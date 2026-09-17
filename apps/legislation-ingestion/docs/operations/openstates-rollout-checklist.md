@@ -2,6 +2,35 @@
 
 ## September 16 continuation and identity verification
 
+September 17 continuation after Docker recovery:
+
+- [x] Local reference database restarted; all 2,302 Alaska OCR reference documents are present.
+- [x] Fresh read-only Alaska 34 parity audit saved as `artifacts/openstates-runtime/production-ocr-audit/ak/3fea07281d148b05ce9e5c595c068e2da339f43b6d56559ad9e2731796d92433.json`: 1,384 identical text hashes, 913 differences, five unresolved source identities/hashes. Differences are not by themselves proof of inferior production text. No production writes from this audit.
+- [x] Audit query now uses bounded indexed bill-ID batches after the broad document-prefix query hit its statement timeout. Eight focused tests, ingestion type-check and commit hooks passed; implementation committed as `2274ae4`.
+- [x] OCR diagnostic change committed as `073f408`, with 15 client tests passing; not yet deployed.
+- [x] Alaska session 31 production freshness at 04:16:19Z: 674 bill vectors and 29,345 section vectors current, zero missing/stale. Historical coverage and search acceptance remain separate gates.
+- [ ] New inventory first ten candidates dispatched as `run_06gar51du3o05748j3vnpfet01`, pinned to `20260916.3`, after previous AK controller completed and no AK lease remained. Last observed executing; next new-inventory offset is 10, not the old inventory's offset 40.
+- [ ] NC controller `run_06gar1fcalhl0b45fi1044d001` remains executing with an active NC session lease; not restarted.
+- [ ] Repository verification is not clean: unrelated web `research.test.ts` conditional-expect lint and Storybook generated-worker unused-disable lint failed. Focused ingestion checks do not override this gate.
+
+September 17 04:03:36Z production freshness audit: Alaska session 30 has all 649 bill vectors and 49,103 section
+vectors matching current input hashes/contracts/dimensions, with zero missing or stale. Search and historical completeness
+are still separate gates. Added reusable read-only `tools/openstates/audit-state-extraction-parity.ts` to regenerate
+checksum-verified reference/target comparison evidence after lost local artifacts. It rejects empty scopes and excludes
+ambiguous identity matches or changed/missing source hashes. The initially blocked live comparison was subsequently
+completed after Docker recovery, as recorded above.
+
+Live provider diagnosis of Alaska session-30 HB132 docid 12754: Azure returned `InvalidRequest` with a `details`
+entry `UnsupportedContent`, stating that the image is corrupted or invalid. Dimensions are 961 by 1200; size 352,824 bytes.
+The OCR client now retains bounded `details` entries as well as nested `innererror` codes/messages. Do not count this
+document as usable or repeatedly retry identical bytes. Old retained Alaska audit inventories were not found after the
+repository split; a fresh checksum-verified inventory has now been regenerated from the surviving reference database.
+
+After the repository split, ingestion code and this ledger live in `apps/legislation-ingestion`. Refreshed Trigger
+status confirms NC's 100 batches, Alaska session 30's 100 batches, and Alaska offset 30's ten batches all completed
+their budgets, with zero complete scan rounds. The OCR client now preserves bounded nested provider error codes/messages
+without recording full response bodies; 15 focused client tests pass. This diagnostic change remains undeployed.
+
 - [x] Focused downloader/recovery verification: 44 tests across two files passed after typed unsupported-format errors.
 - [x] Alaska audited inventory offsets 10 and 20: all twenty documents processed and OCR processed, original raw hashes unchanged. Combined with the initial canary, thirty audited repairs are processed; only the initial canary has separate search-copy acceptance so far.
 - [ ] Offset 30 controller `run_06gamhq9l2c80eg5k3angkfm01` submitted after ten exact source guards passed; next inventory offset 40. Queue limits remain unchanged.
