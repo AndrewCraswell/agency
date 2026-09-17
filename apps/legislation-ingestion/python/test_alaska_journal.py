@@ -32,6 +32,7 @@ YEAS:  4   NAYS:  1   EXCUSED:  0   ABSENT:  0
 Yeas:  Adams, Brown,
 
 2026-05-16                     House Journal
+[[JOURNAL_ANCHOR:2680]]
 Page 2680
 
 Clark, Davis

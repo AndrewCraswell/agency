@@ -113,7 +113,7 @@ def parse_positions(body, totals):
                 active = None
         elif active is not None:
             # The HTML can split one printed header into date/journal and page fragments.
-            if PAGE_HEADER.fullmatch(line):
+            if PAGE_HEADER.fullmatch(line) or ANCHOR.fullmatch(line):
                 continue
             if len(voter_names(groups[active])) < declared[active]:
                 groups[active].append(line)
