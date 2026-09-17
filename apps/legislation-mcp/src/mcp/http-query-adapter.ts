@@ -5,6 +5,7 @@ import {
   LegislationApiProtocolError,
   LegislationApiTimeoutError,
   type ApiRequestBody,
+  type ApiRequestOptions,
   type FetchLike,
   type PageResponse,
   type Query,
@@ -19,6 +20,22 @@ import { z } from "zod"
 import { requestSignals } from "../request-signal.js"
 
 export type ApiAccessTokenProvider = () => Promise<string | undefined> | string | undefined
+
+const votePositionSchema = z.looseObject({
+  id: z.string().min(1),
+  type: z.literal("vote-position"),
+  voteId: z.string().min(1)
+})
+const voteDetailSchema = z.looseObject({
+  id: z.string().min(1),
+  type: z.literal("vote"),
+  positions: z.array(votePositionSchema),
+  positionsPageInfo: z.object({
+    limit: z.number().int().positive(),
+    nextCursor: z.string().min(1).nullable(),
+    truncated: z.boolean()
+  })
+})
 
 export type McpHttpQueryAdapterOptions = Readonly<{
   apiBaseUrl: string
@@ -63,6 +80,69 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
     return { ...requestOptions(), bearerToken }
   }
 
+  function voteRequestOptions(): ApiRequestOptions {
+    const request = requestOptions()
+    const deadline = AbortSignal.timeout(options.timeoutMs ?? 30_000)
+    return {
+      ...request,
+      signal: request.signal === undefined ? deadline : AbortSignal.any([request.signal, deadline])
+    }
+  }
+
+  async function completeVotePositions(data: unknown, request: ApiRequestOptions, expectedId?: string) {
+    const parsed = voteDetailSchema.safeParse(data)
+    if (!parsed.success) {
+      throw new LegislationApiProtocolError("The API returned an invalid vote detail")
+    }
+    const vote = parsed.data
+    if (expectedId !== undefined && vote.id !== expectedId) {
+      throw new LegislationApiProtocolError("The API returned a different vote")
+    }
+    const positions: z.infer<typeof votePositionSchema>[] = []
+    const positionIds = new Set<string>()
+    const cursors = new Set<string>()
+    function appendPage(items: z.infer<typeof votePositionSchema>[], page: typeof vote.positionsPageInfo) {
+      if (
+        page.truncated !== (page.nextCursor !== null) ||
+        items.length > page.limit ||
+        (items.length === 0 && (page.truncated || positions.length > 0))
+      ) {
+        throw new LegislationApiProtocolError("The API returned inconsistent vote position pagination")
+      }
+      for (const position of items) {
+        if (position.voteId !== vote.id || positionIds.has(position.id)) {
+          throw new LegislationApiProtocolError("The API returned mismatched or duplicate vote positions")
+        }
+        positionIds.add(position.id)
+        positions.push(position)
+      }
+    }
+    appendPage(vote.positions, vote.positionsPageInfo)
+    let cursor = vote.positionsPageInfo.nextCursor
+    while (cursor !== null) {
+      if (cursors.has(cursor)) {
+        throw new LegislationApiProtocolError("The API repeated a vote position cursor")
+      }
+      cursors.add(cursor)
+      const page = await api.listVotePositions(vote.id, { cursor, limit: 100 }, request)
+      const parsedPositions = z.array(votePositionSchema).safeParse(page.data)
+      if (!parsedPositions.success) {
+        throw new LegislationApiProtocolError("The API returned invalid vote positions")
+      }
+      appendPage(parsedPositions.data, page.meta)
+      cursor = page.meta.nextCursor
+    }
+    return {
+      ...vote,
+      positions,
+      positionsPageInfo: {
+        limit: Math.max(vote.positionsPageInfo.limit, positions.length),
+        nextCursor: null,
+        truncated: false
+      }
+    }
+  }
+
   return withApiErrors({
     ...(legalText === undefined
       ? {}
@@ -105,8 +185,15 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
       pageData(await api.getRelatedBills(id, query(input), requestOptions())),
     getAmendment: async ({ id }) => resourceData(await api.getAmendment(id, requestOptions())),
     getBill: async ({ id, ...input }) => resourceData(await api.getBill(id, query(input), requestOptions())),
-    getBillVotes: async ({ billId, ...input }) =>
-      pageData(await api.getBillVotes(billId, query(input), requestOptions())),
+    getBillVotes: async ({ billId, ...input }) => {
+      const request = voteRequestOptions()
+      const page = await api.getBillVotes(billId, query(input), request)
+      const items = []
+      for (const vote of page.data) {
+        items.push(await completeVotePositions(vote, request))
+      }
+      return { ...pageData(page), items }
+    },
     getBillText: async ({ id, ...input }) => {
       const page = await api.getBillText(id, query(input), requestOptions())
       return { billId: id, ...pageData(page), sections: page.data }
@@ -126,7 +213,10 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
     getPerson: async ({ id }) => resourceData(await api.getPerson(id, undefined, requestOptions())),
     getSupportingMaterial: async ({ id }) =>
       resourceData(await api.getSupportingMaterial(id, undefined, requestOptions())),
-    getVote: async ({ id }) => resourceData(await api.getVote(id, requestOptions())),
+    getVote: async ({ id }) => {
+      const request = voteRequestOptions()
+      return completeVotePositions((await api.getVote(id, request)).data, request, id)
+    },
     searchAmendments: async (input) => {
       if (input.query === undefined) {
         if (input.mode !== undefined && input.mode !== "lexical") {

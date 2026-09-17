@@ -1,23 +1,28 @@
+import { LegislationError } from "@repo/legislation-core/domain/errors"
 import type { LegislationQueryApi } from "@repo/legislation-core/research/tools"
 import { canonicalJson, type EvalCase } from "./contracts"
 
 export function createFixtureService(item: EvalCase) {
   const missing: { method: string; input: unknown }[] = []
-  const entries = new Map<string, unknown>()
+  const entries = new Map<string, EvalCase["fixtures"][number]>()
   for (const fixture of item.fixtures) {
     const key = `${fixture.method}:${canonicalJson(fixture.input)}`
     if (entries.has(key)) {
       throw new Error("Duplicate fixture arguments.")
     }
-    entries.set(key, fixture.output)
+    entries.set(key, fixture)
   }
   const lookup = (method: string) => async (input: unknown) => {
     const key = `${method}:${canonicalJson(input)}`
-    if (!entries.has(key)) {
+    const fixture = entries.get(key)
+    if (!fixture) {
       missing.push({ method, input })
       throw new Error("Frozen-world fixture coverage gap.")
     }
-    return structuredClone(entries.get(key))
+    if ("error" in fixture) {
+      throw new LegislationError(fixture.error.category, fixture.error.message)
+    }
+    return structuredClone(fixture.output)
   }
   const service: LegislationQueryApi = {
     compareBillVersions: lookup("compareBillVersions"),

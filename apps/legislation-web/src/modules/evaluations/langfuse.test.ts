@@ -25,7 +25,7 @@ describe("hosted evaluation datasets", () => {
       tags: item.tags,
       review: item.review,
       provenance: item.provenance,
-      fixtures: item.fixtures,
+      fixturesJson: JSON.stringify(item.fixtures),
       caseHash: digest(item)
     }
   }
@@ -63,7 +63,29 @@ describe("hosted evaluation datasets", () => {
       { ...item, turnCriteria: [{ turn: 0, criteria: ["Greet briefly"] }] }
     ])
     const body = JSON.parse(String(fetcher.mock.calls[2]?.[1]?.body))
-    expect(body.metadata.fixtures).toEqual(item.fixtures)
+    expect(JSON.parse(body.metadata.fixturesJson)).toEqual(item.fixtures)
     expect(body.expectedOutput.turnCriteria).toEqual([{ turn: 0, criteria: ["Greet briefly"] }])
+  })
+  it("preserves numeric precision and source whitespace in serialized fixtures", async () => {
+    const fixtures = [
+      { method: "searchVotes", input: {}, output: { score: Number("0.12345678901234567"), text: "source\n" } }
+    ]
+    const preciseItem = { ...item, fixtures }
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValue(
+        Response.json({
+          data: [
+            {
+              ...stored,
+              metadata: { ...stored.metadata, fixturesJson: JSON.stringify(fixtures), caseHash: digest(preciseItem) }
+            }
+          ],
+          meta: { totalPages: 1 }
+        })
+      )
+    )
+    const result = await createEvalLangfuse(environment).loadDataset(smokeDataset.name)
+    expect(result.dataset.cases[0]?.fixtures).toEqual(fixtures)
   })
 })

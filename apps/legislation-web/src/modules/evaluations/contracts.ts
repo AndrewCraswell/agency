@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import type { LegislationErrorCategory } from "@repo/legislation-core/domain/errors"
 import { z } from "zod"
 import { clarificationResponseSchema } from "../conversations/clarification"
 
@@ -14,7 +15,7 @@ const turnCriteriaSchema = z.strictObject({
 })
 const reasoningFlags = { enabled: z.boolean().optional(), exclude: z.boolean().optional() }
 const reasoningSchema = z.union([
-  z.strictObject({ ...reasoningFlags, effort: z.enum(["xhigh", "high", "medium", "low", "minimal", "none"]) }),
+  z.strictObject({ ...reasoningFlags, effort: z.enum(["max", "xhigh", "high", "medium", "low", "minimal", "none"]) }),
   z.strictObject({ ...reasoningFlags, max_tokens: z.number().int().positive() })
 ])
 
@@ -30,11 +31,32 @@ export const caseSchema = z
     followUps: z.array(followUpSchema).max(4).default([]),
     turnCriteria: z.array(turnCriteriaSchema).max(5).optional(),
     fixtures: z.array(
-      z.strictObject({
-        method: z.string().min(1),
-        input: z.record(z.string(), z.json()),
-        output: z.json()
-      })
+      z.union([
+        z.strictObject({
+          method: z.string().min(1),
+          input: z.record(z.string(), z.json()),
+          output: z.json()
+        }),
+        z.strictObject({
+          method: z.string().min(1),
+          input: z.record(z.string(), z.json()),
+          error: z.strictObject({
+            category: z.enum([
+              "conflict",
+              "dependency_unavailable",
+              "forbidden",
+              "internal",
+              "invalid_request",
+              "not_found",
+              "payload_too_large",
+              "precondition_failed",
+              "unprocessable",
+              "unauthorized"
+            ] satisfies LegislationErrorCategory[]),
+            message: z.string().min(1)
+          })
+        })
+      ])
     ),
     expected: z.strictObject({
       terminal: z.enum(["answer", "clarification"]),

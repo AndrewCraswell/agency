@@ -107,6 +107,12 @@ the page early before it approaches the response-size ceiling, so unusually larg
 `search_votes`, `get_vote`, and `get_votes` expose the same records as separate discovery and detail operations when
 finer control is needed.
 `get_votes` accepts 1-25 roll-call IDs so a client can resolve every vote returned for a bill in one follow-up call.
+For `get_vote`, `get_votes`, and `get_bill_votes`, M follows W's nested position cursors through the typed HTTP
+client before shared research pagination limits the response by bytes. Position IDs, publisher counts and the bill's
+outer vote cursor are preserved. Completed HTTP position collections have no child cursor and are not truncated;
+clients follow the shared tool's `nextCursor` for remaining output. Reads use the existing MCP cancellation signal
+and an overall configured API timeout (30 seconds by default), with no position-count cap. Invalid cursors,
+duplicate or mismatched positions, and non-progressing pages fail explicitly instead of returning partial success.
 `search_amendments`,
 `search_amendments_for_bills`, `get_amendment`, `get_amendments`, `search_supporting_materials`, and
 `get_supporting_material` expose their canonical records and links;

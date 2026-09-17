@@ -1,4 +1,5 @@
 import type { LanguageModelV4 } from "@openrouter/ai-sdk-provider"
+import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { MockLanguageModelV4 } from "ai/test"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { checkRun } from "./checks"
@@ -9,6 +10,7 @@ import {
   datasetSchema,
   digest,
   experimentSchema,
+  type EvalCase,
   type EvalEvent,
   type EvalTurn
 } from "./contracts"
@@ -43,6 +45,12 @@ function sample(id = "greeting") {
   }
   return item
 }
+
+const capturedTextFailure = {
+  method: "getBillText",
+  input: { id: "bill:tn:113:sb:1903", documentId: "document:4fcc42927bb7547a76a40a2c" },
+  error: { category: "not_found", message: "No matching bill text document was found" }
+} satisfies EvalCase["fixtures"][number]
 
 function streamStep(
   options: {
@@ -149,7 +157,7 @@ const result: EvalEvent = {
 }
 
 describe("evaluation contracts", () => {
-  it("accepts sixteen candidates and only installed reasoning settings", () => {
+  it("accepts sixteen candidates and supported reasoning settings", () => {
     const config = {
       candidates: Array.from({ length: 16 }, (_, index) => ({
         id: `candidate-${index}`,
@@ -171,13 +179,18 @@ describe("evaluation contracts", () => {
         candidates: [...config.candidates, { ...config.candidates[0], id: "extra" }]
       }).success
     ).toBe(false)
-    for (const reasoning of [null, { max_tokens: 512, enabled: true }, { effort: "none", exclude: true }]) {
+    for (const reasoning of [
+      null,
+      { max_tokens: 512, enabled: true },
+      { effort: "none", exclude: true },
+      { effort: "max" }
+    ]) {
       expect(
         experimentSchema.safeParse({ ...config, candidates: [{ ...config.candidates[0], reasoning }] }).success
       ).toBe(true)
     }
     for (const reasoning of [
-      { effort: "max" },
+      { effort: "unsupported" },
       { effort: "low", max_tokens: 512 },
       { enabled: false },
       { max_tokens: 0 }
@@ -236,6 +249,62 @@ describe("evaluation contracts", () => {
     expect(fixture.missing).toEqual([{ method: "getBill", input: { id: "bill:us:119:hr:9999" } }])
   })
 
+  it("accepts strict success or captured failure fixtures but rejects contradictory and invalid records", () => {
+    const { method, input, error } = capturedTextFailure
+    for (const fixture of [capturedTextFailure, { method, input, output: null }]) {
+      expect(caseSchema.parse({ ...sample(), fixtures: [fixture] }).fixtures).toEqual([fixture])
+    }
+    for (const fixture of [
+      { method, input },
+      { ...capturedTextFailure, output: null },
+      { ...capturedTextFailure, output: undefined },
+      { method, input, output: null, error: undefined },
+      { method, input, output: null, extra: true },
+      { ...capturedTextFailure, extra: true },
+      { method, input, error: { ...error, category: "not-found" } },
+      { method, input, error: { ...error, message: "" } },
+      { method, input, error: { category: error.category } },
+      { method, input, error: { ...error, name: "LegislationError" } }
+    ]) {
+      expect(caseSchema.safeParse({ ...sample(), fixtures: [fixture] }).success).toBe(false)
+    }
+  })
+
+  it("replays a captured not-found error without a gap or a document ID alias", async () => {
+    const fixture = createFixtureService(caseSchema.parse({ ...sample(), fixtures: [capturedTextFailure] }))
+    const { input, error } = capturedTextFailure
+    await expect(fixture.service.getBillText(input)).rejects.toBeInstanceOf(LegislationError)
+    await expect(fixture.service.getBillText({ documentId: input.documentId, id: input.id })).rejects.toMatchObject(
+      error
+    )
+    expect(fixture.missing).toEqual([])
+    const uncaptured = { ...input, documentId: `${input.id}:${input.documentId}` }
+    await expect(fixture.service.getBillText(uncaptured)).rejects.toThrow("coverage gap")
+    expect(fixture.missing).toEqual([{ method: "getBillText", input: uncaptured }])
+  })
+
+  it("preserves null and cloned success outputs and rejects duplicate success/failure arguments", async () => {
+    const { method, input } = capturedTextFailure
+    const fixture = createFixtureService(
+      caseSchema.parse({
+        ...sample(),
+        fixtures: [{ method, input, output: null }, ...sample("bill-identity").fixtures]
+      })
+    )
+    await expect(fixture.service.getBillText(input)).resolves.toBeNull()
+    const billInput = { id: "bill:us:119:hr:9001" }
+    const first = await fixture.service.getBill(billInput)
+    const second = await fixture.service.getBill(billInput)
+    expect(first).toEqual(second)
+    expect(first).not.toBe(second)
+    expect(fixture.missing).toEqual([])
+    expect(() =>
+      createFixtureService(
+        caseSchema.parse({ ...sample(), fixtures: [capturedTextFailure, { method, input, output: null }] })
+      )
+    ).toThrow("Duplicate fixture arguments")
+  })
+
   it("does not treat absent citations as perfect grounding", () => {
     const scores = checkRun(sample("bill-identity"), [{ ...turn, text: "No citation" }], [])
     expect(scores.find((score) => score.name === "citation-validity")?.value).toBeNull()
@@ -282,6 +351,35 @@ describe("evaluation contracts", () => {
 })
 
 describe("shared SDK execution", () => {
+  it.each([true, false])(
+    "distinguishes a captured tool error from a coverage gap (captured: %s)",
+    async (isCaptured) => {
+      const model = new MockLanguageModelV4({
+        doStream: [
+          streamStep({
+            tool: {
+              name: "get_bill_text",
+              input: { ...capturedTextFailure.input, cursor: null, versionCode: null }
+            }
+          }),
+          streamStep({ text: "The requested document ID was not found." })
+        ]
+      })
+      const outcome = await executeCase({
+        item: caseSchema.parse({ ...sample(), fixtures: isCaptured ? [capturedTextFailure] : [] }),
+        model,
+        instructions: "Pinned",
+        budget: createCallBudget(3, 180000),
+        signal: new AbortController().signal
+      })
+      expect(outcome.status).toBe(isCaptured ? "completed" : "ungradable")
+      expect(outcome.fixtureGaps).toEqual(
+        isCaptured ? [] : [{ method: capturedTextFailure.method, input: capturedTextFailure.input }]
+      )
+      expect(caseResultSchema.safeParse(outcome).success).toBe(true)
+    }
+  )
+
   it.each([
     { name: "all supplied", costUsd: 0.25, total: 0.375 },
     { name: "one unknown", costUsd: null, total: null },

@@ -8,8 +8,9 @@ export const researchResultByteLimit = 180000
 const prefix = "research-page:"
 const cursorSchema = z.object({
   binding: z.string(),
-  offset: z.number().int().min(1).max(100),
-  upstream: z.string().optional()
+  offset: z.number().int().min(1).max(1000000),
+  upstream: z.string().optional(),
+  snapshot: z.string().optional()
 })
 
 function binding(name: string, input: Readonly<Record<string, unknown>>) {
@@ -31,7 +32,7 @@ export function readResultPage(name: string, input: Readonly<Record<string, unkn
     if (parsed.binding !== binding(name, input)) {
       throw new Error("Selection mismatch")
     }
-    return { input: { ...input, cursor: parsed.upstream }, offset: parsed.offset }
+    return { input: { ...input, cursor: parsed.upstream }, offset: parsed.offset, snapshot: parsed.snapshot }
   } catch {
     throw new LegislationError("invalid_request", "Invalid result cursor. Keep the original tool inputs and limits.")
   }
@@ -53,12 +54,107 @@ export function projectDiscoveryRecord(value: JSONValue, omitSummary = true): JS
   )
 }
 
+function isRecord(value: JSONValue | undefined): value is { [key: string]: JSONValue } {
+  return value !== null && value !== undefined && typeof value === "object" && !Array.isArray(value)
+}
+
+function prepareVotePage(
+  name: string,
+  input: Readonly<Record<string, unknown>>,
+  data: JSONValue,
+  offset: number,
+  expectedSnapshot?: string
+): JSONValue {
+  if (!isRecord(data)) return data
+  const records = name === "get_vote" ? [data] : data.items
+  if (!Array.isArray(records)) return data
+  const snapshot = createHash("sha256").update(JSON.stringify(data)).digest("base64url")
+  if (
+    (offset > 0 && expectedSnapshot === undefined) ||
+    (expectedSnapshot !== undefined && expectedSnapshot !== snapshot)
+  ) {
+    throw new LegislationError("invalid_request", "The vote results changed. Start the request again.")
+  }
+  if (offset === 0 && Buffer.byteLength(JSON.stringify({ data }), "utf8") <= researchResultByteLimit) return data
+  const units = records.flatMap((record, recordIndex) => {
+    const detail = name === "get_votes" && isRecord(record) ? record.data : record
+    if (isRecord(detail) && Array.isArray(detail.positions) && detail.positions.length > 0) {
+      return detail.positions.map((_, positionIndex) => ({ recordIndex, positionIndex }))
+    }
+    return [{ recordIndex, positionIndex: -1 }]
+  })
+  if (offset >= units.length)
+    throw new LegislationError("invalid_request", "The vote page changed. Start the request again.")
+  const pageRecords: JSONValue[] = []
+  let selected: JSONValue | undefined
+  let lastRecordIndex = -1
+  let pageDetail: { [key: string]: JSONValue } | undefined
+  let pagePositions: JSONValue[] = []
+  let positionStart = 0
+  for (let index = offset; index < units.length; index++) {
+    const unit = units[index]
+    if (!unit) break
+    const record = records[unit.recordIndex]
+    if (record === undefined) break
+    const detail = name === "get_votes" && isRecord(record) ? record.data : record
+    if (unit.recordIndex !== lastRecordIndex) {
+      lastRecordIndex = unit.recordIndex
+      pageDetail = undefined
+      if (unit.positionIndex >= 0 && isRecord(detail)) {
+        pagePositions = []
+        positionStart = unit.positionIndex
+        pageDetail = { ...detail, positions: pagePositions, positionOffset: positionStart, positionsTruncated: true }
+        pageRecords.push(name === "get_votes" && isRecord(record) ? { ...record, data: pageDetail } : pageDetail)
+      } else {
+        pageRecords.push(record)
+      }
+    }
+    if (pageDetail && isRecord(detail) && Array.isArray(detail.positions)) {
+      const position = detail.positions[unit.positionIndex]
+      if (position !== undefined) pagePositions.push(position)
+      const upstreamPartial = isRecord(detail.positionsPageInfo) && detail.positionsPageInfo.truncated === true
+      pageDetail.positionsTruncated = upstreamPartial || positionStart + pagePositions.length < detail.positions.length
+    }
+    const hasRemaining = index + 1 < units.length
+    const nextCursor = hasRemaining
+      ? `${prefix}${Buffer.from(JSON.stringify({ binding: binding(name, input), offset: index + 1, upstream: input.cursor, snapshot })).toString("base64url")}`
+      : data.nextCursor
+    const positionsIncomplete = pageRecords.some((record) => {
+      const detail = name === "get_votes" && isRecord(record) ? record.data : record
+      return isRecord(detail) && detail.positionsTruncated === true
+    })
+    const candidate =
+      name === "get_vote" && isRecord(pageRecords[0])
+        ? {
+            ...pageRecords[0],
+            ...(nextCursor !== undefined ? { nextCursor } : {}),
+            truncated: hasRemaining || positionsIncomplete || data.truncated === true
+          }
+        : {
+            ...data,
+            items: pageRecords,
+            ...(nextCursor !== undefined ? { nextCursor } : {}),
+            truncated: hasRemaining || positionsIncomplete || data.truncated === true
+          }
+    if (Buffer.byteLength(JSON.stringify({ data: candidate }), "utf8") > researchResultByteLimit) break
+    selected = structuredClone(candidate)
+  }
+  if (selected === undefined) {
+    throw new LegislationError("payload_too_large", "One vote position exceeds the response budget.")
+  }
+  return selected
+}
+
 export function prepareResultPage(
   name: string,
   input: Readonly<Record<string, unknown>>,
   value: JSONValue,
-  offset: number
+  offset: number,
+  snapshot?: string
 ): JSONValue {
+  if (["get_bill_votes", "get_vote", "get_votes"].includes(name)) {
+    return prepareVotePage(name, input, value, offset, snapshot)
+  }
   let data = value
   if (["search_bills", "get_bill", "get_bills"].includes(name)) {
     data = projectDiscoveryRecord(value)

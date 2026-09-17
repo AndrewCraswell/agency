@@ -1,7 +1,10 @@
 import type { FetchLike } from "@repo/legislation-core/api-client/client"
 import { runWithRequestContext } from "@repo/legislation-core/auth/request-context"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
+import { createLogger } from "@repo/legislation-core/observability/logger"
+import { createLegislationResearchTools } from "@repo/legislation-core/research/tools"
 import { describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 import { requestSignals } from "../request-signal.js"
 import { createMcpHttpQueryAdapter } from "./http-query-adapter.js"
 
@@ -11,12 +14,39 @@ function resourceResponse(data: unknown): Response {
   return jsonResponse({ data, links: { self: "/api/resource" }, meta: { correlationId, warnings: [] } })
 }
 
-function pageResponse(data: readonly unknown[] = []): Response {
+function pageResponse(data: readonly unknown[] = [], nextCursor: string | null = null, limit = 20): Response {
   return jsonResponse({
     data,
     links: { next: null, self: "/api/page" },
-    meta: { correlationId, limit: 20, nextCursor: null, truncated: false, warnings: [] }
+    meta: { correlationId, limit, nextCursor, truncated: nextCursor !== null, warnings: [] }
   })
+}
+
+function votePositions(voteId = "vote:1", count = 430) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `${voteId}:position:${index}`,
+    type: "vote-position",
+    voteId,
+    person: null,
+    option: index % 2 === 0 ? "yes" : "no",
+    sourceName: `Member ${index}`,
+    sourcePersonId: `publisher:${index}`,
+    sources: [{ url: `https://publisher.example.test/votes/${index}`, isOfficial: true }]
+  }))
+}
+
+function voteDetail(id = "vote:1", positions = votePositions(id)) {
+  return {
+    id,
+    type: "vote",
+    counts: { yes: 215, no: 200, absent: 0, abstain: 0, notVoting: 12, present: 3, proxy: 0, paired: 0, other: 0 },
+    positions: positions.slice(0, 25),
+    positionsPageInfo: {
+      limit: 25,
+      nextCursor: positions.length > 25 ? "positions:25" : null,
+      truncated: positions.length > 25
+    }
+  }
 }
 
 function searchResponse(data: readonly unknown[] = []): Response {
@@ -44,6 +74,266 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe("createMcpHttpQueryAdapter", () => {
+  it("gathers all 430 positions through the typed HTTP client and preserves published counts", async () => {
+    const positions = votePositions()
+    const detail = voteDetail()
+    const fetch = vi.fn<FetchLike>(async (input) => {
+      const url = new URL(String(input))
+      if (!url.pathname.endsWith("/positions")) {
+        return resourceResponse(detail)
+      }
+      expect(url.pathname).toBe("/api/votes/vote%3A1/positions")
+      expect(url.searchParams.get("limit")).toBe("100")
+      const offset = Number(url.searchParams.get("cursor")?.split(":")[1])
+      const end = Math.min(offset + 100, positions.length)
+      return pageResponse(positions.slice(offset, end), end < positions.length ? `positions:${end}` : null, 100)
+    })
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "api-token"
+    })
+
+    const result = await runWithRequestContext({ correlationId }, () => adapter.getVote({ id: "vote:1" }))
+
+    expect(result).toEqual({
+      ...detail,
+      positions,
+      positionsPageInfo: { limit: 430, nextCursor: null, truncated: false }
+    })
+    expect(fetch).toHaveBeenCalledTimes(6)
+    expect(fetch.mock.calls.slice(1).map(([input]) => new URL(String(input)).searchParams.get("cursor"))).toEqual([
+      "positions:25",
+      "positions:125",
+      "positions:225",
+      "positions:325",
+      "positions:425"
+    ])
+    for (const [, init] of fetch.mock.calls) {
+      expect(init?.method).toBe("GET")
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer api-token")
+      expect(new Headers(init?.headers).get("x-correlation-id")).toBe(correlationId)
+    }
+  })
+
+  it("expands each bill vote by its own ID and child cursor without consuming the outer continuation", async () => {
+    const first = votePositions("vote:1", 26)
+    const second = votePositions("vote:2", 26)
+    const fetch = vi
+      .fn<FetchLike>()
+      .mockResolvedValueOnce(
+        pageResponse([voteDetail("vote:1", first), voteDetail("vote:2", second)], "bill-votes:next")
+      )
+      .mockResolvedValueOnce(pageResponse(first.slice(25), null, 100))
+      .mockResolvedValueOnce(pageResponse(second.slice(25), null, 100))
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "api-token"
+    })
+
+    await expect(
+      runWithRequestContext({ correlationId }, () =>
+        adapter.getBillVotes({ billId: "bill:1", cursor: "bill-votes:start", limit: 2 })
+      )
+    ).resolves.toEqual({
+      items: [
+        {
+          ...voteDetail("vote:1", first),
+          positions: first,
+          positionsPageInfo: { limit: 26, nextCursor: null, truncated: false }
+        },
+        {
+          ...voteDetail("vote:2", second),
+          positions: second,
+          positionsPageInfo: { limit: 26, nextCursor: null, truncated: false }
+        }
+      ],
+      nextCursor: "bill-votes:next",
+      truncated: true,
+      warnings: []
+    })
+    expect(fetch.mock.calls.map(([input]) => new URL(String(input)).pathname)).toEqual([
+      "/api/bills/bill%3A1/votes",
+      "/api/votes/vote%3A1/positions",
+      "/api/votes/vote%3A2/positions"
+    ])
+    expect(new URL(String(fetch.mock.calls[0]?.[0])).searchParams.get("cursor")).toBe("bill-votes:start")
+    expect(fetch.mock.calls.slice(1).map(([input]) => new URL(String(input)).searchParams.get("cursor"))).toEqual([
+      "positions:25",
+      "positions:25"
+    ])
+  })
+
+  it.each([
+    ["duplicate positions", () => pageResponse(votePositions().slice(0, 1), null, 100)],
+    ["mismatched votes", () => pageResponse(votePositions("vote:other", 1), null, 100)],
+    ["repeated cursors", () => pageResponse(votePositions().slice(25, 26), "positions:25", 100)],
+    ["no progress", () => pageResponse([], "positions:next", 100)],
+    ["empty terminal pages", () => pageResponse([], null, 100)],
+    ["invalid positions", () => pageResponse([{}], null, 100)],
+    [
+      "inconsistent page flags",
+      () =>
+        jsonResponse({
+          data: votePositions().slice(25, 26),
+          links: { self: "/api/page", next: null },
+          meta: { correlationId, limit: 100, nextCursor: null, truncated: true, warnings: [] }
+        })
+    ]
+  ])("fails explicitly on %s during continuation", async (_name, continuation) => {
+    const fetch = vi
+      .fn<FetchLike>()
+      .mockResolvedValueOnce(resourceResponse(voteDetail()))
+      .mockImplementationOnce(async () => continuation())
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "api-token"
+    })
+
+    await expect(
+      runWithRequestContext({ correlationId }, () => adapter.getVote({ id: "vote:1" }))
+    ).rejects.toMatchObject({ category: "dependency_unavailable", details: { retryable: false } })
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it("propagates invalid snapshot cursor errors instead of returning initial positions", async () => {
+    const fetch = vi
+      .fn<FetchLike>()
+      .mockResolvedValueOnce(resourceResponse(voteDetail()))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            error: {
+              category: "invalid_request",
+              correlationId,
+              message: "Invalid vote position pagination cursor",
+              retryable: false
+            }
+          },
+          400
+        )
+      )
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "api-token"
+    })
+    await expect(
+      runWithRequestContext({ correlationId }, () => adapter.getVote({ id: "vote:1" }))
+    ).rejects.toMatchObject({ category: "invalid_request", details: { retryable: false, status: 400 } })
+  })
+
+  it("cancels position continuation when the MCP request is cancelled", async () => {
+    const controller = new AbortController()
+    const fetch = vi
+      .fn<FetchLike>()
+      .mockResolvedValueOnce(resourceResponse(voteDetail()))
+      .mockImplementationOnce(async (_input, init) => {
+        controller.abort()
+        init?.signal?.throwIfAborted()
+        return pageResponse()
+      })
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "api-token"
+    })
+    await expect(
+      runWithRequestContext({ correlationId }, () =>
+        requestSignals.run(controller.signal, () => adapter.getVote({ id: "vote:1" }))
+      )
+    ).rejects.toMatchObject({ category: "dependency_unavailable", details: { retryable: true } })
+  })
+
+  it("applies the configured read deadline to position continuation", async () => {
+    const fetch = vi
+      .fn<FetchLike>()
+      .mockResolvedValueOnce(resourceResponse(voteDetail()))
+      .mockImplementationOnce(async (_input, init) => {
+        const signal = init?.signal
+        if (!signal) throw new Error("Expected the API request signal")
+        signal.throwIfAborted()
+        return new Promise<Response>((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true })
+        })
+      })
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "api-token",
+      timeoutMs: 10
+    })
+    await expect(
+      runWithRequestContext({ correlationId }, () => adapter.getVote({ id: "vote:1" }))
+    ).rejects.toMatchObject({ category: "dependency_unavailable", details: { retryable: true } })
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    { name: "get_vote", input: { id: "vote:1" } },
+    { name: "get_votes", input: { ids: ["vote:1"] } },
+    { name: "get_bill_votes", input: { billId: "bill:us:119:house:hr-1" } }
+  ])("delivers all 430 HTTP positions through $name pages below 180,000 bytes", async ({ name, input }) => {
+    const positions = votePositions().map((position) => ({
+      ...position,
+      sources: [
+        { url: `https://publisher.example.test/${"source-record/".repeat(50)}${position.id}`, isOfficial: true }
+      ]
+    }))
+    const detail = voteDetail("vote:1", positions)
+    const fetch = vi.fn<FetchLike>(async (input) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith("/positions")) {
+        const offset = Number(url.searchParams.get("cursor")?.split(":")[1])
+        const end = Math.min(offset + 100, positions.length)
+        return pageResponse(positions.slice(offset, end), end < positions.length ? `positions:${end}` : null, 100)
+      }
+      expect(url.searchParams.has("cursor")).toBe(false)
+      if (url.pathname.startsWith("/api/bills/")) return pageResponse([detail])
+      return resourceResponse(detail)
+    })
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "api-token"
+    })
+    const logger = createLogger({ level: "error", service: "mcp-vote-test", write: () => undefined })
+    const tool = createLegislationResearchTools(adapter, logger).find((definition) => definition.name === name)
+    if (!tool) throw new Error(`Missing tool ${name}`)
+    const collected: unknown[] = []
+    const cursors = new Set<string>()
+    let cursor: string | undefined
+    let pageCount = 0
+    do {
+      const result = await runWithRequestContext({ correlationId }, () => tool.execute({ ...input, cursor }))
+      expect("isError" in result && result.isError).toBe(false)
+      if (!("structuredContent" in result)) throw new Error("Expected vote result data")
+      expect(Buffer.byteLength(JSON.stringify(result.structuredContent), "utf8")).toBeLessThanOrEqual(180_000)
+      const data = result.structuredContent.data
+      let records: unknown[] = [data]
+      if (name !== "get_vote") records = z.object({ items: z.array(z.unknown()) }).parse(data).items
+      for (const record of records) {
+        const value = name === "get_votes" ? z.object({ data: z.unknown() }).parse(record).data : record
+        const parsed = z.object({ counts: z.unknown(), positions: z.array(z.unknown()) }).parse(value)
+        expect(parsed.counts).toEqual(detail.counts)
+        collected.push(...parsed.positions)
+      }
+      const page = z.object({ nextCursor: z.string().nullish(), truncated: z.boolean().optional() }).parse(data)
+      cursor = page.nextCursor ?? undefined
+      expect(page.truncated).toBe(cursor !== undefined)
+      if (cursor !== undefined) {
+        expect(cursors.has(cursor)).toBe(false)
+        cursors.add(cursor)
+      }
+      pageCount++
+      expect(pageCount).toBeLessThan(10)
+    } while (cursor !== undefined)
+    expect(pageCount).toBeGreaterThan(1)
+    expect(collected).toEqual(positions)
+  })
+
   it("cancels the outbound API request when the MCP request is cancelled", async () => {
     const signal = AbortSignal.abort()
     const fetch = vi.fn<FetchLike>(async (_input, init) => {
@@ -294,7 +584,7 @@ describe("createMcpHttpQueryAdapter", () => {
     ],
     [
       "get_vote",
-      resourceResponse({}),
+      resourceResponse(voteDetail("vote:1", [])),
       (adapter: ReturnType<typeof createMcpHttpQueryAdapter>) => adapter.getVote({ id: "vote:1" }),
       "/api/votes/vote%3A1",
       "GET",

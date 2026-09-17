@@ -28,10 +28,24 @@ inference. `--execute` permits paid inference and Langfuse writes. `--case` filt
 accepts additional cases validated by the canonical schemas in `src/modules/evaluations/contracts.ts`; keep a reviewed cumulative
 regression dataset there rather than duplicating schemas. Existing runs retain their own dataset snapshot.
 
+`--langfuse-dataset NAME` loads active executable cases from a pinned hosted dataset version, including during dry-run.
+Replay fixtures are stored as `metadata.fixturesJson` and parsed before schema and case-hash validation; this preserves
+floating-point search scores and source whitespace through hosted storage. Re-sync executable datasets after changing
+their storage contract. A fixture contains either `output` or a captured `error` with its domain category and message,
+never both. Captured errors replay as real service failures without adding a fixture gap; unrecorded inputs still fail
+as coverage gaps. Do not fabricate successful aliases for invalid identifiers.
+
 The supplied 12 smoke tasks are synthetic, draft, diagnostic cases, not a reviewed benchmark or representative traffic.
 They require `allowDrafts: true`. Fixture matching is exact after structured argument normalization; unrecorded alternative
 valid plans are harness coverage gaps, not empty results or agent-quality failures. Expand fixtures before using these
 cases to compare autonomous retrieval. There is no live-query fallback and no production database mutation.
+
+Vote detail tools paginate member positions without dropping voter records. Continue with the returned `nextCursor` and
+unchanged selection; a roll call may span several pages, with `positionOffset` and `positionsTruncated` describing each
+slice. Vote-level tallies remain totals for the roll call, not counts for the position slice. Shared cursors bind both
+selection and captured response content; changed evidence requires restarting. Replay tests must consume every page and
+compare all positions, not merely check that the first response fits. MCP first resolves HTTP position continuations,
+then uses the same shared byte-bounded pages.
 
 ## Configuration and costs
 

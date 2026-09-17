@@ -329,7 +329,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
             if (!("value" in result)) {
               return result
             }
-            return success(prepareResultPage(name, page.input, result.value, page.offset))
+            return success(prepareResultPage(name, page.input, result.value, page.offset, page.snapshot))
           } catch (error) {
             return failure(error, logger)
           }
@@ -651,7 +651,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
     "get_bill_votes",
     {
       description:
-        "Get a bill's roll calls and normalized member positions in one bounded call, including a continuation cursor when more roll calls exist.",
+        "Get a bill's roll calls and normalized member positions in bounded pages. Follow nextCursor for remaining positions or roll calls; positionOffset and positionsTruncated describe partial roll calls.",
       inputSchema: z.object({
         billId: canonicalBillId,
         cursor: cursorSchema,
@@ -664,8 +664,9 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   server.registerTool(
     "get_vote",
     {
-      description: "Get a roll call with normalized member positions.",
-      inputSchema: entityLookupSchema("vote"),
+      description:
+        "Get a roll call with normalized member positions. Follow nextCursor for remaining positions; positionOffset and positionsTruncated describe each partial page.",
+      inputSchema: entityLookupSchema("vote").extend({ cursor: cursorSchema }),
       outputSchema
     },
     (input) => tool("get_vote", input, () => service.getVote(input), logger, telemetry)
@@ -673,8 +674,12 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   server.registerTool(
     "get_votes",
     {
-      description: "Get multiple roll calls and their normalized member positions in one call.",
-      inputSchema: z.object({ ids: z.array(canonicalId("vote")).min(1).max(MAXIMUM_BATCH_LOOKUPS) }),
+      description:
+        "Get multiple roll calls and their normalized member positions in bounded pages. Follow nextCursor with unchanged IDs for remaining positions or roll calls.",
+      inputSchema: z.object({
+        ids: z.array(canonicalId("vote")).min(1).max(MAXIMUM_BATCH_LOOKUPS),
+        cursor: cursorSchema
+      }),
       outputSchema
     },
     (input) =>

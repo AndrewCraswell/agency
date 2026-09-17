@@ -47,6 +47,14 @@ describe("runResearchAgent", () => {
     expect(chat).toHaveBeenLastCalledWith("candidate/model", expect.objectContaining({ reasoning: { effort: "none" } }))
   })
 
+  it("sends advertised max effort through the provider request body", () => {
+    createResearchModel(undefined, researchModelId, { reasoning: { effort: "max" } })
+    expect(chat).toHaveBeenLastCalledWith(researchModelId, {
+      extraBody: { reasoning: { effort: "max" } },
+      provider: { allow_fallbacks: false, data_collection: "deny" }
+    })
+  })
+
   it("shares the injected prompt, model, tools and production limits", () => {
     const signal = new AbortController().signal
     const onChunk = vi.fn<() => void>()

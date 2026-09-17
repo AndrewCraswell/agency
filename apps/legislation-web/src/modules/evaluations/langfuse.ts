@@ -45,7 +45,7 @@ export function createEvalLangfuse(environment: LangfuseEnvironment) {
                   tags: z.array(z.string()),
                   review: z.string(),
                   provenance: z.string(),
-                  fixtures: z.unknown(),
+                  fixturesJson: z.string(),
                   caseHash: z.string()
                 })
               })
@@ -69,7 +69,7 @@ export function createEvalLangfuse(environment: LangfuseEnvironment) {
                 provenance: stored.metadata.provenance,
                 ...stored.input,
                 ...stored.expectedOutput,
-                fixtures: stored.metadata.fixtures
+                fixtures: JSON.parse(stored.metadata.fixturesJson)
               }
             ]
           }).cases[0]
@@ -114,8 +114,12 @@ export function createEvalLangfuse(environment: LangfuseEnvironment) {
           throw new Error("Duplicate Langfuse case identity; reconcile the dataset before executing.")
         }
         const id = matches[0]?.id ?? digest({ name, caseId: item.id })
-        const metadata = z.object({ caseHash: z.string() }).safeParse(matches[0]?.metadata)
-        if (metadata.success && metadata.data.caseHash === digest(item)) {
+        const metadata = z.object({ caseHash: z.string(), fixturesJson: z.string() }).safeParse(matches[0]?.metadata)
+        if (
+          metadata.success &&
+          metadata.data.caseHash === digest(item) &&
+          metadata.data.fixturesJson === JSON.stringify(item.fixtures)
+        ) {
           ids[item.id] = id
           continue
         }
@@ -130,7 +134,7 @@ export function createEvalLangfuse(environment: LangfuseEnvironment) {
             tags: item.tags,
             review: item.review,
             provenance: item.provenance,
-            fixtures: item.fixtures,
+            fixturesJson: JSON.stringify(item.fixtures),
             caseHash: digest(item),
             fixtureHash: digest(item.fixtures)
           }

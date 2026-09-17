@@ -1,4 +1,4 @@
-import { APICallError } from "ai"
+import { APICallError, StreamProviderError } from "ai"
 import { describe, expect, it, vi } from "vitest"
 import { providerFailure, recoverProviderCall, type ProviderAttempt } from "./providerRecovery"
 
@@ -15,6 +15,13 @@ function rejection(status: number, reason?: string) {
 }
 
 describe("provider recovery", () => {
+  it("classifies streaming rate limits as infrastructure without exporting provider data", () => {
+    const failure = providerFailure(
+      new StreamProviderError({ message: "Rate limited", statusCode: 429, data: { privateValue: "hidden" } })
+    )
+    expect(failure).toMatchObject({ httpStatus: 429, infrastructure: true, temporary: true, stopRun: true })
+    expect(JSON.stringify(failure)).not.toContain("hidden")
+  })
   it("honors temporary reservation backoff and counts every attempt", async () => {
     const attempts: ProviderAttempt[] = []
     const claim = vi.fn<() => void>()

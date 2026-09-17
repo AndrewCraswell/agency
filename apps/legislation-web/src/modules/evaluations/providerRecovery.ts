@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises"
-import { APICallError } from "ai"
+import { APICallError, StreamProviderError } from "ai"
 import { z } from "zod"
 
 const responseSchema = z.object({
@@ -18,6 +18,7 @@ export function providerFailure(error: unknown) {
   let reason: string | null = null
   let limitSource: string | null = null
   const apiError = APICallError.isInstance(error) ? error : undefined
+  const streamError = StreamProviderError.isInstance(error) ? error : undefined
   try {
     const parsed = responseSchema.safeParse(JSON.parse(apiError?.responseBody ?? "null"))
     if (parsed.success) {
@@ -35,7 +36,8 @@ export function providerFailure(error: unknown) {
   }
   const connection = connectionSchema.safeParse(apiError?.cause)
   const dnsFailure = connection.success && ["ENOTFOUND", "EAI_AGAIN"].includes(connection.data.code)
-  const status = apiError?.statusCode ?? null
+  const status = apiError?.statusCode ?? streamError?.statusCode ?? null
+  const infrastructure = apiError !== undefined || streamError !== undefined
   const temporary = status === 429 || (status === 402 && reason === "in_flight_budget_exhausted") || dnsFailure
   const retryHeader = apiError?.responseHeaders?.["retry-after"]
   let retryAfterMs: number | null = null
@@ -53,8 +55,8 @@ export function providerFailure(error: unknown) {
     networkCode: dnsFailure && connection.success ? connection.data.code : null,
     retryAfterMs,
     temporary,
-    infrastructure: apiError !== undefined,
-    stopRun: apiError !== undefined && (temporary || status === 401 || status === 402 || status === 403)
+    infrastructure,
+    stopRun: infrastructure && (temporary || status === 401 || status === 402 || status === 403)
   }
 }
 
