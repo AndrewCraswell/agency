@@ -3,6 +3,8 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { gunzipSync } from "node:zlib"
+import { regulatoryEmbeddingRouteForModel } from "@repo/legislation-core/embeddings/embedding-routing"
+import { OpenRouterEmbeddingClient } from "@repo/legislation-core/embeddings/openrouter-embeddings"
 import {
   acquisitionUnitSchema,
   digest,
@@ -1430,6 +1432,18 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           model: registration.model,
           items: [{ passageId: passage.id, inputHash: passage.input_hash, embedding: vector }]
         }
+        await expect(
+          runLegalEmbeddingShardJob(
+            target,
+            shardJobRequest,
+            new OpenRouterEmbeddingClient({
+              apiKey: "fixture",
+              fetch: async () => new Response("provider cooldown", { status: 429 }),
+              maximumAttempts: 1,
+              route: regulatoryEmbeddingRouteForModel(registration.model)
+            })
+          )
+        ).rejects.toThrow("HTTP 429")
         await target.query(
           "ALTER TABLE legislation.legal_openai_small_embeddings ADD CONSTRAINT injected_vector_write_failure CHECK (dimensions=1024)"
         )
@@ -1458,9 +1472,9 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
             }
           })
         ).toMatchObject({
-          attempts: 3,
+          attempts: 4,
           inserted: 1,
-          possibleRepeatedPaidAttempts: 2,
+          possibleRepeatedPaidAttempts: 3,
           reused: 0,
           promptTokens: 12,
           totalTokens: 12,

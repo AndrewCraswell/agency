@@ -13,11 +13,26 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Connected the durable regulatory vector shards to Trigger.dev without activating a schedule or dispatching provider
+work. An explicit operator task initializes exactly 16 shards and submits them with stable global idempotency keys. A
+four-worker queue processes one bounded provider page per run, checkpoints through the existing fenced lease, and
+creates one continuation from the durable keyset cursor. The trusted `REGULATORY_EMBEDDING_MODEL` setting must match
+the registered generation before a client or provider request is created; an absent selection leaves vector execution
+disabled. The last completed shard invokes the exact-count generation gate. Six focused task tests cover bounded fan-
+out, completed-generation replay, unsafe target rejection, absent selection/credentials, model mismatch, continuation
+and finalization. Focused TypeScript, lint and format checks passed. No provider request or vector dispatch occurred.
+
+Extended the two-database vector smoke through the real shared OpenRouter client with a synthetic HTTP 429 response.
+The client made no retry under the test's one-attempt limit, the shard stayed pending, and the following claim counted
+the uncertain request as a possible repeated paid attempt before later failures and successful persistence. The focused
+PostgreSQL test passed with four attempts, three conservatively counted possible repeats and one exact stored vector.
+No external provider request occurred. Provider-wide outage and deployed Trigger recovery remain open.
+
 Restarted the read-only 49-title qualification after the new regulatory route definitions changed the fingerprinted
 dependency closure. The superseded attempt was stopped cleanly after five editions rather than being allowed to publish
 an obsolete terminal manifest. The active release-candidate run uses implementation hash
-`df80596a461d3404ba25fd53ff9f8f0036142cc9cf6163cc7a5b31295f6604e4` and currently retains five completed editions,
-29,621 canonical records and zero structural, OpenAI-tokenizer or Voyage-tokenizer blockers. Its manifest remains
+`df80596a461d3404ba25fd53ff9f8f0036142cc9cf6163cc7a5b31295f6604e4` and currently retains seven completed editions,
+45,500 canonical records and zero structural, OpenAI-tokenizer or Voyage-tokenizer blockers. Its manifest remains
 `complete: false`; these are live checkpoint counts, not terminal qualification evidence.
 
 Added durable execution checkpoints for all 16 regulatory vector shards. Initialization creates the exact shard

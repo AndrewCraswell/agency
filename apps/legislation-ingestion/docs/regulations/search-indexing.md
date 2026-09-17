@@ -258,6 +258,14 @@ is selected by default. `vector-shards.ts` uses 16 stable SHA-256 passage-ID sha
 byte ceilings. It excludes already stored vectors and independently verifies source input hashes and pinned-tokenizer
 counts before a provider batch can be formed.
 
+`regulatory-embedding-dispatch` is the explicit operator entry point for one already registered generation. It creates
+the fixed durable shard inventory before submitting 16 globally idempotent children and has no schedule. Each
+`regulatory-embedding-shard` run claims one five-minute fenced lease, submits at most one bounded provider batch,
+persists its cursor and counters, then creates one continuation only when that shard remains pending. The queue admits
+at most four workers. `REGULATORY_EMBEDDING_MODEL` is trusted server configuration and must match the generation before
+provider access; no payload may choose a model. The last shard to observe all 16 completed checkpoints runs the exact
+vector-count completion gate. Deployment and a bounded paid pilot remain separate acceptance steps.
+
 Create a unique input identity index and a passage-ID lookup index. Build the new feature's HNSW index after its initial
 bounded load, measure build RSS/time/disk and run ANALYZE before query-plan/recall acceptance. Use the existing index
 maintenance mechanism for an online build when the table already serves traffic; respect PostgreSQL's nontransactional
