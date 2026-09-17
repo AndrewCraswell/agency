@@ -1,5 +1,5 @@
 import unittest
-from alaska_journal import parse_roll_call
+from alaska_journal import journal_text, parse_roll_call
 
 
 class JournalTests(unittest.TestCase):
@@ -48,6 +48,54 @@ And so the effective date clause was adopted.
     def test_does_not_absorb_a_page_header_after_a_complete_group(self):
         text = self.sample() + "\n2026-05-16 House Journal\nPage 2680\nNarrative, Not A Voter\n"
         self.assertEqual(len(parse_roll_call(text, "HB1", (2, 1, 1))), 4)
+
+    def test_uses_source_anchor_to_disambiguate_equal_tallies(self):
+        first = self.sample("Adams, Brown")
+        second = self.sample("Evans, Fox")
+        text = (
+            f"[[JOURNAL_ANCHOR:AM1]]\n{first}[[JOURNAL_ANCHOR:HB1]]\nHB 1\n"
+            f"[[JOURNAL_ANCHOR:1121]]\n[[JOURNAL_ANCHOR:AM2]]\n"
+            f"[[JOURNAL_ANCHOR:SCR14]]\nSCR 14\n{second}"
+        )
+        self.assertEqual(
+            parse_roll_call(text, "HB1", (2, 1, 1), "AM2")[:2],
+            [("yes", "Evans"), ("yes", "Fox")],
+        )
+        self.assertEqual(
+            parse_roll_call(text, "HB1", (2, 1, 1), "AM1")[:2],
+            [("yes", "Adams"), ("yes", "Brown")],
+        )
+
+    def test_rejects_missing_or_duplicate_source_anchor(self):
+        for text in [self.sample(), "[[JOURNAL_ANCHOR:AM1]]\n" + self.sample() * 2]:
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                parse_roll_call(text, "HB1", (2, 1, 1), "AM1")
+
+    def test_preserves_valid_named_anchors_in_journal_text(self):
+        class Anchor:
+            text = "HB 1"
+
+            def get(self, name, default=""):
+                return "AM1" if name == "name" else default
+
+        anchor = Anchor()
+
+        class Pre:
+            def xpath(self, expression):
+                if expression == ".//a[@name]":
+                    return [anchor]
+                if expression == ".//text()":
+                    return [anchor.text, "Final Passage"]
+                raise AssertionError(expression)
+
+        pre = Pre()
+
+        class Document:
+            def xpath(self, expression):
+                self.expression = expression
+                return [pre]
+
+        self.assertIn("[[JOURNAL_ANCHOR:AM1]]", journal_text(Document()))
 
 
 if __name__ == "__main__":
