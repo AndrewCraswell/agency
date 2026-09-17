@@ -1,0 +1,8 @@
+# Cloud extraction image. The pinned base already contains verified dependencies
+# and upstream source inputs; this layer only refreshes the reviewed adapter.
+ARG VERIFIED_DEPENDENCY_IMAGE=legislation-openstates-dependencies:unconfigured
+FROM ${VERIFIED_DEPENDENCY_IMAGE}
+COPY python/openstates_cloud_worker.py /opt/openstates/adapter/openstates_cloud_worker.py
+RUN python /opt/openstates/adapter/smoke_openstates_runtime.py /opt/openstates/inputs
+WORKDIR /tmp
+CMD ["python", "/opt/openstates/adapter/openstates_cloud_worker.py"]
