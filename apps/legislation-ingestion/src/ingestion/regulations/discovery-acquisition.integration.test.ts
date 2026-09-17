@@ -24,6 +24,7 @@ import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
 import { publishLegalDiscoveryUnit } from "./discovery-publication.js"
 import { recoverLegalDiscoveryDispatchPage } from "./discovery-recovery.js"
 import { registerLegalDiscoveryManifest } from "./discovery-registration.js"
+import { inspectLegalDiscoveryStart } from "./discovery-start.js"
 import { runLegalPassagePreparationBatch } from "./passage-preparation.js"
 import { submitLegalPreparation } from "./preparation-dispatch.js"
 import { planLegalPreparationPage } from "./preparation-plan.js"
@@ -702,6 +703,28 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     })
     const dispatch = plan.dispatches[0]
     if (!dispatch) throw new Error("Missing completion dispatch")
+    const before = await inspectLegalDiscoveryStart(pool, {
+      environment: "development",
+      sourceId: "ecfr",
+      scopeKey: attempt.scopeKey,
+      limit: 1
+    })
+    expect(before).toMatchObject({
+      environment: "development",
+      payload: { sourceId: "ecfr", scopeKey: attempt.scopeKey, afterUnitKey: null, limit: 1 },
+      units: { total: 1, registered: 1, runnable: 1, manifested: 1 },
+      dispatch: { registered: 1, completed: 0 },
+      canApply: true,
+      canonicalWrites: false,
+      dispatched: false
+    })
+    const otherEnvironment = await inspectLegalDiscoveryStart(pool, {
+      environment: "staging",
+      sourceId: "ecfr",
+      scopeKey: attempt.scopeKey,
+      limit: 1
+    })
+    expect(otherEnvironment.planId).not.toBe(before.planId)
     await expect(completeLegalDiscoveryDispatch(pool, "acquisition", dispatch.payload)).rejects.toThrow(
       "legal_discovery_dispatch_canonical_completion_missing"
     )
@@ -723,6 +746,18 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
       sourceId: "ecfr",
       scopeKey: attempt.scopeKey
     })
+    const after = await inspectLegalDiscoveryStart(pool, {
+      environment: "development",
+      sourceId: "ecfr",
+      scopeKey: attempt.scopeKey,
+      limit: 1
+    })
+    expect(after).toMatchObject({
+      units: { total: 1, acquired: 1, runnable: 1 },
+      dispatch: { registered: 1, completed: 1 },
+      canApply: true
+    })
+    expect(after.planId).not.toBe(before.planId)
     await expect(completeLegalDiscoveryDispatch(pool, "acquisition", dispatch.payload)).resolves.toEqual({
       sourceId: "ecfr",
       scopeKey: attempt.scopeKey

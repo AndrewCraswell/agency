@@ -377,10 +377,17 @@ Extend `src/trigger/manifest.ts`, identities, activation policy and the existing
 disabled until corresponding phase gates pass. Schedule dispatcher adds explicit regulatory scopes; historical
 controllers stay manual. UTC schedules include jitter/stagger to avoid all current feeds firing simultaneously.
 
-Planned CLI entry points, to implement under `scripts/`: `plan-regulatory-backfill.ts`, `run-regulatory-backfill.ts`,
-`inspect-regulatory-readiness.ts`, `repair-regulatory-units.ts`. Planning/readiness are read-only. Running requires a
-saved manifest, exact environment and `--apply`; schedule activation uses existing explicit activation semantics.
-Never accept an implicit production target. Resuming an existing import takes the same manifest ID and cutoff.
+`pnpm tool regulations/run-regulatory-discovery --environment <name> --source <source> --scope <hash>` is the implemented
+operator entry for an already persisted discovery scope. Its default mode opens a repeatable-read, read-only transaction
+and reports the checkpoint, cutoff, unit states, dispatch states, bounded controller payload and a plan hash. `--apply`
+also requires `--plan <exact-hash>`, an exact `REGULATORY_ENVIRONMENT` match and a Trigger access token. The plan hash
+binds the named environment, checkpoint revision/cursor/cutoff, every aggregate unit/dispatch state and window size; a
+changed scope must be previewed again. Submission uses the plan hash as its global idempotency identity. This command
+does not discover source data, activate a schedule or admit preparation/embeddings.
+
+Remaining operator entry points are manifest/backfill planning and targeted unit repair. Readiness inspection is already
+available through `pnpm tool regulations/inspect-regulatory-readiness`. Planning/readiness remain read-only. Never accept
+an implicit production target. Resuming existing work retains the same discovery scope, manifest identities and cutoff.
 
 Every report records requested/eligible/excluded/failed units, unresolved native IDs, bytes, parser revisions, source
 currency, discovery watermark, projection generation and embedding route. Completion requires no unresolved required

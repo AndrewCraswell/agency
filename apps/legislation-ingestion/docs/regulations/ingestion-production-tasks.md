@@ -212,6 +212,11 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   `inspect-regulatory-readiness.ts` and `repair-regulatory-units.ts` using existing services. **Done:** default invocation
   is read-only; apply binds exact manifest/environment/units and records disposition; malformed targets fail before writes.
   Depends on ORCH-02, ORCH-08.
+  Local progress: `run-regulatory-discovery` now previews one persisted source scope in a repeatable-read, read-only
+  transaction and reports its exact checkpoint, cutoff, unit/dispatch states and bounded controller payload. Apply binds
+  the named environment and complete snapshot to a required plan hash, rejects drift before Trigger access and uses that
+  hash as the global submission identity. A real PostgreSQL preview and stale-plan/environment rejection passed without
+  remote dispatch. Targeted repair, multi-partition backfill planning and deployed apply evidence remain open.
 - [ ] **ORCH-13 Run deployed fault-injection smoke.** Exercise 429/5xx, missing blob, parser kill, lost lease, duplicate
   parent, submit-before-ack crash, target commit/source failure and cancelled child. **Done:** retained run IDs and DB
   checks show no lost work, duplicate publication or premature acknowledgement. Depends on ORCH-03–12, OPS-04–05.

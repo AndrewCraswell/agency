@@ -13,6 +13,23 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added the first operator-safe source-scope start command. `run-regulatory-discovery` defaults to a repeatable-read,
+read-only preview of one persisted discovery scope and reports the committed cursor/cutoff, unit and dispatch counts,
+bounded controller payload and a deterministic plan hash. Apply requires the exact plan hash, an explicit environment
+matching `REGULATORY_ENVIRONMENT` and Trigger credentials; it submits only the existing bounded controller with a global
+plan-scoped identity. A changed checkpoint, unit state, dispatch state, environment or limit invalidates the plan before
+remote access. The command neither discovers source data nor enables a schedule, preparation or embeddings.
+
+The fresh-migration PostgreSQL acquisition suite passed both cases after correcting real `bigint` checkpoint revision
+decoding from the `pg` driver. It proved the preview changes after canonical acquisition completion and environment names
+produce distinct plans. The actual tool then printed a retained development-scope preview with one acquired runnable
+unit and one completed dispatch. An apply attempt with a mismatched configured environment failed before credentials or
+Trigger dispatch. Ingestion TypeScript, scoped lint and the focused continuation/discovery tests passed. Root
+`pnpm verify` stopped in its global formatter because two unrelated actively edited legislation-web files were mapped by
+another process (`os error 1224`); the root runner was stopped after the reported failure while its parallel children no
+longer emitted output, so the full root gate and coverage did not pass. Targeted repair, deployed apply and broader
+backfill planning remain open; recurring schedules and bulk embeddings remain disabled.
+
 Connected current-eCFR discovery and all three source-stage workers to the bounded controller without enabling a
 schedule. Discovery commits its checkpoint and changed units, closes the canonical pool and submits one 25-unit
 controller window under a global key derived from the scope and committed cursor. An unchanged inventory submits
