@@ -99,14 +99,15 @@ it("guards applied changes using exact source and timestamp evidence", async () 
   mocks.apply = true
   await import("./retry-supported-documents.js")
   const update = mocks.query.mock.calls.find(([sql]) => sql.startsWith("update"))
-  expect(update?.[0]).toContain("processing_status='unsupported'")
+  expect(update?.[0]).toContain("processing_status=$7")
   expect(update?.[1]).toEqual([
     "doc",
     "https://example.org/doc",
     "2026-09-16 00:00:00.123456+00",
     sourceHash,
     "old",
-    "unsupported-format"
+    "unsupported-format",
+    "unsupported"
   ])
 })
 it("does not queue changed publisher bytes", async () => {
@@ -152,6 +153,18 @@ it("revalidates stale malformed classifications with the same guarded OCR handof
   const update = mocks.query.mock.calls.find(([sql]) => sql.startsWith("update"))
   expect(update?.[0]).toContain("processing_error_category=$6")
   expect(update?.[1]?.[5]).toBe("malformed-document")
+})
+it("revalidates exhausted transient downloads only from failed state", async () => {
+  mocks.apply = true
+  mocks.category = "download-transient"
+  await import("./retry-supported-documents.js")
+  const select = mocks.query.mock.calls.find(([sql]) => sql.startsWith("select id"))
+  const update = mocks.query.mock.calls.find(([sql]) => sql.startsWith("update"))
+  expect(select?.[0]).toContain("processing_status=$4")
+  expect(select?.[1]?.[3]).toBe("failed")
+  expect(update?.[0]).toContain("processing_status=$7")
+  expect(update?.[1]?.[5]).toBe("download-transient")
+  expect(update?.[1]?.[6]).toBe("failed")
 })
 it("rejects retry categories outside terminal extraction revalidation", async () => {
   mocks.category = "processing-transient"

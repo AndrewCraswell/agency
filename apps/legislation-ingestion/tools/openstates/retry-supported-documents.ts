@@ -20,7 +20,8 @@ const session = z
   .regex(/^[A-Za-z0-9-]+$/)
   .parse(options.session)
 const limit = z.coerce.number().int().min(1).max(100).parse(options.limit)
-const category = z.enum(["unsupported-format", "malformed-document"]).parse(options.category)
+const category = z.enum(["unsupported-format", "malformed-document", "download-transient"]).parse(options.category)
+const previousStatus = category === "download-transient" ? "failed" : "unsupported"
 const pool = new pg.Pool({ connectionString: z.string().min(1).parse(process.env[options.databaseEnv]) })
 const rowSchema = z.object({
   id: z.string(),
@@ -39,9 +40,9 @@ try {
       (
         await client.query(
           `select id,source_url,content_hash,processing_error,updated_at::text from legislation.bill_documents
-       where bill_id like $1 and processing_status='unsupported' and processing_error_category=$3
+       where bill_id like $1 and processing_status=$4 and processing_error_category=$3
        order by id limit $2`,
-          [`bill:${state}:${session.toLowerCase()}:%`, limit, category]
+          [`bill:${state}:${session.toLowerCase()}:%`, limit, category, previousStatus]
         )
       ).rows
     )
@@ -79,9 +80,9 @@ try {
             `update legislation.bill_documents set processing_status='pending',processing_attempts=0,
              processing_error=null,processing_error_category=null,next_attempt_at=null,updated_at=now()
              where id=$1 and source_url=$2 and updated_at=$3 and content_hash is not distinct from $4
-               and processing_error is not distinct from $5 and processing_status='unsupported'
+               and processing_error is not distinct from $5 and processing_status=$7
                and processing_error_category=$6 returning id`,
-            [row.id, row.source_url, row.updated_at, row.content_hash, row.processing_error, category]
+            [row.id, row.source_url, row.updated_at, row.content_hash, row.processing_error, category, previousStatus]
           )
           requeued = result.rowCount === 1
           if (!requeued) {
