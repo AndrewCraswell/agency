@@ -23,7 +23,32 @@ async function fixture() {
     currency_date: "2026-09-17"
   }
   const preparation = [{ model: "openai/text-embedding-3-small", tokenizerId: "pinned-tokenizer" }]
-  const records = '{"ordinal":0}\n{"ordinal":1}\n'
+  const reviewedVersionId = randomUUID()
+  const reviewedContentHash = "f".repeat(64)
+  const reviewedBlockHash = "1".repeat(64)
+  const records =
+    JSON.stringify({
+      ordinal: 0,
+      versionId: reviewedVersionId,
+      contentHash: reviewedContentHash,
+      inspection: {
+        tableBlocks: [
+          {
+            blockHash: reviewedBlockHash,
+            status: "classified",
+            layoutFailure: "passage_table_unresolved_ditto"
+          }
+        ]
+      }
+    }) +
+    "\n" +
+    JSON.stringify({
+      ordinal: 1,
+      versionId: randomUUID(),
+      contentHash: "2".repeat(64),
+      inspection: { tableBlocks: [] }
+    }) +
+    "\n"
   const counters = {
     records: 2,
     empty: 0,
@@ -77,7 +102,41 @@ async function fixture() {
       complete: true
     })
   )
-  return { inventoryPath, implementationHash, recordsPath: join(root, key, "records.ndjson") }
+  return {
+    inventoryPath,
+    implementationHash,
+    recordsPath: join(root, key, "records.ndjson"),
+    sourceReview: {
+      editionId: edition.id,
+      versionId: reviewedVersionId,
+      tableIndex: 0,
+      disposition: "quarantined_source_gap",
+      reason: "publisher_source_missing_reference_row",
+      expected: {
+        contentHash: reviewedContentHash,
+        blockHash: reviewedBlockHash,
+        nativeId: "cfr:33:section:110.214",
+        sourceLocator: "/ECFR/DIV8",
+        sourceId: "ecfr",
+        generationId: edition.generation_id,
+        artifactHash: "3".repeat(64),
+        sourceUrl: "https://www.ecfr.gov/example.xml",
+        rightsProfileId: edition.rights_profile_id,
+        rightsHash: "4".repeat(64)
+      },
+      corroboration: [
+        {
+          sourceUrl: "https://www.govinfo.gov/example.pdf",
+          artifactHash: "5".repeat(64),
+          bytes: 100,
+          observation: "The annual edition contains the missing predecessor row."
+        }
+      ],
+      canonicalBodyChanged: false,
+      contextInjected: false,
+      derivedPassagesAllowed: false
+    }
+  }
 }
 
 it("verifies retained bytes and reports tokenizer readiness separately from table review", async () => {
@@ -109,4 +168,35 @@ it("rejects a retained byte stream changed after terminal completion", async () 
       implementationHash: value.implementationHash
     })
   ).rejects.toThrow("qualification_data_hash_mismatch")
+})
+
+it("accounts for an exact source-gap quarantine without claiming the table itself qualified", async () => {
+  const value = await fixture()
+  await expect(
+    auditRegulatoryQualification(value.inventoryPath, {
+      expectedEditions: 1,
+      implementationHash: value.implementationHash,
+      sourceReviews: [value.sourceReview]
+    })
+  ).resolves.toMatchObject({
+    tokenizerQualified: true,
+    quarantinedSourceGapBlocks: 1,
+    unresolvedTableBlocks: 0,
+    tableShapeAccounted: true,
+    tableShapeQualified: false,
+    sourceReviewHashes: [expect.stringMatching(/^[a-f0-9]{64}$/)]
+  })
+})
+
+it("rejects a quarantine when its exact table hash no longer matches", async () => {
+  const value = await fixture()
+  await expect(
+    auditRegulatoryQualification(value.inventoryPath, {
+      expectedEditions: 1,
+      implementationHash: value.implementationHash,
+      sourceReviews: [
+        { ...value.sourceReview, expected: { ...value.sourceReview.expected, blockHash: "6".repeat(64) } }
+      ]
+    })
+  ).rejects.toThrow("qualification_source_review_table_changed")
 })

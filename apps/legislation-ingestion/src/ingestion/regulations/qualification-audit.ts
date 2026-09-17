@@ -2,10 +2,15 @@ import { createHash } from "node:crypto"
 import { createReadStream } from "node:fs"
 import { readFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
+import { createInterface } from "node:readline"
 import { isDeepStrictEqual } from "node:util"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import { legalPassageShapeContract } from "./passage-shapes.js"
+import {
+  legalProvisionSourceReviewContract,
+  legalProvisionSourceReviewRequestSchema
+} from "./provision-source-review.js"
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
 const modelCountersSchema = z.strictObject({
@@ -65,16 +70,40 @@ const inventorySchema = z.strictObject({
 })
 const requestSchema = z.strictObject({
   expectedEditions: z.int().positive(),
-  implementationHash: hashSchema
+  implementationHash: hashSchema,
+  sourceReviews: z.array(legalProvisionSourceReviewRequestSchema).default([])
 })
 
-async function hashLines(path: string) {
+const reviewedRecordSchema = z.object({
+  versionId: z.uuid(),
+  contentHash: hashSchema,
+  inspection: z.object({
+    tableBlocks: z.array(
+      z.object({
+        blockHash: hashSchema,
+        status: z.string(),
+        layoutFailure: z.string().nullable().optional(),
+        reason: z.string().optional()
+      })
+    )
+  })
+})
+
+async function hashLines(path: string, inspectLine?: (line: string) => void) {
   const hash = createHash("sha256")
   let lines = 0
   for await (const chunk of createReadStream(path)) {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     hash.update(bytes)
     for (const byte of bytes) lines += Number(byte === 10)
+  }
+  if (inspectLine) {
+    let inspectedLines = 0
+    for await (const line of createInterface({ input: createReadStream(path), crlfDelay: Infinity })) {
+      inspectLine(line)
+      inspectedLines++
+    }
+    invariant(inspectedLines === lines, "qualification_record_line_count_mismatch")
   }
   return { hash: hash.digest("hex"), lines }
 }
@@ -99,6 +128,17 @@ export async function auditRegulatoryQualification(inventoryPath: string, reques
     "qualification_duplicate_result"
   )
   const directory = dirname(inventoryPath)
+  const reviews = new Map<string, z.infer<typeof legalProvisionSourceReviewRequestSchema>>(
+    request.sourceReviews.map((review) => {
+      invariant(
+        review.disposition === "quarantined_source_gap" && review.derivedPassagesAllowed === false,
+        "qualification_source_review_not_quarantined"
+      )
+      return [`${review.editionId}:${review.versionId}:${review.tableIndex}`, review] as const
+    })
+  )
+  invariant(reviews.size === request.sourceReviews.length, "qualification_duplicate_source_review")
+  const matchedReviews = new Set<string>()
   const totals = {
     editions: 0,
     records: 0,
@@ -120,7 +160,31 @@ export async function auditRegulatoryQualification(inventoryPath: string, reques
     const report = summarySchema.parse(JSON.parse(await readFile(join(directory, result.key, "report.json"), "utf8")))
     const { key: _, reused: __, ...expectedReport } = result
     invariant(isDeepStrictEqual(report, expectedReport), "qualification_report_mismatch")
-    const data = await hashLines(join(directory, result.key, "records.ndjson"))
+    const data = await hashLines(
+      join(directory, result.key, "records.ndjson"),
+      reviews.size === 0
+        ? undefined
+        : (line) => {
+            const record = reviewedRecordSchema.parse(JSON.parse(line))
+            for (const [tableIndex, table] of record.inspection.tableBlocks.entries()) {
+              if (table.status === "classified" && table.layoutFailure === null) continue
+              const key = `${result.edition.id}:${record.versionId}:${tableIndex}`
+              const review = reviews.get(key)
+              if (!review) continue
+              invariant(
+                record.contentHash === review.expected.contentHash,
+                "qualification_source_review_content_changed"
+              )
+              invariant(table.blockHash === review.expected.blockHash, "qualification_source_review_table_changed")
+              invariant(
+                table.layoutFailure === "passage_table_unresolved_ditto",
+                "qualification_source_review_failure_changed"
+              )
+              invariant(!matchedReviews.has(key), "qualification_duplicate_source_review_match")
+              matchedReviews.add(key)
+            }
+          }
+    )
     invariant(data.hash === report.dataHash, "qualification_data_hash_mismatch")
     invariant(data.lines === report.counters.records, "qualification_record_count_mismatch")
     totals.editions++
@@ -160,6 +224,10 @@ export async function auditRegulatoryQualification(inventoryPath: string, reques
     totals.invalid === 0 &&
     totals.oversized === 0 &&
     Object.values(totals.preparation).every((value) => value.blocked === 0)
+  invariant(matchedReviews.size === reviews.size, "qualification_source_review_unmatched")
+  const quarantinedSourceGapBlocks = matchedReviews.size
+  const unresolvedTableBlocks = totals.blockedTableBlocks - quarantinedSourceGapBlocks
+  invariant(unresolvedTableBlocks >= 0, "qualification_source_review_count_invalid")
   return {
     contract: inventory.contract,
     implementationHash: inventory.implementationHash,
@@ -167,6 +235,28 @@ export async function auditRegulatoryQualification(inventoryPath: string, reques
     totals,
     terminalIntegrity: true as const,
     tokenizerQualified,
+    sourceReviewHashes: request.sourceReviews.map((review) =>
+      createHash("sha256")
+        .update(
+          JSON.stringify({
+            contract: legalProvisionSourceReviewContract,
+            editionId: review.editionId,
+            versionId: review.versionId,
+            tableIndex: review.tableIndex,
+            disposition: review.disposition,
+            reason: review.reason,
+            canonical: review.expected,
+            corroboration: review.corroboration,
+            canonicalBodyChanged: review.canonicalBodyChanged,
+            contextInjected: review.contextInjected,
+            derivedPassagesAllowed: review.derivedPassagesAllowed
+          })
+        )
+        .digest("hex")
+    ),
+    quarantinedSourceGapBlocks,
+    unresolvedTableBlocks,
+    tableShapeAccounted: unresolvedTableBlocks === 0,
     tableShapeQualified: totals.blockedTableBlocks === 0
   }
 }

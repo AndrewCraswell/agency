@@ -1,3 +1,4 @@
+import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { buildLegalTextProjection, storedLegalSourceBlocks } from "@repo/legislation-core/legal-text/reader-text"
 import { load } from "cheerio"
 import { XMLValidator } from "fast-xml-parser"
@@ -26,6 +27,7 @@ function tableShape(block: { ordinal: number; tag: string; text: string; xml: st
   const basic = {
     ordinal: block.ordinal,
     tag: block.tag,
+    blockHash: digest(block.xml),
     characters: block.text.length,
     xmlBytes: Buffer.byteLength(block.xml)
   }

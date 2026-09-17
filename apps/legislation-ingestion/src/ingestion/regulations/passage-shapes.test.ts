@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises"
+import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { buildLegalTextProjection } from "@repo/legislation-core/legal-text/reader-text"
 import { expect, it } from "vitest"
 import { z } from "zod"
@@ -25,7 +26,15 @@ it("classifies every retained ruling-table fixture without changing source text 
       bodyCharacters: fixture.text.length,
       blockedTableBlocks: 0,
       preparationEligibility: "not_evaluated",
-      tableBlocks: [{ status: "classified", tables: 1, nestedTables: 0, layoutFailure: null }]
+      tableBlocks: [
+        {
+          status: "classified",
+          tables: 1,
+          nestedTables: 0,
+          blockHash: digest(fixture.xml),
+          layoutFailure: null
+        }
+      ]
     })
   }
 })
