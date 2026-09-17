@@ -13,6 +13,22 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Made the human-review dependency measurable without weakening it. The new bounded
+`audit-regulatory-judgment-progress` command validates the immutable packet, hashes the reviewed revision and reports
+query/candidate totals, automated and human coverage, conflicting human grades, human adjudications, completion and the
+exact next unresolved identity. Two focused tests prove that automated judgments never count as human completion and
+that conflicting human grades remain unresolved until a human adjudication exists; ingestion type-check and scoped lint
+pass.
+
+The first blind page now carries 43 clearly marked automated suggestions: one direct grade-3 answer at 29 CFR 1602.27,
+which states the 100-member threshold, and 42 grade-0 nonanswers. The existing tamper-checked apply path merged the page
+into a new packet revision. The full scorer correctly rejected the partial packet rather than emitting provisional whole-
+set metrics. The progress audit reports 60 questions, 2,094 candidates, 43 automated-reviewed candidates, zero human-
+reviewed or human-resolved candidates and zero complete questions. Retained artifacts are
+`evaluation-review-page-001-automated-suggestions.json`,
+`evaluation-recovered-all-systems-blind-review-packet-v2-auto-page-001.json` and
+`evaluation-recovered-auto-page-001-progress.json`. EVAL-04 and EVAL-12 remain open; bulk embeddings remain unauthorized.
+
 Completed local HTTP-05 direct version detail without treating publications as code provisions. The new strict
 `GET /api/legal/versions/{versionId}` route and typed client resolve the collision-checked canonical version namespace
 to either immutable provision fields or immutable Federal Register publication fields. An omitted selector remains

@@ -22,7 +22,7 @@ const querySchema = z.strictObject({
   question: z.string().min(1),
   candidates: z.array(candidateSchema).min(1).max(512)
 })
-const packetSchema = z.strictObject({
+export const regulatoryJudgmentPacketSchema = z.strictObject({
   contract: z.literal("regulatory-judgment-pool"),
   manifestHash: z.string().regex(/^[a-f0-9]{64}$/),
   systemsHash: z.string().regex(/^[a-f0-9]{64}$/),
@@ -62,7 +62,7 @@ export function extractRegulatoryJudgmentReviewPage(
   packetInput: unknown,
   input: { afterQueryId?: string | null; limit?: number } = {}
 ) {
-  const packet = packetSchema.parse(packetInput)
+  const packet = regulatoryJudgmentPacketSchema.parse(packetInput)
   invariant(
     new Set(packet.queries.map(({ id }) => id)).size === packet.queries.length,
     "regulatory_review_page_duplicate_query"
@@ -97,7 +97,7 @@ export function extractRegulatoryJudgmentReviewPage(
 
 /** Applies only reviewed fields from one page after exact packet/evidence replay checks. */
 export function applyRegulatoryJudgmentReviewPage(packetInput: unknown, pageInput: unknown) {
-  const packet = packetSchema.parse(packetInput)
+  const packet = regulatoryJudgmentPacketSchema.parse(packetInput)
   const page = pageSchema.parse(pageInput)
   invariant(digest(JSON.stringify(packet)) === page.packetHash, "regulatory_review_page_stale_packet")
   invariant(

@@ -296,6 +296,9 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
   hard-coding false, while model selection and bulk authorization remain separate. The regenerated all-system packet
   contains 60 questions and 2,094 still-unreviewed candidates. A bounded extract/apply tool now pages one to five blind
   questions at a time, binds each page to the exact packet revision and rejects stale merges or changed source evidence.
+  `audit-regulatory-judgment-progress` now reports candidate/query coverage, automated versus human judgments, human
+  disagreements/adjudications and the exact next unresolved identity without attempting to score an incomplete packet.
+  The first 43-candidate page has automated suggestions only; all 2,094 candidates still require human review.
   Domain/product review remains open.
 - [x] **EVAL-05 Close tokenizer/provider accounting evidence.** Recheck the recorded Voyage local/provider usage
   difference with identical text, query/document mode and provider metadata. **Done:** exact input integrity remains
