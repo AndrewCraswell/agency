@@ -6,6 +6,7 @@ environment, pools, credentials and telemetry. Never import an app from C.
 | Contract | Canonical page |
 | --- | --- |
 | Legislative model and change records | [Data model](engineering/data-model.md) |
+| Relationship queries, aggregates and validation | [Relationship analytics](engineering/relationship-analytics.md) |
 | Identity, entity taxonomy and minimum bill | [Civic identity](engineering/identity.md) |
 | Membership dates and tenure identity | [Membership history](engineering/committee-membership-history.md) |
 | Model/input/tokenizer/storage agreement | [Embedding contracts](engineering/embeddings.md) |

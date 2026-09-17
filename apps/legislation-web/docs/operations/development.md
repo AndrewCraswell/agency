@@ -67,8 +67,11 @@ directly using `createLegislationResearchTools`, the same validated registry use
 HTTP request, MCP URL or bearer token is needed. The old chat-specific MCP URL/token settings have been removed.
 
 OpenRouter still requires its server-side model key, and the existing database configuration must be reachable.
-Public `/api/**` and `/mcp` authentication has not been changed. Chat exposes only the 25 named baseline read tools;
+Public `/api/**` and `/mcp` authentication has not been changed. Chat exposes the shared allowlisted read tools;
 the organization-gated legal-text reader is not passed to the registry, and private account/mutation tools remain excluded.
+Relationship analytics uses `describe_analytics` and `analyze_legislation` from the same registry. M forwards analytical
+plans to authenticated `POST /api/analytics`; chat executes the identical compiler in the read-only runtime. See
+[the query contract and acceptance procedure](../../../../packages/legislation-core/docs/engineering/relationship-analytics.md).
 The [research runtime](../../src/modules/search/research-runtime.ts) owns a process-cached pool limited to two connections
 per data store. Each operation creates the existing query service against a client-bound Drizzle database inside
 `BEGIN READ ONLY`. Timeouts are applied with transaction-local `set_config`, not rejected PgBouncer startup fields.

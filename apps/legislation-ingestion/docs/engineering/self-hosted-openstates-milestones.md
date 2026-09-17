@@ -20,6 +20,13 @@ leases, retries, checkpoints, and non-Open-States capacity.
 
 ## Outcome and non-goals
 
+Bill normalization uses the shared core `openstates-bill-status` mapper to populate status from documented Open Civic
+Data action classifications in publisher order. It does not infer status from descriptions, votes, or dates. Chamber
+passage and override passage remain chamber-specific events, not proof of enactment; unclassified administrative notes
+and amendment classifications do not replace the last recognized lifecycle event. Unknown histories leave status unset.
+The web bill read uses the same mapping when an existing Open States bill has no stored status. No retrospective data
+rewrite or reimport is part of this change; future successful ingestion persists the derived status normally.
+
 At completion, each of the 52 supported jurisdictions has active recurring scraper schedules for every supported lane:
 bills and their children every 30 minutes, events every two hours, and people and committee snapshots daily. Each run
 retains inspectable raw source output, validates it before canonical writes, and advances a checkpoint only after a

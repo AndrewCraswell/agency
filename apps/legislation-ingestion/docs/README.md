@@ -25,6 +25,7 @@ paths may still refer to the former combined checkout. Resolve them explicitly w
 
 - [Committee history reconstruction](engineering/committee-membership-history.md) and [reconciliation](engineering/committee-reconciliation.md)
 - [Civic identity source authority and evidence](engineering/identity-sources.md)
+- [Hearing publication backfill](engineering/data-sync-catalog.md#hearing-publication-backfill)
 - [Open States milestones](engineering/self-hosted-openstates-milestones.md), [runtime build](operations/openstates-runtime-build.md), [people quarantine](operations/openstates-people-quarantine.md)
 - [Supporting-material processing](engineering/supporting-material-processing.md), [document operations](operations/document-processing-operations.md), [OCR](operations/document-ocr.md)
 - [Remediation evidence](operations/ingestion-remediation-catalog.md), [LegiScan research](research/legiscan.md)

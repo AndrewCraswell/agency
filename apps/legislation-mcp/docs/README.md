@@ -9,6 +9,7 @@ over HTTPS, never databases, models or source providers. C supplies shared schem
 | Failure diagnostics, correlation and redaction | [Sentry telemetry](operations/telemetry.md) |
 | Resource registration and pending browser consent | [Authentication](operations/authentication.md) |
 | Registered baseline tools | [Tool contracts](engineering/tool-contracts.md) |
+| Relationship listings, counts, rates and rankings | [Analytics contract](../../../packages/legislation-core/docs/engineering/relationship-analytics.md) |
 | Regulatory mapping and exact-text transport | [Legal tools](engineering/legal-tools.md) |
 | Remaining TOOLS task IDs | [Regulatory tool tasks](engineering/legal-tool-tasks.md) |
 | Unit tests, isolated built-process acceptance and distinct-origin boundaries | [Testing](operations/testing.md) |

@@ -18,6 +18,17 @@ release action, not part of source development. `trigger:backfill` and `trigger:
 boundaries. The [README](../../README.md) owns environment isolation, document-relay settings and retained local build
 inputs. [Testing](testing.md) owns parser, Python and guarded database commands.
 
+### Builder isolation
+
+The September 17 hearing release used an isolated copy of commit `6e1e604` plus the publication-session field, not the
+concurrently edited worktree. Its API contract gate, 29 focused tests and worker type-check passed before deployment.
+Trigger CLI 4.5.10's bundled Depot 2.80.0 failed with a resource schema-URL conflict. The release succeeded using the
+supported `DEPOT_BINARY_PATH` override with Depot 2.102.7 installed separately from the Microsoft npm feed, and excluding
+inherited `OTEL_*` variables from that builder subprocess only. Do not remove runtime telemetry settings or place npm
+credentials in image build arguments. Repository dependencies, registry configuration and credentials were unchanged.
+Candidate `20260917.10` retained all 48 existing tasks and registered eight already-committed tasks without activating
+new schedules. It was promoted only after deployment and task-inventory verification; no old Congress runs were active.
+
 Before using the new workspace, follow [local environment setup](../../../legislation-web/docs/operations/development.md#local-environment-after-the-move).
 The old ignored `.env` was not moved. Relocate only I's required settings locally without printing secrets or copying
 the combined environment wholesale. CLI/relay/test commands need an already configured process environment; the tool

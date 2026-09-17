@@ -423,7 +423,7 @@ available through `legislation-backfill` and CLI services.
 | Meeting `witnesses[].organization` | string | Ingested | Combined participant role; no canonical organization link. | `congress-wave-child`, hourly. |
 | Meeting `hearingTranscript` or continuation fields | arrays/objects | Artifact only | Available detail is not separately modeled. | `congress-wave-child`, hourly. |
 | Hearing `jacketNumber` | integer or string | Artifact only | Retained in the source bundle and provider URLs; a publication does not create a meeting ID. | `congress-wave-child`, hourly. |
-| Hearing `congress` | integer | Ingested/derived | Scheduled scope and identity context. | `congress-wave-child`, hourly. |
+| Hearing `congress` | integer | Ingested/derived | Scheduled scope and exact `supporting_materials.session_id` relationship. | `congress-wave-child`, hourly. |
 | Hearing `chamber` | string | Artifact only | Retained in the source; not interpreted as a meeting instance. | `congress-wave-child`, hourly. |
 | Hearing `title` | string | Ingested | Transcript material title, not `legislative_events.name`. | `congress-wave-child`, hourly. |
 | Hearing `dates[].date` | date string | Ingested | All distinct exact dates in `supporting_materials.hearing_dates`; never reused as publication dates or synthetic meeting times. | `congress-wave-child`, hourly. |
@@ -435,6 +435,15 @@ available through `legislation-backfill` and CLI services.
 | Hearing `citation` | string | Artifact only | Not modeled. | `congress-wave-child`, hourly. |
 | Hearing `libraryOfCongressIdentifier` | string | Artifact only | Not modeled. | `congress-wave-child`, hourly. |
 | Hearing `associatedMeeting` | object | Artifact only | Published-hearing-to-meeting relationship is not modeled. | `congress-wave-child`, hourly. |
+
+#### Hearing publication backfill
+
+The September 17, 2026 backfill completed with zero synthetic hearing meetings remaining and 30,518 source-backed
+publication formats verified. All 17,907 actual committee meetings and 31,846 retained artifacts were preserved.
+The one-off preparation/reconciliation CLIs and repair-only helpers were retired after verification; source archives
+and local audit receipts remain retained. No dedicated Trigger task was created for this local backfill.
+Recurring Congress ingestion continues through `congress-wave-coordinator` and `congress-wave-child`, using the
+publication normalizer and writer to maintain exact format identities, hearing dates, sessions and committee links.
 
 ### Congress.gov House vote field catalog
 

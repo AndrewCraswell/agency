@@ -6,11 +6,12 @@ import { ComposedRecord } from "../components/ComposedRecord"
 import { presentationBlockSchema } from "../composition"
 import type { EntityKind } from "../entityResults"
 import { projectPresentationContents } from "../presentationContent"
+import { reviewMeetingIds } from "./reviewData"
 import { capturedCards, toolCaptures } from "./reviewFixtures"
 import * as compactStyles from "../components/CompactRecordCard.css"
 import * as styles from "./ReviewGallery.css"
 
-type RecordArgs = { kind: EntityKind }
+type RecordArgs = { kind: EntityKind; recordIds?: readonly string[] }
 const meta = {
   title: "Conversation/ComposedRecord",
   parameters: { layout: "padded" },
@@ -22,9 +23,11 @@ const meta = {
     )
   ],
   args: { kind: "bill" },
-  argTypes: { kind: { control: false } },
-  render: ({ kind }) => {
-    const captures = capturedCards.filter(({ record }) => record.kind === kind)
+  argTypes: { kind: { control: false }, recordIds: { control: false } },
+  render: ({ kind, recordIds }) => {
+    const captures = capturedCards.filter(
+      ({ record }) => record.kind === kind && (!recordIds || recordIds.includes(record.id))
+    )
     invariant(captures.length, `Missing ${kind} captures`)
     return (
       <div className={styles.grid}>
@@ -56,7 +59,9 @@ const meta = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    for (const { record } of capturedCards.filter(({ record }) => record.kind === args.kind)) {
+    for (const { record } of capturedCards.filter(
+      ({ record }) => record.kind === args.kind && (!args.recordIds || args.recordIds.includes(record.id))
+    )) {
       await expect(canvas.getByRole("region", { name: record.id })).toBeVisible()
     }
   }
@@ -72,6 +77,29 @@ export const Document: Story = { args: { kind: "document" } }
 export const Amendment: Story = { args: { kind: "amendment" } }
 export const Vote: Story = { args: { kind: "vote" } }
 export const Material: Story = { args: { kind: "material" } }
+
+export const HearingPublication: Story = {
+  args: { kind: "material", recordIds: ["material:congress:a82498723ffa1f0caacd9370"] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText("Hearing dates", { exact: true })).toBeVisible()
+    await expect(canvas.queryByText("Dated", { exact: true })).not.toBeInTheDocument()
+    await expect(canvas.queryByText("Agenda items", { exact: true })).not.toBeInTheDocument()
+    await expect(canvas.getByRole("link", { name: "Open" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/records/material/material%3Acongress%3Aa82498723ffa1f0caacd9370?result=")
+    )
+  }
+}
+
+export const MeetingWithAgenda: Story = {
+  args: { kind: "meeting", recordIds: [reviewMeetingIds[1]!] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText("Agenda items", { exact: true })).toBeVisible()
+    await expect(canvas.getByRole("button", { name: "Open" })).toBeVisible()
+  }
+}
 
 function groupedRecords(kinds: EntityKind[], compact: boolean) {
   const items = kinds.map((kind) => {
