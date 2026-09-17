@@ -36,9 +36,9 @@ export const shippingAddress = {
 /* A mix of variant and default-variant products, one of them discounted at the line level. */
 export const lineItems = [
   {
-    title: "Standard Epee Body Cord",
+    title: "Standard Epee Body Cord - 2-prong / 1.5 m",
     quantity: 1,
-    product: { has_only_default_variant: false },
+    product: { title: "Standard Epee Body Cord", has_only_default_variant: false },
     options_with_values: [
       { name: "Connector", value: "2-prong" },
       { name: "Length", value: "1.5 m" }
@@ -53,7 +53,7 @@ export const lineItems = [
   {
     title: "Lens Protection Plan (2 Year)",
     quantity: 1,
-    product: { has_only_default_variant: true },
+    product: { title: "Lens Protection Plan (2 Year)", has_only_default_variant: true },
     options_with_values: [{ name: "Title", value: "Default Title" }],
     original_price: 1999,
     final_price: 1999,
@@ -63,9 +63,9 @@ export const lineItems = [
     line_level_discount_allocations: []
   },
   {
-    title: "Premium Leather Case",
+    title: "Premium Leather Case - Black",
     quantity: 1,
-    product: { has_only_default_variant: false },
+    product: { title: "Premium Leather Case", has_only_default_variant: false },
     options_with_values: [{ name: "Color", value: "Black" }],
     original_price: 2499,
     final_price: 2499,
@@ -75,9 +75,9 @@ export const lineItems = [
     line_level_discount_allocations: []
   },
   {
-    title: "Standard Foil/Saber Body Cord",
+    title: "Standard Foil/Saber Body Cord - Bayonet / 2 m / Braided",
     quantity: 1,
-    product: { has_only_default_variant: false },
+    product: { title: "Standard Foil/Saber Body Cord", has_only_default_variant: false },
     options_with_values: [
       { name: "Connector", value: "Bayonet" },
       { name: "Length", value: "2 m" },
@@ -104,7 +104,7 @@ export const lineItems = [
   {
     title: "Standard Foil/Saber Mask Cord",
     quantity: 1,
-    product: { has_only_default_variant: true },
+    product: { title: "Standard Foil/Saber Mask Cord", has_only_default_variant: true },
     options_with_values: [{ name: "Title", value: "Default Title" }],
     original_price: 695,
     final_price: 695,

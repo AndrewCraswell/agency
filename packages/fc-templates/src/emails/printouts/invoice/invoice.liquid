@@ -635,7 +635,7 @@
                     <tr>
                       <td class="fc-col-qty">{{ line_item.quantity }}</td>
                       <td>
-                        <div class="fc-item__title">{{ line_item.title }}</div>
+                        <div class="fc-item__title">{{ line_item.product.title | default: line_item.title }}</div>
                         {%- comment %}
                           One line for every option the merchant configured, named, so "Bayonet, 2 m" cannot be
                           mistaken for two separate things. Skipped for a product that never had options, whose single

@@ -89,6 +89,8 @@ each one is only the preview.
   `PAID IN FULL` with the amount paid in green.
 - Line items show a unit price and a line amount, so the amount column visibly sums to the subtotal. A discounted item
   shows the original unit price struck through and names the discount underneath.
+- Invoice item headings use the product name, with variant options listed separately below. Custom items without a
+  product retain their line-item title.
 - The payments section lists only transactions that actually settled, meaning a `sale`, `capture`, or `refund` with a
   successful status. An unpaid order carries a card authorization, which is not a payment, so it renders no payments
   section at all.
