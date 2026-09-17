@@ -1,19 +1,25 @@
 import { z } from "zod"
 
-export function parseActionProvenanceScope(input: { state: string; session: string; billId: string }) {
+export function parseActionProvenanceSessionScope(input: { state: string; session: string }) {
   const state = z.enum(["ak", "nc", "ca"]).parse(input.state)
   const session = z
     .string()
     .regex(/^[a-z0-9-]+$/)
     .parse(input.session)
+  const names = { ak: "Alaska", nc: "North Carolina", ca: "California" }
+  return { state, session, jurisdictionName: names[state] }
+}
+
+export function parseActionProvenanceScope(input: { state: string; session: string; billId: string }) {
+  const scope = parseActionProvenanceSessionScope(input)
+  const { state, session } = scope
   if (!input.billId.startsWith(`bill:${state}:${session}:`)) {
     throw new Error("Bill must belong to the explicitly selected state and session")
   }
   if (state === "ca" && input.billId !== "bill:ca:20232024:ab:2652") {
     throw new Error("California action provenance repair is limited to AB 2652 in the 2023-2024 session")
   }
-  const names = { ak: "Alaska", nc: "North Carolina", ca: "California" }
-  return { state, session, jurisdictionName: names[state] }
+  return scope
 }
 
 const actionSchema = z.object({

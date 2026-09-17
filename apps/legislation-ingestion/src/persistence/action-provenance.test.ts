@@ -1,5 +1,17 @@
 import { expect, it } from "vitest"
-import { parseActionProvenanceScope, planActionProvenance } from "./action-provenance.js"
+import {
+  parseActionProvenanceScope,
+  parseActionProvenanceSessionScope,
+  planActionProvenance
+} from "./action-provenance.js"
+
+it("accepts a state/session scope before a bill is selected", () => {
+  expect(parseActionProvenanceSessionScope({ state: "ak", session: "34" })).toEqual({
+    state: "ak",
+    session: "34",
+    jurisdictionName: "Alaska"
+  })
+})
 
 it.each([
   { state: "ak", session: "34", billId: "bill:ak:34:hb:1", jurisdictionName: "Alaska" },
