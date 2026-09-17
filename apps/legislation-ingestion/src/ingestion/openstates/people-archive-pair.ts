@@ -1,4 +1,3 @@
-import { peopleSourceProfiles } from "./people-repository.js"
 import type { readArchivedPeoplePilot } from "./pilot-archive.js"
 
 type ArchiveIdentity = Pick<Awaited<ReturnType<typeof readArchivedPeoplePilot>>, "state" | "lane" | "retrievedAt"> & {
@@ -12,7 +11,7 @@ export function validatePeopleArchivePair(current: ArchiveIdentity, history: Arc
     history.lane !== "history" ||
     current.state !== history.state ||
     current.revision !== history.revision ||
-    current.revision !== peopleSourceProfiles[current.state].revision ||
+    !/^[a-f0-9]{40}$/.test(current.revision) ||
     !Number.isFinite(current.retrievedAt.getTime()) ||
     !Number.isFinite(history.retrievedAt.getTime())
   ) {

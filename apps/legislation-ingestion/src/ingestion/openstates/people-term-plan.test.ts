@@ -55,6 +55,16 @@ describe("source legislative term plan", () => {
     expect(open.terms[0]?.id).toBe(ended.terms[0]?.id)
     expect(ended.terms[0]?.isActive).toBe(false)
   })
+  it("pins source URLs to the acquired revision", () => {
+    const revision = "0123456789abcdef0123456789abcdef01234567"
+    const result = planPeopleLegislativeTerms(
+      files([{ ...role, start_date: "2020-01-01" }], "legislature"),
+      retrievedAt,
+      "nc",
+      revision
+    )
+    expect(result.terms[0]?.sourceUrl).toContain(`/blob/${revision}/`)
+  })
   it("rejects indistinguishable unknown-start terms and partial dates", () => {
     expect(() =>
       planPeopleLegislativeTerms(

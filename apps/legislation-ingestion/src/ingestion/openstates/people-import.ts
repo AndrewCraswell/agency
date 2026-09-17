@@ -32,7 +32,8 @@ export function preparePeopleRepositoryImport(
   currentFiles: readonly PeopleRepositoryFile[],
   retiredFiles: readonly PeopleRepositoryFile[],
   retrievedAt: Date,
-  state: keyof typeof peopleSourceProfiles = "nc"
+  state: keyof typeof peopleSourceProfiles = "nc",
+  revision: string = peopleSourceProfiles[state].revision
 ) {
   if (!Number.isFinite(retrievedAt.getTime())) {
     throw new Error("Invalid retrieval date")
@@ -126,7 +127,8 @@ export function preparePeopleRepositoryImport(
       ? planPeopleLegislativeTerms(
           candidates.map(({ file }) => file),
           retrievedAt,
-          state
+          state,
+          revision
         )
       : { terms: [] }
   const peopleIds = new Set(plan.terms.map((term) => term.personId))
@@ -160,7 +162,7 @@ export function preparePeopleRepositoryImport(
           ).values()
         ],
         other_names: person.other_names.map((alias) => alias.name),
-        openstates_url: `https://github.com/openstates/people/blob/${peopleSourceProfiles[state].revision}/${file.path}`
+        openstates_url: `https://github.com/openstates/people/blob/${revision}/${file.path}`
       }
     }),
     { jurisdictionCode: state, retrievedAt }
@@ -232,9 +234,10 @@ export async function importPeopleRepository(
   currentFiles: readonly PeopleRepositoryFile[],
   retiredFiles: readonly PeopleRepositoryFile[],
   retrievedAt: Date,
-  persist: typeof replaceEntitySnapshot = replaceEntitySnapshot
+  persist: typeof replaceEntitySnapshot = replaceEntitySnapshot,
+  revision: string = peopleSourceProfiles[state].revision
 ) {
-  const result = preparePeopleRepositoryImport(currentFiles, retiredFiles, retrievedAt, state)
+  const result = preparePeopleRepositoryImport(currentFiles, retiredFiles, retrievedAt, state, revision)
   if (result.snapshot === null) {
     return result
   }
@@ -248,7 +251,7 @@ export async function importPeopleRepository(
       source: "openstates",
       stream: `${state}-people-history`,
       cursor: {
-        revision: peopleSourceProfiles[state].revision,
+        revision,
         retrievedAt: retrievedAt.toISOString(),
         complete: result.status === "validated",
         quarantine: result.quarantine,

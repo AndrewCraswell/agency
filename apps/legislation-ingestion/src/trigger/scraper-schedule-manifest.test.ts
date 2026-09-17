@@ -8,7 +8,7 @@ describe("self-hosted scraper schedule manifest", () => {
       enabledJurisdictions: ["ak", "nc"],
       environment: "production"
     })
-    expect(manifest).toHaveLength(6)
+    expect(manifest).toHaveLength(7)
     expect(manifest.every((entry) => !entry.active)).toBe(true)
   })
 
@@ -18,11 +18,12 @@ describe("self-hosted scraper schedule manifest", () => {
       enabledJurisdictions: ["ak"],
       environment: "production"
     })
-    expect(manifest.filter((entry) => entry.active)).toHaveLength(3)
+    expect(manifest.filter((entry) => entry.active)).toHaveLength(4)
     expect(manifest.filter((entry) => entry.active).map((entry) => entry.deduplicationKey)).toEqual([
       "production:openstates-scraper:bills:ak",
       "production:openstates-scraper:events:ak",
-      "production:openstates-scraper:content:ak"
+      "production:openstates-scraper:content:ak",
+      "production:openstates-scraper:foundation:enabled"
     ])
   })
 

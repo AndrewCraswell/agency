@@ -42,7 +42,14 @@ describe("archived state foundation import", () => {
     )
     expect(result).toMatchObject({ status: "foundation_imported", state: "ak", revision: current.revision })
     expect(importPeople).toHaveBeenCalledBefore(importCommittees)
-    expect(importCommittees).toHaveBeenCalledWith(database, "ak", current.files, history.files, retrievedAt)
+    expect(importCommittees).toHaveBeenCalledWith(
+      database,
+      "ak",
+      current.files,
+      history.files,
+      retrievedAt,
+      current.revision
+    )
   })
 
   it("rejects a pair from another state before canonical writes", async () => {

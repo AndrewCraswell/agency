@@ -7,7 +7,8 @@ import { peopleSourceProfiles, type PeopleRepositoryFile } from "./people-reposi
 export function planPeopleLegislativeTerms(
   files: readonly PeopleRepositoryFile[],
   retrievedAt: Date,
-  state: keyof typeof peopleSourceProfiles = "nc"
+  state: keyof typeof peopleSourceProfiles = "nc",
+  revision: string = peopleSourceProfiles[state].revision
 ) {
   if (!Number.isFinite(retrievedAt.getTime())) {
     throw new Error("Invalid retrieval date")
@@ -48,7 +49,7 @@ export function planPeopleLegislativeTerms(
           ? peopleSourceProfiles[state].officeTitles.upper
           : peopleSourceProfiles[state].officeTitles.lower,
       sourceProvider: "openstates",
-      sourceUrl: `https://github.com/openstates/people/blob/${peopleSourceProfiles[state].revision}/${role.sourcePath}`,
+      sourceUrl: `https://github.com/openstates/people/blob/${revision}/${role.sourcePath}`,
       sourceRetrievedAt: retrievedAt,
       sourceIsOfficial: false,
       provenanceComplete: true

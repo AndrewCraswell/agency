@@ -65,7 +65,15 @@ export function createScraperScheduleManifest(
       "openstates-north-carolina-events-schedule"
     ),
     schedule(environment, enabled.has("ak"), "content:ak", "ak:34", "52 */4 * * *", "openstates-content-schedule"),
-    schedule(environment, enabled.has("nc"), "content:nc", "nc:2025", "2 1-23/4 * * *", "openstates-content-schedule")
+    schedule(environment, enabled.has("nc"), "content:nc", "nc:2025", "2 1-23/4 * * *", "openstates-content-schedule"),
+    schedule(
+      environment,
+      enabled.size > 0,
+      "foundation:enabled",
+      "openstates-scraper:foundation:enabled",
+      "17 6 * * *",
+      "openstates-foundation-schedule"
+    )
   ]
 }
 

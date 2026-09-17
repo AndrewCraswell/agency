@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
-import { northCarolinaPeopleSource, peopleSourceProfiles, type PeopleRepositoryFile } from "./people-repository.js"
+import { peopleSourceProfiles, type PeopleRepositoryFile } from "./people-repository.js"
 
 const sourcePaths = {
   entities: /^data\/nc\/(legislature|committees)\/[^/\\]+\.ya?ml$/,
@@ -28,7 +28,7 @@ async function readPilot(
   const reportBytes = await store.read("report.json")
   const report = z
     .object({
-      revision: z.literal(northCarolinaPeopleSource.revision),
+      revision: z.string().regex(/^[a-f0-9]{40}$/),
       retrievedAt: z.iso.datetime(),
       artifacts: z
         .array(entrySchema.extend({ path: z.string().regex(sourcePath) }))
@@ -111,7 +111,7 @@ export async function readArchivedPeoplePilot(store: Pick<ArtifactStore, "read">
   }
   const manifest = z
     .object({
-      revision: z.literal(northCarolinaPeopleSource.revision),
+      revision: z.literal(match[1]!),
       runId: z.literal(match[4]!),
       entries: z.array(entrySchema).min(3).max(2_002)
     })

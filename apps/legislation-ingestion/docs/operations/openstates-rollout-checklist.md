@@ -1,5 +1,32 @@
 # Open States rollout requirements and results
 
+## September 17 self-hosted refresh closure
+
+- [x] Replaced the Alaska and North Carolina hosted-API schedules with six active self-hosted bill, event and content
+  schedules. The cutover staged the replacements inactive, disabled only the six matching legacy schedules, then
+  activated and re-read the replacements; federal and other-jurisdiction schedules were not changed.
+- [x] Added bounded bill fan-out that selects only unleased pending batches and preserves the database receipt and
+  ownership checks as the authority. A continuation that sees only in-flight work now waits instead of declaring the
+  cycle complete or starting content prematurely.
+- [x] Alaska frozen bill inventory `aabfb2518ee7c6934f4aeb35cedbc350659c397e0edd1dcc77ab1b576278f2a9`
+  completed all 87/87 promotion receipts on production. No active Alaska bill-batch ownership remained, and the
+  completion path dispatched the Alaska content controller.
+- [ ] North Carolina frozen bill inventory `747a0fd613bf82dbab2427280872d9cdb4544e6b77584b0ed4a4ee2b7374dcb7`
+  was at 56/235 receipts at the 23:25 UTC observation and still advancing under the shared fan-out controller. Final
+  content and serving acceptance wait for all receipts.
+- [x] Implemented durable people and committee freshness acquisition. The daily schedule resolves Open States people
+  `main`, freezes the exact 40-character commit, downloads that immutable archive, writes checksum-verified current and
+  history manifests for each enabled state, and replays the shared people/term/committee/membership importer. Source
+  URLs and checkpoints retain the acquired revision rather than the build-time default.
+- [x] Identical people revisions return `no_change` from the canonical checkpoints instead of re-observing stale facts
+  with a newer timestamp. Partial failure remains resumable because both the people and committee checkpoints must
+  match before acquisition is skipped. Local live-source replay read 853 supported files at current HEAD
+  `677c6d0a566ad9bd62b6324e502af76acc3d22f3`: Alaska 93 current and 114 history files; North Carolina 263 current and
+  383 history files. Both immutable lanes passed archive hash and read-back verification.
+- [ ] Deploy the foundation schedule, reconcile it into the production scraper manifest, and verify its current-revision
+  `no_change` result. The source revision still omits North Carolina Senate district 1 and contains four held Alaska
+  history timelines; automation must preserve those visible source limitations rather than inventing facts.
+
 ## California AB 2652 action provenance
 
 The owner authorized extending the guarded repair to `bill:ca:20232024:ab:2652` only. Other California bills and

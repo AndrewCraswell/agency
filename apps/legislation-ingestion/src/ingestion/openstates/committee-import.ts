@@ -11,12 +11,13 @@ export function prepareCommitteeRepositoryImport(
   currentFiles: readonly PeopleRepositoryFile[],
   historyFiles: readonly PeopleRepositoryFile[],
   retrievedAt: Date,
-  state: keyof typeof peopleSourceProfiles
+  state: keyof typeof peopleSourceProfiles,
+  revision: string = peopleSourceProfiles[state].revision
 ) {
-  const people = preparePeopleRepositoryImport(currentFiles, historyFiles, retrievedAt, state)
+  const people = preparePeopleRepositoryImport(currentFiles, historyFiles, retrievedAt, state, revision)
   const inventory = inventoryCommitteeHistory(
     currentFiles.filter((file) => file.path.includes("/committees/")),
-    peopleSourceProfiles[state].revision,
+    revision,
     retrievedAt.toISOString(),
     state
   )
@@ -77,9 +78,10 @@ export async function importCommitteeRepository(
   currentFiles: readonly PeopleRepositoryFile[],
   historyFiles: readonly PeopleRepositoryFile[],
   retrievedAt: Date,
-  persist: typeof replaceEntitySnapshot = replaceEntitySnapshot
+  persist: typeof replaceEntitySnapshot = replaceEntitySnapshot,
+  revision: string = peopleSourceProfiles[state].revision
 ) {
-  const result = prepareCommitteeRepositoryImport(currentFiles, historyFiles, retrievedAt, state)
+  const result = prepareCommitteeRepositoryImport(currentFiles, historyFiles, retrievedAt, state, revision)
   if (result.plan.identityEligible.length === 0) {
     return { status: "held" as const, plan: result.plan }
   }
@@ -94,7 +96,7 @@ export async function importCommitteeRepository(
       source: "openstates",
       stream: `${state}-committee-observations`,
       cursor: {
-        revision: peopleSourceProfiles[state].revision,
+        revision,
         retrievedAt: retrievedAt.toISOString(),
         complete: result.plan.held.length === 0 && result.plan.identityHeld.length === 0,
         eligibleCommittees: result.plan.eligible.length,

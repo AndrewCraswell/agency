@@ -14,14 +14,16 @@ type FoundationDependencies = {
     state: "ak" | "nc",
     currentFiles: readonly PeopleRepositoryFile[],
     historyFiles: readonly PeopleRepositoryFile[],
-    retrievedAt: Date
+    retrievedAt: Date,
+    revision: string
   ): Promise<unknown>
   importCommittees(
     database: LegislationDatabase,
     state: "ak" | "nc",
     currentFiles: readonly PeopleRepositoryFile[],
     historyFiles: readonly PeopleRepositoryFile[],
-    retrievedAt: Date
+    retrievedAt: Date,
+    revision: string
   ): Promise<unknown>
 }
 
@@ -36,8 +38,10 @@ export async function importArchivedStateFoundation(
   },
   dependencies: FoundationDependencies = {
     read: readArchivedPeoplePilot,
-    importPeople: importPeopleRepository,
-    importCommittees: importCommitteeRepository
+    importPeople: (database, state, currentFiles, historyFiles, retrievedAt, revision) =>
+      importPeopleRepository(database, state, currentFiles, historyFiles, retrievedAt, undefined, revision),
+    importCommittees: (database, state, currentFiles, historyFiles, retrievedAt, revision) =>
+      importCommitteeRepository(database, state, currentFiles, historyFiles, retrievedAt, undefined, revision)
   }
 ) {
   const [current, history] = await Promise.all([
@@ -48,13 +52,21 @@ export async function importArchivedStateFoundation(
   if (pair.state !== input.state) {
     throw new Error("People archive pair does not match requested state")
   }
-  const people = await dependencies.importPeople(database, input.state, current.files, history.files, pair.retrievedAt)
+  const people = await dependencies.importPeople(
+    database,
+    input.state,
+    current.files,
+    history.files,
+    pair.retrievedAt,
+    current.revision
+  )
   const committees = await dependencies.importCommittees(
     database,
     input.state,
     current.files,
     history.files,
-    pair.retrievedAt
+    pair.retrievedAt,
+    current.revision
   )
   return {
     status: "foundation_imported" as const,
