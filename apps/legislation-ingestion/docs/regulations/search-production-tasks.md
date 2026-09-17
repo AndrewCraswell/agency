@@ -305,6 +305,9 @@ must not alter current bill/document embedding freshness. Small pilot writes may
 - [ ] **VECTOR-05 Implement retries and reuse.** Reuse permitted identical inputs, preserve multiple owner memberships,
   and recover provider success followed by persistence failure without losing provenance. **Done:** accounting separates
   cache hits, possible repeated paid attempts and new writes; incomplete shards remain pending. Depends on VECTOR-04.
+  Durable 16-shard rows now retain a fenced lease, keyset cursor, attempts, possible repeated paid attempts, provider
+  tokens and inserted/reused counts. A killed or failed request releases for retry without claiming success; stored
+  vectors disappear from the next selection. Cross-generation input reuse and multi-owner reuse accounting remain open.
 - [ ] **VECTOR-06 Fence stale input and revoked rights.** Recheck selected input/route/rights before writes and serving;
   invalidate stale jobs, vector memberships and caches through the correction path. **Done:** a source change or rights
   revocation during provider execution cannot promote stale/forbidden vectors. Depends on VECTOR-04, INDEX-04–05.
@@ -314,6 +317,9 @@ must not alter current bill/document embedding freshness. Small pilot writes may
 - [ ] **VECTOR-07 Run the durable pilot.** Exercise malformed response, provider 429/outage, killed worker, lost lease,
   source correction and target write failure on a bounded persisted corpus. **Done:** exact vector inventory recovers
   with no falsely complete shards; pilot is queryable for EVAL-11. Depends on VECTOR-05–06, ORCH-08–10.
+  Local two-database evidence now covers a wrong provider model, conservative retry-cost accounting, exact replay,
+  incomplete-shard completion rejection, empty-shard completion and rights-revocation cleanup. Provider 429/outage,
+  killed-worker lease expiry, target write failure and authenticated queryability remain open.
 - [ ] **VECTOR-08 Plan full manifest cost and dispatch.** Freeze eligible partitions, expected vectors/tokens, reuse,
   budget stop conditions and chosen route. **Done:** plan excludes old embedding rebuilds and unqualified historical
   cohorts; operator preview accounts for every selected passage. Depends on EVAL-12, PASS-10.
