@@ -33,8 +33,6 @@ const checkpointSchema = z.strictObject({
     .nullable(),
   revision: z.int().nonnegative()
 })
-type LegalDiscoveryCheckpoint = z.infer<typeof checkpointSchema>
-
 const attemptSchema = z.strictObject({ sourceId: sourceSchema, query: jsonObjectSchema })
 const pageSchema = z
   .strictObject({
