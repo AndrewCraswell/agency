@@ -315,6 +315,15 @@ Do not change existing production queue limits or introduce a new database image
   retryable then unresolved gaps, never successful empties. Operator repair takes IDs and reason, reuses the same stages,
   and does not reset whole corpora.
 
+`inspect:regulatory-readiness --manifest <hash>` reconciles one immutable bounded current-source manifest without
+dispatching work. It validates the manifest identity and exact unit denominator, counts every canonical unit state and
+acquisition/parsing/publication intent, retains failed and cancelled attempt history, and exposes active leases,
+uncertain submissions and remote-completion mismatches. A published unit is ready only when all three stage intents are
+canonically complete, its artifact/parser/generation/edition references exist, its versioned display/search rights are
+active and its lexical outbox row exists without a delayed retry. Quarantined units can be accounted for but cannot make
+the manifest ready. This is bounded-manifest evidence; it does not prove that discovery exhausted a frozen source scope
+or that a multi-manifest backfill is complete.
+
 Official mechanics: [batch triggering](https://trigger.dev/docs/management/tasks/batch-trigger),
 [idempotency](https://trigger.dev/docs/idempotency), [queues](https://trigger.dev/docs/queue-concurrency).
 Queue concurrency limits active runs, not requests/second. `concurrencyKey` creates per-key queues; it is not a global

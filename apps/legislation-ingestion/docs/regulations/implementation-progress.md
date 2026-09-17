@@ -13,6 +13,25 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added bounded source-stage completion accounting for immutable current-acquisition manifests. The read-only inspector
+validates the stored manifest identity and exact unit denominator, then reconciles acquisition, parsing and publication
+intents with canonical unit state, run-attempt history, active leases, uncertain submissions, premature remote
+completion, canonical artifact/parser/generation/edition references, versioned display/search rights and lexical outbox
+admission. Published units require all three canonically completed stage intents. Quarantined units are accounted but
+never ready, and a delayed lexical retry keeps the source manifest unready. `inspect:regulatory-readiness --manifest
+<hash>` exposes the same gate and performs no dispatch or canonical writes.
+
+The fresh PostgreSQL end-to-end source test proved a newly registered manifest remained unready, a canonically published
+unit with an unreconciled remote completion remained unready, and the same exact one-unit manifest became ready only
+after all three stage intents completed. Its real CLI reported one expected/published unit, three completed dispatches,
+active versioned rights and one due lexical handoff; revoking that exact rights policy changed the CLI to exit 1 and
+`ready: false`, after which the disposable profile was restored. The database test, ingestion types, scoped lint and
+format passed. Root `pnpm verify` completed formatting and all 11 package lint/type tasks, then stopped at the unchanged
+unrelated Knip inventory for theme/template files, root dependencies/binaries and configuration hints; coverage did not
+run. This further advances ORCH-15 for bounded current-source manifests. Frozen discovery-scope exhaustion, FR/annual
+manifests, embedding accounting and multi-partition rollups remain open. Recurring schedules and bulk embeddings remain
+disabled.
+
 Added bounded completion accounting for planned passage-preparation waves. Each dispatch now persists the exact
 preparation ID derived from its scope, pinned tokenizer and passage contract; replay refuses identity drift. The read-only
 wave inspector reconciles planner exhaustion and selected count with registered/completed dispatches, run-attempt

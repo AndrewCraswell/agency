@@ -3,6 +3,10 @@ import pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import {
+  inspectLegalDiscoveryManifestCompletion,
+  legalDiscoveryManifestCompletionSchema
+} from "../../src/ingestion/regulations/discovery-manifest-completion.js"
+import {
   inspectLegalPreparationStatus,
   legalPreparationStatusRequestSchema
 } from "../../src/ingestion/regulations/preparation-status.js"
@@ -17,6 +21,7 @@ async function main() {
     options: {
       preparation: { type: "string" },
       wave: { type: "string" },
+      manifest: { type: "string" },
       after: { type: "string" },
       limit: { type: "string" }
     }
@@ -27,10 +32,11 @@ async function main() {
         kind: z.literal("preparation"),
         value: legalPreparationStatusRequestSchema
       }),
-      z.strictObject({ kind: z.literal("wave"), value: legalPreparationWaveCompletionSchema })
+      z.strictObject({ kind: z.literal("wave"), value: legalPreparationWaveCompletionSchema }),
+      z.strictObject({ kind: z.literal("manifest"), value: legalDiscoveryManifestCompletionSchema })
     ])
     .parse(
-      values.preparation !== undefined && values.wave === undefined
+      values.preparation !== undefined && values.wave === undefined && values.manifest === undefined
         ? {
             kind: "preparation",
             value: {
@@ -41,10 +47,17 @@ async function main() {
           }
         : values.wave !== undefined &&
             values.preparation === undefined &&
+            values.manifest === undefined &&
             values.after === undefined &&
             values.limit === undefined
           ? { kind: "wave", value: { waveId: values.wave } }
-          : { kind: "invalid" }
+          : values.manifest !== undefined &&
+              values.preparation === undefined &&
+              values.wave === undefined &&
+              values.after === undefined &&
+              values.limit === undefined
+            ? { kind: "manifest", value: { manifestId: values.manifest } }
+            : { kind: "invalid" }
     )
   const url = new URL(z.url().parse(process.env.DATABASE_URL))
   invariant(
@@ -55,6 +68,12 @@ async function main() {
   )
   const pool = new pg.Pool({ connectionString: url.href, max: 1, connectionTimeoutMillis: 10_000 })
   try {
+    if (request.kind === "manifest") {
+      const report = await inspectLegalDiscoveryManifestCompletion(pool, request.value)
+      process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
+      if (!report.ready) process.exitCode = 1
+      return
+    }
     if (request.kind === "wave") {
       const report = await inspectLegalPreparationWaveCompletion(pool, request.value)
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
@@ -80,7 +99,7 @@ try {
   await main()
 } catch (error) {
   const message = error instanceof Error ? error.message.replace(/^Invariant failed: /, "") : ""
-  const reason = /^[a-z_]+$/.test(message) ? message : "legal_preparation_inspection_failed"
+  const reason = /^[a-z_]+$/.test(message) ? message : "legal_regulatory_readiness_inspection_failed"
   process.stderr.write(`${JSON.stringify({ reason })}\n`)
   process.exitCode = 1
 }

@@ -219,7 +219,11 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   aggregate inspector. It requires an exhausted nonempty plan, denominator equality, canonical run completion, prepared
   passage state, active display/search rights and acknowledged lexical copy for every scope. Fresh PostgreSQL checks
   prove pending planning, missing preparation, delayed retry and unacknowledged copy remain incomplete, while a real
-  copied and acknowledged scope becomes ready. Source-stage, embedding and multi-partition rollups remain open.
+  copied and acknowledged scope becomes ready. Immutable current-source manifests now have a separate read-only
+  inspector that reconciles their exact unit denominator, source-stage intents and attempt history, canonical
+  publication references, versioned rights and lexical outbox admission. It distinguishes terminal quarantine from
+  readiness and refuses premature remote completion, delayed lexical work and incomplete source stages. Frozen-scope,
+  embedding and multi-partition rollups remain open.
 - [ ] **ORCH-16 Run an interrupted multi-partition wave.** Complete a representative current/FR/annual manifest across
   controller restart and deployment replacement using the chosen concurrency. **Done:** final ING-16 ledger and
   canonical hashes match uninterrupted execution; actual costs and elapsed time are retained. Depends on ORCH-14–15.

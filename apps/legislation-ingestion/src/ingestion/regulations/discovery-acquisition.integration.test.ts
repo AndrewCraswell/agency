@@ -15,6 +15,7 @@ import {
   startLegalDiscoveryAttempt
 } from "./discovery-checkpoint.js"
 import { planLegalDiscoveryDispatchPage, submitLegalDiscoveryDispatch } from "./discovery-dispatch.js"
+import { inspectLegalDiscoveryManifestCompletion } from "./discovery-manifest-completion.js"
 import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
 import { publishLegalDiscoveryUnit } from "./discovery-publication.js"
 import { recoverLegalDiscoveryDispatchPage } from "./discovery-recovery.js"
@@ -97,6 +98,15 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     })
     expect(manifest).not.toBeNull()
     if (manifest === null) throw new Error("Missing manifest")
+    await expect(inspectLegalDiscoveryManifestCompletion(pool, { manifestId: manifest.id })).resolves.toMatchObject({
+      expectedUnits: 1,
+      actualUnits: 1,
+      exactInventory: true,
+      units: { registered: 1, published: 0, quarantined: 0 },
+      dispatch: { registered: 0, completed: 0 },
+      accounted: false,
+      ready: false
+    })
     const planInput = { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 }
     const acquisitionPlan = await planLegalDiscoveryDispatchPage(pool, planInput)
     expect(acquisitionPlan.dispatches).toHaveLength(1)
@@ -352,6 +362,14 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     const secondPublication = await publishLegalDiscoveryUnit(pool, publicationInput)
     expect(firstPublication).toMatchObject({ state: "published", isCurrent: true, reused: false })
     expect(secondPublication).toEqual({ ...firstPublication, reused: true })
+    await expect(inspectLegalDiscoveryManifestCompletion(pool, { manifestId: manifest.id })).resolves.toMatchObject({
+      units: { published: 1, quarantined: 0 },
+      dispatch: { registered: 3, completed: 2, incomplete: 1, remoteStateMismatch: 1 },
+      publication: { missingCanonical: 0 },
+      lexical: { missing: 0, pending: 1 },
+      accounted: false,
+      ready: false
+    })
     const publicationCompletion = await recoverLegalDiscoveryDispatchPage(
       pool,
       { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
@@ -371,6 +389,30 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
         }
       ]
     })
+    await expect(inspectLegalDiscoveryManifestCompletion(pool, { manifestId: manifest.id })).resolves.toMatchObject({
+      expectedUnits: 1,
+      actualUnits: 1,
+      exactInventory: true,
+      units: { published: 1, quarantined: 0 },
+      dispatch: {
+        registered: 3,
+        completed: 3,
+        incomplete: 0,
+        remoteStateMismatch: 0,
+        failedAttempts: 1
+      },
+      publication: { missingCanonical: 0 },
+      lexical: { missing: 0, pending: 1, delayed: 0 },
+      accounted: true,
+      ready: true
+    })
+    await pool.query("UPDATE legislation.legal_rights_profiles SET is_active=false")
+    await expect(inspectLegalDiscoveryManifestCompletion(pool, { manifestId: manifest.id })).resolves.toMatchObject({
+      rights: { profiles: 1, unavailable: 1 },
+      accounted: true,
+      ready: false
+    })
+    await pool.query("UPDATE legislation.legal_rights_profiles SET is_active=true")
     const preparationWaveId = "00000000-0000-4000-8000-000000000001"
     const publishedBefore = z
       .date()
