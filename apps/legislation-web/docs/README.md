@@ -9,9 +9,17 @@ claims of live availability or acceptance of the separated deployments.
 [Storybook review](engineering/storybook.md) provides one gallery of real entity cards and simulated research-activity
 states, with reproducible read-only data capture and individual component stories.
 
-[Composed research conversations](engineering/conversation-experience/README.md) contains the delivery plan and five
-independent workstreams: evidence identity, answer composition, React rendering, ordered streaming, and text animation.
-These are local planning documents, not claims of implemented behavior.
+The composed-conversation specifications are closed for the agreed local scope: evidence identity, answer composition,
+React rendering, ordered streaming, and text animation. The completed spec folder has been removed. Implementation
+references are the [answer catalog](../src/modules/conversations/composition.ts),
+[evidence snapshots](../src/modules/conversations/evidence.ts), and
+[ordered response renderer](../src/modules/conversations/components/OrderedAnswerContent.tsx).
+
+The final evidence slice passed 117 focused tests; the AB 2652 provenance repair passed 19 safety tests and desktop/mobile
+citation checks. [Evaluation operations](operations/agent-evaluations.md) retains the native control results and quality
+limitations; the [ingestion repair record](../../legislation-ingestion/docs/operations/openstates-rollout-checklist.md#california-ab-2652-action-provenance)
+retains the verified 11-action repair. The last repository gate stopped on unrelated Knip findings before coverage;
+spec closure is not a clean verification or deployment claim.
 
 ## Start here
 
@@ -95,10 +103,6 @@ availability.
 | How do we implement regulatory ingestion and retrieval? | [Implementation specification](../../legislation-ingestion/docs/regulations/implementation.md), [remaining production tasks](../../legislation-ingestion/docs/regulations/production-backlog.md)                                             |
 
 ## Where information belongs
-
-Conversation experience planning: [composed research conversations](../../legislation-web/docs/engineering/conversation-experience/README.md)
-splits evidence identity, answer composition, React rendering, ordered streaming, and text animation into five
-independently scoped workstreams. These are local proposals, not shipped capabilities.
 
 | Folder         | Responsibility                                                                                              |
 | -------------- | ----------------------------------------------------------------------------------------------------------- |

@@ -12,6 +12,8 @@ export const sourceUrlSchema = z.url({ protocol: /^https?$/ }).pipe(
 
 export const evidenceSnapshotSchema = z.strictObject({
   id: z.string().min(1).max(256),
+  recordId: z.string().min(1).max(512).optional(),
+  billId: z.string().min(1).max(512).optional(),
   citationRef: z
     .string()
     .regex(/^e[1-9][0-9]{0,30}$/)
@@ -109,6 +111,50 @@ const sourceRecordSchema = z.object({
 
 export type EvidenceSourceContext = z.infer<typeof sourceRecordSchema>
 
+const actionRecordSchema = z.object({
+  id: z.string().min(1),
+  billId: z.string().min(1).nullish(),
+  type: z.string().nullish(),
+  description: z.string().min(1),
+  actionDate: z.string().nullish(),
+  actionAt: z.union([z.string(), z.date()]).nullish(),
+  date: z.string().nullish(),
+  sourceUrl: z.string().nullish(),
+  sourceObservationId: z.string().nullish()
+})
+
+function actionSource(
+  value: unknown,
+  collection: string | undefined,
+  parent: EvidenceSourceContext | undefined
+): EvidenceSourceContext | undefined {
+  if (collection !== "actions" && collection !== "latestAction" && collection !== "events") {
+    return undefined
+  }
+  const parsed = actionRecordSchema.safeParse(value)
+  if (!parsed.success || (collection === "events" && parsed.data.type !== "action")) {
+    return undefined
+  }
+  const action = parsed.data
+  const billId = action.billId ?? parent?.billId
+  if (!billId) {
+    return undefined
+  }
+  const timestamp = action.actionAt instanceof Date ? action.actionAt.toISOString() : action.actionAt
+  const date = timestamp ?? action.actionDate ?? action.date ?? undefined
+  return {
+    id: action.id,
+    recordType: "action",
+    classification: undefined,
+    billId,
+    title: action.description,
+    sourceUrl: action.sourceUrl,
+    sourceLocator: date,
+    sourceObservationId: action.sourceObservationId,
+    contentHash: JSON.stringify([action.description, date ?? null])
+  }
+}
+
 function matchesDocumentVersion(record: EvidenceSourceContext, document: EvidenceSourceContext) {
   for (const field of [
     "billId",
@@ -199,13 +245,13 @@ export function projectResearchEvidence(
   const sources: EvidenceSourceContext[] = []
   const seen = new Set<string>()
   let visited = 0
-  function visit(value: unknown, parent?: EvidenceSourceContext, depth = 0) {
+  function visit(value: unknown, parent?: EvidenceSourceContext, depth = 0, collection?: string) {
     if (++visited > 3000 || depth > 12) {
       return
     }
     if (Array.isArray(value)) {
       for (const item of value) {
-        visit(item, parent, depth + 1)
+        visit(item, parent, depth + 1, collection)
       }
       return
     }
@@ -223,7 +269,7 @@ export function projectResearchEvidence(
     }
     if (parsed.success) {
       const record = parsed.data
-      const source = inheritDocument(record, context)
+      const source = actionSource(value, collection, context) ?? inheritDocument(record, context)
       const rawUrl = source.sourceUrl ?? source.url ?? source.canonicalUrl
       const url = sourceUrlSchema.safeParse(rawUrl)
       const sourceUrl = url.success ? url.data : null
@@ -237,6 +283,9 @@ export function projectResearchEvidence(
         const quote = source.text
         const snapshot = evidenceSnapshotSchema.safeParse({
           id: createId(key),
+          recordId:
+            source.recordId ?? source.documentId ?? source.materialId ?? source.provisionId ?? source.id ?? undefined,
+          billId: source.billId ?? undefined,
           title: title ?? (url.success ? new URL(url.data).hostname : undefined),
           origin: "canonical",
           sourceUrl,
@@ -249,13 +298,13 @@ export function projectResearchEvidence(
           evidence.push({ snapshot: snapshot.data, source })
         }
       }
-      if (!("document" in value) && (record.id || record.documentId || record.recordId)) {
+      if (!("document" in value) && (record.id || record.documentId || record.recordId || record.billId)) {
         context = source
       }
     }
     for (const [key, item] of Object.entries(value)) {
       if (key !== "embedding" && key !== "renditions" && item !== null && typeof item === "object") {
-        visit(item, context, depth + 1)
+        visit(item, context, depth + 1, key)
       }
     }
   }

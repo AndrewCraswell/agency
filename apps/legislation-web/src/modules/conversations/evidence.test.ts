@@ -125,6 +125,83 @@ function project(data: unknown) {
 }
 
 describe("research evidence identity", () => {
+  it("projects the same action from bill details and timeline without inventing a document quote", () => {
+    const action = {
+      id: "action:ca:ab2652:10",
+      billId: "bill:ca:20232024:ab:2652",
+      ordinal: 10,
+      description: "In committee: Held under submission.",
+      actionDate: "2024-05-16",
+      actionAt: null,
+      sourceUrl: "https://leginfo.legislature.ca.gov/faces/billHistoryClient.xhtml?bill_id=202320240AB2652"
+    }
+    const detail = project({ actions: [action], latestAction: action })
+    const timeline = project({
+      billId: action.billId,
+      events: [
+        {
+          id: action.id,
+          type: "action",
+          description: action.description,
+          date: action.actionDate,
+          sourceUrl: action.sourceUrl
+        }
+      ]
+    })
+    expect(detail).toHaveLength(1)
+    expect(detail[0]).toMatchObject({
+      recordId: action.id,
+      billId: action.billId,
+      title: action.description,
+      locator: action.actionDate,
+      sourceUrl: action.sourceUrl,
+      content: { state: "not-collected" }
+    })
+    expect(timeline).toEqual(detail)
+    expect(project({ latestAction: { ...action, description: "Different recorded action." } })[0]?.id).not.toBe(
+      detail[0]?.id
+    )
+    expect(project({ latestAction: { ...action, actionDate: "2024-05-17" } })[0]?.id).not.toBe(detail[0]?.id)
+  })
+
+  it("does not borrow a bill or document URL for an action without its own source", () => {
+    const action = {
+      id: "action:one",
+      billId: document.billId,
+      description: "Referred to committee",
+      actionDate: "2025-01-03",
+      sourceUrl: null
+    }
+    const result = project({
+      document: { ...document, text: "Document body is not an action quotation." },
+      actions: [action]
+    })
+    expect(result.find((source) => source.title === action.description)).toMatchObject({
+      sourceUrl: null,
+      locator: "2025-01-03",
+      content: { state: "not-collected" }
+    })
+    const missingDate = project({ latestAction: { ...action, actionDate: undefined } })[0]
+    expect(missingDate?.locator).toBeUndefined()
+    expect(
+      project({ latestAction: { ...action, sourceUrl: "https://example.org/?token=secret" } })[0]?.sourceUrl
+    ).toBeNull()
+    expect(project({ latestAction: { ...action, billId: "bill:other" } })[0]?.id).not.toBe(
+      project({ latestAction: action })[0]?.id
+    )
+    expect(project({ latestAction: { ...action, sourceObservationId: "observation:new" } })[0]?.id).not.toBe(
+      project({ latestAction: action })[0]?.id
+    )
+  })
+
+  it("does not treat unowned actions, unrelated descriptions or other timeline types as action evidence", () => {
+    const record = { id: "record:one", description: "A description without an action owner" }
+    expect(project({ metadata: record })).toEqual([])
+    expect(project({ actions: [record] })).toEqual([])
+    expect(project({ billId: document.billId, events: [{ ...record, type: "meeting" }] })).toEqual([])
+    expect(project({ billId: document.billId, events: [{ ...record, type: "vote" }] })).toEqual([])
+  })
+
   it("deduplicates repeated search and detail evidence using the supplied identity hash", () => {
     const createId = vi.fn<typeof createEvidenceId>(createEvidenceId)
     const search = { items: [{ document, section, score: 1, snippet: "Search excerpt" }] }
@@ -135,6 +212,8 @@ describe("research evidence identity", () => {
     expect(project([search, detail])).toEqual(read)
     expect(read).toHaveLength(2)
     expect(read[1]).toMatchObject({
+      recordId: document.id,
+      billId: document.billId,
       title: document.title,
       sourceUrl: document.sourceUrl,
       versionLabel: "ih, 2025-01-03",

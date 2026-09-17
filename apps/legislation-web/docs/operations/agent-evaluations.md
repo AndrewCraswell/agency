@@ -153,6 +153,18 @@ All turns remain available as observations in Langfuse. Add selected observation
 experiments; collection does not imply a golden expected answer or coverage of unobserved retrieval alternatives.
 There is no automatic prompt promotion or mandatory human-review gate for this personal prototype.
 
+The conversation evaluators' citation rubric was updated September 16, 2026 in Langfuse. It prefers `composition.text`
+when supplied and distinguishes resolvable anchors from support for the claim's record, bill, jurisdiction, date, version,
+and passage. It explicitly checks unrelated citations attached to empty results and metadata represented as quotations,
+without penalizing honestly disclosed missing publisher URLs. Models, output categories, variable mappings, and the
+existing 100% conversation rule were retained; bakeoff evaluators were not changed.
+
+Native control batch `2987022b-b2f2-465c-b5d7-f599394944f5` contains three synthetic observations, not real legislative
+evidence. Quality/critical scores were supported/no-established-critical-defect for disclosed missing provenance,
+material-issues/critical-defect for a wrong-bill citation, and minor-issues/critical-defect for an unrelated empty-result
+citation. All six scores came from Langfuse (`source=EVAL`). The severity disagreement remains visible; this small check
+does not establish independent evaluator calibration or a production accuracy rate.
+
 ## Artifacts and metrics
 
 Each immutable run directory includes configuration and code hashes, pinned prompt text, dataset and fixtures, per-case

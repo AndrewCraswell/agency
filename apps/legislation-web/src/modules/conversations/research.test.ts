@@ -120,6 +120,8 @@ it("exposes short evidence ids to the model without mutating browser snapshots o
   const evidence = {
     id: "stable-evidence-identity",
     citationRef: "e1",
+    recordId: "document:us:119:hr:1:ih",
+    billId: "bill:us:119:hr:1",
     title: "Introduced text",
     origin: "canonical",
     sourceUrl: "https://publisher.example/bill",
@@ -134,6 +136,8 @@ it("exposes short evidence ids to the model without mutating browser snapshots o
       {
         id: "e1",
         citation: "[1](#citation-e1)",
+        recordId: evidence.recordId,
+        billId: evidence.billId,
         title: evidence.title,
         origin: evidence.origin,
         sourceUrl: evidence.sourceUrl,

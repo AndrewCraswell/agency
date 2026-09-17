@@ -32,6 +32,42 @@ function setup(runId = "run:one", previousReferences: readonly string[] = []) {
 }
 
 describe("readable evidence sources", () => {
+  it("reuses a short action reference across bill detail and timeline projections", () => {
+    const { project, lines } = setup()
+    const action = {
+      id: "action:one",
+      billId: "bill:ca:20232024:ab:2652",
+      ordinal: 10,
+      description: "In committee: Held under submission.",
+      actionDate: "2024-05-16",
+      actionAt: new Date("2024-05-16T12:30:00.000Z"),
+      sourceUrl: "https://leginfo.legislature.ca.gov/faces/billHistoryClient.xhtml?bill_id=202320240AB2652"
+    }
+    const detail = project({ latestAction: action })[0]
+    const timeline = project({
+      billId: action.billId,
+      events: [
+        {
+          id: action.id,
+          type: "action",
+          description: action.description,
+          date: action.actionAt.toISOString(),
+          sourceUrl: action.sourceUrl
+        }
+      ]
+    })[0]
+    expect(timeline).toEqual(detail)
+    expect(detail).toMatchObject({
+      citationRef: "e1",
+      readableUrl: action.sourceUrl,
+      locator: action.actionAt.toISOString()
+    })
+    expect(lines).toEqual([])
+    expect(project({ latestAction: { ...action, description: "Changed source description." } })[0]?.citationRef).toBe(
+      "e2"
+    )
+  })
+
   it("does not recycle references present in previous conversation turns", () => {
     const initial = setup().project(document)[0]
     const { project } = setup("run:two", ["e7", "e2", "e7", "not-a-reference", "e-1"])

@@ -6,7 +6,7 @@ import { loadConfig } from "../../src/config/config.js"
 import { decodeArchiveRecords } from "../../src/ingestion/archive.js"
 import { AzureBlobArtifactStore } from "../../src/ingestion/documents/artifact-store.js"
 import { normalizeOpenStatesBill } from "../../src/ingestion/openstates/normalize.js"
-import { planActionProvenance } from "../../src/persistence/action-provenance.js"
+import { parseActionProvenanceScope, planActionProvenance } from "../../src/persistence/action-provenance.js"
 
 const options = new Command()
   .requiredOption("--state <state>")
@@ -26,11 +26,7 @@ const options = new Command()
     databaseEnv: string
     apply?: boolean
   }>()
-const state = z.enum(["ak", "nc"]).parse(options.state)
-const session = z
-  .string()
-  .regex(/^[a-z0-9-]+$/)
-  .parse(options.session)
+const { state, jurisdictionName } = parseActionProvenanceScope(options)
 const stream = z
   .string()
   .regex(/^[a-z0-9][a-z0-9._-]*$/)
@@ -39,9 +35,6 @@ const hash = z
   .string()
   .regex(/^[a-f0-9]{64}$/)
   .parse(options.archiveSha256)
-if (!options.billId.startsWith(`bill:${state}:${session}:`)) {
-  throw new Error("Bill must belong to the explicitly selected state and session")
-}
 const config = loadConfig()
 const store = new AzureBlobArtifactStore(
   z.string().min(1).parse(config.azure.storageAccount),
@@ -54,7 +47,7 @@ if (createHash("sha256").update(bytes).digest("hex") !== hash) {
 const matching = decodeArchiveRecords(bytes).flatMap((record) => {
   const normalized = normalizeOpenStatesBill(record, {
     jurisdictionCode: state,
-    jurisdictionName: state === "ak" ? "Alaska" : "North Carolina"
+    jurisdictionName
   })
   return normalized.aggregate.bill.id === options.billId ? [normalized.aggregate] : []
 })

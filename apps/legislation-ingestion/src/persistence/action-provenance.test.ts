@@ -1,5 +1,25 @@
 import { expect, it } from "vitest"
-import { planActionProvenance } from "./action-provenance.js"
+import { parseActionProvenanceScope, planActionProvenance } from "./action-provenance.js"
+
+it.each([
+  { state: "ak", session: "34", billId: "bill:ak:34:hb:1", jurisdictionName: "Alaska" },
+  { state: "nc", session: "2025-2026", billId: "bill:nc:2025-2026:sb:1", jurisdictionName: "North Carolina" },
+  { state: "ca", session: "20232024", billId: "bill:ca:20232024:ab:2652", jurisdictionName: "California" }
+])("accepts the authorized action repair scope: $billId", ({ state, session, billId, jurisdictionName }) => {
+  expect(parseActionProvenanceScope({ state, session, billId })).toEqual({ state, session, jurisdictionName })
+})
+
+it.each([
+  { state: "ca", session: "20232024", billId: "bill:ca:20232024:ab:2653" },
+  { state: "ca", session: "20252026", billId: "bill:ca:20252026:ab:2652" },
+  { state: "ca", session: "20232024", billId: "bill:ca:20232024:sb:2652" },
+  { state: "ca", session: "20232024", billId: "bill:ca:20232024:ab:2652:other" },
+  { state: "ca", session: "20252026", billId: "bill:ca:20232024:ab:2652" },
+  { state: "ak", session: "34", billId: "bill:ca:20232024:ab:2652" },
+  { state: "ny", session: "2023-2024", billId: "bill:ny:2023-2024:ab:2652" }
+])("rejects action repair outside the authorized scope: %j", (scope) => {
+  expect(() => parseActionProvenanceScope(scope)).toThrow()
+})
 
 const source = {
   id: "action:1",
