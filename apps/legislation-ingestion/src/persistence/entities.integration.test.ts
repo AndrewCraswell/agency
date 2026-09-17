@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { repairOpenStatesMembershipObservations } from "../ingestion/openstates/membership-observation-repair.js"
 import { importPeopleRepository } from "../ingestion/openstates/people-import.js"
 import { peopleSourceProfiles } from "../ingestion/openstates/people-repository.js"
 import { replaceEntitySnapshot } from "./entities.js"
@@ -338,6 +339,50 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
     const rows = await membershipsForTenure(organizationId)
     expect(rows.filter((row) => row.sourceId?.startsWith("large:") && row.isActive)).toHaveLength(4_000)
   }, 120_000)
+
+  it("repairs missing active membership observation dates from retained retrieval evidence", async () => {
+    const repairJurisdictionId = "jurisdiction:membership-observation-repair"
+    const repairOrganizationId = "organization:openstates:membership-observation-repair"
+    const repairPersonId = "person:openstates:membership-observation-repair"
+    const repairMembershipId = `${repairOrganizationId}:membership:repair`
+    await database.insert(schema.jurisdictions).values({
+      classification: "state",
+      countryCode: "US",
+      id: repairJurisdictionId,
+      name: "Membership observation repair",
+      subdivisionCode: "MR"
+    })
+    await database.insert(schema.people).values({ id: repairPersonId, name: "Repair member" })
+    await database.insert(schema.organizations).values({
+      id: repairOrganizationId,
+      jurisdictionId: repairJurisdictionId,
+      name: "Repair committee",
+      sourceId: "repair-committee",
+      sourceProvider: "openstates"
+    })
+    await database.insert(schema.organizationMemberships).values({
+      id: repairMembershipId,
+      isActive: true,
+      organizationId: repairOrganizationId,
+      personId: repairPersonId,
+      sourceProvider: "openstates",
+      sourceRetrievedAt: new Date("2026-09-17T06:32:06.271Z")
+    })
+
+    const inspection = await repairOpenStatesMembershipObservations(database, {
+      jurisdictionId: repairJurisdictionId
+    })
+    expect(inspection).toMatchObject({ repaired: 0, status: "inspected" })
+    expect(inspection.candidates).toEqual([
+      expect.objectContaining({ detectedStartDate: "2026-09-17", lastObservedDate: "2026-09-17" })
+    ])
+    await expect(
+      repairOpenStatesMembershipObservations(database, { apply: true, jurisdictionId: repairJurisdictionId })
+    ).resolves.toMatchObject({ repaired: 1, status: "repaired" })
+    await expect(
+      repairOpenStatesMembershipObservations(database, { apply: true, jurisdictionId: repairJurisdictionId })
+    ).resolves.toMatchObject({ repaired: 0, status: "repaired" })
+  })
 
   it("imports a historical term range exceeding one statement's bind parameter budget", async () => {
     const input = snapshot({ complete: true, role: "member" })

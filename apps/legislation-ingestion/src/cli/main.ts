@@ -77,6 +77,7 @@ import {
 import { normalizeOpenStatesEvent } from "../ingestion/openstates/events.js"
 import { importOpenStatesRecords } from "../ingestion/openstates/import.js"
 import { parseOpenStatesManifest } from "../ingestion/openstates/manifest.js"
+import { repairOpenStatesMembershipObservations } from "../ingestion/openstates/membership-observation-repair.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../ingestion/source-store.js"
 import { createTelemetry } from "../observability/telemetry.js"
 import { replaceEntitySnapshot } from "../persistence/entities.js"
@@ -137,6 +138,13 @@ program
   .description("Synchronize current Open States people, terms, committees, and memberships")
   .option("--jurisdiction <code>")
   .action(syncOpenStatesEntities)
+
+program
+  .command("openstates:repair-membership-observations")
+  .description("Inspect or repair missing Open States committee membership observation dates")
+  .requiredOption("--jurisdiction <code>")
+  .option("--apply", "apply the exact inspected repair scope")
+  .action(repairOpenStatesMembershipObservationDates)
 
 program
   .command("openstates:events")
@@ -563,7 +571,10 @@ async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
               retrievedAt
             })
             const snapshot = mergeOpenStatesEntitySnapshots(normalizedPeople, normalizedCommittees)
-            await replaceEntitySnapshot(database, `jurisdiction:${code}`, snapshot)
+            await replaceEntitySnapshot(database, `jurisdiction:${code}`, snapshot, {
+              membershipDetectionDate: retrievedAt.toISOString().slice(0, 10),
+              organizationSourceProvider: "openstates"
+            })
             const records =
               snapshot.people.length +
               snapshot.terms.length +
@@ -587,6 +598,22 @@ async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
     printJobResult(result)
   }, config)
   createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "openstates" })
+}
+
+async function repairOpenStatesMembershipObservationDates(options: { apply?: boolean; jurisdiction: string }) {
+  const requestedCode = options.jurisdiction.trim().toLowerCase()
+  const code = supportedOpenStatesJurisdictions.find((supported) => supported === requestedCode)
+  if (code === undefined) {
+    throw new InvalidJobInput(`unsupported Open States jurisdiction: ${options.jurisdiction}`)
+  }
+  const config = loadConfig()
+  await withDatabase(async (database) => {
+    const result = await repairOpenStatesMembershipObservations(database, {
+      apply: options.apply,
+      jurisdictionId: openStatesJurisdictionId(code)
+    })
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+  }, config)
 }
 
 async function syncOpenStatesEvents(options: { from?: string; jurisdiction?: string; to?: string }) {
