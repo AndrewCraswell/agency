@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
 import {
   canonicalFoundationRecordSchema,
@@ -70,5 +71,23 @@ describe("canonical jurisdiction and session foundation", () => {
     expect(parseCanonicalFoundationContentHash("a".repeat(64))).toBe("a".repeat(64))
     expect(() => parseCanonicalFoundationContentHash("A".repeat(64))).toThrow("contentHash")
     expect(() => parseCanonicalFoundationContentHash("not-a-hash")).toThrow("contentHash")
+  })
+
+  it("keeps the retained North Carolina foundation snapshot fully source-backed", async () => {
+    const raw: unknown = JSON.parse(
+      await readFile(new URL("../../data/canonical-foundation/nc.json", import.meta.url), "utf8")
+    )
+    expect(Array.isArray(raw)).toBe(true)
+    const records = (raw as unknown[]).map((record) => canonicalFoundationRecordSchema.parse(record))
+    expect(records).toHaveLength(9)
+    expect(records.filter((record) => record.kind === "jurisdiction")).toEqual([
+      expect.objectContaining({ id: "jurisdiction:nc", isActive: true })
+    ])
+    expect(records.filter((record) => record.kind === "session" && record.isActive)).toEqual([
+      expect.objectContaining({ id: "session:nc:2025" })
+    ])
+    expect(
+      records.every((record) => record.source.isOfficial && record.source.url.startsWith("https://www.ncleg.gov/"))
+    ).toBe(true)
   })
 })

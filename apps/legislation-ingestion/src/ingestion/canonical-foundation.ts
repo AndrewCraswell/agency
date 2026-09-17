@@ -1,6 +1,6 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { jurisdictions, legislativeSessions, syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
-import { and, eq } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 import { z } from "zod"
 import { createJobCounts, type JobCounts } from "./job.js"
 
@@ -67,6 +67,11 @@ export type CanonicalFoundationAudit = Readonly<{
   incompleteSessionIds: readonly string[]
 }>
 
+export type CanonicalFoundationAuditScope = Readonly<{
+  jurisdictionIds: readonly string[]
+  sessionIds: readonly string[]
+}>
+
 export type CanonicalFoundationImportResult = Readonly<{
   audit: CanonicalFoundationAudit
   checkpoint: Readonly<Record<string, unknown>>
@@ -93,38 +98,65 @@ export function isSessionFoundationComplete(row: SessionFoundationRow): boolean 
  * Audits the exact facts required by the jurisdiction and session projections.
  * This deliberately fails closed: a partial source record is not route-ready.
  */
-export async function auditCanonicalFoundation(database: LegislationDatabase): Promise<CanonicalFoundationAudit> {
+export async function auditCanonicalFoundation(
+  database: LegislationDatabase,
+  scope?: CanonicalFoundationAuditScope
+): Promise<CanonicalFoundationAudit> {
+  const jurisdictionQuery = database
+    .select({
+      id: jurisdictions.id,
+      isActive: jurisdictions.isActive,
+      provenanceComplete: jurisdictions.provenanceComplete,
+      sourceIsOfficial: jurisdictions.sourceIsOfficial,
+      sourceProvider: jurisdictions.sourceProvider,
+      sourceRetrievedAt: jurisdictions.sourceRetrievedAt,
+      sourceUrl: jurisdictions.sourceUrl
+    })
+    .from(jurisdictions)
+  const sessionQuery = database
+    .select({
+      classification: legislativeSessions.classification,
+      id: legislativeSessions.id,
+      isActive: legislativeSessions.isActive,
+      provenanceComplete: legislativeSessions.provenanceComplete,
+      sourceIsOfficial: legislativeSessions.sourceIsOfficial,
+      sourceProvider: legislativeSessions.sourceProvider,
+      sourceRetrievedAt: legislativeSessions.sourceRetrievedAt,
+      sourceUrl: legislativeSessions.sourceUrl
+    })
+    .from(legislativeSessions)
   const [jurisdictionRows, sessionRows] = await Promise.all([
-    database
-      .select({
-        id: jurisdictions.id,
-        isActive: jurisdictions.isActive,
-        provenanceComplete: jurisdictions.provenanceComplete,
-        sourceIsOfficial: jurisdictions.sourceIsOfficial,
-        sourceProvider: jurisdictions.sourceProvider,
-        sourceRetrievedAt: jurisdictions.sourceRetrievedAt,
-        sourceUrl: jurisdictions.sourceUrl
-      })
-      .from(jurisdictions)
-      .orderBy(jurisdictions.id),
-    database
-      .select({
-        classification: legislativeSessions.classification,
-        id: legislativeSessions.id,
-        isActive: legislativeSessions.isActive,
-        provenanceComplete: legislativeSessions.provenanceComplete,
-        sourceIsOfficial: legislativeSessions.sourceIsOfficial,
-        sourceProvider: legislativeSessions.sourceProvider,
-        sourceRetrievedAt: legislativeSessions.sourceRetrievedAt,
-        sourceUrl: legislativeSessions.sourceUrl
-      })
-      .from(legislativeSessions)
-      .orderBy(legislativeSessions.id)
+    scope === undefined
+      ? jurisdictionQuery.orderBy(jurisdictions.id)
+      : scope.jurisdictionIds.length === 0
+        ? Promise.resolve([])
+        : jurisdictionQuery.where(inArray(jurisdictions.id, [...scope.jurisdictionIds])).orderBy(jurisdictions.id),
+    scope === undefined
+      ? sessionQuery.orderBy(legislativeSessions.id)
+      : scope.sessionIds.length === 0
+        ? Promise.resolve([])
+        : sessionQuery.where(inArray(legislativeSessions.id, [...scope.sessionIds])).orderBy(legislativeSessions.id)
   ])
-  const incompleteJurisdictionIds = jurisdictionRows
-    .filter((row) => !isJurisdictionFoundationComplete(row))
-    .map((row) => row.id)
-  const incompleteSessionIds = sessionRows.filter((row) => !isSessionFoundationComplete(row)).map((row) => row.id)
+  const jurisdictionRowsById = new Map(jurisdictionRows.map((row) => [row.id, row]))
+  const sessionRowsById = new Map(sessionRows.map((row) => [row.id, row]))
+  const incompleteJurisdictionIds =
+    scope === undefined
+      ? jurisdictionRows.filter((row) => !isJurisdictionFoundationComplete(row)).map((row) => row.id)
+      : [...new Set(scope.jurisdictionIds)]
+          .filter((id) => {
+            const row = jurisdictionRowsById.get(id)
+            return row === undefined || !isJurisdictionFoundationComplete(row)
+          })
+          .sort()
+  const incompleteSessionIds =
+    scope === undefined
+      ? sessionRows.filter((row) => !isSessionFoundationComplete(row)).map((row) => row.id)
+      : [...new Set(scope.sessionIds)]
+          .filter((id) => {
+            const row = sessionRowsById.get(id)
+            return row === undefined || !isSessionFoundationComplete(row)
+          })
+          .sort()
   return {
     complete: incompleteJurisdictionIds.length === 0 && incompleteSessionIds.length === 0,
     incompleteJurisdictionIds,
@@ -179,7 +211,7 @@ export async function applyCanonicalFoundationRecord(
 export async function importCanonicalFoundationRecords(
   database: LegislationDatabase,
   records: readonly unknown[],
-  options: Readonly<{ contentHash: string; stream?: string }>
+  options: Readonly<{ auditScope?: CanonicalFoundationAuditScope; contentHash: string; stream?: string }>
 ): Promise<CanonicalFoundationImportResult> {
   const stream = options.stream ?? canonicalFoundationCheckpointStream
   const contentHash = parseCanonicalFoundationContentHash(options.contentHash)
@@ -226,7 +258,7 @@ export async function importCanonicalFoundationRecords(
     }
   }
 
-  const audit = await auditCanonicalFoundation(database)
+  const audit = await auditCanonicalFoundation(database, options.auditScope)
   const complete = failures.length === 0 && index === records.length && audit.complete
   const checkpoint = {
     complete,

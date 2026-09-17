@@ -13,6 +13,7 @@ import { Command } from "commander"
 import { loadConfig, type LegislationConfig } from "../config/config.js"
 import { compareCoverageReports, generateCoverageReport, isCoverageReport } from "../coverage/collector.js"
 import { decodeArchiveRecords, MAXIMUM_ARCHIVE_BYTES } from "../ingestion/archive.js"
+import { canonicalFoundationRecordSchema, importCanonicalFoundationRecords } from "../ingestion/canonical-foundation.js"
 import { synchronizeCongressAmendments } from "../ingestion/congress/amendments-sync.js"
 import { CongressClient } from "../ingestion/congress/client.js"
 import { synchronizeCongressEvents } from "../ingestion/congress/events-sync.js"
@@ -99,6 +100,13 @@ const program = new Command()
   .showHelpAfterError()
 
 program.command("db:wait").description("Wait for the legislation database to become ready").action(wait)
+
+program
+  .command("canonical:foundation")
+  .description("Import a source-backed canonical jurisdiction and session foundation snapshot")
+  .requiredOption("--file <path>")
+  .option("--stream <name>", "durable checkpoint stream")
+  .action(importCanonicalFoundationFile)
 
 program
   .command("openstates:discover")
@@ -1974,6 +1982,54 @@ async function validate() {
     const report = await validateCorpus(database)
     process.stdout.write(`${JSON.stringify(report)}\n`)
     if (!report.valid) {
+      process.exitCode = JOB_EXIT_CODE.failed
+    }
+  })
+}
+
+async function importCanonicalFoundationFile(options: { file: string; stream?: string }) {
+  const file = resolve(options.file)
+  const bytes = await readFile(file)
+  if (bytes.byteLength === 0 || bytes.byteLength > 1_000_000) {
+    throw new InvalidJobInput("canonical foundation file must contain between 1 byte and 1 MB")
+  }
+  let raw: unknown
+  try {
+    raw = JSON.parse(bytes.toString("utf8"))
+  } catch {
+    throw new InvalidJobInput("canonical foundation file must contain valid JSON")
+  }
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new InvalidJobInput("canonical foundation file must contain a non-empty record array")
+  }
+  const records = raw.map((record) => canonicalFoundationRecordSchema.parse(record))
+  const identities = records.map((record) => `${record.kind}:${record.id}`)
+  if (new Set(identities).size !== identities.length) {
+    throw new InvalidJobInput("canonical foundation file contains duplicate record identities")
+  }
+  const jurisdictionIds = records.filter((record) => record.kind === "jurisdiction").map((record) => record.id)
+  const sessionIds = records.filter((record) => record.kind === "session").map((record) => record.id)
+  if (jurisdictionIds.length !== 1) {
+    throw new InvalidJobInput("canonical foundation file must contain exactly one jurisdiction record")
+  }
+  const jurisdictionPrefix = jurisdictionIds[0]?.replace(/^jurisdiction:/, "")
+  if (
+    jurisdictionPrefix === undefined ||
+    jurisdictionPrefix.length === 0 ||
+    sessionIds.some((id) => !id.startsWith(`session:${jurisdictionPrefix}:`))
+  ) {
+    throw new InvalidJobInput("canonical foundation sessions must belong to the file jurisdiction")
+  }
+  const stream = options.stream ?? `canonical-foundation:${jurisdictionIds[0]}`
+  const contentHash = createHash("sha256").update(bytes).digest("hex")
+  await withDatabase(async (database) => {
+    const result = await importCanonicalFoundationRecords(database, records, {
+      auditScope: { jurisdictionIds, sessionIds },
+      contentHash,
+      stream
+    })
+    process.stdout.write(`${JSON.stringify({ contentHash, file, stream, ...result })}\n`)
+    if (!result.audit.complete || result.failures.length > 0) {
       process.exitCode = JOB_EXIT_CODE.failed
     }
   })

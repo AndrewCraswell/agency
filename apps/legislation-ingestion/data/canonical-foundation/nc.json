@@ -1,0 +1,119 @@
+[
+  {
+    "id": "jurisdiction:nc",
+    "isActive": true,
+    "kind": "jurisdiction",
+    "source": {
+      "isOfficial": true,
+      "provider": "North Carolina General Assembly",
+      "retrievedAt": "2026-09-17T21:32:04.011Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.ncleg.gov/"
+    },
+    "timezone": null
+  },
+  {
+    "classification": "legislature",
+    "id": "session:nc:2017",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "North Carolina General Assembly",
+      "retrievedAt": "2026-09-17T21:32:04.011Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.ncleg.gov/BillLookUp/2017/H1"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:nc:2017e1",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "North Carolina General Assembly",
+      "retrievedAt": "2026-09-17T21:32:04.011Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.ncleg.gov/BillLookUp/2017E1/H1"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:nc:2017e2",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "North Carolina General Assembly",
+      "retrievedAt": "2026-09-17T21:32:04.011Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.ncleg.gov/BillLookUp/2017E2/H1"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:nc:2017e3",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "North Carolina General Assembly",
+      "retrievedAt": "2026-09-17T21:32:04.011Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.ncleg.gov/BillLookUp/2017E3/H1"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:nc:2019",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "North Carolina General Assembly",
+      "retrievedAt": "2026-09-17T21:32:04.011Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.ncleg.gov/BillLookUp/2019/H1"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:nc:2021",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "North Carolina General Assembly",
+      "retrievedAt": "2026-09-17T21:32:04.011Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.ncleg.gov/BillLookUp/2021/H1"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:nc:2023",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "North Carolina General Assembly",
+      "retrievedAt": "2026-09-17T21:32:04.011Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.ncleg.gov/BillLookUp/2023/H1"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:nc:2025",
+    "isActive": true,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "North Carolina General Assembly",
+      "retrievedAt": "2026-09-17T21:32:04.011Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.ncleg.gov/BillLookUp/2025/H1"
+    }
+  }
+]

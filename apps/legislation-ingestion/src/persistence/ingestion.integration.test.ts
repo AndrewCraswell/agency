@@ -282,6 +282,30 @@ describePostgres.sequential("legislation PostgreSQL ingestion", () => {
       incompleteJurisdictionIds: [],
       incompleteSessionIds: []
     })
+
+    await database.insert(schema.jurisdictions).values({
+      classification: "state",
+      countryCode: "US",
+      id: "jurisdiction:foundation-unrelated",
+      name: "Unrelated incomplete foundation",
+      subdivisionCode: "FU"
+    })
+    await expect(
+      auditCanonicalFoundation(database, {
+        jurisdictionIds: [jurisdictionId],
+        sessionIds: [incompleteSessionId, lateSessionId]
+      })
+    ).resolves.toEqual({ complete: true, incompleteJurisdictionIds: [], incompleteSessionIds: [] })
+    await expect(
+      auditCanonicalFoundation(database, {
+        jurisdictionIds: ["jurisdiction:missing-foundation"],
+        sessionIds: ["session:missing-foundation"]
+      })
+    ).resolves.toEqual({
+      complete: false,
+      incompleteJurisdictionIds: ["jurisdiction:missing-foundation"],
+      incompleteSessionIds: ["session:missing-foundation"]
+    })
   })
 
   it("enforces and checkpoints civic provenance without resolving provider parent IDs", async () => {
