@@ -92,9 +92,6 @@ export async function prepareArchivedNcScraperEvents(input: {
   const eventRecords = records
     .filter((record) => record.path.startsWith("_data/nc/event_"))
     .map((record) => record.value)
-  if (eventRecords.length === 0) {
-    throw new Error("North Carolina event extraction contains no meetings")
-  }
   return {
     status: "prepared" as const,
     canonicalWrites: false as const,
@@ -104,6 +101,9 @@ export async function prepareArchivedNcScraperEvents(input: {
       manifestSha256: archive.manifestSha256,
       buildInputsSha256: approved
     },
+    // The current-calendar scraper can legitimately emit no event records
+    // between published notices. The caller treats that as a verified no-op;
+    // it must never infer that previously observed meetings were deleted.
     snapshots: normalizeNcScraperEvents(eventRecords, input.retrievedAt)
   }
 }

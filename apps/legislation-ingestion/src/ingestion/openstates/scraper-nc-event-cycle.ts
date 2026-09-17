@@ -64,6 +64,14 @@ export async function executeNorthCarolinaEventCloudCycle(
       approvedBuildInputsSha256,
       retrievedAt: dependencies.now()
     })
+    if (prepared.snapshots.length === 0) {
+      return {
+        status: "no_current_events" as const,
+        events: 0,
+        manifestSha256: prepared.provenance.manifestSha256,
+        runId
+      }
+    }
     await dependencies.promote(database, prepared.snapshots, {
       ownership: owner,
       receipt: {

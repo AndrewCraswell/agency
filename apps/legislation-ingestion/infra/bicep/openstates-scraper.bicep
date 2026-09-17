@@ -73,6 +73,10 @@ resource scraper 'Microsoft.App/jobs@2025-01-01' = {
       containers: [{
         name: 'openstates-scraper'
         image: image
+        // Pin the production queue entry point in infrastructure instead of
+        // inheriting an image default that may be a build-time smoke command.
+        command: ['python']
+        args: ['/opt/openstates/adapter/openstates_cloud_worker.py']
         env: [
           { name: 'AZURE_STORAGE_ACCOUNT', value: storageAccountName }
           { name: 'AZURE_STATE_SOURCE_CONTAINER', value: stateSourceContainer }

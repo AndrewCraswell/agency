@@ -38,11 +38,14 @@ const event = {
   sources: [{ url: "https://www.ncleg.gov/Committees/NoticeDocument/10724/Meeting" }]
 }
 
-async function archivedFixture() {
+async function archivedFixture(includeEvent = true) {
   const store = new Store()
   const bytes = Buffer.from(JSON.stringify(event))
   const path = "_data/nc/event_fixture.json"
-  await store.put(path, bytes)
+  const jurisdictionBytes = Buffer.from("{}")
+  const jurisdictionPath = "_data/nc/jurisdiction_nc.json"
+  await store.put(jurisdictionPath, jurisdictionBytes)
+  if (includeEvent) await store.put(path, bytes)
   await store.put(
     "attempt.json",
     Buffer.from(
@@ -55,7 +58,16 @@ async function archivedFixture() {
         canonical_writes: false,
         semantically_validated: false,
         reason: null,
-        files: [{ path, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") }],
+        files: [
+          {
+            path: jurisdictionPath,
+            bytes: jurisdictionBytes.length,
+            sha256: createHash("sha256").update(jurisdictionBytes).digest("hex")
+          },
+          ...(includeEvent
+            ? [{ path, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") }]
+            : [])
+        ],
         request: {
           jurisdiction: "nc",
           domain: "events",
@@ -91,6 +103,17 @@ describe("North Carolina hosted event cycle", () => {
         retrievedAt
       })
     ).rejects.toThrow("not approved")
+  })
+
+  it("accepts an approved empty current calendar without inferring deletions", async () => {
+    const { store, manifestPath } = await archivedFixture(false)
+    const prepared = await prepareArchivedNcScraperEvents({
+      store,
+      manifestPath,
+      approvedBuildInputsSha256: build,
+      retrievedAt
+    })
+    expect(prepared.snapshots).toEqual([])
   })
 
   it("promotes through one owned transaction receipt and confirms release", async () => {
@@ -148,6 +171,43 @@ describe("North Carolina hosted event cycle", () => {
         receipt: expect.objectContaining({ stream: `nc-events:current:${build}` })
       })
     )
+    expect(release).toHaveBeenCalledOnce()
+  })
+
+  it("releases ownership and skips canonical writes for an approved empty calendar", async () => {
+    const database = drizzle({ connection: "postgresql://unused", schema })
+    const release = vi.fn(async () => true)
+    const promote = vi.fn(async () => undefined)
+    const result = await executeNorthCarolinaEventCloudCycle(
+      database,
+      {
+        store: new Store(),
+        approvedBuildInputsSha256: build,
+        storageAccount: "legislationtest",
+        queueName: "openstates-scraper-dispatch",
+        runId: "nc-event-empty"
+      },
+      {
+        claim: async () => true,
+        release,
+        dispatch: async () => ({ manifestPath: "retained.json", settlementPath: "settled.json" }),
+        prepare: async () => ({
+          status: "prepared",
+          canonicalWrites: false,
+          provenance: {
+            runId: "nc-event-empty",
+            manifestPath: "retained.json",
+            manifestSha256: build,
+            buildInputsSha256: build
+          },
+          snapshots: []
+        }),
+        promote,
+        now: () => retrievedAt
+      }
+    )
+    expect(result).toMatchObject({ status: "no_current_events", events: 0, manifestSha256: build })
+    expect(promote).not.toHaveBeenCalled()
     expect(release).toHaveBeenCalledOnce()
   })
 })
