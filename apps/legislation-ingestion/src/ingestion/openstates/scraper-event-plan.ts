@@ -2,14 +2,15 @@ import { execFile } from "node:child_process"
 import { createHash } from "node:crypto"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { join, resolve } from "node:path"
 import { promisify } from "node:util"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { parseAlaskaEventPlan, readAlaskaEventPlan, type AlaskaEventPlan } from "./scraper-event-cycle.js"
 
 const sourceUrl = "https://www.akleg.gov/publicservice/basis/meetings?session=34"
-const plannerPath = fileURLToPath(new URL("../../../python/plan_alaska_events.py", import.meta.url))
+// Trigger's Python extension retains configured scripts under /app/python; the local package has the same cwd-relative
+// layout. import.meta.url points at the flattened bundled module in production and cannot identify extension assets.
+const plannerPath = resolve(process.cwd(), "python", "plan_alaska_events.py")
 const executeFile = promisify(execFile)
 
 async function planWithPython(source: Uint8Array): Promise<AlaskaEventPlan> {
