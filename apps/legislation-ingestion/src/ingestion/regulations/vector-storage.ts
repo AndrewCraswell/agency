@@ -65,6 +65,18 @@ function route(model: keyof typeof routes) {
   return routeSchema.parse({ model, dimensions: routes[model].dimensions })
 }
 
+async function requireActiveSearchMembership(client: pg.PoolClient, generationId: string) {
+  const result = await client.query(
+    `SELECT 1 FROM legislation.legal_search_memberships m
+    WHERE m.generation_id=$1 AND NOT EXISTS (
+      SELECT 1 FROM legislation.legal_search_revocations r
+      WHERE r.scope_kind=m.scope_kind AND r.scope_id=m.scope_id
+    ) LIMIT 1 FOR SHARE OF m`,
+    [generationId]
+  )
+  invariant(result.rowCount === 1, "legal_embedding_search_membership_unavailable")
+}
+
 /** Registers one immutable model-specific vector generation over one exact passage generation. */
 export async function registerLegalEmbeddingGeneration(pool: pg.Pool, input: unknown) {
   const request = generationRequestSchema.parse(input)
@@ -83,6 +95,8 @@ export async function registerLegalEmbeddingGeneration(pool: pg.Pool, input: unk
   )
   return transaction(pool, async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [id])
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [request.passageGenerationId])
+    await requireActiveSearchMembership(client, request.passageGenerationId)
     const source = (
       await client.query<{ passage_count: number; eligibility: string; tokenizer_id: string; actual_count: number }>(
         `SELECT (g.metadata->>'passage_count')::integer AS passage_count,
@@ -162,11 +176,21 @@ export async function storeLegalEmbeddingBatch(pool: pg.Pool, input: unknown) {
     const generation = (
       await client.query<{ passage_generation_id: string; model: string; dimensions: number; state: string }>(
         `SELECT passage_generation_id,model,dimensions,state FROM legislation.legal_embedding_generations
-        WHERE id=$1 FOR SHARE`,
+        WHERE id=$1`,
         [request.generationId]
       )
     ).rows[0]
     invariant(generation, "legal_embedding_generation_missing")
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [generation.passage_generation_id])
+    await requireActiveSearchMembership(client, generation.passage_generation_id)
+    const current = (
+      await client.query<{ passage_generation_id: string; model: string; dimensions: number; state: string }>(
+        `SELECT passage_generation_id,model,dimensions,state FROM legislation.legal_embedding_generations
+        WHERE id=$1 FOR SHARE`,
+        [request.generationId]
+      )
+    ).rows[0]
+    invariant(isDeepStrictEqual(current, generation), "legal_embedding_generation_changed")
     invariant(
       generation.model === request.model && generation.dimensions === selected.dimensions,
       "legal_embedding_generation_route_mismatch"
@@ -223,16 +247,32 @@ export async function storeLegalEmbeddingBatch(pool: pg.Pool, input: unknown) {
 export async function completeLegalEmbeddingGeneration(pool: pg.Pool, generationIdInput: unknown) {
   const generationId = hash.parse(generationIdInput)
   return transaction(pool, async (client) => {
+    const identity = (
+      await client.query<{
+        model: keyof typeof routes
+        expected_count: number
+        passage_generation_id: string
+        state: string
+      }>(
+        "SELECT model,expected_count,passage_generation_id,state FROM legislation.legal_embedding_generations WHERE id=$1",
+        [generationId]
+      )
+    ).rows[0]
+    invariant(identity, "legal_embedding_generation_missing")
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [identity.passage_generation_id])
+    await requireActiveSearchMembership(client, identity.passage_generation_id)
     const generation = (
       await client.query<{
         model: keyof typeof routes
         expected_count: number
+        passage_generation_id: string
         state: string
-      }>("SELECT model,expected_count,state FROM legislation.legal_embedding_generations WHERE id=$1 FOR UPDATE", [
-        generationId
-      ])
+      }>(
+        "SELECT model,expected_count,passage_generation_id,state FROM legislation.legal_embedding_generations WHERE id=$1 FOR UPDATE",
+        [generationId]
+      )
     ).rows[0]
-    invariant(generation, "legal_embedding_generation_missing")
+    invariant(isDeepStrictEqual(generation, identity), "legal_embedding_generation_changed")
     if (["embedded", "ready"].includes(generation.state)) {
       return { generationId, vectors: generation.expected_count, reused: true }
     }

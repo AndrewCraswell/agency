@@ -7,7 +7,7 @@ import { z } from "zod"
 const scopeSchema = z.strictObject({ kind: z.enum(["edition", "publication"]), id: z.uuid() })
 type Scope = z.infer<typeof scopeSchema>
 
-/** Remove only derived regulatory copies. Canonical artifacts and every embedding table remain untouched. */
+/** Remove only derived regulatory copies. Search embeddings cascade with their copied passage generation. */
 export async function reconcileLegalSearchScopeRights(sourcePool: pg.Pool, targetPool: pg.Pool, input: Scope) {
   const deadline = Date.now() + 30_000
   const scope = scopeSchema.parse(input)

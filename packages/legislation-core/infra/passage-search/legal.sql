@@ -26,7 +26,7 @@ CREATE TABLE legislation.legal_search_passages (
 CREATE INDEX legal_search_passages_text_idx ON legislation.legal_search_passages USING gin(search_vector);
 CREATE TABLE legislation.legal_embedding_generations (
   id text PRIMARY KEY CHECK(id ~ '^[a-f0-9]{64}$'),
-  passage_generation_id text NOT NULL REFERENCES legislation.legal_search_generations(id),
+  passage_generation_id text NOT NULL REFERENCES legislation.legal_search_generations(id) ON DELETE CASCADE,
   model text NOT NULL,
   dimensions integer NOT NULL,
   input_contract text NOT NULL,
@@ -57,9 +57,9 @@ CREATE TABLE legislation.legal_openai_small_embeddings (
   embedding vector(1536) NOT NULL,
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   PRIMARY KEY(generation_id,passage_id),
-  FOREIGN KEY(generation_id,model,dimensions) REFERENCES legislation.legal_embedding_generations(id,model,dimensions),
-  FOREIGN KEY(generation_id,passage_generation_id) REFERENCES legislation.legal_embedding_generations(id,passage_generation_id),
-  FOREIGN KEY(passage_generation_id,passage_id) REFERENCES legislation.legal_search_passages(generation_id,id)
+  FOREIGN KEY(generation_id,model,dimensions) REFERENCES legislation.legal_embedding_generations(id,model,dimensions) ON DELETE CASCADE,
+  FOREIGN KEY(generation_id,passage_generation_id) REFERENCES legislation.legal_embedding_generations(id,passage_generation_id) ON DELETE CASCADE,
+  FOREIGN KEY(passage_generation_id,passage_id) REFERENCES legislation.legal_search_passages(generation_id,id) ON DELETE CASCADE
 );
 CREATE INDEX legal_openai_small_embeddings_passage_idx ON legislation.legal_openai_small_embeddings(passage_id,generation_id);
 CREATE TABLE legislation.legal_voyage_4_embeddings (
@@ -73,9 +73,9 @@ CREATE TABLE legislation.legal_voyage_4_embeddings (
   embedding vector(1024) NOT NULL,
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   PRIMARY KEY(generation_id,passage_id),
-  FOREIGN KEY(generation_id,model,dimensions) REFERENCES legislation.legal_embedding_generations(id,model,dimensions),
-  FOREIGN KEY(generation_id,passage_generation_id) REFERENCES legislation.legal_embedding_generations(id,passage_generation_id),
-  FOREIGN KEY(passage_generation_id,passage_id) REFERENCES legislation.legal_search_passages(generation_id,id)
+  FOREIGN KEY(generation_id,model,dimensions) REFERENCES legislation.legal_embedding_generations(id,model,dimensions) ON DELETE CASCADE,
+  FOREIGN KEY(generation_id,passage_generation_id) REFERENCES legislation.legal_embedding_generations(id,passage_generation_id) ON DELETE CASCADE,
+  FOREIGN KEY(passage_generation_id,passage_id) REFERENCES legislation.legal_search_passages(generation_id,id) ON DELETE CASCADE
 );
 CREATE INDEX legal_voyage_4_embeddings_passage_idx ON legislation.legal_voyage_4_embeddings(passage_id,generation_id);
 CREATE TABLE legislation.legal_search_memberships (

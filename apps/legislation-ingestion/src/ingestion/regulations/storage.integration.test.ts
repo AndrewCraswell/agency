@@ -1479,6 +1479,20 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
             generation.generationId
           ])
         ).rejects.toThrow()
+        await pool.query("UPDATE legislation.legal_rights_profiles SET is_active=false")
+        expect(
+          await reconcileLegalSearchScopeRights(pool, target, { kind: "edition", id: data.editionId })
+        ).toMatchObject({ allowed: false, removedGenerations: 1, removedMemberships: 1, remaining: 0 })
+        expect(
+          (
+            await target.query(
+              "SELECT (SELECT count(*)::integer FROM legislation.legal_embedding_generations) AS generations,(SELECT count(*)::integer FROM legislation.legal_openai_small_embeddings) AS vectors"
+            )
+          ).rows[0]
+        ).toEqual({ generations: 0, vectors: 0 })
+        await expect(registerLegalEmbeddingGeneration(target, registration)).rejects.toThrow(
+          "legal_embedding_search_membership_unavailable"
+        )
       } finally {
         await target.end()
       }
