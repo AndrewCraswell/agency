@@ -25,6 +25,7 @@ class Store implements ArtifactStore {
 }
 
 const build = createHash("sha256").update("approved NC event build").digest("hex")
+const currentCalendarCohort = createHash("sha256").update("nc-events:current-calendar:v1").digest("hex")
 const retrievedAt = new Date("2026-09-17T00:00:00Z")
 const event = {
   _id: "ephemeral-id",
@@ -127,7 +128,19 @@ describe("North Carolina hosted event cycle", () => {
       }
     )
     expect(result).toMatchObject({ status: "promoted", events: 1, manifestSha256: build })
-    expect(claim).toHaveBeenCalledOnce()
+    expect(claim).toHaveBeenCalledWith(
+      database,
+      {
+        source: "openstates",
+        stream: `ownership:nc-events:${currentCalendarCohort}:current-calendar`,
+        token: "nc-event-test"
+      },
+      1800,
+      expect.objectContaining({
+        requireConfirmedRelease: true,
+        group: { stream: "ownership:nc-events", cohort: currentCalendarCohort }
+      })
+    )
     expect(promote).toHaveBeenCalledWith(
       database,
       snapshots,

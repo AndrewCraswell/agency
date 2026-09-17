@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { hostname } from "node:os"
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { z } from "zod"
@@ -10,6 +10,7 @@ import { prepareArchivedNcScraperEvents } from "./scraper-normalize.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/)
+const currentCalendarCohort = createHash("sha256").update("nc-events:current-calendar:v1").digest("hex")
 
 function receiptStream(manifestSha256: string) {
   return `nc-events:current:${manifestSha256}`
@@ -39,8 +40,8 @@ export async function executeNorthCarolinaEventCloudCycle(
     .string()
     .regex(/^[A-Za-z0-9][A-Za-z0-9-]{0,100}$/)
     .parse(input.runId ?? `nc-event-${randomUUID()}`)
-  const group = { stream: "ownership:nc-events", cohort: "current-calendar" }
-  const owner = { source: "openstates", stream: `${group.stream}:${group.cohort}`, token: runId }
+  const group = { stream: "ownership:nc-events", cohort: currentCalendarCohort }
+  const owner = { source: "openstates", stream: `${group.stream}:${group.cohort}:current-calendar`, token: runId }
   const claimed = await dependencies.claim(database, owner, 1800, {
     requireConfirmedRelease: true,
     group,
