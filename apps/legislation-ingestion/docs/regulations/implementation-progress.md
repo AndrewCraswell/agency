@@ -13,6 +13,22 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Repaired one of two defects in 40 CFR 152.175: sparse criteria preserve the prior printed criterion across verified
+unclassified rows for later explicit dittos. Empty entries acquire no criterion. Recognition requires exact pesticide
+headers, unspanned cells, populated formulation/use/classification, and an explicit or resolved `Unclassified` value.
+The full source block was exported read-only with version/edition membership, content hash and XML hash verification.
+
+The retained Zinc Phosphide record exposes a separate shifted-row defect; the complete section remains blocked under
+both models. The test verifies this rejection while reconstructing the preceding source exactly with both pinned
+tokenizers. All 85 table tests, scoped lint and ingestion types pass. Canonical report:
+`artifacts/regulatory-backfills/pesticides-version-recheck.json`, parser hash
+`d274adda54dce34525153aaf36d8459f5cf5db5b0ca94cb58db09a6097b90e8a`. Tests:
+`C:/Users/andcra/AppData/Local/Temp/tabra-pesticides-tests.log`. Three known blocked versions and full-corpus
+requalification remain open. No provider calls or source/index/vector writes occurred. See the
+[source review](ditto-source-review.md) for the exact misalignment and the next required evidence.
+Root `pnpm verify` stopped at unrelated knip findings before coverage. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-pesticides-verify.log`.
+
 Resolved the reviewed child-only rows in the 38 CFR 3.261 income table. Parent-benefit reference retention is limited
 to the exact earned-child-income and chapter-35 educational-assistance labels, all six reviewed headers, empty
 parent/citation cells and populated pension cells. These blank parent cells receive no inferred inclusion/exclusion.

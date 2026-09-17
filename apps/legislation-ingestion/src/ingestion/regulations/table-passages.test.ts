@@ -529,6 +529,60 @@ describe("regulatory table passages", () => {
     }
   }, 30_000)
 
+  it("retains explicit pesticide criteria across unclassified entries but rejects the shifted zinc record", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(
+        JSON.parse(await readFile(new URL("./fixtures/restricted-pesticides-table.json", import.meta.url), "utf8"))
+      )
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "pesticide_table_required")
+    expect(() => legalTableRows(table)).toThrow("passage_table_unresolved_ditto")
+    const zinc = table.xml.indexOf("Zinc Phosphide")
+    invariant(zinc > 0, "zinc_boundary_required")
+    const prefix = {
+      text: table.text.slice(0, table.text.indexOf("Zinc Phosphide")).trimEnd(),
+      xml: table.xml.slice(0, table.xml.lastIndexOf("<TR>", zinc)) + "</TBODY></TABLE>"
+    }
+    const rows = legalTableRows(prefix).rows
+    const blank = rows.find((row) =>
+      prefix.text.slice(row.start, row.end).startsWith("90 pct wettable powder formulation in water soluble bags")
+    )
+    const methyl = rows.find((row) => prefix.text.slice(row.start, row.end).startsWith("Methyl bromide"))
+    invariant(blank && methyl, "pesticide_rows_required")
+    expect(blank.context.some((span) => span.label === "Column 5 ditto source")).toBe(false)
+    expect(
+      methyl.context
+        .filter((span) => span.label === "Column 5 ditto source")
+        .map((span) => prefix.text.slice(span.start, span.end))
+    ).toEqual(["Other hazards-accident history."])
+    for (const [before, after] of [
+      ["Criteria influencing restriction", "Other criteria"],
+      ["Unclassified", "Unknown classification"]
+    ]) {
+      expect(() =>
+        legalTableRows({ text: prefix.text.replaceAll(before, after), xml: prefix.xml.replaceAll(before, after) })
+      ).toThrow("passage_table_unresolved_ditto")
+    }
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", ...prefix }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(prefix.xml),
+      body: prefix.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(prefix.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
   it("resolves reviewed sparse flavoring limitations without filling blank entries", async () => {
     const fixture = z
       .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })

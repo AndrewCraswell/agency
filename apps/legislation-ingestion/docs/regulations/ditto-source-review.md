@@ -2,6 +2,23 @@
 
 ## Latest scoped requalification
 
+40 CFR 152.175 has two independent defects. The sparse restriction-criteria reference is repaired only for
+unclassified entries with the exact five pesticide headers and populated formulation/use/classification cells.
+Explicit classification dittos must resolve to `Unclassified`; blank criteria receive no inferred restriction.
+The [2017 published table](https://www.govinfo.gov/content/pkg/CFR-2017-title40-vol26/pdf/CFR-2017-title40-vol26.pdf)
+corroborates the same retained sequence across the Methomyl and Methyl bromide rows. This historical corroboration
+does not substitute for the retained current version or establish current legal status.
+
+The complete current section still fails: the Zinc Phosphide dry-formulation record is split across a formulation-only
+row, a blank row and a shifted row containing `All uses`, `Restricted`, `Acute inhalation toxicity.` in columns 1–3
+instead of 3–5. The following bait row's classification ditto has no valid column-4 source. Do not fill this from a
+different column without a separately reviewed alignment rule. The full canonical fixture is
+`fixtures/restricted-pesticides-table.json`; all 85 table tests pass, including exact prefix reconstruction with both
+tokenizers and continued rejection of the complete malformed table. Whole-version report:
+`artifacts/regulatory-backfills/pesticides-version-recheck.json`, parser hash
+`d274adda54dce34525153aaf36d8459f5cf5db5b0ca94cb58db09a6097b90e8a`.
+Three known versions remain blocked; this change does not close the pesticide section.
+
 38 CFR 3.261 now qualifies with 61 passages per model, maximum 482 OpenAI / 669 Voyage tokens. The two reviewed
 child-only income entries preserve earlier parent-benefit references for later explicit dittos. Recognition requires
 all six income headers, exact row labels, empty parent/citation cells and populated pension cells, without spans.

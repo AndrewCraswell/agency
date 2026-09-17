@@ -349,6 +349,24 @@ function isChildIncomeRow(row: ReturnType<ReturnType<typeof load>>, hasIncomeHea
   )
 }
 
+/** Unclassified pesticide entries have no restriction criterion; later explicit dittos retain the printed criterion. */
+function isSparsePesticideCriteria(row: ReturnType<ReturnType<typeof load>>, hasPesticideHeaders: boolean) {
+  const cells = row.children("TD")
+  return (
+    hasPesticideHeaders &&
+    cells.length === 5 &&
+    cells
+      .toArray()
+      .every(
+        (cell, index) =>
+          Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+          (index === 4
+            ? cell.children.every((node) => node.type === "text" && node.data.trim() === "")
+            : index === 0 || sourceText(cells.eq(index)).length > 0)
+      )
+  )
+}
+
 /** Reviewed flavoring tables print sparse limitations; a blank row itself inherits no limitation. */
 function isSparseFlavoringLimitation(row: ReturnType<ReturnType<typeof load>>, hasFlavoringHeaders: boolean) {
   const cells = row.children("TD")
@@ -721,6 +739,16 @@ export function legalTableRows(input: { text: string; xml: string }) {
   const expenseGroups = sourceExpenseGroups(rows)
   const nameContinuations = sourceReviewedNameContinuations(rows)
   const approvalHeaders = tables.find("THEAD TH")
+  const pesticideHeaders = [
+    "Active ingredient",
+    "Formulation",
+    "Use pattern",
+    "Classification 1",
+    "Criteria influencing restriction"
+  ]
+  const hasPesticideHeaders =
+    approvalHeaders.length === pesticideHeaders.length &&
+    pesticideHeaders.every((value, index) => sourceText(approvalHeaders.eq(index)) === value)
   const incomeHeaders = [
     "Income",
     "Dependency (parents)",
@@ -812,6 +840,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
       const isSparseLimitation = isSparseFlavoringLimitation(selection, hasFlavoringHeaders)
       const isSparseStation = isSparseStationClass(selection, hasFrequencyHeaders)
       const isChildIncome = isChildIncomeRow(selection, hasIncomeHeaders)
+      const isSparsePesticide = isSparsePesticideCriteria(selection, hasPesticideHeaders)
       const isGroup =
         cells.length === 1 && Number(cells.first().attr("colspan") ?? cells.first().attr("COLSPAN") ?? 1) > 1
       const categoryLevel = sourceCategoryLevel(selection)
@@ -889,10 +918,17 @@ export function legalTableRows(input: { text: string; xml: string }) {
             invariant(width === 1 && reference, "passage_table_unresolved_ditto")
             context.push(reference)
           } else {
+            const classification = previousCells.get(4)
+            const preservesPesticideCriteria =
+              isSparsePesticide &&
+              column === 5 &&
+              classification &&
+              input.text.slice(classification.start, classification.end) === "Unclassified"
             if (
               (((isReservedApproval || isSparseLimitation) && column === 3) ||
                 (isSparseStation && column === 2) ||
-                (isChildIncome && (column === 2 || column === 3))) &&
+                (isChildIncome && (column === 2 || column === 3)) ||
+                preservesPesticideCriteria) &&
               value.length === 0 &&
               width === 1
             ) {
