@@ -36,3 +36,11 @@ explicit `DATABASE_URL`. The `apply` operation adds the nullable column and repl
 the current canonical schema definition. DDL has a three-second lock timeout; validation runs separately with a
 30-second statement timeout. A schema-derived constraint fingerprint makes repeat application a no-op and lets an
 interrupted validation resume. The operation changes no vote facts, source references or completeness flags.
+
+The fresh-database baseline also includes `votes_occurrence_asc_idx` and `votes_occurrence_desc_idx`, partial B-tree
+indexes on the internal ordering anchor and ascending vote ID for canonically complete votes. Both directions are
+needed because cursor ties retain ascending IDs even when time order is descending; a backward scan reverses both.
+The isolated integration suite inserts 100,000 mixed date-only/exact-time votes, including large same-day ties, and
+checks the real reader ordering expression uses the matching index without a full sort. The transaction rolls back
+all fixtures and test-created indexes. Existing databases require a separately observed concurrent index build and
+production query-plan verification before deployment. These are vote-query indexes, not embedding indexes.

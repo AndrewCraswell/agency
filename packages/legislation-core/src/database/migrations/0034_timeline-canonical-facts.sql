@@ -66,5 +66,13 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS "votes_bill_timeline_idx"
   ON "legislation"."votes" ("bill_id", "held_at", "source_sequence", "id");
+-- Cursor ties use ascending IDs in both time directions, so a backward scan of
+-- one index cannot satisfy both orders without sorting large same-day groups.
+CREATE INDEX IF NOT EXISTS "votes_occurrence_asc_idx"
+  ON "legislation"."votes" ((coalesce("held_at", "held_date"::timestamp at time zone 'UTC')), "id")
+  WHERE "timeline_complete";
+CREATE INDEX IF NOT EXISTS "votes_occurrence_desc_idx"
+  ON "legislation"."votes" ((coalesce("held_at", "held_date"::timestamp at time zone 'UTC')) DESC, "id")
+  WHERE "timeline_complete";
 CREATE INDEX IF NOT EXISTS "event_outcomes_timeline_idx"
   ON "legislation"."event_outcomes" ("occurred_at", "source_sequence", "id");

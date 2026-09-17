@@ -2,6 +2,14 @@
 
 ## September 16 continuation and identity verification
 
+September 17 vote-order index implementation and scale test:
+
+- [x] Added canonical partial B-tree indexes for ascending and descending mixed-precision vote order to the Drizzle schema and original migration baseline. Both retain ascending ID tie order, including large groups of date-only votes; no embedding indexes changed.
+- [x] Isolated Docker integration passed both tests: 100,000 mixed-precision votes use the matching ordered index with no full sort/sequential scan; one-item cursor pagination and conservative boundary-day filtering still pass. Fixtures and test-created indexes rolled back. Core type-check passed.
+- [x] Revalidated content runs: AK `run_06garg91jikvu57cng9hf50601` completed its 100-continuation budget with zero completed scan rounds and `ingestionComplete=false`. No unexpired AK lease remained. Resumed the existing checkpoint as `run_06garmbo069g0bajh5v9pl1401`, pinned to deployed `20260916.3`, concurrency one. NC `run_06garg93gu95310vmlld063k01` remains executing; no overlapping NC run launched.
+- [ ] Concurrent production index builds/read-back, realistic scoped-query acceptance, reader/worker deployment, source journal replay and authenticated API/MCP acceptance remain open. Local scale acceptance is not production endpoint acceptance.
+- [ ] Full `pnpm verify` is not green: after correcting two test-file brace lint errors, the rerun passed lint but stopped on unrelated knip unused files/dependencies/binaries and `EntityResults` export findings. Coverage did not run. The resumed Alaska handle was subsequently confirmed `EXECUTING`.
+
 September 17 production vote-schema reconciliation:
 
 - [x] Added C `scripts/reconcile-vote-date.ts`, inspect by default, explicit apply. Constraint SQL comes directly from the canonical Drizzle schema, with a SHA256 fingerprint; no hand-maintained duplicate condition. Tested missing-column reconciliation and repeat no-op behavior in the isolated local database. C lint/type-check passed.
