@@ -25,6 +25,9 @@ its official printed-page evidence.
 
 ## Purpose and decision
 
+The [embedding corpus candidate inventory](embedding-corpus-candidates.md) records canonical export qualification,
+pre-freeze duplicate screening, rejected selections and the remaining evaluation gates.
+
 Update September 14, 2026: evaluate **Vaquill for state statutory and administrative codes, with direct federal
 acquisition**, as the leading scoped option. Compare it with a broader license and OpenLaws before selecting a contract.
 State-only availability, savings, coverage and rights remain unverified. Keep current legislative providers.

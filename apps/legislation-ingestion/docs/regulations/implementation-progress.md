@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Exported and independently audited 26 canonical evaluation candidate versions across current prose/tables, annual history,
+proposals, final rules and notices. All complete versions qualified under both pinned tokenizers, producing 55 shared
+passages (17 development, 38 held-out candidates), maximum 777 tokens. Before freezing anything, replaced four historical
+pairs whose normalized words were identical despite distinct canonical hashes, and replaced two notices whose boilerplate
+crossed the proposed split. The replacement screen has zero exact-input cross-split duplicates and zero cross-split
+five-word-shingle pairs at Jaccard >= 0.5. Semantic/family review and final corpus/query expansion remain open; this small,
+short-record-biased candidate inventory does not close EVAL-02. See the [candidate report](embedding-corpus-candidates.md)
+and its exact identity/hash manifest. No provider calls or canonical/index/vector writes occurred.
+The live exports and independent packet audit passed, as did `git diff --check`. Root `pnpm verify` stopped at unrelated
+Knip findings for existing Storybook/generator files, root dependencies/binaries and `EntityResults`; coverage did not run.
+Log: `C:/Users/andcra/AppData/Local/Temp/tabra-evaluation-candidates-verify.log`.
+
+Full-current qualification process 40548 continues with five completed editions and 29,621 canonical members, zero
+preparation failures under both tokenizers. The full 49-title run is still incomplete.
+
 Added the Federal Register counterpart to canonical evaluation export. One read-only statement binds the published
 batch, observation, document/version, active rights and registered supporting PDF. The verifier reproduces the original
 XML or HTML content-hash rules, checks source/identity/rights/byte bounds, and prepares the complete version for both
