@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added a strict filter projection for every acknowledged edition or publication in the isolated search database. Whole-
+copy finalization derives the projection while holding the canonical scope and rights locks, validates its exact
+discriminated shape, and stores a SHA-256-bound record beside the copy receipt. Edition projections carry source,
+rights, jurisdiction, code, edition and issue/currency dates. Publication projections carry source, rights,
+jurisdiction, observation/version identity, publication kind/date and an explicit empty agency list until reviewed
+agency mappings are promoted. The new-database baseline and an idempotent existing-database upgrade both provision the
+table and measured common/publication filter indexes.
+
+The upgrade applied to both retained isolated search databases. Re-finalizing the two retained edition scopes and 12
+Federal Register scopes produced 14 strict projections with 14 matching hashes: current Title 3 retained 33 generations
+and 35 passages, annual 2024 Title 6 retained 659 generations and 996 passages, and the 12 final rules retained their
+451 passages. The dedicated PostgreSQL edition and publication acknowledgement tests passed. This establishes the
+projection and backfill half of INDEX-01; full-corpus target filtering, canonical partition-completeness comparison and
+reviewed Federal Register agency mappings remain open.
+
 Added input-identity covering indexes to both isolated regulatory vector tables. Exact cross-generation reuse can now
 seek by input hash and read generation, passage-owner and vector-hash identity from the index instead of scanning a
 route's full vector table. The existing passage-ID indexes remain for owner/passage lookups; HNSW serving indexes are

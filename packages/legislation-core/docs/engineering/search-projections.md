@@ -22,10 +22,13 @@ Canonical immutable passage generations bind provision/publication version, prep
 context spans. English FTS has a generated column and GIN index; exact citation uses B-tree indexes. Measured filtered
 indexes support edition membership/publication date, not every filter combination.
 
-The isolated `legal_passages` projection records key, owner/version, text/hash, heading, jurisdiction, code, corpus/kind,
-edition/source dates, agency IDs, rights profile, source and generation. Use the pinned extension syntax and disposable
-compatibility canary. Corpus namespaces cannot collide. Unique passage identity and rights semantics come from
-[the regulatory data contract](../regulations/data-contract.md).
+The isolated legal-passage projection stores immutable generation and passage text separately from one filter projection
+per acknowledged edition or publication scope. The filter record binds the exact scope to corpus, jurisdiction, source,
+rights profile, code or publication version, relevant dates, publication kind and agency IDs. Agency IDs remain empty
+until canonical Federal Register agency resolution is promoted; callers must not infer an agency from publisher text.
+`legal.sql` provisions this shape for a new database, while `scope-projections.sql` is the explicit upgrade for an
+existing isolated search database. Corpus namespaces cannot collide. Unique passage identity and rights semantics come
+from [the regulatory data contract](../regulations/data-contract.md).
 
 Canonical `legal_passage_embeddings` uses dimension-constrained model/input checks, unique input identity and passage-ID
 lookup. Hashes bind normalized input, model, dimensions, input and chunk contracts. Every vector stores those fields.

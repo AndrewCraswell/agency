@@ -237,6 +237,12 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           )
         }
         await target.query(
+          await readFile(
+            new URL(import.meta.resolve("@repo/legislation-core/infra/passage-search/scope-projections.sql")),
+            "utf8"
+          )
+        )
+        await target.query(
           "TRUNCATE legislation.legal_search_generations,legislation.legal_search_scopes,legislation.legal_search_revocations CASCADE"
         )
         const data = await materialized(await input())
@@ -430,6 +436,12 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           )
         }
         await target.query(
+          await readFile(
+            new URL(import.meta.resolve("@repo/legislation-core/infra/passage-search/scope-projections.sql")),
+            "utf8"
+          )
+        )
+        await target.query(
           "TRUNCATE legislation.legal_search_generations,legislation.legal_search_scopes,legislation.legal_search_revocations CASCADE"
         )
         const first = await materialized(await input())
@@ -530,6 +542,22 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         expect(await acknowledgeLegalPassageCopy(pool, target, prepared.preparationId)).toMatchObject({
           acknowledged: true
         })
+        expect(
+          (
+            await target.query(
+              "SELECT projection FROM legislation.legal_search_scope_projections WHERE scope_kind='edition' AND scope_id=$1",
+              [first.editionId]
+            )
+          ).rows[0]?.projection
+        ).toMatchObject({
+          scope_kind: "edition",
+          scope_id: first.editionId,
+          corpus: "regulation",
+          jurisdiction_id: "jurisdiction:us",
+          source_id: "ecfr",
+          edition_id: first.editionId,
+          agency_ids: []
+        })
         await expect(
           inspectLegalPassagePipelineCompletion(pool, target, { preparationId: prepared.preparationId })
         ).resolves.toMatchObject({
@@ -582,6 +610,12 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
             )
           )
         }
+        await target.query(
+          await readFile(
+            new URL(import.meta.resolve("@repo/legislation-core/infra/passage-search/scope-projections.sql")),
+            "utf8"
+          )
+        )
         await target.query(
           "TRUNCATE legislation.legal_search_generations,legislation.legal_search_scopes,legislation.legal_search_revocations CASCADE"
         )
@@ -1073,6 +1107,12 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           )
         }
         await target.query(
+          await readFile(
+            new URL(import.meta.resolve("@repo/legislation-core/infra/passage-search/scope-projections.sql")),
+            "utf8"
+          )
+        )
+        await target.query(
           "TRUNCATE legislation.legal_search_generations,legislation.legal_search_scopes,legislation.legal_search_revocations CASCADE"
         )
         const data = await frInput()
@@ -1098,6 +1138,31 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         expect(await acknowledgeLegalPassageCopy(pool, target, plan.preparationId)).toMatchObject({
           acknowledged: true,
           copiedGenerations: 1
+        })
+        const canonicalProjection = (
+          await pool.query(
+            `SELECT o.id AS scope_id,o.version_id AS document_version_id,v.publication_kind,
+            o.publication_date::text AS publication_date
+            FROM legislation.regulatory_document_observations o
+            JOIN legislation.regulatory_document_versions v ON v.id=o.version_id WHERE o.id=$1`,
+            [observation.id]
+          )
+        ).rows[0]
+        expect(
+          (
+            await target.query(
+              "SELECT projection FROM legislation.legal_search_scope_projections WHERE scope_kind='publication' AND scope_id=$1",
+              [observation.id]
+            )
+          ).rows[0]?.projection
+        ).toMatchObject({
+          ...canonicalProjection,
+          scope_kind: "publication",
+          observation_id: observation.id,
+          corpus: "regulatory_publication",
+          jurisdiction_id: "jurisdiction:us",
+          source_id: "govinfo-fr",
+          agency_ids: []
         })
         const publicationSearch = {
           scope: { kind: "publication" as const, observationId: observation.id, versionId: observation.version_id },

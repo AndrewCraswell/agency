@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import {
+  legalSearchScopeProjectionSchema,
   legalTransferGenerationSchema,
   legalTransferRowSchema
 } from "@repo/legislation-core/legal-text/passage-contract"
@@ -93,6 +94,7 @@ async function checkLegalPassageCopy(
         `legal-scope:${scope.kind}:${scope.id}`
       ])
       await requireLegalPreparationRights(source, scope)
+      const projection = acknowledge ? await readLegalSearchScopeProjection(source, scope) : undefined
       const selection =
         page === undefined
           ? undefined
@@ -381,6 +383,13 @@ async function checkLegalPassageCopy(
           inventory_hash=EXCLUDED.inventory_hash,generation_count=EXCLUDED.generation_count,passage_count=EXCLUDED.passage_count,verified_at=clock_timestamp()`,
           [scope.kind, scope.id, id, job.inventory_hash, checked, passages]
         )
+        invariant(projection !== undefined, "legal_copy_projection_missing")
+        await target.query(
+          `INSERT INTO legislation.legal_search_scope_projections(scope_kind,scope_id,projection,projection_hash)
+          VALUES($1,$2,$3::jsonb,$4) ON CONFLICT(scope_kind,scope_id) DO UPDATE SET
+          projection=EXCLUDED.projection,projection_hash=EXCLUDED.projection_hash,projected_at=clock_timestamp()`,
+          [scope.kind, scope.id, JSON.stringify(projection), digest(JSON.stringify(projection))]
+        )
         await target.query("DELETE FROM legislation.legal_search_scope_revisions WHERE scope_kind=$1 AND scope_id=$2", [
           scope.kind,
           scope.id
@@ -426,6 +435,44 @@ async function checkLegalPassageCopy(
   } finally {
     target.release()
   }
+}
+
+async function readLegalSearchScopeProjection(
+  source: pg.PoolClient,
+  scope: { kind: "edition" | "publication"; id: string }
+) {
+  if (scope.kind === "edition") {
+    const row = (
+      await source.query(
+        `SELECT e.id AS scope_id,e.jurisdiction_id,e.source_id,e.rights_profile_id,e.code_id,
+        e.id AS edition_id,e.issue_date::text,e.currency_date::text
+        FROM legislation.legal_editions e WHERE e.id=$1 AND e.published_at IS NOT NULL FOR SHARE OF e`,
+        [scope.id]
+      )
+    ).rows[0]
+    return legalSearchScopeProjectionSchema.parse({
+      ...row,
+      scope_kind: "edition",
+      corpus: "regulation",
+      agency_ids: []
+    })
+  }
+  const row = (
+    await source.query(
+      `SELECT o.id AS scope_id,o.jurisdiction_id,o.source_id,o.rights_profile_id,o.id AS observation_id,
+      o.version_id AS document_version_id,v.publication_kind,o.publication_date::text
+      FROM legislation.regulatory_document_observations o
+      JOIN legislation.regulatory_document_versions v ON v.id=o.version_id
+      WHERE o.id=$1 FOR SHARE OF o,v`,
+      [scope.id]
+    )
+  ).rows[0]
+  return legalSearchScopeProjectionSchema.parse({
+    ...row,
+    scope_kind: "publication",
+    corpus: "regulatory_publication",
+    agency_ids: []
+  })
 }
 
 async function readCopyCheckpoints(source: pg.PoolClient, target: pg.PoolClient, id: string, generations: string[]) {
