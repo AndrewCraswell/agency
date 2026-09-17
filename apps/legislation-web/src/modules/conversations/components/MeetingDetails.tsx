@@ -6,6 +6,7 @@ import { useEffect, useEffectEvent, useRef, useState } from "react"
 import { Button } from "../../../components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "../../../components/ui/sheet"
 import { ResultExpiredError, formatMeetingWhen } from "../entityResults"
+import { evidenceSourceUrl } from "../evidence"
 import type { MeetingDetails as MeetingData } from "../recordDetails"
 import { useConversationSession } from "./ConversationSession"
 import { ResultBadge } from "./ResultBadge"
@@ -19,6 +20,7 @@ function MeetingContent({ selection }: Readonly<{ selection: Selection }>) {
   const { loadMeetingDetails } = useConversationSession()
   const load = useEffectEvent(loadMeetingDetails)
   const [details, setDetails] = useState<MeetingData>()
+  const sourceUrl = details ? evidenceSourceUrl(details.record) : null
   const [failure, setFailure] = useState<"expired" | "failed">()
   const [attempt, setAttempt] = useState(0)
   const [page, setPage] = useState(0)
@@ -182,9 +184,9 @@ function MeetingContent({ selection }: Readonly<{ selection: Selection }>) {
           </section>
         )}
       </div>
-      {details.record.sourceUrl && (
+      {sourceUrl && (
         <SheetFooter className={styles.footer}>
-          <a href={details.record.sourceUrl} target="_blank" rel="noopener noreferrer" className={drawer.source}>
+          <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className={drawer.source}>
             <ExternalLink className="size-3.5" aria-hidden="true" />
             View source
           </a>

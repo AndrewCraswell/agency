@@ -337,13 +337,72 @@ export function projectResearchEvidence(
     })
 }
 
-export function evidenceSourceUrl(evidence: Pick<EvidenceSnapshot, "sourceUrl" | "readableUrl">): string | null {
-  const readable = sourceUrlSchema.safeParse(evidence.readableUrl)
-  if (readable.success) {
-    return readable.data
+export function humanReadableUrl(value: unknown): string | null {
+  const parsed = sourceUrlSchema.safeParse(value)
+  if (!parsed.success) {
+    return null
   }
-  const source = sourceUrlSchema.safeParse(evidence.sourceUrl)
-  return source.success ? source.data : null
+  const source = new URL(parsed.data)
+  let path: string
+  try {
+    path = decodeURIComponent(source.pathname)
+  } catch {
+    return null
+  }
+  const federalHosts = ["www.govinfo.gov", "govinfo.gov"]
+  let bill =
+    source.hostname === "api.congress.gov"
+      ? /^\/v3\/bill\/([1-9][0-9]*)\/(hr|s|hjres|sjres|hconres|sconres|hres|sres)\/([1-9][0-9]*)\/?$/i.exec(path)
+      : null
+  if (federalHosts.includes(source.hostname)) {
+    const status =
+      /^\/bulkdata\/BILLSTATUS\/([1-9][0-9]*)\/(hr|s|hjres|sjres|hconres|sconres|hres|sres)\/BILLSTATUS-\1\2([1-9][0-9]*)\.xml$/i.exec(
+        path
+      )
+    bill = status ?? bill
+    const document = /^\/content\/pkg\/([A-Z0-9-]+)\/xml\/\1\.xml$/i.exec(path)
+    if (document) {
+      return `https://www.govinfo.gov/content/pkg/${document[1]}/pdf/${document[1]}.pdf`
+    }
+  }
+  const amendment =
+    source.hostname === "api.congress.gov"
+      ? /^\/v3\/amendment\/([1-9][0-9]*)\/(hamdt|samdt)\/([1-9][0-9]*)\/?$/i.exec(path)
+      : null
+  const record = bill ?? amendment
+  if (record) {
+    const congress = record[1]!
+    const types: Record<string, string> = {
+      hr: "house-bill",
+      s: "senate-bill",
+      hjres: "house-joint-resolution",
+      sjres: "senate-joint-resolution",
+      hconres: "house-concurrent-resolution",
+      sconres: "senate-concurrent-resolution",
+      hres: "house-resolution",
+      sres: "senate-resolution",
+      hamdt: "house-amendment",
+      samdt: "senate-amendment"
+    }
+    const suffixes: Record<string, string> = { one: "st", two: "nd", few: "rd", other: "th" }
+    const suffix = suffixes[new Intl.PluralRules("en", { type: "ordinal" }).select(Number(congress))]
+    return `https://www.congress.gov/${bill ? "bill" : "amendment"}/${congress}${suffix}-congress/${types[record[2]!.toLowerCase()]}/${record[3]}`
+  }
+  if (
+    /(^|\.)api\./i.test(source.hostname) ||
+    /\/(api|bulkdata)(\/|$)/i.test(path) ||
+    /\.(xml|json|jsonl|ndjson|csv|tsv|zip|gz|txt)\/?$/i.test(path) ||
+    [...source.searchParams].some(
+      ([key, format]) => /^(format|output|outputformat|f)$/i.test(key) && /^(xml|json|csv|txt)$/i.test(format)
+    )
+  ) {
+    return null
+  }
+  return parsed.data
+}
+
+export function evidenceSourceUrl(evidence: Pick<EvidenceSnapshot, "sourceUrl" | "readableUrl">): string | null {
+  return humanReadableUrl(evidence.readableUrl) ?? humanReadableUrl(evidence.sourceUrl)
 }
 
 function evidenceContent(source: EvidenceSourceContext, quote: string | null | undefined): EvidenceSnapshot["content"] {

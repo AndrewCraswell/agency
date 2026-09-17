@@ -6,7 +6,7 @@ import { useId, useRef, useState } from "react"
 import { Button } from "../../../components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip"
-import { evidenceSourceUrl, formatEvidenceCitation } from "../evidence"
+import { evidenceSourceUrl, formatEvidenceCitation, humanReadableUrl } from "../evidence"
 import type { ContentComponent, PresentationContent } from "../presentationContent"
 import { BillProgressCard } from "./BillProgressCard"
 import type { CitationSelection } from "./citationPresentation"
@@ -17,9 +17,13 @@ import * as responseStyles from "./ConversationResponse.css"
 import * as styles from "./InlinePresentation.css"
 
 function SourceLink({ url, children }: Readonly<{ url: string; children: string }>) {
+  const destination = humanReadableUrl(url)
+  if (!destination) {
+    return null
+  }
   return (
     <Button asChild variant="ghost" size="sm">
-      <a href={url} target="_blank" rel="noopener noreferrer">
+      <a href={destination} target="_blank" rel="noopener noreferrer">
         {children}
         <ExternalLink aria-hidden="true" />
       </a>
@@ -230,7 +234,9 @@ function TimelineContent({
   content,
   isProgress
 }: Readonly<{ content: Extract<PresentationContent, { kind: "timeline" }>; isProgress: boolean }>) {
-  const events = isProgress ? content.events.filter((event) => event.type === "action") : content.events
+  const events = (isProgress ? content.events.filter((event) => event.type === "action") : content.events).map(
+    (event) => ({ ...event, sourceUrl: humanReadableUrl(event.sourceUrl) })
+  )
   const title = isProgress ? "Recorded bill progress" : "Recorded bill activity"
   return (
     <section className={styles.view} aria-label={title}>

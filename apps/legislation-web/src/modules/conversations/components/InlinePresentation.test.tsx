@@ -10,7 +10,7 @@ import type { ContentComponent, PresentationContent } from "../presentationConte
 import { ChatProviders } from "./ChatProviders"
 import type { CitationSelection } from "./citationPresentation"
 import { ConversationResponse } from "./ConversationResponse"
-import { recordHref } from "./EntityResults"
+import { CompactRecordCard, RecordCard, recordHref } from "./EntityResults"
 import { InlinePresentation } from "./InlinePresentation"
 
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn<typeof import("@sentry/nextjs").captureException>() }))
@@ -31,6 +31,71 @@ const source: EvidenceSnapshot = {
   content: { state: "available", quote: "Exact words.\n".repeat(140) }
 }
 const content: PresentationContent = { id: "33333333-3333-4333-8333-333333333333", kind: "evidence", evidence: source }
+
+it.each(["full", "compact"])("opens human bill pages from %s GovInfo cards", (variant) => {
+  const Card = variant === "full" ? RecordCard : CompactRecordCard
+  const record = {
+    id: "bill:us:116:hr:5826",
+    kind: "bill" as const,
+    title: "HR 5826",
+    fields: [],
+    tallies: [],
+    sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/116/hr/BILLSTATUS-116hr5826.xml"
+  }
+  render(<Card record={record} resultId="result" onOpenVote={() => undefined} />)
+  const links = screen.getAllByRole("link")
+  expect(links.length).toBeGreaterThan(0)
+  for (const link of links) {
+    expect(link.getAttribute("href")).toBe("https://www.congress.gov/bill/116th-congress/house-bill/5826")
+    expect(link.getAttribute("target")).toBe("_blank")
+  }
+  expect(record.sourceUrl).toContain(".xml")
+})
+
+it.each(["full", "compact"])("keeps %s unknown XML document cards non-navigable", (variant) => {
+  const Card = variant === "full" ? RecordCard : CompactRecordCard
+  render(
+    <Card
+      record={{
+        id: "document:one",
+        kind: "document",
+        title: "Version",
+        fields: [],
+        tallies: [],
+        sourceUrl: "https://example.org/version.xml"
+      }}
+      resultId="result"
+      onOpenVote={() => undefined}
+    />
+  )
+  expect(screen.queryByRole("link")).toBeNull()
+})
+
+it("uses the document's retained readable rendition instead of its raw provenance", () => {
+  render(
+    <RecordCard
+      record={{
+        id: "document:one",
+        kind: "document",
+        title: "Version",
+        fields: [],
+        tallies: [],
+        sourceUrl: "https://example.org/version.xml",
+        readableUrl: "https://example.org/version.pdf"
+      }}
+      resultId="result"
+      onOpenVote={() => undefined}
+    />
+  )
+  expect(screen.getByRole("link", { name: "Open in reader" }).getAttribute("href")).toBe(
+    "https://example.org/version.pdf"
+  )
+})
+
+it.each(["CitationCard", "PassageQuote"] as const)("does not offer raw XML from %s", (variant) => {
+  show({ ...content, evidence: { ...source, sourceUrl: "https://example.org/version.xml" } }, variant)
+  expect(screen.queryByRole("link", { name: "Read in full" })).toBeNull()
+})
 
 it("renders the bill progress identity, milestones and actions without invented progress", () => {
   show(
@@ -91,12 +156,20 @@ it.each([
 
 it.each([
   "https://example.org/v3/bill/119/hr/1",
-  "https://api.congress.gov.example.org/v3/bill/119/hr/1",
   "https://www.congress.gov/bill/119th-congress/house-bill/1",
-  "https://api.congress.gov/v3/bill/119/hr/1/actions",
-  "https://api.congress.gov/v3/bill/119/unknown/1",
   "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB2652"
 ])("preserves other bill source destinations: %s", (sourceUrl) => {
+  expect(
+    recordHref({ id: "bill:one", kind: "bill", title: "Bill", sourceUrl, fields: [], tallies: [] }, "result")
+  ).toBe(sourceUrl)
+})
+
+it.each([
+  "https://api.congress.gov.example.org/v3/bill/119/hr/1",
+  "https://api.congress.gov/v3/bill/119/hr/1/actions",
+  "https://api.congress.gov/v3/bill/119/unknown/1",
+  "https://publisher.example/bill.xml"
+])("does not expose machine-only record navigation: %s", (sourceUrl) => {
   expect(
     recordHref({ id: "bill:one", kind: "bill", title: "Bill", sourceUrl, fields: [], tallies: [] }, "result")
   ).toBeUndefined()

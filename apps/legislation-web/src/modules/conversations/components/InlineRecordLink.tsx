@@ -69,7 +69,8 @@ export function InlineRecordLink({ mention, children }: InlineRecordLinkProps) {
   const { record, reference } = mention
   const descriptionId = useId()
   const href = recordHref(record, reference.resultId)
-  let description = `Open record: ${record.title}`
+  const description =
+    href && !href.startsWith("/") ? `Open record in a new tab: ${record.title}` : `Open record: ${record.title}`
   let link: ReactNode
   if (record.kind === "vote" || record.kind === "meeting") {
     link = (
@@ -79,23 +80,16 @@ export function InlineRecordLink({ mention, children }: InlineRecordLinkProps) {
     )
   } else if (href) {
     link = (
-      <Link href={href} className={styles.recordMention} aria-describedby={descriptionId}>
-        {children}
-      </Link>
-    )
-  } else if (record.sourceUrl) {
-    description = `Open record in a new tab: ${record.title}`
-    link = (
-      <a
-        href={record.sourceUrl}
+      <Link
+        href={href}
+        target={href.startsWith("/") ? undefined : "_blank"}
+        rel={href.startsWith("/") ? undefined : "noopener noreferrer"}
         className={styles.recordMention}
-        target="_blank"
-        rel="noopener noreferrer"
         aria-describedby={descriptionId}
       >
         {children}
-        <ExternalLink className="ml-1 inline size-3" aria-hidden="true" />
-      </a>
+        {!href.startsWith("/") && <ExternalLink className="ml-1 inline size-3" aria-hidden="true" />}
+      </Link>
     )
   } else {
     return <span>{children}</span>

@@ -1317,7 +1317,7 @@ describe("ConversationResponse citations", () => {
   it.each([
     { interaction: "hover", evidence: first, expectedUrl: first.readableUrl },
     { interaction: "focus", evidence: first, expectedUrl: first.readableUrl },
-    { interaction: "hover", evidence: { ...first, readableUrl: undefined }, expectedUrl: first.sourceUrl }
+    { interaction: "hover", evidence: { ...first, readableUrl: undefined }, expectedUrl: null }
   ])("resolves $expectedUrl on $interaction", async ({ interaction, evidence, expectedUrl }) => {
     const user = userEvent.setup()
     const onEvidence = vi.fn<(selection: CitationSelection) => void>()
@@ -1341,7 +1341,8 @@ describe("ConversationResponse citations", () => {
       await user.tab()
     }
     expect(document.activeElement === badge).toBe(interaction === "focus")
-    expect((await screen.findByRole("tooltip")).textContent).toBe(expectedUrl)
+    const tooltip = expectedUrl ? await screen.findByRole("tooltip") : screen.queryByRole("tooltip")
+    expect(tooltip?.textContent ?? null).toBe(expectedUrl)
     if (interaction === "focus") {
       await user.keyboard("{Enter}")
     } else {
@@ -1351,7 +1352,7 @@ describe("ConversationResponse citations", () => {
     expect(selection).toEqual({ answerId: "answer", number: 1, evidence })
     const panel = render(<EvidencePanel selection={selection} onClose={onClose} returnFocus={returnFocus} />)
     const dialog = await screen.findByRole("dialog", { name: "Source 1" })
-    expect(within(dialog).getByRole("link", { name: "Open source" }).getAttribute("href")).toBe(expectedUrl)
+    expect(within(dialog).queryByRole("link", { name: "Open source" })?.getAttribute("href") ?? null).toBe(expectedUrl)
     expect(within(dialog).getByText("The exact supporting passage.")).toBeDefined()
     expect(within(dialog).getByText("Introduced")).toBeDefined()
     expect(within(dialog).getByText("Section 2")).toBeDefined()

@@ -7,6 +7,7 @@ import { Progress } from "../../../components/ui/progress"
 import { Sheet, SheetClose, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "../../../components/ui/sheet"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
 import { ResultExpiredError } from "../entityResults"
+import { evidenceSourceUrl } from "../evidence"
 import type { VoteDetails as VoteDetailsData } from "../recordDetails"
 import { useConversationSession } from "./ConversationSession"
 import { ResultBadge } from "./ResultBadge"
@@ -37,6 +38,7 @@ export function VoteDetails({
 }>) {
   const { loadVoteDetails } = useConversationSession()
   const [details, setDetails] = useState<VoteDetailsData>()
+  const sourceUrl = details ? evidenceSourceUrl(details.record) : null
   const [failure, setFailure] = useState<{ message: string; isExpired: boolean }>()
   const failureNotice = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(selection !== undefined)
@@ -261,11 +263,11 @@ export function VoteDetails({
                 </Button>
               </nav>
             )}
-            {details.record.sourceUrl && (
+            {sourceUrl && (
               <SheetFooter className={styles.footer}>
                 <a
                   className={styles.source}
-                  href={details.record.sourceUrl}
+                  href={sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="View source (opens in new tab)"

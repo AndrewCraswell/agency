@@ -22,6 +22,7 @@ import { useStickToBottomContext } from "use-stick-to-bottom"
 import { Button } from "../../../components/ui/button"
 import { Toggle } from "../../../components/ui/toggle"
 import { entityLabels, resultTone, ResultExpiredError, type EntityCard, type EntityPage } from "../entityResults"
+import { evidenceSourceUrl } from "../evidence"
 import { useConversationSession } from "./ConversationSession"
 import { MeetingDetails } from "./MeetingDetails"
 import { VoteDetails } from "./VoteDetails"
@@ -136,7 +137,8 @@ export function CardActions({
   isFollowing: boolean
 }>) {
   const kind = record.kind
-  const href = recordHref(record, resultId) ?? record.sourceUrl
+  const href = recordHref(record, resultId)
+  const textHref = evidenceSourceUrl(record)
   const inspector = kind === "vote" || kind === "meeting"
   return (
     <div className={styles.fullActions}>
@@ -174,10 +176,10 @@ export function CardActions({
           {isFollowing ? "Following" : "Follow"}
         </Toggle>
       )}
-      {kind === "amendment" && record.sourceUrl && (
+      {kind === "amendment" && textHref && (
         <Button asChild variant="ghost" size="xs" className={styles.actionButton}>
-          <a href={record.sourceUrl} target="_blank" rel="noopener noreferrer">
-            Read text
+          <a href={textHref} target="_blank" rel="noopener noreferrer">
+            Open source
           </a>
         </Button>
       )}
@@ -421,7 +423,7 @@ function DocumentCard({
 }: Readonly<{ record: EntityCard; href?: string; isGrouped?: boolean }>) {
   const summary = record.documentSummary
   const versionDate = summary?.versionDate
-  const destination = href ?? record.sourceUrl
+  const destination = href ?? evidenceSourceUrl(record)
   const isExternal = destination ? !destination.startsWith("/") : false
   const isMaterial = record.kind === "material"
   const primaryLabel = isMaterial ? "Open" : "Open in reader"
@@ -511,32 +513,8 @@ function DocumentCard({
 }
 
 export function recordHref(record: EntityCard, resultId: string) {
-  if (record.kind === "bill" && record.sourceUrl) {
-    const source = new URL(record.sourceUrl)
-    const match = /^\/v3\/bill\/([1-9][0-9]*)\/(hr|s|hjres|sjres|hconres|sconres|hres|sres)\/([1-9][0-9]*)\/?$/.exec(
-      source.pathname
-    )
-    if (source.protocol === "https:" && source.hostname === "api.congress.gov" && match) {
-      const congress = match[1]!
-      const billType = match[2]!
-      const billNumber = match[3]!
-      const types: Record<string, string> = {
-        hr: "house-bill",
-        s: "senate-bill",
-        hjres: "house-joint-resolution",
-        sjres: "senate-joint-resolution",
-        hconres: "house-concurrent-resolution",
-        sconres: "senate-concurrent-resolution",
-        hres: "house-resolution",
-        sres: "senate-resolution"
-      }
-      const suffixes: Record<string, string> = { one: "st", two: "nd", few: "rd", other: "th" }
-      const suffix = suffixes[new Intl.PluralRules("en", { type: "ordinal" }).select(Number(congress))]
-      return `https://www.congress.gov/bill/${congress}${suffix}-congress/${types[billType]}/${billNumber}`
-    }
-  }
   if (!["person", "organization", "material"].includes(record.kind)) {
-    return undefined
+    return evidenceSourceUrl(record) ?? undefined
   }
   return `/records/${record.kind}/${encodeURIComponent(record.id)}?${new URLSearchParams({ result: resultId })}`
 }
@@ -618,6 +596,8 @@ export function CompactRecordCard({
     return (
       <Link
         href={href}
+        target={href.startsWith("/") ? undefined : "_blank"}
+        rel={href.startsWith("/") ? undefined : "noopener noreferrer"}
         className={className}
         aria-label={record.title}
         aria-describedby={describedBy}
@@ -625,21 +605,6 @@ export function CompactRecordCard({
       >
         {body}
       </Link>
-    )
-  }
-  if (record.sourceUrl) {
-    return (
-      <a
-        href={record.sourceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={className}
-        aria-label={record.title}
-        aria-describedby={describedBy}
-        data-result-focus
-      >
-        {body}
-      </a>
     )
   }
   return (
@@ -812,22 +777,16 @@ export function RecordCard({
     )
   } else if (href) {
     heading = (
-      <Link href={href} className={styles.fullTitle} aria-label={record.title} data-result-focus>
-        {displayTitle}
-      </Link>
-    )
-  } else if (record.sourceUrl) {
-    heading = (
-      <a
-        href={record.sourceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        href={href}
+        target={href.startsWith("/") ? undefined : "_blank"}
+        rel={href.startsWith("/") ? undefined : "noopener noreferrer"}
         className={styles.fullTitle}
         aria-label={record.title}
         data-result-focus
       >
         {displayTitle}
-      </a>
+      </Link>
     )
   }
   return (
@@ -860,7 +819,7 @@ function ResultRow({
         <span className={styles.title}>{record.title}</span>
         {record.subtitle && <span className={styles.subtitle}>{record.subtitle}</span>}
       </span>
-      {(href || record.sourceUrl || record.kind === "vote" || record.kind === "meeting") && (
+      {(href || record.kind === "vote" || record.kind === "meeting") && (
         <ChevronRight className="size-4 shrink-0 text-subtle" aria-hidden="true" />
       )}
     </>
@@ -874,16 +833,15 @@ function ResultRow({
   }
   if (href) {
     return (
-      <Link href={href} className={styles.row} data-result-focus>
+      <Link
+        href={href}
+        target={href.startsWith("/") ? undefined : "_blank"}
+        rel={href.startsWith("/") ? undefined : "noopener noreferrer"}
+        className={styles.row}
+        data-result-focus
+      >
         {body}
       </Link>
-    )
-  }
-  if (record.sourceUrl) {
-    return (
-      <a href={record.sourceUrl} target="_blank" rel="noopener noreferrer" className={styles.row} data-result-focus>
-        {body}
-      </a>
     )
   }
   return (

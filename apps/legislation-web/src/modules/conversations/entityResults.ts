@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { sourceUrlSchema } from "./evidence"
+import { humanReadableUrl, sourceUrlSchema } from "./evidence"
 import { sessionLabel } from "./sessionLabels"
 
 export const entityKindSchema = z.enum([
@@ -32,6 +32,7 @@ export const entityCardSchema = z.object({
   subtitle: z.string().optional(),
   metadata: z.array(z.string()).optional(),
   sourceUrl: sourceUrlSchema.nullable(),
+  readableUrl: sourceUrlSchema.optional(),
   personSummary: z
     .object({
       isActive: z.boolean().optional(),
@@ -597,6 +598,7 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
     subtitle,
     metadata: metadata.filter(Boolean),
     sourceUrl: source.success ? source.data : null,
+    readableUrl: humanReadableUrl(record.readableUrl) ?? undefined,
     fields,
     tallies,
     billSummary,

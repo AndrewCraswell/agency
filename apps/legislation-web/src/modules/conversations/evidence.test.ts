@@ -5,6 +5,7 @@ import {
   evidenceSnapshotSchema,
   evidenceSourceUrl,
   formatEvidenceCitation,
+  humanReadableUrl,
   projectResearchEvidence,
   type EvidenceSourceContext
 } from "./evidence"
@@ -21,6 +22,56 @@ const citation = {
 }
 
 describe("conversation evidence", () => {
+  it.each([
+    [
+      "https://www.govinfo.gov/bulkdata/BILLSTATUS/116/hr/BILLSTATUS-116hr5826.xml",
+      "https://www.congress.gov/bill/116th-congress/house-bill/5826"
+    ],
+    [
+      "https://www.govinfo.gov/bulkdata/BILLSTATUS/116/s/BILLSTATUS-116s1531.xml",
+      "https://www.congress.gov/bill/116th-congress/senate-bill/1531"
+    ],
+    [
+      "https://api.congress.gov/v3/amendment/119/hamdt/1?format=json",
+      "https://www.congress.gov/amendment/119th-congress/house-amendment/1"
+    ],
+    [
+      "https://www.govinfo.gov/content/pkg/BILLS-119hr1ih/xml/BILLS-119hr1ih.xml",
+      "https://www.govinfo.gov/content/pkg/BILLS-119hr1ih/pdf/BILLS-119hr1ih.pdf"
+    ],
+    ["https://example.org/report.pdf", "https://example.org/report.pdf"],
+    ["https://example.org/page.xhtml", "https://example.org/page.xhtml"]
+  ])("resolves human-readable navigation for %s", (sourceUrl, expected) => {
+    expect(humanReadableUrl(sourceUrl)).toBe(expected)
+    expect(evidenceSourceUrl({ sourceUrl })).toBe(expected)
+  })
+
+  it.each([
+    "https://example.org/document.xml",
+    "https://example.org/document.%78ml",
+    "https://example.org/api/bills/1",
+    "https://api.congress.gov/v3/bill/119/hr/1/actions",
+    "https://example.org/report?format=json",
+    "https://www.govinfo.gov/bulkdata/BILLSTATUS/116/hr/BILLSTATUS-115hr5826.xml",
+    "https://www.govinfo.gov/content/pkg/BILLS-119hr1ih/xml/BILLS-119hr1enr.xml",
+    "https://api.congress.gov.example.org/v3/bill/119/hr/1"
+  ])("never offers unknown machine content as navigation: %s", (sourceUrl) => {
+    expect(humanReadableUrl(sourceUrl)).toBeNull()
+  })
+
+  it("prefers retained readable content without rewriting raw provenance", () => {
+    const evidence = evidenceSnapshotSchema.parse({
+      ...citation,
+      sourceUrl: "https://example.org/source.xml",
+      readableUrl: "https://example.org/exact-version.pdf"
+    })
+    expect(evidenceSourceUrl(evidence)).toBe(evidence.readableUrl)
+    expect(formatEvidenceCitation(evidence)).toContain("https://example.org/source.xml")
+    expect(
+      evidenceSourceUrl({ sourceUrl: "https://example.org/source.xml", readableUrl: "https://example.org/other.json" })
+    ).toBeNull()
+  })
+
   it("preserves the exact quote and version in copied citations", () => {
     expect(formatEvidenceCitation(evidenceSnapshotSchema.parse(citation))).toBe(
       "A source document\nExample publisher\nIntroduced version\nSection 2\nThe exact retained passage.\nSecond paragraph.\nhttps://example.org/document"

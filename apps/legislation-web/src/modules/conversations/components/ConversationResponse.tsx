@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/
 import { clarificationRequestSchema } from "../clarification"
 import { presentationCitation, presentationEvidence } from "../composition"
 import { entityPageSchema } from "../entityResults"
-import { evidenceSnapshotSchema, evidenceSourceUrl, sourceUrlSchema, type EvidenceSnapshot } from "../evidence"
+import { evidenceSnapshotSchema, evidenceSourceUrl, humanReadableUrl, type EvidenceSnapshot } from "../evidence"
 import { createCitationPresentation, type CitationSelection } from "./citationPresentation"
 import { ClarificationQuestion, ClarificationReceiptStatus } from "./ClarificationQuestion"
 import { ComposedRecord } from "./ComposedRecord"
@@ -126,12 +126,12 @@ function CitationLink({ href, children }: ComponentProps<"a">) {
       </Tooltip>
     )
   }
-  const safeUrl = sourceUrlSchema.safeParse(href)
-  if (!safeUrl.success) {
+  const destination = humanReadableUrl(href)
+  if (!destination) {
     return <span>{children}</span>
   }
   return (
-    <a href={safeUrl.data} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+    <a href={destination} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
       {children}
       <ExternalLink className="ml-1 inline size-3" aria-hidden="true" />
     </a>

@@ -9,6 +9,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible"
 import { ResultExpiredError } from "../entityResults"
+import { evidenceSourceUrl } from "../evidence"
 import type { ProfileDetails } from "../recordDetails"
 import { useConversationSession } from "./ConversationSession"
 import * as styles from "./RecordProfile.css"
@@ -38,6 +39,7 @@ export function RecordProfile({
   const router = useRouter()
   const load = useEffectEvent(loadProfileDetails)
   const [details, setDetails] = useState<ProfileDetails>()
+  const sourceUrl = details ? evidenceSourceUrl(details.record) : null
   const [failure, setFailure] = useState<"expired" | "failed">()
   const [attempt, setAttempt] = useState(0)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -253,28 +255,23 @@ export function RecordProfile({
                 </section>
               </div>
             )}
-            {kind !== "material" && details.record.sourceUrl && (
+            {kind !== "material" && sourceUrl && (
               <Collapsible className={styles.sources}>
                 <CollapsibleTrigger className={`${styles.back} group`}>
                   <ChevronDown className="size-3.5 group-data-[state=open]:rotate-180" aria-hidden="true" />
                   Sources
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <a
-                    className={styles.source}
-                    href={details.record.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a className={styles.source} href={sourceUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="size-3.5" aria-hidden="true" />
                     View source
                   </a>
                 </CollapsibleContent>
               </Collapsible>
             )}
-            {kind === "material" && details.record.sourceUrl && (
+            {kind === "material" && sourceUrl && (
               <Button asChild variant="outline" className="self-start">
-                <a href={details.record.sourceUrl} target="_blank" rel="noopener noreferrer">
+                <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
                   View original source
                   <ExternalLink aria-hidden="true" />
                 </a>
