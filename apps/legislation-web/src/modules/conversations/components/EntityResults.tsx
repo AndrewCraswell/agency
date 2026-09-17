@@ -511,6 +511,30 @@ function DocumentCard({
 }
 
 export function recordHref(record: EntityCard, resultId: string) {
+  if (record.kind === "bill" && record.sourceUrl) {
+    const source = new URL(record.sourceUrl)
+    const match = /^\/v3\/bill\/([1-9][0-9]*)\/(hr|s|hjres|sjres|hconres|sconres|hres|sres)\/([1-9][0-9]*)\/?$/.exec(
+      source.pathname
+    )
+    if (source.protocol === "https:" && source.hostname === "api.congress.gov" && match) {
+      const congress = match[1]!
+      const billType = match[2]!
+      const billNumber = match[3]!
+      const types: Record<string, string> = {
+        hr: "house-bill",
+        s: "senate-bill",
+        hjres: "house-joint-resolution",
+        sjres: "senate-joint-resolution",
+        hconres: "house-concurrent-resolution",
+        sconres: "senate-concurrent-resolution",
+        hres: "house-resolution",
+        sres: "senate-resolution"
+      }
+      const suffixes: Record<string, string> = { one: "st", two: "nd", few: "rd", other: "th" }
+      const suffix = suffixes[new Intl.PluralRules("en", { type: "ordinal" }).select(Number(congress))]
+      return `https://www.congress.gov/bill/${congress}${suffix}-congress/${types[billType]}/${billNumber}`
+    }
+  }
   if (!["person", "organization", "material"].includes(record.kind)) {
     return undefined
   }

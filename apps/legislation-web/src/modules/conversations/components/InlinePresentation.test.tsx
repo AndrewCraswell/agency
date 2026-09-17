@@ -10,6 +10,7 @@ import type { ContentComponent, PresentationContent } from "../presentationConte
 import { ChatProviders } from "./ChatProviders"
 import type { CitationSelection } from "./citationPresentation"
 import { ConversationResponse } from "./ConversationResponse"
+import { recordHref } from "./EntityResults"
 import { InlinePresentation } from "./InlinePresentation"
 
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn<typeof import("@sentry/nextjs").captureException>() }))
@@ -42,7 +43,7 @@ it("renders the bill progress identity, milestones and actions without invented 
         kind: "bill",
         title: "HB 1 Housing",
         identifier: "HB 1",
-        sourceUrl: "https://example.org/bill",
+        sourceUrl: "https://api.congress.gov/v3/bill/119/hr/1?format=json",
         fields: [],
         tallies: []
       },
@@ -60,7 +61,45 @@ it("renders the bill progress identity, milestones and actions without invented 
   expect(region.querySelector('[aria-current="step"]')?.textContent).toContain("Committee")
   expect(within(region).getByText("Not recorded")).toBeDefined()
   expect(screen.queryByText("Not reached")).toBeNull()
-  expect(screen.getByRole("link", { name: "Open" }).getAttribute("href")).toBe("https://example.org/bill")
+  const open = screen.getByRole("link", { name: "Open" })
+  expect(open.getAttribute("href")).toBe("https://www.congress.gov/bill/119th-congress/house-bill/1")
+  expect(open.getAttribute("target")).toBe("_blank")
+  expect(open.getAttribute("rel")).toBe("noopener noreferrer")
+})
+
+it.each([
+  ["119/hr/1", "119th-congress/house-bill/1"],
+  ["121/s/2", "121st-congress/senate-bill/2"],
+  ["122/hjres/3", "122nd-congress/house-joint-resolution/3"],
+  ["123/sjres/4", "123rd-congress/senate-joint-resolution/4"],
+  ["111/hconres/5", "111th-congress/house-concurrent-resolution/5"],
+  ["112/sconres/6", "112th-congress/senate-concurrent-resolution/6"],
+  ["113/hres/7", "113th-congress/house-resolution/7"],
+  ["119/sres/8", "119th-congress/senate-resolution/8"]
+])("opens the human-readable Congress bill page for %s without changing provenance", (apiPath, publicPath) => {
+  const record = {
+    id: "bill:one",
+    kind: "bill" as const,
+    title: "Bill",
+    fields: [],
+    tallies: [],
+    sourceUrl: `https://api.congress.gov/v3/bill/${apiPath}?format=json`
+  }
+  expect(recordHref(record, "result")).toBe(`https://www.congress.gov/bill/${publicPath}`)
+  expect(record.sourceUrl).toBe(`https://api.congress.gov/v3/bill/${apiPath}?format=json`)
+})
+
+it.each([
+  "https://example.org/v3/bill/119/hr/1",
+  "https://api.congress.gov.example.org/v3/bill/119/hr/1",
+  "https://www.congress.gov/bill/119th-congress/house-bill/1",
+  "https://api.congress.gov/v3/bill/119/hr/1/actions",
+  "https://api.congress.gov/v3/bill/119/unknown/1",
+  "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB2652"
+])("preserves other bill source destinations: %s", (sourceUrl) => {
+  expect(
+    recordHref({ id: "bill:one", kind: "bill", title: "Bill", sourceUrl, fields: [], tallies: [] }, "result")
+  ).toBeUndefined()
 })
 
 function part(value: PresentationContent, component: ContentComponent): UIMessage["parts"][number] {

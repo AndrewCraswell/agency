@@ -74,6 +74,7 @@ export const citedAnswerSchema = z
 export type EvidenceSnapshot = z.infer<typeof evidenceSnapshotSchema>
 
 const sourceRecordSchema = z.object({
+  origin: z.enum(["canonical", "web"]).optional(),
   id: z.string().nullish(),
   type: z.string().nullish(),
   recordType: z.string().nullish(),
@@ -296,7 +297,7 @@ export function projectResearchEvidence(
             source.recordId ?? source.documentId ?? source.materialId ?? source.provisionId ?? source.id ?? undefined,
           billId: source.billId ?? undefined,
           title: title ?? (url.success ? new URL(url.data).hostname : undefined),
-          origin: "canonical",
+          origin: source.origin ?? "canonical",
           sourceUrl,
           versionLabel: [source.versionCode, source.documentDate].filter(Boolean).join(", ") || undefined,
           locator: source.sourceLocator ?? source.sectionIdentifier ?? source.heading ?? undefined,
@@ -349,6 +350,7 @@ function evidenceContent(source: EvidenceSourceContext, quote: string | null | u
   if (quote) {
     const truncated =
       quote.length > 20000 ||
+      (source.totalCharacters ?? quote.length) > quote.length ||
       (source.nextTextOffset !== null && source.nextTextOffset !== undefined) ||
       (source.textOffset ?? 0) > 0
     return {

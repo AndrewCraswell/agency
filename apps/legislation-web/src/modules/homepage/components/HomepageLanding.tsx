@@ -134,11 +134,11 @@ export function HomepageLanding({
           <div className={styles.heroContent}>
             <div className={styles.heading}>
               <h1 id="homepage-title" className={styles.title}>
-                Understand policy. Follow the evidence.
+                Research legislation. Read the source.
               </h1>
               <p className={styles.description}>
-                Ask about bills, amendments, votes and hearings. Explore answers with cited passages from the public
-                record.
+                Find out what a bill proposes, how its wording changed, or how lawmakers voted. Follow the citations to
+                the source text.
               </p>
             </div>
             <div className={styles.composer}>

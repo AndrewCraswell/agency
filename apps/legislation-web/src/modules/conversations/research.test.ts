@@ -5,8 +5,17 @@ import { z } from "zod"
 import { createCitationPresentation } from "./components/citationPresentation"
 import { recordMentionHref } from "./composition"
 import type { EntityPage } from "./entityResults"
+import { projectResearchEvidence } from "./evidence"
 import { createResearchTools, modelInputSchema, researchModelOutput } from "./research"
 import { researchFailureCode } from "./researchFailure"
+
+it("preserves web provenance without treating search snippets as collected page text", () => {
+  const evidence = projectResearchEvidence(
+    { origin: "web", title: "Public source", sourceUrl: "https://example.org", snippet: "Search excerpt" },
+    () => "web-source"
+  )
+  expect(evidence[0]).toMatchObject({ origin: "web", content: { state: "not-collected" } })
+})
 
 it.each([
   ["payload_too_large", "result_limit"],

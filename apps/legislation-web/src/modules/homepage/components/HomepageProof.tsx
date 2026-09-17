@@ -104,11 +104,11 @@ export function HomepageProof() {
           <header className={styles.sectionHead}>
             <p className={styles.eyebrow}>One answer, end to end</p>
             <h2 id="example-title" className={styles.sectionTitle}>
-              Every sentence is answerable. Here is the passage behind one.
+              See what supports the answer.
             </h2>
             <p className={styles.sectionDescription}>
-              A question, a cited passage, and the record behind it. This example uses California AB 2652 as amended on
-              April 18, 2024, not a statement of current law.
+              This answer cites California AB 2652 as amended on April 18, 2024. The quoted passage and source version
+              let you check the claim. It describes a proposal, not current law.
             </p>
           </header>
           <div className={styles.proof}>

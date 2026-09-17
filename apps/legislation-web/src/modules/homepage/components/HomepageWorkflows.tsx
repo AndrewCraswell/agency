@@ -48,14 +48,14 @@ export function HomepageWorkflows({
     <section id="after-the-answer" aria-labelledby="after-title" className={styles.band}>
       <div className={landing.inner}>
         <header className={styles.heading}>
-          <p className={landing.eyebrow}>The answer is a doorway</p>
+          <p className={landing.eyebrow}>Working with the evidence</p>
           <h2 id="after-title" className={styles.title}>
-            Follow a citation.
+            Read the text.
             <br />
-            Keep going into the record.
+            Compare the wording.
           </h2>
           <p className={landing.sectionDescription}>
-            The filed text, the wording that changed, and the evidence worth keeping.
+            Check the source version, inspect an amendment, and copy findings with their citations.
           </p>
         </header>
         <div className={styles.acts}>
@@ -63,11 +63,11 @@ export function HomepageWorkflows({
             <div className={styles.copy}>
               <p className={styles.step}>01 / Reader</p>
               <h3 id="reader-title" className={styles.actTitle}>
-                The passage, in the document it lives in.
+                Read the version the answer cites.
               </h3>
               <p className={styles.body}>
-                The source version stays attached to the citation. Read the passage in context, then open the filed
-                document.
+                A citation identifies the document, version and passage. Read the retrieved excerpt, then open the filed
+                text for the full context.
               </p>
             </div>
             <div className={styles.preview}>
@@ -102,11 +102,11 @@ export function HomepageWorkflows({
             <div className={styles.copy}>
               <p className={styles.step}>02 / Compare</p>
               <h3 id="compare-title" className={styles.actTitle}>
-                What one version did to another.
+                See which words changed.
               </h3>
               <p className={styles.body}>
-                Small wording changes can change the question. This April 18 amendment shifts the focus from safe uses
-                to benefits and risks.
+                This amendment replaces a focus on safe and effective uses with an assessment of benefits and risks. The
+                removed and added words show the difference.
               </p>
             </div>
             <div className={styles.preview}>
@@ -151,10 +151,10 @@ export function HomepageWorkflows({
             <div className={styles.copy}>
               <p className={styles.step}>03 / Updates</p>
               <h3 id="updates-title" className={styles.actTitle}>
-                When the record moves, the evidence comes with it.
+                A dated change, linked to its source.
               </h3>
               <p className={styles.body}>
-                An update pairs the recorded change with its date and source. No headline without a record behind it.
+                An amendment or committee action is easier to assess with its date and underlying record together.
               </p>
             </div>
             <div className={styles.preview}>
@@ -210,10 +210,11 @@ export function HomepageWorkflows({
             <div className={styles.copy}>
               <p className={styles.step}>04 / Issues and briefs</p>
               <h3 id="findings-title" className={styles.actTitle}>
-                Findings collect into work you can hand over.
+                Share the finding and its source.
               </h3>
               <p className={styles.body}>
-                Keep the finding and its citation together. Review the evidence before carrying it into a brief.
+                Copy a brief with the bill, version, passage and source link included, so a reader can check the
+                conclusion.
               </p>
             </div>
             <div className={styles.preview}>

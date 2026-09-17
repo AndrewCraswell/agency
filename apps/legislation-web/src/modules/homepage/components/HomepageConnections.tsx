@@ -106,8 +106,8 @@ function McpConnection() {
             Connect your own client
           </h2>
           <p className={styles.description}>
-            Access Rostra&apos;s read-only research tools from your preferred client. Your client handles sign-in and
-            access to the records.
+            Search legislative records and retrieve source text from VS Code, Copilot, Cursor or Claude through
+            Rostra&apos;s read-only MCP tools.
           </p>
         </header>
         <div className={styles.server}>
@@ -179,7 +179,7 @@ function McpConnection() {
           </div>
           <div>
             <dt>Authentication</dt>
-            <dd>OAuth discovery from the resource metadata. An authorized account is required.</dd>
+            <dd>Your client discovers the OAuth sign-in flow. An authorized account is required.</dd>
           </div>
           <div>
             <dt>Access</dt>
@@ -328,10 +328,11 @@ export function HomepageConnections({
             <header className={styles.heading}>
               <p className={landing.eyebrow}>Mentions</p>
               <h2 id="mentions-title" className={landing.sectionTitle}>
-                Point at a representative or a committee
+                Name the person or committee you mean.
               </h2>
               <p className={styles.description}>
-                Give your question a specific person or committee to refer to, with their record attached.
+                Add a published person or committee record to your question, so the research starts with the right
+                identity.
               </p>
             </header>
             <div className={styles.split}>
@@ -344,15 +345,15 @@ export function HomepageConnections({
               )}
               <dl className={styles.facts}>
                 <div>
-                  <dt>One record, not a name</dt>
-                  <dd>People who share a surname stay distinct. Every selection identifies a specific record.</dd>
+                  <dt>Check the identity</dt>
+                  <dd>Use the name and published details to distinguish records before selecting one.</dd>
                 </div>
                 <div>
                   <dt>People and committees</dt>
                   <dd>Find representatives, standing committees and subcommittees in the published directory.</dd>
                 </div>
                 <div>
-                  <dt>Nothing is notified</dt>
+                  <dt>No notifications</dt>
                   <dd>A mention adds context to your question. Nobody is emailed, invited or granted access.</dd>
                 </div>
               </dl>

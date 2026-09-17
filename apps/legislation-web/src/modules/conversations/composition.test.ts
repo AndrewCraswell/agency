@@ -110,6 +110,19 @@ describe("composition contracts", () => {
     expect(compositionInstructions).toContain("includes only action events and omits votes")
     expect(compositionInstructions).toContain("every returned event type, including actions and votes")
     expect(compositionInstructions).toContain("Use RecordCard when visible record facts materially help the answer")
+    expect(compositionInstructions).toContain("include at least one useful supported visualization by default")
+    expect(compositionInstructions).toContain("Cards are entry points into resources, not decoration")
+    expect(compositionInstructions).toContain("even when its label repeats the prose")
+    expect(compositionInstructions).toContain("do not claim follow, add-to-issue")
+    expect(compositionInstructions).toContain("an explicit prose-only request")
+    expect(compositionInstructions).toContain('"children":[]')
+    expect(compositionInstructions).toContain("No state, sample data, child elements")
+    expect(compositionInstructions).not.toContain("Most retrieved records need no visual block")
+    expect(compositionInstructions).not.toContain("Always include realistic")
+    expect(compositionInstructions).not.toContain('"path":"/state')
+    for (const component of answerCatalog.componentNames) {
+      expect(compositionInstructions).toContain(`${component}:`)
+    }
     expect(compositionInstructions).not.toContain("BillComparison")
     expect(answerCatalog.validate(block.spec).success).toBe(true)
     expect(

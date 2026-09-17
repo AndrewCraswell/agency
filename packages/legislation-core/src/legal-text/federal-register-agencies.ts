@@ -1,6 +1,6 @@
+import { digest } from "@repo/legislation-core/legal-text/contracts"
+import { legalAgencyReferenceSchema } from "@repo/legislation-core/legal-text/reader-contract"
 import { z } from "zod"
-import { digest } from "./contracts.js"
-import { legalAgencyReferenceSchema } from "./reader-contract.js"
 
 export const federalRegisterAgencyEvidenceSchema = z.object({
   raw_name: z.string(),

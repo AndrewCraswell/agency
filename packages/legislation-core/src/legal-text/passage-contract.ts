@@ -1,5 +1,5 @@
+import { legalAgencyReferenceSchema } from "@repo/legislation-core/legal-text/reader-contract"
 import { z } from "zod"
-import { legalAgencyReferenceSchema } from "./reader-contract.js"
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
 
