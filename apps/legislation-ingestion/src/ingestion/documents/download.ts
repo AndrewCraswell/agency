@@ -78,7 +78,7 @@ function isCaliforniaBillPdfUrl(url: URL): boolean {
   return url.hostname === CALIFORNIA_LEGINFO_HOST && url.pathname === CALIFORNIA_BILL_PDF_PATH
 }
 
-function resolveAlaskaBillPlaintextUrl(sourceUrl: URL): URL | undefined {
+function resolveAlaskaBillCoordinates(sourceUrl: URL): { documentId: string; session: string } | undefined {
   const pathMatch = ALASKA_BILL_TEXT_PATH.exec(sourceUrl.pathname)
   const documentId = sourceUrl.searchParams.get("Hsid")
   if (
@@ -89,9 +89,18 @@ function resolveAlaskaBillPlaintextUrl(sourceUrl: URL): URL | undefined {
   ) {
     return undefined
   }
-  const resolved = new URL(`https://www.akleg.gov/basis/Bill/Plaintext/${pathMatch[1]}`)
-  resolved.searchParams.set("Hsid", documentId)
-  return resolved
+  return { documentId, session: pathMatch[1] }
+}
+
+function resolveAlaskaBillAlternativeUrls(sourceUrl: URL): URL[] {
+  const coordinates = resolveAlaskaBillCoordinates(sourceUrl)
+  if (coordinates === undefined) {
+    return []
+  }
+  const resolved = new URL(`https://www.akleg.gov/basis/Bill/Plaintext/${coordinates.session}`)
+  resolved.searchParams.set("Hsid", coordinates.documentId)
+  const pdf = new URL(`https://www.akleg.gov/PDF/${coordinates.session}/Bills/${coordinates.documentId}.PDF`)
+  return [resolved, pdf]
 }
 
 export function resolveApprovedDocumentUrl(sourceUrl: string): URL {
@@ -891,16 +900,18 @@ export async function downloadDocument(
   )
   let response = await resolveCaliforniaBillPdf(districtOfColumbiaResponse, url, fetcher, timeoutMs)
   let responseUrl = url
-  const alaskaPlaintextUrl = resolveAlaskaBillPlaintextUrl(url)
-  if (!response.ok && alaskaPlaintextUrl !== undefined) {
-    const plaintextResponse = await fetcher(alaskaPlaintextUrl, {
+  for (const alternativeUrl of resolveAlaskaBillAlternativeUrls(url)) {
+    if (response.ok) {
+      break
+    }
+    const alternativeResponse = await fetcher(alternativeUrl, {
       headers: { "user-agent": BROWSER_USER_AGENT },
       redirect: "follow",
       signal: AbortSignal.timeout(timeoutMs)
     })
-    if (plaintextResponse.ok) {
-      response = plaintextResponse
-      responseUrl = alaskaPlaintextUrl
+    if (alternativeResponse.ok) {
+      response = alternativeResponse
+      responseUrl = alternativeUrl
     }
   }
   if (!response.ok) {

@@ -57,10 +57,36 @@ describe("document downloads", () => {
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response("publisher error", { status: 500 }))
       .mockResolvedValueOnce(new Response("publisher error", { status: 503 }))
+      .mockResolvedValueOnce(new Response("publisher error", { status: 404 }))
 
     await expect(
       downloadDocument("https://www.akleg.gov/basis/Bill/Text/34?Hsid=HB9050B", { fetch: fetcher })
     ).rejects.toThrow("Document download failed with HTTP 500")
+    expect(fetcher).toHaveBeenNthCalledWith(
+      3,
+      new URL("https://www.akleg.gov/PDF/34/Bills/HB9050B.PDF"),
+      expect.any(Object)
+    )
+  })
+
+  it("falls back to the exact official Alaska PDF when both text routes fail", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response("publisher error", { status: 500 }))
+      .mockResolvedValueOnce(new Response("publisher error", { status: 500 }))
+      .mockResolvedValueOnce(
+        new Response("%PDF-test", {
+          headers: { "content-type": "application/pdf" },
+          status: 200
+        })
+      )
+
+    await expect(
+      downloadDocument("https://www.akleg.gov/basis/Bill/Text/34?Hsid=HB9050B", { fetch: fetcher })
+    ).resolves.toMatchObject({
+      contentType: "application/pdf",
+      sourceUrl: "https://www.akleg.gov/PDF/34/Bills/HB9050B.PDF"
+    })
   })
 
   it("maps the retired Arkansas FTP endpoint to its approved HTTPS download route", async () => {
