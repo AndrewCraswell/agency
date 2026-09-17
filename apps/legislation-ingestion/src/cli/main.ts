@@ -13,7 +13,11 @@ import { Command } from "commander"
 import { loadConfig, type LegislationConfig } from "../config/config.js"
 import { compareCoverageReports, generateCoverageReport, isCoverageReport } from "../coverage/collector.js"
 import { decodeArchiveRecords, MAXIMUM_ARCHIVE_BYTES } from "../ingestion/archive.js"
-import { canonicalFoundationRecordSchema, importCanonicalFoundationRecords } from "../ingestion/canonical-foundation.js"
+import {
+  auditCanonicalFoundation,
+  canonicalFoundationRecordSchema,
+  importCanonicalFoundationRecords
+} from "../ingestion/canonical-foundation.js"
 import { synchronizeCongressAmendments } from "../ingestion/congress/amendments-sync.js"
 import { CongressClient } from "../ingestion/congress/client.js"
 import { synchronizeCongressEvents } from "../ingestion/congress/events-sync.js"
@@ -105,6 +109,7 @@ program
   .command("canonical:foundation")
   .description("Import a source-backed canonical jurisdiction and session foundation snapshot")
   .requiredOption("--file <path>")
+  .option("--apply", "apply the validated snapshot; the default is read-only inspection")
   .option("--stream <name>", "durable checkpoint stream")
   .action(importCanonicalFoundationFile)
 
@@ -1987,7 +1992,7 @@ async function validate() {
   })
 }
 
-async function importCanonicalFoundationFile(options: { file: string; stream?: string }) {
+async function importCanonicalFoundationFile(options: { apply?: boolean; file: string; stream?: string }) {
   const file = resolve(options.file)
   const bytes = await readFile(file)
   if (bytes.byteLength === 0 || bytes.byteLength > 1_000_000) {
@@ -2023,6 +2028,13 @@ async function importCanonicalFoundationFile(options: { file: string; stream?: s
   const stream = options.stream ?? `canonical-foundation:${jurisdictionIds[0]}`
   const contentHash = createHash("sha256").update(bytes).digest("hex")
   await withDatabase(async (database) => {
+    if (options.apply !== true) {
+      const audit = await auditCanonicalFoundation(database, { jurisdictionIds, sessionIds })
+      process.stdout.write(
+        `${JSON.stringify({ audit, contentHash, file, records: records.length, status: "inspected", stream })}\n`
+      )
+      return
+    }
     const result = await importCanonicalFoundationRecords(database, records, {
       auditScope: { jurisdictionIds, sessionIds },
       contentHash,
