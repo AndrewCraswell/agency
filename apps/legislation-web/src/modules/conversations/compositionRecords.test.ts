@@ -5,6 +5,25 @@ import { contentOptions, projectPresentationContents } from "./presentationConte
 import { createResultStore } from "./resultStore"
 
 describe("run-owned presentation records", () => {
+  it("resolves short model handles only within their originating turn", () => {
+    const store = createResultStore()
+    const page = store.create(
+      "owner",
+      "search_bills",
+      { items: [{ id: "bill:one", title: "One" }] },
+      undefined,
+      async () => ({})
+    )!
+    const run = createPresentationRecords("owner", store)
+    const handle = run.register(page)
+    expect(handle).toBe("r1")
+    const canonical = run.canonicalReference({ resultId: handle, recordId: "bill:one" })
+    expect(canonical.resultId).toBe(page.id)
+    expect(run.resolve(canonical).id).toBe("bill:one")
+    expect(() =>
+      createPresentationRecords("owner", store).canonicalReference({ resultId: handle, recordId: "bill:one" })
+    ).toThrow("The result was not retrieved in this response.")
+  })
   it("builds progress from classified actions without inferring unreached stages or using another bill", () => {
     const store = createResultStore()
     const data = {

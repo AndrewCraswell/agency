@@ -11,7 +11,7 @@ import {
 } from "./presentationContent"
 
 export const presentationReferenceSchema = z.strictObject({
-  resultId: z.uuid(),
+  resultId: z.union([z.uuid(), z.string().regex(/^r[1-9][0-9]{0,3}$/)]),
   recordId: z
     .string()
     .min(1)
@@ -42,79 +42,79 @@ export const answerCatalog = defineCatalog(schema, {
       props: contentReferenceSchema,
       slots: [],
       description:
-        "A bill identity card with its recorded legislative milestones. Select a BillProgressCard contentId from get_bill presentationOptions. Unknown stages remain unknown; never infer enactment or future progress."
+        "Choose for one bill when the answer is about where it stands across legislative milestones. This full card shows bill identity and the recorded milestone path. Select a BillProgressCard contentId from get_bill presentationOptions. Use ProgressPath for a concise sequence of returned actions or RecordTimeline for dated actions and votes. Unknown stages remain unknown; never infer enactment or future progress."
     },
     RecordGroup: {
       props: recordGroupSchema,
       slots: [],
       description:
-        "Group two to five selected records of any kind with their identity and key facts. Copy exact resultId/recordId references from successful tools. No model-authored facts."
+        "Choose when two to five specific records collectively matter and each needs its full identity and key-fact body. The group supplies one shared action header and omits per-card actions. Use CompactRecordGroup when titles, metadata and status are enough; use ResultList for a retrieved or paginated result set. Copy exact resultId/recordId references from successful tools."
     },
     CompactRecordGroup: {
       props: recordGroupSchema,
       slots: [],
       description:
-        "Group two to five selected records as compact rows with a shared count header. Use for a concise mixed-record list; use ResultList for pagination. Copy exact resultId/recordId references."
+        "Choose when two to five specific records need a concise grouped reference. It renders title, compact metadata and status rows under one count and shared action header, without fact-grid bodies. Use RecordGroup when each record's facts need to remain visible; use ResultList for a retrieved or paginated result set. Copy exact resultId/recordId references."
     },
     CompactPassageCard: {
       props: contentReferenceSchema,
       slots: [],
       description:
-        "A compact passage reference row with quote icon, document/version metadata and locator. Select a CompactPassageCard presentationOption. Opens the existing evidence panel; no model-authored quote, title or location."
+        "Choose when the prose carries the claim and only a compact source pointer is needed. It shows source title, publisher/version and locator; the quote is hidden until the user opens the evidence panel. Use PassageQuote when the exact words should be visible or CitationCard when provenance and citation controls should be prominent. Select a CompactPassageCard presentationOption; never author its content."
     },
     CitationCard: {
       props: contentReferenceSchema,
       slots: [],
       description:
-        "A source card with exact retrieved quote, publisher, version, locator and citation actions. Select contentId from a CitationCard presentationOption; never write the quote yourself."
+        "Choose when source provenance is central and the reader should see publisher, title, version, locator, exact quote and citation actions together. Use PassageQuote when the quote should flow more lightly beside prose, or CompactPassageCard when the quote can remain in the evidence panel. Select contentId from a CitationCard presentationOption; never write the quote yourself."
     },
     PassageQuote: {
       props: contentReferenceSchema,
       slots: [],
       description:
-        "An inline exact passage with its source/version line. Select a PassageQuote presentationOption. Missing passages stay explicitly unavailable."
+        "Choose when the source's exact words are central to the answer. It leads with the retrieved quote and follows with a lightweight source, version and locator line plus citation actions. Use CitationCard when provenance metadata needs stronger visual emphasis, or CompactPassageCard when the quote need not be visible. Select a PassageQuote presentationOption; missing passages stay explicitly unavailable."
     },
     ResultList: {
       props: contentReferenceSchema,
       slots: [],
       description:
-        "A selected compact result list with real pagination and coverage notes. Select a ResultList presentationOption. Do not automatically display every retrieval."
+        "Choose when the answer should expose a retrieved result set, especially when users may page through it or need query and coverage notes. It renders compact navigable rows and real result-store pagination. Use a record card for one selected record or a record group for two to five curated records. Select a ResultList presentationOption; do not automatically display every retrieval."
     },
     ProgressPath: {
       props: contentReferenceSchema,
       slots: [],
       description:
-        "A bill's recorded legislative actions, in returned order. Select a ProgressPath presentationOption from get_bill_timeline. Never infer future stages or enactment."
+        "Choose for a concise step-like account of how a bill progressed through returned legislative actions. It includes only action events and omits votes and other event types. Use BillProgressCard for canonical milestone status or RecordTimeline when all returned dated activity matters. Select a ProgressPath presentationOption from get_bill_timeline; never infer future stages or enactment."
     },
     RecordTimeline: {
       props: contentReferenceSchema,
       slots: [],
       description:
-        "A chronological record of returned bill actions and votes. Select a RecordTimeline presentationOption from get_bill_timeline. Partial timelines are labeled."
+        "Choose when the question is what happened and when. It presents every returned event type, including actions and votes, as a date-led activity list. Use ProgressPath for action-only progression or BillProgressCard for canonical milestone status. Select a RecordTimeline presentationOption from get_bill_timeline; partial timelines are labeled."
     },
     RollCall: {
       props: contentReferenceSchema,
       slots: [],
       description:
-        "A vote's reported tally and retrieved member positions. Select a RollCall presentationOption from get_vote; use the full roll-call inspector for partial pages. Do not invent missing votes or members."
+        "Choose when the answer discusses how members voted, not merely that a vote occurred. It shows the reported tally, up to six retrieved member positions and a control to open the full roll-call inspector. Use RecordCard or CompactRecordCard for vote identity, outcome or a passing vote reference. Select a RollCall presentationOption from get_vote; do not invent missing votes or members."
     },
     RecordStatus: {
       props: contentReferenceSchema,
       slots: [],
       description:
-        "A source-backed not-found or not-collected record state. Select a RecordStatus presentationOption; never infer a missing record from an unrelated empty search."
+        "Choose only to communicate an explicit source-backed not-found lookup or a passage known not to have been collected. It renders the unavailable state and a source link when one exists. Select a RecordStatus presentationOption; an empty search is not eligible and never proves absence."
     },
     RecordCard: {
       props: presentationReferenceSchema,
       slots: [],
       description:
-        "Display one retrieved legislative record beside the prose discussing it. Copy resultId from resultSet.id and recordId from a record in that result. The server supplies all display fields. Do not show every search result."
+        "Choose when one retrieved record is a primary subject and its visible facts, tallies or actions help answer the question. This full card shows the record's identity and kind-specific detail body. Use CompactRecordCard for a passing reference, ResultList for a result set, or BillProgressCard for milestone status. Copy resultId from resultSet.id and recordId from that result; the server supplies every display field."
     },
     CompactRecordCard: {
       props: presentationReferenceSchema,
       slots: [],
       description:
-        "A compact one-record card with title, kind and supplied metadata but no body or account actions. Use instead of RecordCard when a small navigable reference is enough. Copy exact resultId and recordId from current tool results."
+        "Choose when one retrieved record needs a concise navigable reference beside prose. It shows title, kind, compact metadata and status or vote counts, without a fact-grid body or account actions. Use RecordCard when visible record facts materially help the answer. Copy exact resultId and recordId from current tool results."
     }
   },
   actions: {}
@@ -201,6 +201,9 @@ export const presentationBlockSchema = z.discriminatedUnion("state", [
         context.addIssue({ code: "custom", message: "Record presentations require records only." })
       }
       const references = presentationReferences(block.spec)
+      if (references.some((reference) => !z.uuid().safeParse(reference.resultId).success)) {
+        context.addIssue({ code: "custom", message: "Rendered references must contain canonical result IDs." })
+      }
       if (
         references.length !== block.records.length ||
         references.some((reference, index) => reference.recordId !== block.records[index]?.id)
@@ -305,6 +308,9 @@ export function answerPlainText(message: UIMessage) {
 export const compositionInstructions = answerCatalog.prompt({
   mode: "inline",
   customRules: [
+    "Resolve named records before topic discovery. For a bill number and Congress/session, discover the jurisdiction and session IDs, then use resolve_record with identifier and separate scope fields. Do not search for bare numbers, embed Congress names in query text, or invent introduction-date filters. Use returned canonical IDs with get tools. If a published name is ambiguous, ask for context instead of guessing.",
+    "Record-card resultId values may be short turn-owned handles such as r1. Copy them exactly from resultSet.id; never reconstruct UUIDs or reuse previous-turn references. The server canonicalizes handles before rendering. For record mentions copy recordLinks.href unchanged.",
+    "A parent detail is a bounded preview. Use read_record_collection and the dedicated membership, sponsored-bill and document readers for the rest. Follow nextCursor unchanged; for section text continue sectionId with nextTextOffset as textOffset. Truncated passages and approximate search candidate sets are partial, not evidence of absent records.",
     "Use CompactRecordCard for a concise navigable record reference and CompactPassageCard for a concise source-passage reference. Compact passage props contain only contentId from an option permitting that component. Both use retrieved metadata without a fact-grid body or account actions.",
     "Research and retrieve evidence before composing visual blocks. Preserve all research and citation requirements.",
     "For a list of bills, select a ResultList presentationOption: it renders compact bill rows with pagination. For one selected bill, use CompactRecordCard. Place the block beside the relevant prose. Explain comparisons in cited prose, not a bill-comparison component or a duplicate metadata table. Never print JSON outside a spec code fence.",

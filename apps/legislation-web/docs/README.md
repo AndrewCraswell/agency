@@ -61,6 +61,7 @@ Migrations live once in C and release explicitly through `pnpm --filter legislat
 
 ## Engineering and serving
 
+- [Research identity and collection retrieval](engineering/research-record-retrieval.md)
 - [Architecture decisions](engineering/architecture-decisions.md), including separate runtimes and explicit migration releases
 - [Civic graph/events](engineering/api/civic-graph-and-events.md), [membership projection](engineering/committee-membership-history.md)
 - [Legislative records](engineering/api/legislative-records.md), [HTTP schemas](engineering/api/schemas.md)

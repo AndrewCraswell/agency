@@ -6,6 +6,7 @@ type JSONValue = z.infer<ReturnType<typeof z.json>>
 
 export const researchResultByteLimit = 180000
 const prefix = "research-page:"
+const scopedPrefix = "research-cursor:"
 const cursorSchema = z.object({
   binding: z.string(),
   offset: z.number().int().min(1).max(1000000),
@@ -15,7 +16,7 @@ const cursorSchema = z.object({
 
 function binding(name: string, input: Readonly<Record<string, unknown>>) {
   const selection = Object.entries(input)
-    .filter(([key, value]) => key !== "cursor" && value !== undefined)
+    .filter(([key, value]) => key !== "cursor" && key !== "childCursor" && value !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))
   return createHash("sha256")
     .update(JSON.stringify([name, selection]))
@@ -23,6 +24,31 @@ function binding(name: string, input: Readonly<Record<string, unknown>>) {
 }
 
 export function readResultPage(name: string, input: Readonly<Record<string, unknown>>) {
+  const unwrapped = { ...input }
+  for (const key of ["cursor", "childCursor"] as const) {
+    const supplied = input[key]
+    if (typeof supplied !== "string") continue
+    if (!supplied.startsWith(scopedPrefix)) {
+      throw new LegislationError("invalid_request", "Use the continuation returned by this tool with unchanged inputs.")
+    }
+    try {
+      const scope = z
+        .strictObject({
+          binding: z.string(),
+          upstream: z.string().min(1).max(16384),
+          field: z.enum(["cursor", "childCursor"])
+        })
+        .parse(JSON.parse(Buffer.from(supplied.slice(scopedPrefix.length), "base64url").toString()))
+      if (scope.binding !== binding(name, input) || scope.field !== key) throw new Error("Selection mismatch")
+      unwrapped[key] = scope.upstream
+    } catch {
+      throw new LegislationError("invalid_request", "The continuation does not match this tool, collection or filters.")
+    }
+  }
+  return readContentPage(name, unwrapped)
+}
+
+function readContentPage(name: string, input: Readonly<Record<string, unknown>>) {
   const cursor = input.cursor
   if (typeof cursor !== "string" || !cursor.startsWith(prefix)) {
     return { input, offset: 0 }
@@ -75,7 +101,7 @@ function prepareVotePage(
   ) {
     throw new LegislationError("invalid_request", "The vote results changed. Start the request again.")
   }
-  if (offset === 0 && Buffer.byteLength(JSON.stringify({ data }), "utf8") <= researchResultByteLimit) return data
+  if (offset === 0 && resultPageBytes(name, input, data) <= researchResultByteLimit) return data
   const units = records.flatMap((record, recordIndex) => {
     const detail = name === "get_votes" && isRecord(record) ? record.data : record
     if (isRecord(detail) && Array.isArray(detail.positions) && detail.positions.length > 0) {
@@ -136,7 +162,7 @@ function prepareVotePage(
             ...(nextCursor !== undefined ? { nextCursor } : {}),
             truncated: hasRemaining || positionsIncomplete || data.truncated === true
           }
-    if (Buffer.byteLength(JSON.stringify({ data: candidate }), "utf8") > researchResultByteLimit) break
+    if (resultPageBytes(name, input, candidate) > researchResultByteLimit) break
     selected = structuredClone(candidate)
   }
   if (selected === undefined) {
@@ -145,7 +171,7 @@ function prepareVotePage(
   return selected
 }
 
-export function prepareResultPage(
+function prepareContentPage(
   name: string,
   input: Readonly<Record<string, unknown>>,
   value: JSONValue,
@@ -155,15 +181,7 @@ export function prepareResultPage(
   if (["get_bill_votes", "get_vote", "get_votes"].includes(name)) {
     return prepareVotePage(name, input, value, offset, snapshot)
   }
-  let data = value
-  if (["search_bills", "get_bill", "get_bills"].includes(name)) {
-    data = projectDiscoveryRecord(value)
-  } else if (name === "get_bill_text") {
-    data = projectDiscoveryRecord(value, false)
-  }
-  if (!["search_bills", "get_bills", "search_bill_text", "get_bill_text"].includes(name)) {
-    return data
-  }
+  const data = projectDiscoveryRecord(value, name !== "get_bill_text")
   const collection = name === "get_bill_text" ? "sections" : "items"
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
     return data
@@ -175,7 +193,7 @@ export function prepareResultPage(
   if (offset > 0 && offset >= records.length) {
     throw new LegislationError("invalid_request", "The result page changed. Start the search again.")
   }
-  if (offset === 0 && Buffer.byteLength(JSON.stringify({ data }), "utf8") <= researchResultByteLimit) {
+  if (offset === 0 && resultPageBytes(name, input, data) <= researchResultByteLimit) {
     return data
   }
   let selected: JSONValue | undefined
@@ -193,7 +211,7 @@ export function prepareResultPage(
       [collection]: records.slice(offset, end),
       ...(hasRemaining ? { nextCursor: cursor, truncated: true } : {})
     }
-    if (Buffer.byteLength(JSON.stringify({ data: candidate }), "utf8") > researchResultByteLimit) {
+    if (resultPageBytes(name, input, candidate) > researchResultByteLimit) {
       break
     }
     selected = candidate
@@ -205,4 +223,38 @@ export function prepareResultPage(
     )
   }
   return selected
+}
+
+export function prepareResultPage(
+  name: string,
+  input: Readonly<Record<string, unknown>>,
+  value: JSONValue,
+  offset: number,
+  snapshot?: string
+): JSONValue {
+  const page = prepareContentPage(name, input, value, offset, snapshot)
+  return wrapResultCursors(name, input, page)
+}
+
+function resultPageBytes(name: string, input: Readonly<Record<string, unknown>>, value: JSONValue) {
+  return Buffer.byteLength(JSON.stringify({ data: wrapResultCursors(name, input, value) }), "utf8")
+}
+
+function wrapResultCursors(name: string, input: Readonly<Record<string, unknown>>, value: JSONValue): JSONValue {
+  function wrap(value: JSONValue): JSONValue {
+    if (Array.isArray(value)) return value.map(wrap)
+    if (value === null || typeof value !== "object") return value
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => {
+        if ((key === "nextCursor" || key === "nextChildCursor") && typeof item === "string") {
+          return [
+            key,
+            `${scopedPrefix}${Buffer.from(JSON.stringify({ binding: binding(name, input), upstream: item, field: key === "nextCursor" ? "cursor" : "childCursor" })).toString("base64url")}`
+          ]
+        }
+        return [key, wrap(item)]
+      })
+    )
+  }
+  return wrap(value)
 }

@@ -6,6 +6,16 @@ import { createCitationPresentation } from "./components/citationPresentation"
 import { recordMentionHref } from "./composition"
 import type { EntityPage } from "./entityResults"
 import { createResearchTools, modelInputSchema, researchModelOutput } from "./research"
+import { researchFailureCode } from "./researchFailure"
+
+it.each([
+  ["payload_too_large", "result_limit"],
+  ["conflict", "not_processed"],
+  ["precondition_failed", "not_processed"],
+  ["unprocessable", "invalid_request"]
+])("preserves actionable failure category %s", (input, expected) => {
+  expect(researchFailureCode(input)).toBe(expected)
+})
 
 it("passes copy-ready evidence citations through the actual SDK tool-result boundary", async () => {
   const output = {

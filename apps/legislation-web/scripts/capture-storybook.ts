@@ -34,9 +34,11 @@ const connection = createDatabase({ ...config.database, maxConnections: 1 })
 const store = createResultStore()
 const destination = new URL("../src/modules/conversations/stories/captured.json", import.meta.url)
 const detailsOnly = process.argv.includes("--details-only")
-const dataset: ReviewDataset = detailsOnly
-  ? reviewDatasetSchema.parse(JSON.parse(await readFile(destination, "utf8")))
-  : { capturedAt: new Date().toISOString(), captures: [], details: {}, failures: [] }
+const retrievalOnly = process.argv.includes("--retrieval-only")
+const dataset: ReviewDataset =
+  detailsOnly || retrievalOnly
+    ? reviewDatasetSchema.parse(JSON.parse(await readFile(destination, "utf8")))
+    : { capturedAt: new Date().toISOString(), captures: [], details: {}, failures: [] }
 const logger = createLogger({ service: "storybook-capture", level: "error" })
 const billId = "bill:ca:20232024:ab:2652"
 const sessionKey = crypto.randomUUID()
@@ -97,7 +99,34 @@ async function capture(toolName: string, input: Record<string, z.infer<ReturnTyp
 }
 
 try {
-  if (!detailsOnly) {
+  if (retrievalOnly) {
+    const person = dataset.captures.find((item) => item.toolName === "get_person")?.input.id
+    const organization = dataset.captures.find((item) => item.toolName === "get_organization")?.input.id
+    const document = dataset.captures.find((item) => item.toolName === "get_bill_text")?.input.documentId
+    invariant(
+      typeof person === "string" && typeof organization === "string" && typeof document === "string",
+      "Missing retained capture identities"
+    )
+    const requests: Array<[string, Record<string, z.infer<ReturnType<typeof z.json>>>]> = [
+      [
+        "resolve_record",
+        { kind: "bill", identifier: "H.R. 1", jurisdictionId: "jurisdiction:us", sessionId: "session:us:116" }
+      ],
+      ["list_jurisdictions", { query: "United States", limit: 2 }],
+      ["list_sessions", { jurisdictionId: "jurisdiction:us", limit: 3 }],
+      ["get_memberships", { personId: person, limit: 2 }],
+      ["get_sponsored_bills", { id: person, limit: 2 }],
+      ["get_committee_bills", { id: organization, limit: 2 }],
+      ["get_document_sections", { documentId: document, limit: 1 }],
+      ["read_record_collection", { collection: "document-sections", recordId: document, limit: 1 }]
+    ]
+    for (const [name, input] of requests) {
+      if (!dataset.captures.some((item) => item.toolName === name)) {
+        await capture(name, input)
+      }
+    }
+  }
+  if (!detailsOnly && !retrievalOnly) {
     const selected = await withReadOnlyDatabase(connection.pool, 60000, async (database) => {
       const person = await database
         .select({ id: people.id, name: people.name })
@@ -186,9 +215,9 @@ try {
       ["get_bill_text", { id: billId, documentId: selected.documents[0].id }],
       ["find_related_bills", { id: billId, limit: 5, mode: "lexical" }],
       ["search_people", { query: selected.person.name, limit: 5 }],
-      ["get_person", { id: selected.person.id, limit: 5 }],
+      ["get_person", { id: selected.person.id }],
       ["search_organizations", { query: selected.organization.name, limit: 5 }],
-      ["get_organization", { id: selected.organization.id, limit: 1 }],
+      ["get_organization", { id: selected.organization.id }],
       ["search_events", { limit: 5 }],
       ["get_event", { id: selected.meeting.id }],
       ["search_votes", { limit: 5 }],
@@ -246,12 +275,6 @@ try {
         await capture(toolName, { id: record.documentSummary.billId, documentId: record.id })
       } else {
         const input: Record<string, string | number> = { id: record.id }
-        if (record.kind === "person") {
-          input.limit = 5
-        }
-        if (record.kind === "organization") {
-          input.limit = 1
-        }
         await capture(toolName, input)
       }
     }

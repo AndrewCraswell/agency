@@ -400,7 +400,7 @@ describe("createMcpHttpQueryAdapter", () => {
     expect(timeline).toEqual({
       billId: "bill:ca:2025:ab:1",
       events: [{ id: "timeline:1" }],
-      nextChildCursor: null,
+      nextCursor: null,
       truncated: false,
       warnings: []
     })
@@ -455,8 +455,8 @@ describe("createMcpHttpQueryAdapter", () => {
       { correlationId },
       async () =>
         await adapter.searchBillText({
-          billId: "bill:ca:2025:ab:1",
-          classifications: ["bill"],
+          billIds: ["bill:ca:2025:ab:1"],
+          documentClassifications: ["version"],
           mode: "lexical",
           query: "housing"
         })
@@ -466,7 +466,7 @@ describe("createMcpHttpQueryAdapter", () => {
     expect(fetch.mock.calls[0]?.[1]?.body).toBe(
       JSON.stringify({
         billIds: ["bill:ca:2025:ab:1"],
-        documentClassifications: ["bill"],
+        documentClassifications: ["version"],
         mode: "lexical",
         query: "housing"
       })
@@ -494,7 +494,7 @@ describe("createMcpHttpQueryAdapter", () => {
         adapter.findRelatedBills({ id: "bill:ca:2025:ab:1", limit: 5 }),
       "/api/bills/bill%3Aca%3A2025%3Aab%3A1/related",
       "GET",
-      { limit: "5" },
+      { limit: "5", mode: "explicit" },
       undefined
     ],
     [
@@ -678,6 +678,9 @@ describe("createMcpHttpQueryAdapter", () => {
     ]
   ])("maps %s to its documented HTTP operation", async (_name, response, invoke, path, method, parameters, body) => {
     const fetch = vi.fn<FetchLike>().mockResolvedValue(response)
+    if (_name === "get_supporting_material") {
+      fetch.mockReset().mockResolvedValueOnce(response).mockResolvedValueOnce(pageResponse())
+    }
     const adapter = createMcpHttpQueryAdapter({
       apiBaseUrl: "https://legislation.example.test",
       fetch,
@@ -691,6 +694,25 @@ describe("createMcpHttpQueryAdapter", () => {
     expect(init?.method).toBe(method)
     expect(Object.fromEntries(new URL(String(url)).searchParams)).toEqual(parameters)
     expect(init?.body === undefined ? undefined : JSON.parse(String(init.body))).toEqual(body)
+  })
+
+  it("forwards supporting-material section cursors and limits", async () => {
+    const fetch = vi
+      .fn<FetchLike>()
+      .mockResolvedValueOnce(resourceResponse({ id: "material:1" }))
+      .mockResolvedValueOnce(pageResponse())
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://legislation.example.test",
+      fetch,
+      getApiAccessToken: () => "api-m2m-token"
+    })
+    await runWithRequestContext(
+      { correlationId },
+      async () => await adapter.getSupportingMaterial({ id: "material:1", cursor: "next-sections", limit: 2 })
+    )
+    const target = new URL(String(fetch.mock.calls[1]?.[0]))
+    expect(target.pathname).toBe("/api/supporting-materials/material%3A1/sections")
+    expect(Object.fromEntries(target.searchParams)).toEqual({ cursor: "next-sections", limit: "2" })
   })
 
   it("maps API error categories and retryability for MCP tool responses", async () => {

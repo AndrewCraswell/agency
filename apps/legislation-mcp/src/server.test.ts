@@ -162,7 +162,16 @@ describe("standalone Node MCP host", () => {
     const client = new Client({ name: "socket-test", version: "1.0.0" }, { versionNegotiation: { mode: "auto" } })
     try {
       await client.connect(transport)
-      expect((await client.listTools()).tools).toHaveLength(25)
+      expect((await client.listTools()).tools.map((tool) => tool.name)).toEqual(
+        expect.arrayContaining([
+          "get_bill",
+          "resolve_record",
+          "read_record_collection",
+          "list_jurisdictions",
+          "list_sessions",
+          "get_memberships"
+        ])
+      )
       const result = await client.callTool({ name: "get_bill", arguments: { id: "bill:us:119:hr:1" } })
       expect(result.isError).not.toBe(true)
       expect(result.structuredContent).toEqual({ data: { id: "bill:us:119:hr:1" } })

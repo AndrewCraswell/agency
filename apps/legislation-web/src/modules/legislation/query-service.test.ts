@@ -41,6 +41,30 @@ afterAll(async () => {
 })
 
 describe("mention discovery", () => {
+  it("applies timeline pagination to a single ordered action and vote query", async () => {
+    const stopped = new Error("Timeline query captured")
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
+      throw stopped
+    })
+    try {
+      await expect(
+        new LegislationQueryService(database).getBillTimeline({
+          id: "bill:us:116:hr:1",
+          limit: 1,
+          cursor: Buffer.from(JSON.stringify({ offset: 1 })).toString("base64url")
+        })
+      ).rejects.toMatchObject({ cause: stopped })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain("union all")
+      expect(statement).toContain("date asc nulls last")
+      expect(statement).toContain("offset")
+      expect(query.mock.calls[0]?.[1]).toEqual(["bill:us:116:hr:1", "bill:us:116:hr:1", 2, 1])
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
   it("scopes committee-name bill fallback to the selected jurisdiction", async () => {
     const stopped = new Error("Fallback query captured")
     const query = vi
@@ -192,6 +216,9 @@ describe("bill session metadata", () => {
   })
 
   it("joins the session name in semantic bill result hydration", async () => {
+    const configure = vi
+      .spyOn(database, "execute")
+      .mockResolvedValueOnce({ rows: [], fields: [], command: "SELECT", rowCount: 0, oid: 0 })
     const stopped = new Error("Query captured without contacting a database")
     const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
       throw stopped
@@ -209,6 +236,7 @@ describe("bill session metadata", () => {
       expect(query).toHaveBeenCalledOnce()
     } finally {
       query.mockRestore()
+      configure.mockRestore()
     }
   })
 
@@ -236,7 +264,7 @@ describe("bill session metadata", () => {
       throw stopped
     })
     try {
-      await expect(lexicalBillSearch(database, { query: "AB 2652" })).rejects.toMatchObject({ cause: stopped })
+      await expect(lexicalBillSearch(database, { query: "education policy" })).rejects.toMatchObject({ cause: stopped })
       const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
       expect(statement).toContain('"legislative_sessions"."name"')
       expect(statement).toContain('left join "legislation"."legislative_sessions"')

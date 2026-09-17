@@ -94,6 +94,7 @@ function MeetingContent({ selection }: Readonly<{ selection: Selection }>) {
     <>
       <div className={styles.body}>
         <h3 className={styles.title}>{details.record.title}</h3>
+        {details.isPartial && <p className={styles.note}>Only part of this record was retrieved.</p>}
         <div className={styles.facts}>
           {when && <p>{when}</p>}
           {summary?.timezone && <p className={styles.note}>{summary.timezone}</p>}

@@ -42,6 +42,7 @@ const textChunkSchema = z.discriminatedUnion("type", [
 
 type CompositionStreamOptions = {
   resolveRecord: (reference: PresentationReference) => EntityCard
+  canonicalReference?: (reference: PresentationReference) => PresentationReference
   resolveContent?: (reference: { contentId: string }) => PresentationContent
   onInvalid?: (reason: string) => void
   onBlock?: (block: PresentationBlock) => void
@@ -173,6 +174,11 @@ export function createCompositionStream(
         throw new Error("Invalid catalog element.")
       }
       resolving = true
+      if (options.canonicalReference) {
+        for (const reference of references) {
+          reference.resultId = options.canonicalReference(reference).resultId
+        }
+      }
       let content: PresentationContent | undefined
       if (contentReference?.success) {
         if (!options.resolveContent) {

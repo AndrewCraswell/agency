@@ -435,7 +435,8 @@ test("isolated built MCP acceptance", { timeout: 60_000 }, async (context) => {
       try {
         await client.connect(transport)
         const { tools } = await client.listTools()
-        assert.equal(tools.length, 25)
+        assert.ok(tools.some((tool) => tool.name === "resolve_record"))
+        assert.ok(tools.some((tool) => tool.name === "read_record_collection"))
         assert.ok(tools.some((tool) => tool.name === "get_bill"))
         assert.deepEqual(received, [], "Discovery must not acquire API credentials")
         const result = await client.callTool({ name: "get_bill", arguments: { id: bill.id } })

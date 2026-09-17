@@ -48,13 +48,17 @@ export async function searchReferences(
   })
   signal.throwIfAborted()
   const results = Array.isArray(result) ? result : [result]
-  return results.flatMap((entry) => {
-    const page = resultStore.create(input.sessionKey, entry.tool, entry.data, query, async () => {
-      throw new Error("Search again to refine references")
+  const pages = await Promise.all(
+    results.map(async (entry) => {
+      const page = resultStore.create(input.sessionKey, entry.tool, entry.data, query, async () => {
+        throw new Error("Search again to refine references")
+      })
+      if (!page) {
+        throw new Error("Reference results could not be read")
+      }
+      await resultStore.persist(page.id)
+      return page.items.map((record) => ({ resultId: page.id, recordId: record.id, record }))
     })
-    if (!page) {
-      throw new Error("Reference results could not be read")
-    }
-    return page.items.map((record) => ({ resultId: page.id, recordId: record.id, record }))
-  })
+  )
+  return pages.flat()
 }

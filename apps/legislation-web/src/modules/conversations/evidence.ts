@@ -26,7 +26,12 @@ export const evidenceSnapshotSchema = z.strictObject({
   sourceUrl: sourceUrlSchema.nullable(),
   readableUrl: sourceUrlSchema.optional(),
   content: z.discriminatedUnion("state", [
-    z.strictObject({ state: z.literal("available"), quote: z.string().min(1).max(20000) }),
+    z.strictObject({
+      state: z.literal("available"),
+      quote: z.string().min(1).max(20000),
+      truncated: z.literal(true).optional(),
+      totalCharacters: z.number().int().positive().optional()
+    }),
     z.strictObject({ state: z.enum(["not-collected", "unavailable", "failed"]) })
   ])
 })
@@ -96,6 +101,9 @@ const sourceRecordSchema = z.object({
   format: z.string().nullish(),
   renditions: z.array(z.unknown()).nullish(),
   text: z.string().nullish(),
+  textOffset: z.number().int().nonnegative().nullish(),
+  nextTextOffset: z.number().int().nonnegative().nullish(),
+  totalCharacters: z.number().int().nonnegative().nullish(),
   snippet: z.string().nullish(),
   heading: z.string().nullable().optional(),
   sectionIdentifier: z.string().nullable().optional(),
@@ -228,7 +236,8 @@ function evidenceIdentity(source: EvidenceSourceContext, sourceUrl: string | nul
     passageId,
     passageId ? null : (source.ordinal ?? null),
     passageId ? null : (source.sourceLocator ?? source.sectionIdentifier ?? source.heading ?? null),
-    source.text ?? source.contentHash ?? null
+    source.text ?? source.contentHash ?? null,
+    source.textOffset ?? 0
   ])
 }
 
@@ -279,7 +288,7 @@ export function projectResearchEvidence(
         sources.push(source)
       }
       const key = evidenceIdentity(source, sourceUrl)
-      if (hasSource && evidence.length < 40 && !seen.has(key)) {
+      if (hasSource && evidence.length < 1600 && !seen.has(key)) {
         const quote = source.text
         const snapshot = evidenceSnapshotSchema.safeParse({
           id: createId(key),
@@ -309,12 +318,22 @@ export function projectResearchEvidence(
     }
   }
   visit(data)
-  return evidence.map(({ snapshot, source }) => {
-    if (!resolveSource) {
-      return snapshot
-    }
-    return evidenceSnapshotSchema.parse(resolveSource(snapshot, source, sources))
-  })
+  const selected = new Set(
+    evidence
+      .toSorted(
+        (left, right) =>
+          Number(right.snapshot.content.state === "available") - Number(left.snapshot.content.state === "available")
+      )
+      .slice(0, 40)
+  )
+  return evidence
+    .filter((item) => selected.has(item))
+    .map(({ snapshot, source }) => {
+      if (!resolveSource) {
+        return snapshot
+      }
+      return evidenceSnapshotSchema.parse(resolveSource(snapshot, source, sources))
+    })
 }
 
 export function evidenceSourceUrl(evidence: Pick<EvidenceSnapshot, "sourceUrl" | "readableUrl">): string | null {
@@ -327,8 +346,16 @@ export function evidenceSourceUrl(evidence: Pick<EvidenceSnapshot, "sourceUrl" |
 }
 
 function evidenceContent(source: EvidenceSourceContext, quote: string | null | undefined): EvidenceSnapshot["content"] {
-  if (quote && quote.length <= 20000) {
-    return { state: "available", quote }
+  if (quote) {
+    const truncated =
+      quote.length > 20000 ||
+      (source.nextTextOffset !== null && source.nextTextOffset !== undefined) ||
+      (source.textOffset ?? 0) > 0
+    return {
+      state: "available",
+      quote: quote.slice(0, 20000),
+      ...(truncated ? { truncated: true, totalCharacters: source.totalCharacters ?? quote.length } : {})
+    }
   }
   if (source.processingStatus === "failed") {
     return { state: "failed" }

@@ -90,7 +90,10 @@ export function contentOptions(content: PresentationContent) {
           evidenceId: content.evidence.citationRef ?? content.evidence.id,
           recordId: content.evidence.recordId,
           locator: content.evidence.locator,
-          contentState: content.evidence.content.state
+          contentState: content.evidence.content.state,
+          ...(content.evidence.content.state === "available" && content.evidence.content.truncated
+            ? { passageTruncated: true, totalCharacters: content.evidence.content.totalCharacters }
+            : {})
         }
       : {}),
     ...(content.kind === "record-status" ? { recordId: content.recordId, state: content.state } : {})

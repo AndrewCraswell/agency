@@ -65,7 +65,7 @@ describe("captured Storybook review", () => {
     }
     expect(activityPart(capture, "Complete").part).toMatchObject({ output: capture.output, input: capture.input })
     expect(JSON.stringify(capture)).toBe(original)
-    expect(failureCodes).toHaveLength(11)
+    expect(failureCodes).toHaveLength(12)
   })
 
   it("retains inspector data for all primary interactive card kinds", () => {

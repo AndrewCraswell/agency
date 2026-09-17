@@ -45,6 +45,17 @@ export interface EventVirtualAccessPayload {
 
 export const legislationSchema = pgSchema("legislation")
 
+export const researchResultSnapshots = legislationSchema.table(
+  "research_result_snapshots",
+  {
+    id: uuid("id").primaryKey(),
+    sessionKey: uuid("session_key").notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull()
+  },
+  (table) => [index("research_result_snapshots_expiry_idx").on(table.expiresAt)]
+)
+
 export const organizationMembershipEndReason = legislationSchema.enum(
   "organization_membership_end_reason",
   organizationMembershipEndReasons
@@ -1150,6 +1161,7 @@ export const supportingMaterials = legislationSchema.table(
     jurisdictionId: text("jurisdiction_id")
       .notNull()
       .references(() => jurisdictions.id, { onDelete: "restrict" }),
+    sessionId: text("session_id").references(() => legislativeSessions.id, { onDelete: "restrict" }),
     sourceId: text("source_id").notNull(),
     classification: text("classification").notNull(),
     title: text("title").notNull(),

@@ -56,7 +56,10 @@
     "./observability/telemetry": "./src/observability/telemetry.ts",
     "./research/canonical-search-output": "./src/research/canonical-search-output.ts",
     "./research/result-pages": "./src/research/result-pages.ts",
-    "./research/tools": "./src/research/tools.ts"
+    "./research/tools": "./src/research/tools.ts",
+    "./research/record-resolution": "./src/research/record-resolution.ts",
+    "./research/record-contracts": "./src/research/record-contracts.ts",
+    "./research/record-collections": "./src/research/record-collections.ts"
   },
   "files": [
     "src",

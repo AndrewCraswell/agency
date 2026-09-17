@@ -4,6 +4,15 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 --> statement-breakpoint
 CREATE SCHEMA "legislation";
 --> statement-breakpoint
+CREATE TABLE "legislation"."research_result_snapshots" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"session_key" uuid NOT NULL,
+	"snapshot" jsonb NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX "research_result_snapshots_expiry_idx" ON "legislation"."research_result_snapshots" ("expires_at");
+--> statement-breakpoint
 CREATE TABLE "legislation"."bill_actions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"bill_id" text NOT NULL,

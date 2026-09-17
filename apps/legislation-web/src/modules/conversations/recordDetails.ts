@@ -12,6 +12,7 @@ export const recordDetailRequestSchema = z.strictObject({
 })
 
 export const voteDetailsSchema = z.object({
+  isPartial: z.boolean().optional(),
   record: entityCardSchema,
   heldAt: z.iso.datetime({ offset: true }).optional(),
   hasCompleteTally: z.boolean(),
@@ -20,6 +21,7 @@ export const voteDetailsSchema = z.object({
 export type VoteDetails = z.infer<typeof voteDetailsSchema>
 
 export const meetingDetailsSchema = z.object({
+  isPartial: z.boolean().optional(),
   record: entityCardSchema,
   description: z.string().optional(),
   agenda: z
@@ -125,6 +127,7 @@ export function projectMeetingDetails(data: unknown): MeetingDetails {
   const input = z
     .object({
       event: z.object({ description: z.string().nullish() }),
+      truncated: z.boolean().optional(),
       agendaItems: z
         .array(
           z.object({
@@ -153,6 +156,7 @@ export function projectMeetingDetails(data: unknown): MeetingDetails {
   }
   return meetingDetailsSchema.parse({
     record,
+    isPartial: input.truncated === true,
     description: input.event.description ?? undefined,
     agenda: input.agendaItems
       .toSorted((left, right) => left.ordinal - right.ordinal)
@@ -175,6 +179,7 @@ export function projectMeetingDetails(data: unknown): MeetingDetails {
 }
 
 const voteInputSchema = z.object({
+  positionsTruncated: z.boolean().optional(),
   vote: z.object({ heldAt: z.union([z.date(), z.iso.datetime({ offset: true })]).nullish() }),
   positions: z
     .array(
@@ -198,6 +203,7 @@ export function projectVoteDetails(data: unknown): VoteDetails {
   }
   return voteDetailsSchema.parse({
     record,
+    isPartial: input.positionsTruncated === true,
     heldAt,
     hasCompleteTally: record.tallies.length === 9,
     positions: input.positions.map(({ person, position }) => ({

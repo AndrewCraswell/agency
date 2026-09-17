@@ -74,6 +74,7 @@ export interface SearchModelUsage {
 }
 
 export interface BillSearchResultPage extends SearchPage<BillSearchCandidate> {
+  warnings?: string[]
   search: {
     isReranked: boolean
     models: SearchModelUsage[]
@@ -274,6 +275,38 @@ export async function lexicalBillSearch(
   input: SearchInput
 ): Promise<SearchPage<BillSearchCandidate>> {
   const { limit, offset, query } = validateSearchInput(input, true)
+  if (isBillIdentifierQuery(query)) {
+    const normalized = query.replaceAll(/[.\s-]/g, "").toUpperCase()
+    const identifierParts = /^([A-Z]+)(\d+[A-Z]?)$/.exec(normalized)
+    const session = input.sessionIds?.length === 1 ? input.sessionIds[0] : undefined
+    let selection: SQL = sql`regexp_replace(upper(${bills.identifier}), '[.[:space:]-]', '', 'g') = ${normalized}`
+    if (session?.startsWith("session:") && identifierParts) {
+      selection = eq(
+        bills.id,
+        `bill:${session.slice("session:".length)}:${identifierParts[1]!.toLowerCase()}:${identifierParts[2]!.toLowerCase().replace(/^0+(?=\d)/, "")}`
+      )
+    }
+    const rows = await database
+      .select({ bill: billSearchSummaryColumns, sessionName: legislativeSessions.name })
+      .from(bills)
+      .leftJoin(legislativeSessions, eq(bills.sessionId, legislativeSessions.id))
+      .where(and(selection, ...billFilters(input)))
+      .orderBy(asc(bills.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const candidates: BillSearchCandidate[] = rows.map((row) => ({
+      ...row.bill,
+      sessionName: row.sessionName,
+      latestActionAt: null,
+      lexicalScore: 1,
+      matchedFields: ["identifier"],
+      rerankScore: null,
+      score: 1,
+      semanticScore: null,
+      snippet: `${row.bill.identifier} ${row.bill.title}`
+    }))
+    return paginateSearchDatabaseRows(candidates, limit, offset, input)
+  }
   const result = await database.execute<LexicalBillSearchRow>(buildLexicalBillSearchQuery(input, query, limit, offset))
   const versionCoverageCapped = hasCappedLexicalBillVersionCoverage(result.rows)
   const candidateRows = result.rows.filter(isLexicalBillSearchCandidateRow)
@@ -1087,6 +1120,25 @@ export async function semanticBillSearch(
   }
   const offset = decodeSearchCursor(input.cursor)
   const distance = sql<number>`${billEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
+  await database.execute(sql`select set_config('hnsw.ef_search', '1000', true)`)
+  const nearest = database.$with("nearest_bill_embeddings").as(
+    database
+      .select({ billId: billEmbeddings.billId, distance: distance.as("distance") })
+      .from(billEmbeddings)
+      .where(and(eq(billEmbeddings.model, route.model), eq(billEmbeddings.inputContract, route.embeddingInputContract)))
+      .orderBy(asc(distance))
+      .limit(1000)
+  )
+  const candidates = database.$with("semantic_bill_candidates").as(
+    database
+      .select({ billId: bills.id, distance: nearest.distance })
+      .from(nearest)
+      .innerJoin(bills, eq(nearest.billId, bills.id))
+      .where(and(...billFilters(input)))
+      .orderBy(asc(nearest.distance), asc(bills.id))
+      .limit(limit + 1)
+      .offset(offset)
+  )
   const latestActions = database
     .select({
       latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`
@@ -1097,26 +1149,18 @@ export async function semanticBillSearch(
     .where(eq(billActions.billId, bills.id))
     .as("bill_semantic_latest_actions")
   const rows = await database
+    .with(nearest, candidates)
     .select({
-      bill: bills,
-      distance,
+      bill: billSearchSummaryColumns,
+      distance: candidates.distance,
       sessionName: legislativeSessions.name,
       latestActionAt: latestActions.latestActionAt
     })
-    .from(bills)
-    .innerJoin(billEmbeddings, eq(billEmbeddings.billId, bills.id))
+    .from(candidates)
+    .innerJoin(bills, eq(candidates.billId, bills.id))
     .leftJoin(legislativeSessions, eq(bills.sessionId, legislativeSessions.id))
     .leftJoinLateral(latestActions, sql`true`)
-    .where(
-      and(
-        eq(billEmbeddings.model, route.model),
-        eq(billEmbeddings.inputContract, route.embeddingInputContract),
-        ...billFilters(input)
-      )
-    )
-    .orderBy(asc(distance), asc(bills.id))
-    .limit(limit + 1)
-    .offset(offset)
+    .orderBy(asc(candidates.distance), asc(bills.id))
   return paginateSearchDatabaseRows(
     rows.map((row) => ({
       ...row.bill,
@@ -1131,7 +1175,9 @@ export async function semanticBillSearch(
       snippet: `${row.bill.identifier} ${row.bill.title}${row.bill.summary === null ? "" : ` ${row.bill.summary}`}`
     })),
     limit,
-    offset
+    offset,
+    undefined,
+    true
   )
 }
 

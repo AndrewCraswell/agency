@@ -144,6 +144,29 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
   }
 
   return withApiErrors({
+    readRecordCollection: async (input) =>
+      await apiCall(async () => resourceData(await api.readRecordCollection(input, requestOptions()))),
+    resolveRecord: async (input) =>
+      await apiCall(async () => resourceData(await api.resolveRecord(input, requestOptions()))),
+    listJurisdictions: async (input) =>
+      pageData(await api.listJurisdictions(query(input, { query: "q" }), requestOptions())),
+    listSessions: async ({ jurisdictionId, ...input }) =>
+      pageData(await api.listJurisdictionSessions(jurisdictionId, query(input), requestOptions())),
+    getMemberships: async ({ personId, organizationId, ...input }) => {
+      if (personId && organizationId) {
+        throw new LegislationError("invalid_request", "Select one person or organization for membership lookup")
+      }
+      if (personId) return pageData(await api.listPersonMemberships(personId, query(input), requestOptions()))
+      if (organizationId)
+        return pageData(await api.listOrganizationMembers(organizationId, query(input), requestOptions()))
+      throw new LegislationError("invalid_request", "Select a person or organization for membership lookup")
+    },
+    getSponsoredBills: async ({ id, ...input }) =>
+      pageData(await api.listPersonBills(id, query(input), requestOptions())),
+    getCommitteeBillActivity: async ({ id, ...input }) =>
+      pageData(await api.listOrganizationBills(id, query(input), requestOptions())),
+    getDocumentSections: async ({ documentId, ...input }) =>
+      pageData(await api.getDocumentSections(documentId, query(input), requestOptions())),
     ...(legalText === undefined
       ? {}
       : {
@@ -177,15 +200,23 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
             return api.getLegalText(versionId, input, { ...requestOptions(), bearerToken })
           }
         }),
-    compareBillVersions: async ({ billId, documentIds }) => {
+    compareBillVersions: async ({ billId, documentIds, cursor, limit }) => {
       const [leftDocumentId, rightDocumentId] = documentIds
       if (leftDocumentId === undefined || rightDocumentId === undefined) {
         throw new LegislationError("invalid_request", "Exactly two document IDs are required")
       }
-      return resourceData(await api.compareBillVersions(billId, leftDocumentId, rightDocumentId, requestOptions()))
+      return resourceData(
+        await api.compareBillVersions(billId, leftDocumentId, rightDocumentId, requestOptions(), { cursor, limit })
+      )
     },
-    findRelatedBills: async ({ id, ...input }) =>
-      pageData(await api.getRelatedBills(id, query(input), requestOptions())),
+    findRelatedBills: async ({ id, mode, ...input }) =>
+      pageData(
+        await api.getRelatedBills(
+          id,
+          query({ ...input, mode: mode === "semantic" ? "similar" : "explicit" }),
+          requestOptions()
+        )
+      ),
     getAmendment: async ({ id }) => resourceData(await api.getAmendment(id, requestOptions())),
     getBill: async ({ id, ...input }) => resourceData(await api.getBill(id, query(input), requestOptions())),
     getBillVotes: async ({ billId, ...input }) => {
@@ -206,7 +237,7 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
       return {
         billId: id,
         events: page.data,
-        nextChildCursor: page.meta.nextCursor,
+        nextCursor: page.meta.nextCursor,
         truncated: page.meta.truncated,
         warnings: page.meta.warnings
       }
@@ -214,8 +245,16 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
     getEvent: async ({ id }) => resourceData(await api.getMeeting(id, requestOptions())),
     getOrganization: async ({ id }) => resourceData(await api.getOrganization(id, undefined, requestOptions())),
     getPerson: async ({ id }) => resourceData(await api.getPerson(id, undefined, requestOptions())),
-    getSupportingMaterial: async ({ id }) =>
-      resourceData(await api.getSupportingMaterial(id, undefined, requestOptions())),
+    getSupportingMaterial: async ({ id, ...input }) => {
+      const detail = resourceData(await api.getSupportingMaterial(id, undefined, requestOptions()))
+      const sections = await api.listSupportingMaterialSections(id, query(input), requestOptions())
+      return {
+        material: detail,
+        sections: sections.data,
+        nextCursor: sections.meta.nextCursor,
+        truncated: sections.meta.truncated
+      }
+    },
     getVote: async ({ id }) => {
       const request = voteRequestOptions()
       return completeVotePositions((await api.getVote(id, request)).data, request, id)
@@ -265,6 +304,7 @@ function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
   const listLegalEditions = adapter.listLegalEditions
   const listLegalProvisions = adapter.listLegalProvisions
   return {
+    ...adapter,
     ...(getLegalCode === undefined ? {} : { getLegalCode: async (input) => await apiCall(() => getLegalCode(input)) }),
     ...(getLegalEdition === undefined
       ? {}
@@ -427,12 +467,7 @@ function supportingMaterialSearchBody(input: object): ApiRequestBody {
 }
 
 function passageSearchBody(input: object): ApiRequestBody {
-  const result = body(input, { billId: "billIds", classifications: "documentClassifications" })
-  const billId = result.billIds
-  if (billId !== undefined) {
-    result.billIds = [billId]
-  }
-  return result
+  return body(input)
 }
 
 function bodyWithArrayFields(input: object, names: Readonly<Record<string, string>>): ApiRequestBody {

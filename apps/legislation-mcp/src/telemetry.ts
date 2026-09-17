@@ -1,0 +1,118 @@
+import { getRequestContext } from "@repo/legislation-core/auth/request-context"
+import { normalizeLegislationError, postgresErrorCode } from "@repo/legislation-core/domain/errors"
+import { sanitizeTelemetry } from "@repo/legislation-core/observability/sanitize-telemetry"
+import type { Telemetry } from "@repo/legislation-core/observability/telemetry"
+import * as Sentry from "@sentry/node"
+import { z } from "zod"
+
+function safeRecord(value: unknown) {
+  return z.record(z.string(), z.unknown()).parse(sanitizeTelemetry(value))
+}
+
+function safeSpanAttributes(value: unknown) {
+  const attributes: Record<string, string | number | boolean> = {}
+  for (const [key, item] of Object.entries(safeRecord(value))) {
+    if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") attributes[key] = item
+  }
+  return attributes
+}
+
+export function mcpSentryOptions(environment: NodeJS.ProcessEnv): Sentry.NodeOptions {
+  return {
+    dsn: environment.SENTRY_DSN,
+    enabled: Boolean(environment.SENTRY_DSN),
+    environment: environment.SENTRY_ENVIRONMENT ?? environment.NODE_ENV ?? "development",
+    release: environment.SENTRY_RELEASE,
+    sendDefaultPii: false,
+    tracesSampleRate: 1,
+    maxValueLength: 2000,
+    beforeSendTransaction(event) {
+      return {
+        ...event,
+        request: undefined,
+        user: undefined,
+        extra: event.extra ? safeRecord(event.extra) : undefined,
+        spans: event.spans?.map((span) => ({ ...span, data: safeSpanAttributes(span.data ?? {}) }))
+      }
+    },
+    beforeSend(event) {
+      return {
+        ...event,
+        request: undefined,
+        user: undefined,
+        extra: event.extra ? safeRecord(event.extra) : undefined,
+        breadcrumbs: event.breadcrumbs?.map((crumb) => ({
+          ...crumb,
+          message: String(sanitizeTelemetry(crumb.message ?? "")),
+          data: crumb.data ? safeRecord(crumb.data) : undefined
+        })),
+        exception: event.exception
+          ? {
+              ...event.exception,
+              values: event.exception.values?.map((value) => ({
+                ...value,
+                value: String(sanitizeTelemetry(value.value ?? "")),
+                stacktrace: value.stacktrace
+                  ? {
+                      ...value.stacktrace,
+                      frames: value.stacktrace.frames?.map((frame) => ({ ...frame, vars: undefined }))
+                    }
+                  : undefined
+              }))
+            }
+          : undefined
+      }
+    }
+  }
+}
+
+export function initializeMcpTelemetry(environment: NodeJS.ProcessEnv) {
+  Sentry.init(mcpSentryOptions(environment))
+}
+
+export function createMcpTelemetry(): Telemetry {
+  return {
+    observe: async (name, metadata, operation) =>
+      await Sentry.startSpan(
+        {
+          name,
+          op: "mcp.tool",
+          attributes: { "mcp.tool": name, "correlation.id": getRequestContext()?.correlationId ?? "" }
+        },
+        async (span) => {
+          try {
+            const result = await operation()
+            span.setStatus({ code: 1 })
+            return result
+          } catch (error) {
+            span.setStatus({ code: 2, message: normalizeLegislationError(error).category })
+            throw error
+          } finally {
+            span.setAttribute("mcp.input_keys", Object.keys(metadata).join(","))
+          }
+        }
+      ),
+    reportFailure(name, metadata, error) {
+      const failure = normalizeLegislationError(error)
+      const context = getRequestContext()
+      Sentry.withScope((scope) => {
+        scope.setTag("service", "legislation-mcp")
+        scope.setTag("tool", name)
+        scope.setTag("category", error instanceof z.ZodError ? "invalid_request" : failure.category)
+        scope.setTag("stage", String(metadata.stage ?? "unknown"))
+        const correlation = context?.correlationId ?? metadata.correlationId
+        if (typeof correlation === "string") scope.setTag("correlationId", correlation)
+        const code = postgresErrorCode(error)
+        if (code) scope.setTag("database.code", code)
+        scope.setContext(
+          "mcp",
+          safeRecord({ ...metadata, errorDetails: failure.details, correlationId: context?.correlationId })
+        )
+        Sentry.captureException(error instanceof Error ? error : failure)
+      })
+    },
+    shutdown: async () => {
+      await Sentry.close(5000)
+    }
+  }
+}

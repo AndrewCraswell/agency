@@ -129,6 +129,7 @@ export function VoteDetails({
             </Button>
           </SheetClose>
         </SheetHeader>
+        {details?.isPartial && <p className="text-sm text-muted-foreground">Only part of this record was retrieved.</p>}
         {isLoading && (
           <output className="flex items-center gap-2 text-sm text-muted-foreground">
             <LoaderCircle className={shared.spinner} aria-hidden="true" />

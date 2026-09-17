@@ -1,3 +1,4 @@
+import { z } from "zod"
 import {
   projectEntityResult,
   ResultExpiredError,
@@ -5,6 +6,29 @@ import {
   type EntityCard,
   type EntityKind
 } from "./entityResults"
+import { entityCardSchema, entityKindSchema } from "./entityResults"
+import { resultPersistence } from "./resultPersistence.server"
+
+export const retainedResultSchema = z.object({
+  sessionKey: z.uuid(),
+  toolName: z.string(),
+  kind: entityKindSchema,
+  presentation: z.enum(["card", "list"]),
+  items: z.array(entityCardSchema).max(1000),
+  warnings: z.array(z.string()),
+  nextCursor: z.string().optional(),
+  query: z.string().optional(),
+  expiresAt: z.number(),
+  pageStarts: z.array(z.number().int().nonnegative()),
+  pageEnds: z.array(z.number().int().nonnegative()),
+  input: z.record(z.string(), z.unknown()).optional()
+})
+export type RetainedResult = z.infer<typeof retainedResultSchema>
+export type ResultPersistence = {
+  save: (id: string, value: RetainedResult) => Promise<void>
+  read: (sessionKey: string, id: string) => Promise<unknown>
+  load: (tool: string, input: Record<string, unknown>, signal: AbortSignal) => Promise<unknown>
+}
 
 type Snapshot = {
   sessionKey: string
@@ -20,10 +44,40 @@ type Snapshot = {
   load: (cursor: string, signal: AbortSignal) => Promise<unknown>
   pageStarts: number[]
   pageEnds: number[]
+  input?: Record<string, unknown>
 }
 
-export function createResultStore(now = Date.now) {
+export function createResultStore(now = Date.now, persistence?: ResultPersistence) {
   const snapshots = new Map<string, Snapshot>()
+  async function persist(id: string) {
+    const snapshot = snapshots.get(id)
+    if (persistence && snapshot) {
+      await persistence.save(id, retainedResultSchema.parse(snapshot))
+    }
+  }
+  async function recover(sessionKey: string, id: string) {
+    prune()
+    if (snapshots.has(id)) {
+      return
+    }
+    if (!persistence) {
+      throw new ResultExpiredError()
+    }
+    const saved = retainedResultSchema.safeParse(await persistence.read(sessionKey, id))
+    if (!saved.success || saved.data.sessionKey !== sessionKey || saved.data.expiresAt <= now()) {
+      throw new ResultExpiredError()
+    }
+    const snapshot = saved.data
+    snapshots.set(id, {
+      ...snapshot,
+      load: async (cursor, signal) => {
+        if (!snapshot.input) {
+          throw new ResultExpiredError()
+        }
+        return await persistence.load(snapshot.toolName, { ...snapshot.input, cursor }, signal)
+      }
+    })
+  }
   function prune() {
     for (const [id, snapshot] of snapshots) {
       if (snapshot.expiresAt <= now()) {
@@ -54,7 +108,8 @@ export function createResultStore(now = Date.now) {
     toolName: string,
     data: unknown,
     query: string | undefined,
-    load: Snapshot["load"]
+    load: Snapshot["load"],
+    input?: Record<string, unknown>
   ) {
     prune()
     const result = projectEntityResult(toolName, data)
@@ -71,9 +126,10 @@ export function createResultStore(now = Date.now) {
       ...result,
       query,
       load,
+      input,
       pageStarts: [0],
       pageEnds: [Math.min(result.items.length, 5)],
-      expiresAt: now() + 15 * 60 * 1000
+      expiresAt: now() + (persistence ? 24 * 60 : 15) * 60 * 1000
     }
     snapshots.set(id, snapshot)
     return render(id, snapshot, 0)
@@ -81,6 +137,9 @@ export function createResultStore(now = Date.now) {
   async function page(sessionKey: string, id: string, page: number, signal: AbortSignal) {
     signal.throwIfAborted()
     prune()
+    if (!snapshots.has(id)) {
+      await recover(sessionKey, id)
+    }
     const snapshot = snapshots.get(id)
     if (!snapshot || snapshot.sessionKey !== sessionKey) {
       throw new ResultExpiredError()
@@ -125,6 +184,7 @@ export function createResultStore(now = Date.now) {
     }
     snapshot.pageStarts[page] = offset
     snapshot.pageEnds[page] = Math.min(offset + 5, snapshot.items.length)
+    await persist(id)
     return render(id, snapshot, page)
   }
   function record(sessionKey: string, id: string, recordId: string) {
@@ -153,7 +213,7 @@ export function createResultStore(now = Date.now) {
       })
       .map((item) => ({ id: item.id, kind: item.kind, title: item.title }))
   }
-  return { create, page, record, references }
+  return { create, page, record, references, persist, recover }
 }
 
-export const resultStore = createResultStore()
+export const resultStore = createResultStore(Date.now, resultPersistence)

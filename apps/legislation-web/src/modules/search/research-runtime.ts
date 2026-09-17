@@ -25,25 +25,32 @@ function createResearchRuntime(config: LegislationConfig = loadConfig()) {
         })
 
   return {
-    async run<Result>(operation: (service: LegislationQueryService) => Promise<Result>) {
-      return await withReadOnlyDatabase(canonical.pool, config.database.apiStatementTimeoutMs, async (database) => {
-        const passageConfig = config.passageSearch
-        const ranked =
-          search && passageConfig.enabled
-            ? createRankedPassageSearch({
-                canonicalDatabase: database,
-                searchDatabase: search.database,
-                generation: passageConfig.rankingGeneration,
-                executeRankedQuery: (query) =>
-                  withReadOnlyDatabase(
-                    search.pool,
-                    passageConfig.database.apiStatementTimeoutMs,
-                    async (searchDatabase) => (await searchDatabase.execute(query)).rows
-                  )
-              })
-            : undefined
-        return await operation(new LegislationQueryService(database, retrieval, ranked))
-      })
+    async run<Result>(operation: (service: LegislationQueryService) => Promise<Result>, signal?: AbortSignal) {
+      const deadline = AbortSignal.timeout(30000)
+      const requestSignal = signal ? AbortSignal.any([signal, deadline]) : deadline
+      return await withReadOnlyDatabase(
+        canonical.pool,
+        config.database.apiStatementTimeoutMs,
+        async (database) => {
+          const passageConfig = config.passageSearch
+          const ranked =
+            search && passageConfig.enabled
+              ? createRankedPassageSearch({
+                  canonicalDatabase: database,
+                  searchDatabase: search.database,
+                  generation: passageConfig.rankingGeneration,
+                  executeRankedQuery: (query) =>
+                    withReadOnlyDatabase(
+                      search.pool,
+                      passageConfig.database.apiStatementTimeoutMs,
+                      async (searchDatabase) => (await searchDatabase.execute(query)).rows
+                    )
+                })
+              : undefined
+          return await operation(new LegislationQueryService(database, retrieval, ranked))
+        },
+        requestSignal
+      )
     },
     async close() {
       await Promise.all([canonical.pool.end(), search?.pool.end()])

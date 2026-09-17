@@ -32,6 +32,7 @@ export const activityStates = [
 ] as const
 export type ActivityState = (typeof activityStates)[number]
 const failures: Record<ResearchFailureCode, true> = {
+  not_processed: true,
   result_limit: true,
   invalid_request: true,
   invalid_cursor: true,

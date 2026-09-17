@@ -1,4 +1,12 @@
 export const researchToolLabels: Readonly<Record<string, string>> = {
+  read_record_collection: "Read record details",
+  resolve_record: "Resolve record identity",
+  list_jurisdictions: "List jurisdictions",
+  list_sessions: "List sessions",
+  get_memberships: "Read memberships",
+  get_sponsored_bills: "Read sponsored bills",
+  get_committee_bills: "Read committee bills",
+  get_document_sections: "Read document sections",
   search_bills: "Search bills",
   get_bill: "Read bill",
   get_bills: "Read bills",

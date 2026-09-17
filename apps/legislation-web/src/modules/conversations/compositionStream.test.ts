@@ -102,6 +102,21 @@ async function compose(content: string, resolveRecord = resolver) {
 }
 
 describe("createCompositionStream", () => {
+  it("replaces turn-local handles with canonical IDs before emitting a ready block", async () => {
+    const chunks = await collect(
+      createCompositionStream(textStream([fence([rootPatch(), elementPatch("first", "bill-1", "r1")])]), {
+        canonicalReference: (reference) => ({ ...reference, resultId }),
+        resolveRecord: (reference) => {
+          expect(reference.resultId).toBe(resultId)
+          return record(reference.recordId)
+        }
+      })
+    )
+    const ready = blocks(chunks).find((block) => block.state === "ready")
+    expect(ready?.state).toBe("ready")
+    expect(JSON.stringify(ready)).toContain(resultId)
+    expect(JSON.stringify(ready)).not.toContain('"r1"')
+  })
   it.each(["RecordGroup", "CompactRecordGroup"])(
     "resolves mixed %s records using each exact result reference",
     async (type) => {

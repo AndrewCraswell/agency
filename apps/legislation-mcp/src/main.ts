@@ -1,8 +1,11 @@
 import { z } from "zod"
-import { createMcpApplication } from "./application.js"
-import { close, createMcpServer, listen } from "./server.js"
+import { createMcpTelemetry, initializeMcpTelemetry } from "./telemetry.js"
+
+initializeMcpTelemetry(process.env)
 
 try {
+  const { createMcpApplication } = await import("./application.js")
+  const { close, createMcpServer, listen } = await import("./server.js")
   const port = z.coerce.number().int().min(1).max(65535).default(3000).parse(process.env.PORT)
   const application = createMcpApplication(process.env)
   const server = createMcpServer(application)
@@ -17,7 +20,8 @@ try {
     shutdown ??= close(server, application)
     void shutdown.then(
       () => clearTimeout(deadline),
-      () => {
+      (error: unknown) => {
+        createMcpTelemetry().reportFailure?.("mcp.shutdown", { stage: "shutdown" }, error)
         process.stderr.write("MCP shutdown failed\n")
         process.exitCode = 1
       }
@@ -31,7 +35,10 @@ try {
     await close(server, application)
     throw error
   }
-} catch {
+} catch (error) {
+  const telemetry = createMcpTelemetry()
+  telemetry.reportFailure?.("mcp.startup", { stage: "startup" }, error)
+  await telemetry.shutdown()
   process.stderr.write("MCP startup failed; check configuration and port availability\n")
   process.exitCode = 1
 }

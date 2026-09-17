@@ -23,3 +23,36 @@ export class LegislationError extends Error {
     this.name = "LegislationError"
   }
 }
+
+export function postgresErrorCode(error: unknown): string | undefined {
+  const visited = new Set<unknown>()
+  let current = error
+  while (typeof current === "object" && current !== null && !visited.has(current)) {
+    visited.add(current)
+    if ("code" in current && typeof current.code === "string" && /^[0-9A-Z]{5}$/.test(current.code)) {
+      return current.code
+    }
+    current = "cause" in current ? current.cause : undefined
+  }
+  return undefined
+}
+
+export function normalizeLegislationError(error: unknown): LegislationError {
+  if (error instanceof LegislationError) {
+    return error
+  }
+  const code = postgresErrorCode(error)
+  if (code === "57014") {
+    return new LegislationError("dependency_unavailable", "The database query timed out. Narrow the selection.", {
+      cause: error,
+      details: { reason: "timeout", retryable: true }
+    })
+  }
+  if (code?.startsWith("08") || code === "53300" || code === "57P01") {
+    return new LegislationError("dependency_unavailable", "The database is temporarily unavailable.", {
+      cause: error,
+      details: { retryable: true }
+    })
+  }
+  return new LegislationError("internal", "The request could not be completed", { cause: error })
+}

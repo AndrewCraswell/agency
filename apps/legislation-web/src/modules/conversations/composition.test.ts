@@ -104,6 +104,12 @@ describe("composition contracts", () => {
     expect(compositionInstructions).toContain("spec")
     expect(compositionInstructions).toContain("ResultList")
     expect(compositionInstructions).toContain("CompactRecordCard")
+    expect(compositionInstructions).toContain("resolve_record")
+    expect(compositionInstructions).toContain("never reconstruct UUIDs")
+    expect(compositionInstructions).toContain("the quote is hidden until the user opens the evidence panel")
+    expect(compositionInstructions).toContain("includes only action events and omits votes")
+    expect(compositionInstructions).toContain("every returned event type, including actions and votes")
+    expect(compositionInstructions).toContain("Use RecordCard when visible record facts materially help the answer")
     expect(compositionInstructions).not.toContain("BillComparison")
     expect(answerCatalog.validate(block.spec).success).toBe(true)
     expect(

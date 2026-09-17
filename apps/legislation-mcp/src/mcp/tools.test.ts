@@ -191,14 +191,8 @@ describe("legislation MCP tools", () => {
     expect(tools.get("get_bill_timeline")).toEqual(expect.arrayContaining(["cursor", "limit"]))
     expect(tools.get("get_bill_timeline")).not.toEqual(expect.arrayContaining(["childCursor", "childLimit"]))
     expect(tools.get("find_related_bills")).not.toContain("includeSemantic")
-    for (const name of [
-      "get_amendment",
-      "get_event",
-      "get_organization",
-      "get_person",
-      "get_supporting_material",
-      "get_vote"
-    ]) {
+    expect(tools.get("get_supporting_material")).toEqual(expect.arrayContaining(["cursor", "limit"]))
+    for (const name of ["get_amendment", "get_event", "get_organization", "get_person", "get_vote"]) {
       expect(tools.get(name)).not.toEqual(expect.arrayContaining(["cursor", "limit"]))
     }
     await transport.close()

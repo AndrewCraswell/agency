@@ -1,0 +1,182 @@
+import { createHash } from "node:crypto"
+import { and, asc, eq, getTableColumns, sql } from "drizzle-orm"
+import { z } from "zod"
+import type { LegislationDatabase } from "../database/database"
+import {
+  amendmentActions,
+  billActions,
+  billDocuments,
+  billSponsors,
+  documentSections,
+  eventAgendaItems,
+  eventBills,
+  eventDocuments,
+  eventOutcomeLinks,
+  eventParticipants,
+  legislativeTerms,
+  organizations,
+  supportingMaterialLinks,
+  supportingMaterials,
+  supportingMaterialSections,
+  votePositions,
+  votes
+} from "../database/schema/schema"
+import { LegislationError } from "../domain/errors"
+import { recordCollectionSchema, type RecordCollectionInput } from "./record-contracts"
+
+export async function readRecordCollection(database: LegislationDatabase, value: RecordCollectionInput) {
+  const input = recordCollectionSchema.parse(value)
+  const { text: _text, ...documentMetadata } = getTableColumns(billDocuments)
+  const selection = Object.fromEntries(
+    Object.entries(input)
+      .filter(([key, value]) => key !== "cursor" && value !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+  )
+  const binding = createHash("sha256").update(JSON.stringify(selection)).digest("base64url")
+  let offset = 0
+  if (input.cursor) {
+    try {
+      const cursor = z
+        .strictObject({ offset: z.number().int().min(0).max(1000000), binding: z.string() })
+        .parse(JSON.parse(Buffer.from(input.cursor, "base64url").toString()))
+      if (cursor.binding !== binding) throw new Error("Selection mismatch")
+      offset = cursor.offset
+    } catch {
+      throw new LegislationError("invalid_request", "Invalid collection cursor")
+    }
+  }
+  const definitions = {
+    "bill-actions": {
+      table: billActions,
+      parent: billActions.billId,
+      order: billActions.ordinal,
+      columns: getTableColumns(billActions)
+    },
+    "bill-sponsors": {
+      table: billSponsors,
+      parent: billSponsors.billId,
+      order: billSponsors.id,
+      columns: getTableColumns(billSponsors)
+    },
+    "bill-documents": {
+      table: billDocuments,
+      parent: billDocuments.billId,
+      order: billDocuments.id,
+      columns: documentMetadata
+    },
+    "person-terms": {
+      table: legislativeTerms,
+      parent: legislativeTerms.personId,
+      order: legislativeTerms.id,
+      columns: getTableColumns(legislativeTerms)
+    },
+    "organization-children": {
+      table: organizations,
+      parent: organizations.parentOrganizationId,
+      order: organizations.id,
+      columns: getTableColumns(organizations)
+    },
+    "meeting-agenda": {
+      table: eventAgendaItems,
+      parent: eventAgendaItems.eventId,
+      order: eventAgendaItems.id,
+      columns: getTableColumns(eventAgendaItems)
+    },
+    "meeting-documents": {
+      table: eventDocuments,
+      parent: eventDocuments.eventId,
+      order: eventDocuments.id,
+      columns: getTableColumns(eventDocuments)
+    },
+    "meeting-participants": {
+      table: eventParticipants,
+      parent: eventParticipants.eventId,
+      order: eventParticipants.id,
+      columns: getTableColumns(eventParticipants)
+    },
+    "meeting-bills": {
+      table: eventBills,
+      parent: eventBills.eventId,
+      order: eventBills.billId,
+      columns: getTableColumns(eventBills)
+    },
+    "meeting-outcomes": {
+      table: eventOutcomeLinks,
+      parent: eventOutcomeLinks.eventId,
+      order: eventOutcomeLinks.id,
+      columns: getTableColumns(eventOutcomeLinks)
+    },
+    "vote-positions": {
+      table: votePositions,
+      parent: votePositions.voteId,
+      order: votePositions.sourceIdentity,
+      columns: getTableColumns(votePositions)
+    },
+    "amendment-actions": {
+      table: amendmentActions,
+      parent: amendmentActions.amendmentId,
+      order: amendmentActions.id,
+      columns: getTableColumns(amendmentActions)
+    },
+    "amendment-votes": { table: votes, parent: votes.amendmentId, order: votes.id, columns: getTableColumns(votes) },
+    "amendment-materials": {
+      table: supportingMaterialLinks,
+      parent: supportingMaterialLinks.amendmentId,
+      order: supportingMaterialLinks.materialId,
+      columns: getTableColumns(supportingMaterialLinks)
+    }
+  }
+  const isSection = input.collection === "document-sections" || input.collection === "material-sections"
+  const limit = input.limit ?? (isSection ? 1 : 25)
+  let items: unknown[]
+  if (input.collection === "document-sections" || input.collection === "material-sections") {
+    const table = input.collection === "document-sections" ? documentSections : supportingMaterialSections
+    const parent =
+      input.collection === "document-sections" ? documentSections.documentId : supportingMaterialSections.materialId
+    const parentTable = input.collection === "document-sections" ? billDocuments : supportingMaterials
+    const textOffset = input.textOffset ?? 0
+    const { text: _sectionText, searchVector: _searchVector, ...sectionMetadata } = getTableColumns(table)
+    items = await database
+      .select({
+        ...sectionMetadata,
+        recordId: parent,
+        sectionId: table.id,
+        title: parentTable.title,
+        sourceUrl: parentTable.sourceUrl,
+        documentDate: parentTable.documentDate,
+        billId: input.collection === "document-sections" ? billDocuments.billId : sql<string | null>`null`,
+        versionCode: input.collection === "document-sections" ? billDocuments.versionCode : sql<string | null>`null`,
+        text: sql<string>`substring(${table.text} from ${textOffset + 1} for 10000)`,
+        textOffset: sql<number>`${textOffset}::integer`,
+        totalCharacters: sql<number>`length(${table.text})`,
+        nextTextOffset: sql<
+          number | null
+        >`case when length(${table.text}) > ${textOffset + 10000} then ${textOffset + 10000}::integer else null end`
+      })
+      .from(table)
+      .innerJoin(parentTable, eq(parentTable.id, parent))
+      .where(and(eq(parent, input.recordId), input.sectionId ? eq(table.id, input.sectionId) : undefined))
+      .orderBy(asc(table.ordinal), asc(table.id))
+      .limit(limit + 1)
+      .offset(offset)
+  } else {
+    const definition = definitions[input.collection]
+    items = await database
+      .select(definition.columns)
+      .from(definition.table)
+      .where(eq(definition.parent, input.recordId))
+      .orderBy(asc(definition.order))
+      .limit(limit + 1)
+      .offset(offset)
+  }
+  return {
+    collection: input.collection,
+    recordId: input.recordId,
+    items: items.slice(0, limit),
+    nextCursor:
+      items.length > limit
+        ? Buffer.from(JSON.stringify({ offset: offset + limit, binding })).toString("base64url")
+        : undefined,
+    truncated: items.length > limit
+  }
+}

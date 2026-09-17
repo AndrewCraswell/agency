@@ -7,7 +7,6 @@ import {
   amendments,
   billActions,
   billDocuments,
-  billEmbeddings,
   billOrganizations,
   billRelations,
   billSponsors,
@@ -26,6 +25,7 @@ import {
   organizationMemberships,
   organizations,
   people,
+  personAliases,
   jurisdictions,
   supportingMaterialLinks,
   supportingMaterialSections,
@@ -34,7 +34,7 @@ import {
   votes
 } from "@repo/legislation-core/database/schema/schema"
 import { billActionTimestamp } from "@repo/legislation-core/domain/bill-action-timestamp"
-import { LegislationError } from "@repo/legislation-core/domain/errors"
+import { LegislationError, postgresErrorCode } from "@repo/legislation-core/domain/errors"
 import {
   openStatesBillStatus,
   openStatesStatusClassifications
@@ -44,6 +44,9 @@ import {
   embeddingRouteFor,
   type EmbeddingSearchTool
 } from "@repo/legislation-core/embeddings/embedding-routing"
+import { readRecordCollection } from "@repo/legislation-core/research/record-collections"
+import type { RecordCollectionInput, RecordResolutionInput } from "@repo/legislation-core/research/record-contracts"
+import { resolveRecord, publishedNameMatches } from "@repo/legislation-core/research/record-resolution"
 import {
   and,
   arrayContains,
@@ -95,10 +98,17 @@ import {
   validatePassageSearchInput,
   validateSearchInput
 } from "../search/search"
+import {
+  assertBillRelatedParentExists,
+  BILL_RELATION_CLASSIFICATIONS,
+  listBillRelatedBills
+} from "./persistence/queries/bill-related-read"
 import { findChangeEvents, type CanonicalChangeType } from "./persistence/queries/changes"
 
 const CHILD_LIMIT = 100
 const SECTION_LIMIT = 50
+const DETAIL_PREVIEW_LIMIT = 1000
+const { text: _documentText, ...documentMetadataColumns } = getTableColumns(billDocuments)
 const DETAIL_RESPONSE_TARGET_BYTES = 750_000
 const DOCUMENT_AMENDMENT_ID_PREFIX = "amendment:document:"
 const LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT = 250
@@ -503,6 +513,8 @@ export interface BillLookup {
 export interface VersionComparisonInput {
   billId: string
   documentIds: [string, string]
+  cursor?: string
+  limit?: number
 }
 
 export interface EntityLookup {
@@ -513,6 +525,9 @@ export interface EntityLookup {
 
 export interface MembershipLookup {
   cursor?: string
+  from?: string
+  to?: string
+  isCurrent?: boolean
   limit?: number
   organizationId?: string
   personId?: string
@@ -615,6 +630,7 @@ function canonicalCommitteeSource() {
 }
 
 export interface VoteSearchInput {
+  to?: Date
   query?: string
   billId?: string
   cursor?: string
@@ -1304,7 +1320,7 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       candidate_window.capped as "candidateWindowCapped"
     from ranked_candidate_prefix
     left join section_candidates on section_candidates.material_id = ranked_candidate_prefix.material_id
-    inner join lateral (
+    left join lateral (
       select ${supportingMaterialSections.id}
       from ${supportingMaterialSections}
       where ${supportingMaterialSections.materialId} = ranked_candidate_prefix.material_id
@@ -1326,11 +1342,12 @@ function materialLinkIds(
 }
 
 function isPostgresStatementTimeout(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "57014"
+  return postgresErrorCode(error) === "57014"
 }
 
 export interface ChangeSearchInput {
   billId?: string
+  classification?: CanonicalChangeType
   changeType?: CanonicalChangeType
   cursor?: string
   jurisdictionId?: string
@@ -1649,6 +1666,13 @@ function decodeChangeCursor(cursor: string | undefined): { id?: string; observed
 }
 
 export class LegislationQueryService {
+
+  async readRecordCollection(input: RecordCollectionInput) {
+    return await readRecordCollection(this.#database, input)
+  }
+  async resolveRecord(input: RecordResolutionInput) {
+    return await resolveRecord(this.#database, input)
+  }
   readonly #database: LegislationDatabase
   readonly #rankedPassageSearch?: RankedPassageSearch
   readonly #retrievalClient?: RetrievalModelClient
@@ -1669,7 +1693,7 @@ export class LegislationQueryService {
     const rows = await findChangeEvents(this.#database, {
       before: cursor.observedAt,
       beforeId: cursor.id,
-      changeType: input.changeType,
+      changeType: input.classification ?? input.changeType,
       jurisdictionId: input.jurisdictionId,
       limit: limit + 1,
       organizationId: input.organizationId,
@@ -1832,11 +1856,23 @@ export class LegislationQueryService {
         .select()
         .from(legislativeTerms)
         .where(eq(legislativeTerms.personId, lookup.id))
-        .orderBy(asc(legislativeTerms.startDate), asc(legislativeTerms.id)),
+        .orderBy(asc(legislativeTerms.startDate), asc(legislativeTerms.id))
+        .limit(DETAIL_PREVIEW_LIMIT + 1),
       this.getMemberships({ limit: lookup.limit, personId: lookup.id }),
       this.getSponsoredBills({ ...lookup, id: lookup.id })
     ])
-    return { memberships, person: person[0], sponsoredBills, terms }
+    return {
+      memberships,
+      person: person[0],
+      sponsoredBills,
+      terms: terms.slice(0, DETAIL_PREVIEW_LIMIT),
+      truncated: terms.length > DETAIL_PREVIEW_LIMIT || memberships.truncated || sponsoredBills.truncated,
+      continuations: {
+        terms: { collection: "person-terms", recordId: lookup.id },
+        memberships: { personId: lookup.id },
+        sponsoredBills: { id: lookup.id }
+      }
+    }
   }
 
   async searchPeople(input: PersonSearchInput) {
@@ -1858,7 +1894,7 @@ export class LegislationQueryService {
           input.isActive === undefined ? undefined : eq(people.isActive, input.isActive),
           input.query === undefined
             ? undefined
-            : sql`(${people.name} ilike ${`%${input.query}%`} or ${people.givenName} ilike ${`%${input.query}%`} or ${people.familyName} ilike ${`%${input.query}%`} or ${people.party} ilike ${`%${input.query}%`} or ${nameMatch})`
+            : sql`(${people.name} ilike ${`%${input.query}%`} or ${people.givenName} ilike ${`%${input.query}%`} or ${people.familyName} ilike ${`%${input.query}%`} or ${people.party} ilike ${`%${input.query}%`} or ${nameMatch} or exists (select 1 from ${personAliases} where ${personAliases.personId} = ${people.id} and ${personAliases.provenanceComplete} = true and ${publishedNameMatches(personAliases.name, input.query)}))`
         )
       )
       .orderBy(asc(people.name), asc(people.id))
@@ -1925,14 +1961,16 @@ export class LegislationQueryService {
         .select()
         .from(organizations)
         .where(and(eq(organizations.parentOrganizationId, lookup.id), canonicalCommitteeSource()))
-        .orderBy(asc(organizations.name)),
+        .orderBy(asc(organizations.name))
+        .limit(DETAIL_PREVIEW_LIMIT + 1),
       this.getMemberships({ limit: lookup.limit, organizationId: lookup.id }),
       this.getCommitteeBillActivity(lookup),
       this.searchEvents({ organizationId: lookup.id, from: new Date(), status: ["scheduled"], limit: 1 })
     ])
     return {
       billActivity,
-      children,
+      children: children.slice(0, DETAIL_PREVIEW_LIMIT),
+      truncated: children.length > DETAIL_PREVIEW_LIMIT || memberships.truncated || billActivity.truncated,
       memberships,
       organization: organization[0],
       nextMeeting: meetings.items[0] ?? null
@@ -1954,7 +1992,9 @@ export class LegislationQueryService {
             : eq(organizations.parentOrganizationId, input.parentOrganizationId),
           input.classification === undefined ? undefined : eq(organizations.classification, input.classification),
           input.isActive === undefined ? undefined : eq(organizations.isActive, input.isActive),
-          input.query === undefined ? undefined : sql`${organizations.name} ilike ${`%${input.query}%`}`
+          input.query === undefined
+            ? undefined
+            : sql`(${organizations.name} ilike ${`%${input.query}%`} or ${publishedNameMatches(organizations.name, input.query)})`
         )
       )
       .orderBy(asc(organizations.name), asc(organizations.id))
@@ -1971,6 +2011,9 @@ export class LegislationQueryService {
   }
 
   async getMemberships(input: MembershipLookup) {
+    if (input.from && input.to && input.from > input.to) {
+      throw new LegislationError("invalid_request", "Membership date range is reversed")
+    }
     if (input.organizationId === undefined && input.personId === undefined) {
       throw new LegislationError("invalid_request", "Select a person or organization for membership lookup")
     }
@@ -1986,7 +2029,14 @@ export class LegislationQueryService {
           input.organizationId === undefined
             ? undefined
             : eq(organizationMemberships.organizationId, input.organizationId),
-          input.personId === undefined ? undefined : eq(organizationMemberships.personId, input.personId)
+          input.personId === undefined ? undefined : eq(organizationMemberships.personId, input.personId),
+          input.isCurrent === undefined ? undefined : eq(organizationMemberships.isActive, input.isCurrent),
+          input.from === undefined
+            ? undefined
+            : sql`coalesce(${organizationMemberships.effectiveEndDate}, ${organizationMemberships.detectedEndDate}, '9999-12-31'::date) >= ${input.from}::date`,
+          input.to === undefined
+            ? undefined
+            : sql`coalesce(${organizationMemberships.effectiveStartDate}, ${organizationMemberships.detectedStartDate}, '0001-01-01'::date) <= ${input.to}::date`
         )
       )
       .orderBy(asc(organizations.name), asc(people.name), asc(organizationMemberships.id))
@@ -2112,32 +2162,53 @@ export class LegislationQueryService {
         .select()
         .from(eventAgendaItems)
         .where(eq(eventAgendaItems.eventId, lookup.id))
-        .orderBy(asc(eventAgendaItems.ordinal)),
+        .orderBy(asc(eventAgendaItems.ordinal))
+        .limit(DETAIL_PREVIEW_LIMIT + 1),
       this.#database
         .select()
         .from(eventDocuments)
         .where(eq(eventDocuments.eventId, lookup.id))
-        .orderBy(asc(eventDocuments.id)),
+        .orderBy(asc(eventDocuments.id))
+        .limit(DETAIL_PREVIEW_LIMIT + 1),
       this.#database
         .select({ participant: eventParticipants, organization: organizations, person: people })
         .from(eventParticipants)
         .leftJoin(organizations, eq(eventParticipants.organizationId, organizations.id))
         .leftJoin(people, eq(eventParticipants.personId, people.id))
         .where(eq(eventParticipants.eventId, lookup.id))
-        .orderBy(asc(eventParticipants.id)),
+        .orderBy(asc(eventParticipants.id))
+        .limit(DETAIL_PREVIEW_LIMIT + 1),
       this.#database
         .select({ bill: bills, classification: eventBills.classification })
         .from(eventBills)
         .innerJoin(bills, eq(eventBills.billId, bills.id))
         .where(eq(eventBills.eventId, lookup.id))
-        .orderBy(asc(bills.id)),
+        .orderBy(asc(bills.id))
+        .limit(DETAIL_PREVIEW_LIMIT + 1),
       this.#database
         .select()
         .from(eventOutcomeLinks)
         .where(eq(eventOutcomeLinks.eventId, lookup.id))
         .orderBy(asc(eventOutcomeLinks.createdAt), asc(eventOutcomeLinks.id))
+        .limit(DETAIL_PREVIEW_LIMIT + 1)
     ])
-    return { agendaItems, documents, event: event[0], outcomes, participants, relatedBills }
+    const truncated = [agendaItems, documents, outcomes, participants, relatedBills].some(
+      (items) => items.length > DETAIL_PREVIEW_LIMIT
+    )
+    return {
+      agendaItems: agendaItems.slice(0, DETAIL_PREVIEW_LIMIT),
+      documents: documents.slice(0, DETAIL_PREVIEW_LIMIT),
+      event: event[0],
+      outcomes: outcomes.slice(0, DETAIL_PREVIEW_LIMIT),
+      participants: participants.slice(0, DETAIL_PREVIEW_LIMIT),
+      relatedBills: relatedBills.slice(0, DETAIL_PREVIEW_LIMIT),
+      truncated,
+      continuations: truncated
+        ? ["meeting-agenda", "meeting-documents", "meeting-participants", "meeting-bills", "meeting-outcomes"].map(
+            (collection) => ({ collection, recordId: lookup.id })
+          )
+        : []
+    }
   }
 
   async getBillSchedule(input: EventSearchInput & { billId: string }) {
@@ -2205,7 +2276,12 @@ export class LegislationQueryService {
           input.billId === undefined ? undefined : eq(votes.billId, input.billId),
           input.organizationId === undefined ? undefined : eq(votes.organizationId, input.organizationId),
           input.personId === undefined ? undefined : eq(votePositions.personId, input.personId),
-          input.from === undefined ? undefined : gte(votes.heldAt, input.from)
+          input.from === undefined
+            ? undefined
+            : sql`coalesce(${votes.heldAt}, ${votes.heldDate}::timestamptz) >= ${input.from}`,
+          input.to === undefined
+            ? undefined
+            : sql`coalesce(${votes.heldAt}, ${votes.heldDate}::timestamptz) <= ${input.to}`
         )
       )
       .orderBy(asc(votes.heldAt), asc(votes.id))
@@ -2235,12 +2311,19 @@ export class LegislationQueryService {
       throw new LegislationError("not_found", `Vote ${lookup.id} was not found`)
     }
     const positions = await this.#database
-      .select({ person: people, position: votePositions })
+      .select({ person: { id: people.id, name: people.name }, position: votePositions })
       .from(votePositions)
       .leftJoin(people, eq(votePositions.personId, people.id))
       .where(eq(votePositions.voteId, lookup.id))
       .orderBy(asc(votePositions.option), asc(votePositions.sourceIdentity))
-    return { positions, vote: vote[0] }
+      .limit(DETAIL_PREVIEW_LIMIT + 1)
+    return {
+      positions: positions.slice(0, DETAIL_PREVIEW_LIMIT),
+      vote: vote[0],
+      positionsTruncated: positions.length > DETAIL_PREVIEW_LIMIT,
+      continuation:
+        positions.length > DETAIL_PREVIEW_LIMIT ? { collection: "vote-positions", recordId: lookup.id } : undefined
+    }
   }
 
   async getBillVotes(input: Readonly<{ billId: string; cursor?: string; limit?: number }>) {
@@ -2492,20 +2575,28 @@ export class LegislationQueryService {
         .select()
         .from(amendmentActions)
         .where(eq(amendmentActions.amendmentId, lookup.id))
-        .orderBy(asc(amendmentActions.ordinal)),
+        .orderBy(asc(amendmentActions.ordinal))
+        .limit(DETAIL_PREVIEW_LIMIT + 1),
       this.#database
         .select({ link: supportingMaterialLinks, material: supportingMaterialSummaryColumns })
         .from(supportingMaterialLinks)
         .innerJoin(supportingMaterials, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
         .where(eq(supportingMaterialLinks.amendmentId, lookup.id))
-        .orderBy(asc(supportingMaterials.documentDate), asc(supportingMaterials.id)),
-      this.#database.select().from(votes).where(eq(votes.amendmentId, lookup.id)).orderBy(asc(votes.heldAt))
+        .orderBy(asc(supportingMaterials.documentDate), asc(supportingMaterials.id))
+        .limit(DETAIL_PREVIEW_LIMIT + 1),
+      this.#database
+        .select()
+        .from(votes)
+        .where(eq(votes.amendmentId, lookup.id))
+        .orderBy(asc(votes.heldAt))
+        .limit(DETAIL_PREVIEW_LIMIT + 1)
     ])
     return {
-      actions,
+      actions: actions.slice(0, DETAIL_PREVIEW_LIMIT),
       amendment: { ...amendment[0], recordType: "structured" as const },
-      materials,
-      votes: amendmentVotes
+      materials: materials.slice(0, DETAIL_PREVIEW_LIMIT),
+      votes: amendmentVotes.slice(0, DETAIL_PREVIEW_LIMIT),
+      truncated: [actions, materials, amendmentVotes].some((items) => items.length > DETAIL_PREVIEW_LIMIT)
     }
   }
 
@@ -2646,13 +2737,14 @@ export class LegislationQueryService {
         : await this.#database
             .select({ material: supportingMaterialSummaryColumns, section: supportingMaterialSections })
             .from(supportingMaterials)
-            .innerJoin(supportingMaterialSections, eq(supportingMaterialSections.materialId, supportingMaterials.id))
-            .where(
+            .leftJoin(
+              supportingMaterialSections,
               and(
-                inArray(supportingMaterials.id, candidateIds),
+                eq(supportingMaterialSections.materialId, supportingMaterials.id),
                 inArray(supportingMaterialSections.id, candidateSectionIds)
               )
             )
+            .where(inArray(supportingMaterials.id, candidateIds))
     const summariesAndSectionsByMaterialId = new Map(
       summariesAndSections.map(({ material, section }) => [material.id, { material, section }])
     )
@@ -2669,12 +2761,16 @@ export class LegislationQueryService {
         {
           ...value.material,
           id: value.material.id,
-          lexicalEvidence: {
-            lexicalScore: row.lexicalScore,
-            matchedFields,
-            section: value.section,
-            snippet: row.matchedSectionId === value.section.id ? row.snippet : null
-          },
+          ...(value.section
+            ? {
+                lexicalEvidence: {
+                  lexicalScore: row.lexicalScore,
+                  matchedFields,
+                  section: value.section,
+                  snippet: row.matchedSectionId === value.section.id ? row.snippet : null
+                }
+              }
+            : {}),
           score: row.lexicalScore
         }
       ]
@@ -2964,7 +3060,10 @@ export class LegislationQueryService {
         ...page,
         nextCursor:
           page.nextCursor === undefined ? undefined : encodeSearchCursor(offset + page.items.length, cursorInput),
-        search: billSearchExecution(queryEmbedding.model, rerankModel, semantic.items.length)
+        search: billSearchExecution(queryEmbedding.model, rerankModel, semantic.items.length),
+        warnings: [
+          "Approximate search within at most 1,000 nearest bill candidates. Scope filters may exclude candidates; empty results do not establish absence."
+        ]
       }
     }
     const [lexical, semantic] = await Promise.all([
@@ -3109,7 +3208,7 @@ export class LegislationQueryService {
         .limit(childLimit + 1)
         .offset(childOffset),
       this.#database
-        .select()
+        .select(documentMetadataColumns)
         .from(billDocuments)
         .where(eq(billDocuments.billId, lookup.id))
         .orderBy(asc(billDocuments.documentDate), asc(billDocuments.id))
@@ -3184,33 +3283,50 @@ export class LegislationQueryService {
     }
   }
 
-  async getBillTimeline(lookup: BillLookup) {
-    const detail = await this.getBill(lookup)
-    const events = [
-      ...detail.actions.map((action) => ({
-        date: action.actionAt?.toISOString() ?? action.actionDate,
-        description: action.description,
-        id: action.id,
-        sourceUrl: action.sourceUrl,
-        type: "action" as const
-      })),
-      ...detail.votes.map((vote) => ({
-        date: vote.heldAt?.toISOString() ?? vote.heldDate,
-        description: vote.motion,
-        id: vote.id,
-        result: vote.result,
-        sourceUrl: vote.sourceUrl,
-        type: "vote" as const
-      }))
-    ].sort(
-      (left, right) => (left.date ?? "9999").localeCompare(right.date ?? "9999") || left.id.localeCompare(right.id)
-    )
+  async getBillTimeline(lookup: EntityLookup) {
+    const limit = Math.min(Math.max(lookup.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(lookup.cursor)
+    const actions = this.#database
+      .select({
+        date: sql<
+          string | null
+        >`coalesce(to_char(${billActions.actionAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), ${billActions.actionDate})`.as(
+          "date"
+        ),
+        description: billActions.description,
+        id: billActions.id,
+        result: sql<string | null>`null`.as("result"),
+        sourceUrl: billActions.sourceUrl,
+        type: sql<"action" | "vote">`'action'`.as("type")
+      })
+      .from(billActions)
+      .where(eq(billActions.billId, lookup.id))
+    const rollCalls = this.#database
+      .select({
+        date: sql<
+          string | null
+        >`coalesce(to_char(${votes.heldAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), ${votes.heldDate})`.as(
+          "date"
+        ),
+        description: votes.motion,
+        id: votes.id,
+        result: votes.result,
+        sourceUrl: votes.sourceUrl,
+        type: sql<"action" | "vote">`'vote'`.as("type")
+      })
+      .from(votes)
+      .where(eq(votes.billId, lookup.id))
+    const events = await unionAll(actions, rollCalls)
+      .orderBy(sql`date asc nulls last`, sql`id asc`)
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = events.length > limit
     return {
       billId: lookup.id,
-      events,
-      nextChildCursor: detail.nextChildCursor,
-      truncated: detail.truncated,
-      warnings: detail.warnings
+      events: events.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated,
+      warnings: []
     }
   }
 
@@ -3259,11 +3375,7 @@ export class LegislationQueryService {
       embedding: queryEmbedding.embedding,
       limit: candidateLimit
     })
-    const lexical = await lexicalPassageSearch(
-      this.#database,
-      { ...input, cursor: undefined, limit: candidateLimit },
-      semantic.items.map((item) => item.section.id)
-    )
+    const lexical = await lexicalPassageSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit })
     const lexicalById = new Map(lexical.items.map((item) => [item.section.id, item]))
     const semanticById = new Map(semantic.items.map((item) => [item.section.id, item]))
     const lexicalCandidates = lexical.items.map((item) => ({ ...item, id: item.section.id }))
@@ -3301,11 +3413,14 @@ export class LegislationQueryService {
     }
   }
 
-  async getBillText(input: BillLookup & { cursor?: string; documentId?: string; versionCode?: string }) {
+  async getBillText(
+    input: BillLookup & { cursor?: string; limit?: number; documentId?: string; versionCode?: string }
+  ) {
     const offset = decodeOffset(input.cursor)
+    const limit = Math.min(Math.max(input.limit ?? SECTION_LIMIT, 1), SECTION_LIMIT)
     const documents = await this.#database
       .select({
-        ...getTableColumns(billDocuments),
+        ...documentMetadataColumns,
         billIdentifier: bills.identifier,
         sectionCount: sql<number>`(select count(*)::integer from ${documentSections} where ${documentSections.documentId} = ${billDocuments.id})`
       })
@@ -3323,8 +3438,8 @@ export class LegislationQueryService {
     if (documents[0] === undefined) {
       throw new LegislationError("not_found", "No matching bill text document was found")
     }
-    if (documents.length > 1 && input.documentId === undefined && input.versionCode === undefined) {
-      throw new LegislationError("invalid_request", "Select a document or version when multiple texts are available")
+    if (documents.length > 1) {
+      throw new LegislationError("invalid_request", "Multiple texts match. Select one exact document ID.")
     }
     if (documents[0].processingStatus !== "processed") {
       throw new LegislationError(
@@ -3337,116 +3452,121 @@ export class LegislationQueryService {
       .from(documentSections)
       .where(eq(documentSections.documentId, documents[0].id))
       .orderBy(asc(documentSections.ordinal))
-      .limit(SECTION_LIMIT + 1)
+      .limit(limit + 1)
       .offset(offset)
-    const truncated = sections.length > SECTION_LIMIT
+    const truncated = sections.length > limit
     return {
       billId: input.id,
       document: documents[0],
-      nextCursor: truncated ? encodeOffset(offset + SECTION_LIMIT) : undefined,
-      sections: sections.slice(0, SECTION_LIMIT),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      sections: sections.slice(0, limit),
       truncated
     }
   }
 
   async compareBillVersions(input: VersionComparisonInput) {
+    const limit = Math.min(Math.max(input.limit ?? 25, 1), 100)
+    const binding = createHash("sha256")
+      .update(JSON.stringify([input.billId, input.documentIds, limit]))
+      .digest("base64url")
+    let offset = 0
+    if (input.cursor) {
+      try {
+        const cursor = JSON.parse(Buffer.from(input.cursor, "base64url").toString())
+        if (cursor.binding !== binding || !Number.isSafeInteger(cursor.offset) || cursor.offset < 0) {
+          throw new Error("Invalid cursor")
+        }
+        offset = cursor.offset
+      } catch {
+        throw new LegislationError("invalid_request", "Comparison cursor does not match the selected versions")
+      }
+    }
     const documents = await this.#database
-      .select()
+      .select(documentMetadataColumns)
       .from(billDocuments)
       .where(and(eq(billDocuments.billId, input.billId), inArray(billDocuments.id, input.documentIds)))
     if (documents.length !== 2) {
       throw new LegislationError("invalid_request", "Both selected documents must belong to the requested bill")
     }
-    const sections = await this.#database
-      .select()
+    if (documents.some((document) => document.processingStatus !== "processed")) {
+      throw new LegislationError("conflict", "Both selected versions must have processed text before comparison")
+    }
+    const identities = await this.#database
+      .select({
+        id: documentSections.id,
+        documentId: documentSections.documentId,
+        sectionIdentifier: documentSections.sectionIdentifier,
+        ordinal: documentSections.ordinal
+      })
       .from(documentSections)
       .where(inArray(documentSections.documentId, input.documentIds))
-      .orderBy(asc(documentSections.ordinal))
-    const byDocument = new Map(
-      input.documentIds.map((documentId) => [
-        documentId,
-        sections.filter((section) => section.documentId === documentId)
-      ])
-    )
-    const left = byDocument.get(input.documentIds[0]) ?? []
-    const right = byDocument.get(input.documentIds[1]) ?? []
-    const sectionKey = (section: (typeof sections)[number]) => section.sectionIdentifier ?? `ordinal:${section.ordinal}`
+      .orderBy(asc(documentSections.ordinal), asc(documentSections.id))
+    const left = identities.filter((section) => section.documentId === input.documentIds[0])
+    const right = identities.filter((section) => section.documentId === input.documentIds[1])
+    const sectionKey = (section: (typeof identities)[number]) =>
+      section.sectionIdentifier ?? `ordinal:${section.ordinal}`
     const leftByKey = new Map(left.map((section) => [sectionKey(section), section]))
     const rightByKey = new Map(right.map((section) => [sectionKey(section), section]))
     const keys = [...left.map(sectionKey), ...right.map(sectionKey).filter((key) => !leftByKey.has(key))]
-    const maximum = Math.min(keys.length, CHILD_LIMIT)
-    const changes = Array.from({ length: maximum }, (_value, index) => {
-      const key = keys[index]
+    const pageKeys = [...new Set(keys)].slice(offset, offset + limit)
+    const selectedIds = pageKeys
+      .flatMap((key) => [leftByKey.get(key)?.id, rightByKey.get(key)?.id])
+      .filter((id): id is string => id !== undefined)
+    const texts = selectedIds.length
+      ? await this.#database
+          .select({ id: documentSections.id, text: documentSections.text })
+          .from(documentSections)
+          .where(inArray(documentSections.id, selectedIds))
+      : []
+    const textById = new Map(texts.map((section) => [section.id, section.text]))
+    const changes = pageKeys.map((key, index) => {
       const before = key === undefined ? undefined : leftByKey.get(key)
       const after = key === undefined ? undefined : rightByKey.get(key)
       return {
-        after: after?.text,
-        before: before?.text,
-        classification: comparisonClassification(before?.text, after?.text),
+        after: after ? textById.get(after.id) : undefined,
+        before: before ? textById.get(before.id) : undefined,
+        classification: comparisonClassification(
+          before ? textById.get(before.id) : undefined,
+          after ? textById.get(after.id) : undefined
+        ),
         identifier: after?.sectionIdentifier ?? before?.sectionIdentifier,
-        ordinal: index
+        ordinal: offset + index
       }
     })
-    return { billId: input.billId, changes, documents, truncated: keys.length > CHILD_LIMIT }
+    const truncated = new Set(keys).size > offset + pageKeys.length
+    return {
+      billId: input.billId,
+      changes,
+      documents,
+      truncated,
+      nextCursor: truncated
+        ? Buffer.from(JSON.stringify({ binding, offset: offset + pageKeys.length })).toString("base64url")
+        : undefined
+    }
   }
 
-  async findRelatedBills(input: BillLookup & { includeSemantic?: boolean; limit?: number }) {
-    const limit = Math.min(input.limit ?? 20, CHILD_LIMIT)
-    const [outgoing, incoming] = await Promise.all([
-      this.#database
-        .select({ classification: billRelations.classification, bill: bills })
-        .from(billRelations)
-        .innerJoin(bills, eq(billRelations.relatedBillId, bills.id))
-        .where(eq(billRelations.billId, input.id))
-        .orderBy(asc(bills.id))
-        .limit(limit + 1),
-      this.#database
-        .select({ classification: billRelations.classification, bill: bills })
-        .from(billRelations)
-        .innerJoin(bills, eq(billRelations.billId, bills.id))
-        .where(eq(billRelations.relatedBillId, input.id))
-        .orderBy(asc(bills.id))
-        .limit(limit + 1)
-    ])
-    const relations = [
-      ...new Map([...outgoing, ...incoming].map((relation) => [relation.bill.id, relation])).values()
-    ].toSorted((left, right) => left.bill.id.localeCompare(right.bill.id))
-    const explicit = relations.slice(0, limit).map((relation) => ({ ...relation, method: "explicit" as const }))
-    if (input.includeSemantic !== true || explicit.length >= limit) {
-      return { items: explicit, truncated: relations.length > limit }
+  async findRelatedBills(input: EntityLookup & { classification?: string; mode?: "lexical" | "semantic" }) {
+    const classification = BILL_RELATION_CLASSIFICATIONS.find((value) => value === input.classification)
+    if (input.classification !== undefined && classification === undefined) {
+      throw new LegislationError("invalid_request", "Unknown bill relationship classification")
     }
-    const route = embeddingRouteFor("bill")
-    const source = await this.#database
-      .select({ embedding: billEmbeddings.embedding })
-      .from(billEmbeddings)
-      .where(
-        and(
-          eq(billEmbeddings.billId, input.id),
-          eq(billEmbeddings.model, route.model),
-          eq(billEmbeddings.inputContract, route.embeddingInputContract)
-        )
-      )
-      .limit(1)
-    if (source[0]?.embedding === null || source[0]?.embedding === undefined) {
-      return { items: explicit, truncated: relations.length > limit, warnings: ["Source bill has no embedding"] }
-    }
-    const semantic = await semanticBillSearch(this.#database, {
-      embedding: source[0].embedding,
-      limit: Math.min(limit + explicit.length + 1, 100)
+    await assertBillRelatedParentExists(this.#database, input.id)
+    const page = await listBillRelatedBills(this.#database, {
+      billId: input.id,
+      classifications: classification ? [classification] : undefined,
+      cursor: input.cursor,
+      limit: input.limit,
+      mode: input.mode === "semantic" ? "similar" : "explicit"
     })
-    const seen = new Set([input.id, ...explicit.map((item) => item.bill.id)])
-    const semanticItems = semantic.items
-      .filter(
-        (bill): bill is typeof bill & { semanticScore: number } => !seen.has(bill.id) && bill.semanticScore !== null
-      )
-      .slice(0, limit - explicit.length)
-      .map((bill) => ({
-        bill,
-        classification: "semantic",
-        method: "semantic" as const,
-        similarity: bill.semanticScore
+    return {
+      ...page,
+      items: page.items.map((item) => ({
+        bill: item.bill,
+        classification: item.relationship?.classification ?? "semantic",
+        method: item.relationship ? "explicit" : "semantic",
+        similarity: item.similarityScore
       }))
-    return { items: [...explicit, ...semanticItems], truncated: relations.length > limit || semantic.truncated }
+    }
   }
 
   async #embedQueryWithModel(

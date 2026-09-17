@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
 import { describe, expect, it, vi } from "vitest"
+import { LegislationError } from "../domain/errors"
 import { createLogger } from "../observability/logger"
+import type { Telemetry } from "../observability/telemetry"
+import { prepareResultPage } from "./result-pages"
 import { createLegislationResearchTools, type LegislationQueryApi } from "./tools"
 
 const logger = createLogger({ level: "error", service: "research-test", write: () => undefined })
@@ -37,12 +40,130 @@ function definition(api: LegislationQueryApi, name: string) {
 }
 
 describe("shared research definitions", () => {
-  it.each(["get_person", "get_organization"])("preserves bounded child limits for %s", async (name) => {
+  it("preserves supporting-material organization, session and date scope", async () => {
+    const searchSupportingMaterials = vi.fn<LegislationQueryApi["searchSupportingMaterials"]>(async () => ({
+      items: []
+    }))
+    const input = {
+      query: "report",
+      organizationId: "organization:us:one",
+      sessionIds: ["session:us:116"],
+      documentFrom: "2019-01-01",
+      documentTo: "2020-12-31"
+    }
+    await definition({ ...service(), searchSupportingMaterials }, "search_supporting_materials").execute(input)
+    expect(searchSupportingMaterials).toHaveBeenCalledWith({ ...input, mode: "lexical" })
+  })
+  it("applies a passage's selected bill and document classification at the service boundary", async () => {
+    const searchBillText = vi.fn<LegislationQueryApi["searchBillText"]>(async () => ({ items: [] }))
+    await definition({ ...service(), searchBillText }, "search_bill_text").execute({
+      query: "working group",
+      billId: "bill:ca:20232024:ab:2652",
+      classifications: ["version"]
+    })
+    expect(searchBillText).toHaveBeenCalledWith(
+      expect.objectContaining({ billIds: ["bill:ca:20232024:ab:2652"], documentClassifications: ["version"] })
+    )
+  })
+  it("forwards historical membership filters and comparison pagination", async () => {
+    const getMemberships = vi.fn<NonNullable<LegislationQueryApi["getMemberships"]>>(async () => ({ items: [] }))
+    const compareBillVersions = vi.fn<LegislationQueryApi["compareBillVersions"]>(async () => ({ changes: [] }))
+    const api = { ...service(), getMemberships, compareBillVersions }
+    await definition(api, "get_memberships").execute({
+      personId: "person:us:one",
+      from: "2019-01-01",
+      to: "2020-12-31",
+      isCurrent: false
+    })
+    expect(getMemberships).toHaveBeenCalledWith({
+      personId: "person:us:one",
+      from: "2019-01-01",
+      to: "2020-12-31",
+      isCurrent: false
+    })
+    await definition(api, "compare_bill_versions").execute({
+      billId: "bill:us:116:hr:1",
+      documentIds: ["left", "right"],
+      limit: 1
+    })
+    expect(compareBillVersions).toHaveBeenCalledWith({
+      billId: "bill:us:116:hr:1",
+      documentIds: ["left", "right"],
+      limit: 1,
+      cursor: undefined
+    })
+  })
+  it("reports validation, execution, and handled batch failures", async () => {
+    const reportFailure = vi.fn<NonNullable<Telemetry["reportFailure"]>>()
+    const telemetry: Telemetry = {
+      reportFailure,
+      observe: async (_name, _metadata, operation) => await operation(),
+      shutdown: async () => undefined
+    }
+    const api = {
+      ...service(),
+      getBill: async () => {
+        throw new LegislationError("not_found", "Missing record")
+      }
+    }
+    const tools = createLegislationResearchTools(api, logger, telemetry)
+    await tools.find((tool) => tool.name === "get_bill")!.execute({ id: "invalid" })
+    await tools.find((tool) => tool.name === "get_bill")!.execute({ id: "bill:us:116:hr:1" })
+    await tools.find((tool) => tool.name === "get_bills")!.execute({ ids: ["bill:us:116:hr:1"] })
+    expect(reportFailure.mock.calls.map((call) => call[1].stage)).toEqual(["validation", "execution", "batch-item"])
+  })
+  it("exposes discovered scope and collection continuations without dropping inputs", async () => {
+    const read = vi.fn<(input: Readonly<Record<string, unknown>>) => Promise<{ items: unknown[] }>>(async () => ({
+      items: []
+    }))
+    const api = { ...service(), listSessions: read, getMemberships: read, getSupportingMaterial: read }
+    const cases = [
+      { name: "list_sessions", selection: { jurisdictionId: "jurisdiction:us", limit: 2 }, cursor: "page" },
+      { name: "get_memberships", selection: { personId: "person:congress:one", limit: 3 }, cursor: "members" },
+      { name: "get_supporting_material", selection: { id: "material:congress:one", limit: 4 }, cursor: "sections" }
+    ]
+    for (const { name, selection, cursor } of cases) {
+      const page = prepareResultPage(name, selection, { items: [], nextCursor: cursor }, 0)
+      assert.ok(page && typeof page === "object" && !Array.isArray(page))
+      await definition(api, name).execute({ ...selection, cursor: page.nextCursor })
+    }
+    expect(read.mock.calls.map((call) => call[0])).toEqual([
+      { jurisdictionId: "jurisdiction:us", cursor: "page", limit: 2 },
+      { personId: "person:congress:one", cursor: "members", limit: 3 },
+      { id: "material:congress:one", cursor: "sections", limit: 4 }
+    ])
+  })
+  it("reports wrapped SQL timeouts without exposing database internals", async () => {
+    const api = service()
+    const error = new Error("private SQL", { cause: Object.assign(new Error("private SQL"), { code: "57014" }) })
+    const tool = definition(
+      {
+        ...api,
+        searchBills: async () => {
+          throw error
+        }
+      },
+      "search_bills"
+    )
+    const result = await tool.execute({ query: "HR 1" })
+    expect(result).toHaveProperty("isError", true)
+    const failure = JSON.parse(result.content[0]!.text)
+    expect(failure).toMatchObject({ error: "dependency_unavailable", retryable: true })
+    expect(failure.message).toContain("timed out")
+    expect(failure.message).not.toContain("private SQL")
+  })
+
+  it("reports invalid tool inputs as invalid requests", async () => {
+    const result = await definition(service(), "get_bill").execute({ id: "H.R. 1" })
+    expect(JSON.parse(result.content[0]!.text)).toMatchObject({ error: "invalid_request" })
+  })
+
+  it.each(["get_person", "get_organization"])("rejects unsupported child limits for %s", async (name) => {
     const read = vi.fn(async () => ({ items: [] }))
     const api = { ...service(), getPerson: read, getOrganization: read }
     const id = name === "get_person" ? "person:us:one" : "organization:us:one"
-    await definition(api, name).execute({ id, limit: 1 })
-    expect(read).toHaveBeenCalledWith({ id, limit: 1 })
+    await definition(api, name).execute({ id })
+    expect(read).toHaveBeenCalledWith({ id })
     expect(await definition(api, name).execute({ id, limit: 101 })).toHaveProperty("isError", true)
     expect(read).toHaveBeenCalledOnce()
   })
@@ -104,9 +225,11 @@ describe("shared research definitions", () => {
     const data = first.structuredContent.data
     assert.ok(data && typeof data === "object" && !Array.isArray(data))
     assert.ok(typeof data.nextCursor === "string")
-    const cursor = JSON.parse(Buffer.from(data.nextCursor.slice("research-page:".length), "base64url").toString())
+    const scoped = JSON.parse(Buffer.from(data.nextCursor.slice("research-cursor:".length), "base64url").toString())
+    const cursor = JSON.parse(Buffer.from(scoped.upstream.slice("research-page:".length), "base64url").toString())
     delete cursor.snapshot
-    const missingSnapshot = `research-page:${Buffer.from(JSON.stringify(cursor)).toString("base64url")}`
+    scoped.upstream = `research-page:${Buffer.from(JSON.stringify(cursor)).toString("base64url")}`
+    const missingSnapshot = `research-cursor:${Buffer.from(JSON.stringify(scoped)).toString("base64url")}`
     expect(await tool.execute({ id: "vote:us:roll-1", cursor: missingSnapshot })).toHaveProperty("isError", true)
     expect(await tool.execute({ id: "vote:us:other", cursor: data.nextCursor })).toHaveProperty("isError", true)
     detail.positions.reverse()

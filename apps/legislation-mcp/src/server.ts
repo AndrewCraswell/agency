@@ -3,10 +3,12 @@ import { Readable } from "node:stream"
 import { toNodeHandler } from "@modelcontextprotocol/node"
 import { createMcpApplication } from "./application.js"
 import { jsonResponse } from "./http.js"
+import { createMcpTelemetry } from "./telemetry.js"
 
 export { createMcpApplication }
 
 export function createMcpServer(application: ReturnType<typeof createMcpApplication>): Server {
+  const telemetry = createMcpTelemetry()
   const server = createServer((request, response) => {
     const handler = toNodeHandler({
       fetch: async (converted) => {
@@ -52,7 +54,8 @@ export function createMcpServer(application: ReturnType<typeof createMcpApplicat
     })
     response.setHeader("cache-control", "private, no-store")
     response.shouldKeepAlive = false
-    void handler(request, response, null).catch(() => {
+    void handler(request, response, null).catch((error: unknown) => {
+      telemetry.reportFailure?.("mcp.http", { stage: "transport", method: request.method }, error)
       response.destroy()
     })
   })

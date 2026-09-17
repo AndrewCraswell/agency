@@ -60,6 +60,14 @@ function QuoteContent({
   const [expanded, setExpanded] = useState(false)
   const fullText = evidence.content.state === "available" ? evidence.content.quote : undefined
   const isLong = fullText !== undefined && fullText.length > 600
+  const isPartial = evidence.content.state === "available" && evidence.content.truncated === true
+  let expandLabel = "Show full passage"
+  if (isPartial) {
+    expandLabel = "Show retrieved excerpt"
+  }
+  if (expanded) {
+    expandLabel = "Show less"
+  }
   let quote = fullText
   if (fullText && isLong && !expanded) {
     const boundary = fullText.lastIndexOf(" ", 600)
@@ -117,10 +125,11 @@ function QuoteContent({
       ) : (
         <p className={styles.note}>{unavailable}</p>
       )}
+      {isPartial && <p className={styles.note}>Only part of the retrieved passage is shown.</p>}
       {isLong && (
         <div className={styles.plainActions}>
           <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-            {expanded ? "Show less" : "Show full passage"}
+            {expandLabel}
           </Button>
           {!expanded && <span className={styles.note}>Passage excerpt</span>}
         </div>

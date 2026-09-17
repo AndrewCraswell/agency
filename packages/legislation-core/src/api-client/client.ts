@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
+import {
+  recordCollectionSchema,
+  recordResolutionSchema,
+  type RecordCollectionInput,
+  type RecordResolutionInput
+} from "../research/record-contracts"
 import { linksSchema, resourceSchema, pageSchema, searchPageSchema } from "./envelopes"
 import {
   legalEditionsRequestSchema,
@@ -187,6 +193,20 @@ export class LegislationApiClient {
 
   getBill(id: string, query?: Query, options?: ApiRequestOptions): Promise<ResourceResponse> {
     return this.#resource({ method: "GET", path: `/api/bills/${segment(id)}`, query }, options)
+  }
+
+  resolveRecord(input: RecordResolutionInput, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      { method: "POST", path: "/api/records/resolve", body: recordResolutionSchema.parse(input) },
+      options
+    )
+  }
+
+  readRecordCollection(input: RecordCollectionInput, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      { method: "POST", path: "/api/records/collection", body: recordCollectionSchema.parse(input) },
+      options
+    )
   }
 
   getBills(ids: readonly string[], options?: ApiRequestOptions): Promise<BatchResponse> {
@@ -578,11 +598,12 @@ export class LegislationApiClient {
     billId: string,
     leftDocumentId: string,
     rightDocumentId: string,
-    options?: ApiRequestOptions
+    options?: ApiRequestOptions,
+    pagination: Readonly<{ cursor?: string; limit?: number }> = {}
   ): Promise<ResourceResponse> {
     return this.#resource(
       {
-        body: { billId, leftDocumentId, rightDocumentId },
+        body: { billId, leftDocumentId, rightDocumentId, ...pagination },
         method: "POST",
         path: "/api/document-diffs"
       },

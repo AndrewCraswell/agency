@@ -29,6 +29,9 @@ decision.
 
 ## Run
 
+MCP failure reporting uses `SENTRY_DSN`, `SENTRY_ENVIRONMENT` and `SENTRY_RELEASE`; see
+[diagnostic telemetry](docs/operations/telemetry.md) for coverage, redaction and acceptance requirements.
+
 From the repository root, with workspace dependencies installed and the runtime environment configured:
 
 ```sh

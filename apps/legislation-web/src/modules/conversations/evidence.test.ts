@@ -279,14 +279,51 @@ describe("research evidence identity", () => {
     expect(project({ ...document, availability: "restricted" })[0]?.content.state).toBe("unavailable")
   })
 
-  it.each([null, undefined, "", "x".repeat(20001)])(
-    "does not turn snippets or unretained text into an exact quote",
-    (text) => {
-      const result = project({ ...document, text, snippet: "An incomplete search excerpt" })
-      expect(result).toHaveLength(1)
-      expect(result[0]?.content).toEqual({ state: "not-collected" })
-    }
-  )
+  it.each([null, undefined, ""])("does not turn snippets or unretained text into an exact quote", (text) => {
+    const result = project({ ...document, text, snippet: "An incomplete search excerpt" })
+    expect(result).toHaveLength(1)
+    expect(result[0]?.content).toEqual({ state: "not-collected" })
+  })
+
+  it("keeps long retrieved passages available and identifies the bounded excerpt", () => {
+    const result = project({ ...document, text: "x".repeat(20001) })
+    expect(result[0]?.content).toEqual({
+      state: "available",
+      quote: "x".repeat(20000),
+      truncated: true,
+      totalCharacters: 20001
+    })
+  })
+  it("distinguishes equal text windows at different source offsets", () => {
+    const first = project({
+      ...document,
+      text: "Repeated text",
+      textOffset: 0,
+      nextTextOffset: 10000,
+      totalCharacters: 30000
+    })[0]
+    const second = project({
+      ...document,
+      text: "Repeated text",
+      textOffset: 10000,
+      nextTextOffset: 20000,
+      totalCharacters: 30000
+    })[0]
+    expect(first?.id).not.toBe(second?.id)
+    expect(first?.content).toEqual({
+      state: "available",
+      quote: "Repeated text",
+      truncated: true,
+      totalCharacters: 30000
+    })
+  })
+
+  it("prioritizes exact passages after metadata fills the evidence budget", () => {
+    const metadata = Array.from({ length: 45 }, (_, index) => ({ ...document, id: `metadata:${index}` }))
+    const result = project([...metadata, { ...document, id: "exact-passage", text: "Exact returned text." }])
+    expect(result).toHaveLength(40)
+    expect(result.at(-1)?.content).toEqual({ state: "available", quote: "Exact returned text." })
+  })
 
   it("retains nullable document records and never inherits full document text for an empty section", () => {
     expect(project(document)[0]?.content).toEqual({ state: "not-collected" })

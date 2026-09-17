@@ -12,6 +12,7 @@ import { correlationId, jsonResponse } from "./http.js"
 import { createMcpHttpQueryAdapter } from "./mcp/http-query-adapter.js"
 import { createLegislationMcpHandler } from "./mcp/tools.js"
 import { requestSignals } from "./request-signal.js"
+import { createMcpTelemetry } from "./telemetry.js"
 
 const httpsUrl = z.url({ protocol: /^https$/ }).refine((value) => {
   const url = URL.parse(value)
@@ -51,6 +52,7 @@ export function createMcpApplication(
     throw new Error("Invalid MCP configuration")
   }
   const config = parsed.data
+  const telemetry = createMcpTelemetry()
   const resource = new URL(config.WORKOS_MCP_AUDIENCE)
   const authenticate = createWorkosAuthenticator(
     {
@@ -93,7 +95,8 @@ export function createMcpApplication(
           }),
       ...(dependencies.fetch === undefined ? {} : { fetch: dependencies.fetch })
     }),
-    createLogger({ service: "legislation-mcp", level: "warn" })
+    createLogger({ service: "legislation-mcp", level: "warn" }),
+    telemetry
   )
   const metadataUrl = `${resource.origin}/.well-known/oauth-protected-resource/mcp`
   let isClosed = false
@@ -107,6 +110,7 @@ export function createMcpApplication(
       shutdown.abort()
       closing ??= transport.close()
       await closing
+      await telemetry.shutdown()
     },
     metadata: (request: Request) =>
       jsonResponse(
@@ -152,6 +156,11 @@ export function createMcpApplication(
         headers.set("cache-control", "private, no-store")
         return new Response(response.body, { status: response.status, headers })
       } catch (error) {
+        telemetry.reportFailure?.(
+          "mcp.request",
+          { stage: "request", correlationId: correlationId(request), method: request.method },
+          error
+        )
         if (error instanceof McpBodyError) {
           return jsonResponse(request, error.status, { error: "invalid_request_body" })
         }

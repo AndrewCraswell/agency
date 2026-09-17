@@ -38,6 +38,9 @@ export function researchModelOutput({ output }: { output: unknown }) {
     type: "text" as const,
     value: JSON.stringify({
       ...result,
+      ...(page.success && typeof result.resultHandle === "string"
+        ? { resultSet: { ...page.data, id: result.resultHandle } }
+        : {}),
       ...(recordLinks.length > 0 ? { recordLinks } : {}),
       evidence: result.evidence.map(({ citationRef, ...source }, index) => ({
         ...source,
@@ -78,7 +81,7 @@ function collectCursors(value: unknown, cursors: Set<string>) {
     }
   } else if (value !== null && typeof value === "object") {
     for (const [key, item] of Object.entries(value)) {
-      if (key === "nextCursor" && typeof item === "string" && item.length > 0) {
+      if ((key === "nextCursor" || key === "nextChildCursor") && typeof item === "string" && item.length > 0) {
         cursors.add(item)
       } else {
         collectCursors(item, cursors)
@@ -95,7 +98,7 @@ export function createResearchTools(
   sessionKey?: string,
   queryServiceOverride?: LegislationQueryApi,
   runId: string = crypto.randomUUID(),
-  onResultSet?: (page: EntityPage) => void,
+  onResultSet?: (page: EntityPage) => string | void,
   previousCitationReferences: readonly string[] = [],
   onContents?: (contents: PresentationContent[]) => void
 ) {
@@ -119,12 +122,14 @@ export function createResearchTools(
     }
     return getResearchRuntime().run(async (service) => {
       executionSignal.throwIfAborted()
-      const definition = createLegislationResearchTools(service, logger).find((candidate) => candidate.name === name)
+      const definition = createLegislationResearchTools(service, logger).find(
+        (candidate) => candidate.name === name
+      )
       if (!definition) {
         throw new Error("Research tool is unavailable")
       }
       return definition.execute(input)
-    })
+    }, executionSignal)
   }
   const tools: ToolSet = {}
   const cursors = new Set<string>()
@@ -153,6 +158,10 @@ export function createResearchTools(
           }
           const pagination = cursorInputSchema.parse(input)
           if (pagination.cursor !== undefined && !cursors.has(pagination.cursor)) {
+            throw new ResearchFailure("invalid_cursor", reference)
+          }
+          const childPagination = z.object({ childCursor: z.string().optional() }).parse(input)
+          if (childPagination.childCursor !== undefined && !cursors.has(childPagination.childCursor)) {
             throw new ResearchFailure("invalid_cursor", reference)
           }
           const result = await execute(name, input)
@@ -193,11 +202,14 @@ export function createResearchTools(
                     throw new ResearchFailure("result_limit", crypto.randomUUID())
                   }
                   return page.structuredContent.data
-                }
+                },
+                pageInput
               )
             : undefined
+          let resultHandle: string | void = undefined
           if (resultSet) {
-            onResultSet?.(resultSet)
+            await resultStore.persist(resultSet.id)
+            resultHandle = onResultSet?.(resultSet)
           }
           const evidence = projectEvidence(parsed.data.structuredContent.data)
           const contents = onContents
@@ -206,6 +218,7 @@ export function createResearchTools(
           onContents?.(contents)
           return {
             ...parsed.data.structuredContent,
+            ...(typeof resultHandle === "string" ? { resultHandle } : {}),
             evidence,
             ...(onContents ? { presentationOptions: contents.map(contentOptions) } : {}),
             resultSet

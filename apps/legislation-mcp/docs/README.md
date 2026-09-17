@@ -6,6 +6,7 @@ over HTTPS, never databases, models or source providers. C supplies shared schem
 | Need | Read |
 | --- | --- |
 | Configuration, build/start, health/readiness and smoke | [Runtime README](../README.md) |
+| Failure diagnostics, correlation and redaction | [Sentry telemetry](operations/telemetry.md) |
 | Resource registration and pending browser consent | [Authentication](operations/authentication.md) |
 | Registered baseline tools | [Tool contracts](engineering/tool-contracts.md) |
 | Regulatory mapping and exact-text transport | [Legal tools](engineering/legal-tools.md) |

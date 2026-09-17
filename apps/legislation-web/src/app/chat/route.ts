@@ -80,6 +80,7 @@ export async function POST(request: Request) {
       const { sessionKey, resultId, recordId, cursor, parentRecordId } = recordRequest.data
       let record
       try {
+        await resultStore.recover(sessionKey, resultId)
         record = resultStore.record(sessionKey, resultId, parentRecordId ?? recordId)
       } catch {
         return Response.json(
@@ -203,6 +204,11 @@ export async function POST(request: Request) {
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(researchAgentLimits.timeoutMs)])
     let references
     try {
+      await Promise.all(
+        (parsed.data.references ?? []).map((reference) =>
+          resultStore.recover(parsed.data.sessionKey, reference.resultId)
+        )
+      )
       references = resultStore.references(parsed.data.sessionKey, parsed.data.references ?? [])
     } catch {
       return Response.json(
@@ -348,6 +354,7 @@ export async function POST(request: Request) {
           writer.merge(
             createCompositionStream(responseStream, {
               resolveRecord: presentationRecords.resolve,
+              canonicalReference: presentationRecords.canonicalReference,
               resolveContent: presentationRecords.resolveContent,
               onComplete: composed.resolve,
               onInvalid: (reason) => {

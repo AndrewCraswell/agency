@@ -23,7 +23,10 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
     },
     {
       legacy: "stateless",
-      onerror: (error) => logger.error("MCP protocol error", errorContext(error)),
+      onerror: (error) => {
+        telemetry?.reportFailure?.("mcp.protocol", { stage: "protocol" }, error)
+        logger.error("MCP protocol error", errorContext(error))
+      },
       responseMode: "auto"
     }
   )

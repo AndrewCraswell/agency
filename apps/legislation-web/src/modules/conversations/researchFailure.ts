@@ -1,4 +1,5 @@
 const failureMessages = {
+  not_processed: "The record exists, but its text is not ready. Read its metadata or select another processed source.",
   result_limit: "The result is too large. Request fewer records or a smaller childLimit.",
   invalid_request: "The research request is invalid. Check the filters and identifiers before retrying.",
   invalid_cursor: "The page cursor is invalid. Start without a cursor, then use nextCursor from the returned result.",
@@ -34,6 +35,15 @@ export function researchFailureCode(value: unknown): ResearchFailureCode {
   }
   if (value === "unauthorized") {
     return "forbidden"
+  }
+  if (value === "payload_too_large") {
+    return "result_limit"
+  }
+  if (value === "conflict" || value === "precondition_failed") {
+    return "not_processed"
+  }
+  if (value === "unprocessable") {
+    return "invalid_request"
   }
   return "internal"
 }

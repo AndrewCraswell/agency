@@ -129,6 +129,23 @@ it("renders missing passages without a fabricated quotation or source link", () 
   expect(screen.queryByRole("link", { name: "Read in full" })).toBeNull()
 })
 
+it("does not describe a truncated retrieved excerpt as the full passage", async () => {
+  show(
+    {
+      ...content,
+      evidence: {
+        ...source,
+        content: { state: "available", quote: "Exact words. ".repeat(100), truncated: true, totalCharacters: 20001 }
+      }
+    },
+    "CitationCard"
+  )
+  expect(screen.getByText("Only part of the retrieved passage is shown.")).toBeDefined()
+  expect(screen.queryByRole("button", { name: "Show full passage" })).toBeNull()
+  await userEvent.setup().click(screen.getByRole("button", { name: "Show retrieved excerpt" }))
+  expect(document.querySelector("blockquote")?.textContent).toBe("Exact words. ".repeat(100))
+})
+
 it("renders the designed compact passage row and opens the exact numbered evidence without a quote body", async () => {
   const onEvidence = show(content, "CompactPassageCard")
   const markers = screen.getAllByRole("button", { name: "Read source 1: Retrieved bill text" })

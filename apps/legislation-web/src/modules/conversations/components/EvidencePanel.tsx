@@ -88,6 +88,9 @@ export function EvidencePanel({ selection: currentSelection, onClose, returnFocu
             ) : (
               <p className="text-sm text-muted-foreground">No passage was retrieved for this source.</p>
             )}
+            {evidence.content.state === "available" && evidence.content.truncated && (
+              <p className="text-sm text-muted-foreground">Only part of the retrieved passage is shown.</p>
+            )}
             <div className="flex flex-wrap gap-2">
               {sourceUrl ? (
                 <Button asChild variant="outline">

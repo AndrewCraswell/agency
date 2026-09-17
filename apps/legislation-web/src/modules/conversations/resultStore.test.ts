@@ -1,8 +1,47 @@
 import { describe, expect, it, vi } from "vitest"
 import { projectEntityResult, ResultExpiredError } from "./entityResults"
-import { createResultStore } from "./resultStore"
+import { createResultStore, type RetainedResult, type ResultPersistence } from "./resultStore"
 
 describe("result recovery", () => {
+  it("restores session-owned snapshots and resumes pagination after a process restart", async () => {
+    const records = new Map<string, RetainedResult>()
+    const persistence: ResultPersistence = {
+      save: async (id, value) => {
+        records.set(id, structuredClone(value))
+      },
+      read: async (sessionKey, id) => (records.get(id)?.sessionKey === sessionKey ? records.get(id) : undefined),
+      load: vi.fn<ResultPersistence["load"]>(async () => ({ items: [{ id: "bill:next", title: "Next" }] }))
+    }
+    const owner = "11111111-1111-4111-8111-111111111111"
+    const original = createResultStore(() => 1000, persistence)
+    const initial = original.create(
+      owner,
+      "search_bills",
+      {
+        items: Array.from({ length: 5 }, (_, index) => ({ id: `bill:${index}`, title: `Bill ${index}` })),
+        nextCursor: "continuation"
+      },
+      "housing",
+      async () => ({}),
+      { query: "housing", limit: 5 }
+    )!
+    await original.persist(initial.id)
+    const restarted = createResultStore(() => 2000, persistence)
+    await expect(restarted.recover("22222222-2222-4222-8222-222222222222", initial.id)).rejects.toBeInstanceOf(
+      ResultExpiredError
+    )
+    await restarted.recover(owner, initial.id)
+    expect(restarted.record(owner, initial.id, "bill:0").title).toBe("Bill 0")
+    const next = await restarted.page(owner, initial.id, 1, new AbortController().signal)
+    expect(next.items[0]?.id).toBe("bill:next")
+    expect(persistence.load).toHaveBeenCalledWith(
+      "search_bills",
+      { query: "housing", limit: 5, cursor: "continuation" },
+      expect.any(AbortSignal)
+    )
+    const expired = createResultStore(() => 1000 + 86400000, persistence)
+    await expect(expired.recover(owner, initial.id)).rejects.toBeInstanceOf(ResultExpiredError)
+  })
   it("omits committee classification from subtitles while preserving the structured value", () => {
     const record = {
       id: "org:1",

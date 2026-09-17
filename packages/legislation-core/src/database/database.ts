@@ -46,18 +46,39 @@ export type LegislationDatabase = Omit<ReturnType<typeof createDatabase>["databa
 export async function withReadOnlyDatabase<Result>(
   pool: pg.Pool,
   statementTimeoutMs: number,
-  operation: (database: LegislationDatabase) => Promise<Result>
+  operation: (database: LegislationDatabase) => Promise<Result>,
+  signal?: AbortSignal
 ): Promise<Result> {
   assertStatementTimeout(statementTimeoutMs)
-  const client = await pool.connect()
+  signal?.throwIfAborted()
+  const connecting = pool.connect()
+  let abort: (() => void) | undefined
+  const cancelled = new Promise<never>((_resolve, reject) => {
+    abort = () => reject(signal?.reason)
+    signal?.addEventListener("abort", abort, { once: true })
+  })
+  let client: pg.PoolClient
+  try {
+    client = await Promise.race([connecting, cancelled])
+  } catch (error) {
+    void connecting.then(
+      (lateClient) => lateClient.release(),
+      () => undefined
+    )
+    throw error
+  } finally {
+    if (abort) signal?.removeEventListener("abort", abort)
+  }
   let discard = false
   try {
+    signal?.throwIfAborted()
     await client.query("BEGIN READ ONLY")
     await client.query(
       "SELECT set_config('statement_timeout', $1, true), set_config('idle_in_transaction_session_timeout', '35000', true)",
       [String(statementTimeoutMs)]
     )
     const result = await operation(drizzle(client, { schema }))
+    signal?.throwIfAborted()
     await client.query("COMMIT")
     return result
   } catch (error) {
