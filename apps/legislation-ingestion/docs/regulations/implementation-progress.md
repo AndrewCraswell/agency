@@ -3647,3 +3647,57 @@ The preview made zero provider requests and zero canonical writes. Candidate and
 [the corpus inventory](embedding-corpus-candidates.json), [development queries](embedding-development-queries.json) and
 [held-out queries](embedding-heldout-queries.json). Human relevance review, final freeze, current-price confirmation,
 live model comparison and promotion remain open; bulk embeddings remain disabled.
+
+## Recovered live embedding comparison and blind review pool
+
+Ran the complete recovered 243-passage, 60-query manifest through OpenRouter with both candidate routes and immutable
+per-input cache. Each model created 303 embeddings in five batches with zero provider failures, rate limits or retries.
+OpenAI Small returned 1,536 dimensions, 107,543 billed input tokens and 11.576 seconds elapsed. Voyage 4 returned
+1,024 dimensions, 115,807 billed input tokens and 13.748 seconds elapsed. OpenAI provider usage exactly equals the
+105,986 locally counted document tokens plus 1,557 query tokens. Voyage provider usage is 546 tokens lower than the
+114,684 locally counted document tokens plus 1,669 query tokens, a bounded 0.47 percent difference; no text was changed
+to force agreement. The retained summary is
+`artifacts/regulatory-backfills/evaluation-recovered-live-comparison-summary.json`.
+
+At the OpenRouter catalog prices retrieved on September 17, 2026, $0.02 per million input tokens for OpenAI Small and
+$0.06 per million for Voyage 4, the measured calls cost approximately $0.00215 and $0.00695. These are evaluation-call
+estimates from reported tokens, not a customer usage limit or a full-corpus projection.
+
+Automated exact-known-answer scoring is preliminary. OpenAI held-out MRR is 0.8951, nDCG@10 is 0.9215 and Recall@5 is
+0.9630; Voyage held-out MRR is 0.9272, nDCG@10 is 0.9451 and Recall@5 is 1.0. Both reach every known answer by rank 10.
+The largest separation is proposed rules: OpenAI aggregate MRR 0.5491/nDCG@10 0.6564 versus Voyage
+0.7542/0.8147. The six source-bounded no-answer queries retain null automatic metrics; retrieval ranks do not establish
+abstention quality.
+
+The exact two-system rankings were converted into a rank-blind top-25-plus-known-answer packet with 2,093 pooled
+candidates across all 60 questions. The packet contains no model identity or ranking position and every grade,
+rationale, reviewer and reviewer kind remains null. It is retained as
+`artifacts/regulatory-backfills/evaluation-recovered-blind-review-packet.json`. This advances EVAL-05/06 evidence but
+does not close EVAL-04 or select a model. EVAL-06 remains unchecked because its dependency on human-reviewed labels is
+deliberate. `modelSelected`, `humanReviewComplete` and `bulkEmbeddingAuthorized` remain false.
+
+## Recovered persisted lexical and authenticated API/MCP canary
+
+Provisioned the empty isolated search database `legislation_passage_search` on loopback port 55458 and persisted two
+current-eCFR difficult-table generations from the recovered canonical database: 20 CFR 220.143 prepared as six passages
+and 29 CFR 1910.103 as 16 passages. Both were copied with exact immutable generation verification. These bounded writes
+used OpenAI Small's tokenizer as a canary candidate; they do not record a selected model and contain no vectors.
+
+Prepared the complete recovered current Title 3 edition in two bounded batches, yielding 33 complete generations and
+35 passages with zero blockers. Two copy batches transferred all 33 generations, full source/target comparison passed,
+the exact copy receipt and revision snapshot were committed, and the matching canonical lexical outbox row was
+acknowledged. No other recovered title was acknowledged.
+
+The typed client then called the real `/api/search/legal` handler through the authentication boundary for `executive
+order`, explicitly scoped to Title 3. It returned 3 CFR 102.130 with matching canonical provision, version and passage
+identity; a bad bearer credential returned 401. The API-backed streamable HTTP MCP tool `search_regulations` returned
+the same provision/version/citation and sent its distinct API credential only to `/api/search/legal`; the incoming MCP
+credential was not forwarded. Retained reports are
+`artifacts/regulatory-backfills/recovered-legal-search-http-canary.json` and
+`artifacts/regulatory-backfills/recovered-legal-search-mcp-canary.json`.
+
+This renews local recovered-database lexical HTTP/MCP acceptance and supplies current-code plus difficult-table portions
+of EVAL-11. It is not a deployed canary, does not contain vectors, and does not yet cover the required historical annual
+CFR or Federal Register publication case. Human relevance review, actual PostgreSQL lexical/hybrid comparison, selected
+route, bounded persisted vectors and deployed acceptance remain open. Recurring ingestion and bulk embeddings remain
+disabled.

@@ -255,9 +255,16 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
 - [ ] **EVAL-05 Close tokenizer/provider accounting evidence.** Recheck the recorded Voyage local/provider usage
   difference with identical text, query/document mode and provider metadata. **Done:** exact input integrity remains
   verified and billing discrepancy is explained or explicitly bounded; no text mutation is introduced to force equality.
+  Recovered live evidence now bounds the Voyage difference to 546 tokens over 116,353 locally counted tokens, or
+  0.47 percent. OpenAI provider and local totals agree exactly at 107,543. The 243 documents and 60 queries were
+  identical within each route and retained under immutable input hashes. Final closure remains coupled to the reviewed
+  comparison rather than treating provider accounting alone as route approval.
 - [ ] **EVAL-06 Run both semantic candidates.** Compare OpenAI Small and Voyage 4 through the repaired shared client
   using identical frozen passages/queries and immutable response cache. **Done:** dimensions, input/output pairing,
   usage, provider errors, latency and model IDs are retained per request. Depends on EVAL-02, EVAL-04–05.
+  The recovered live run completed all 303 inputs per model in five batches with zero failures, retries or rate limits.
+  Voyage leads the automated known-answer held-out scores, but the generated 2,093-candidate blind packet is still
+  unreviewed. EVAL-06 remains unchecked until EVAL-04 replaces proposal labels with human-reviewed judgments.
 - [ ] **EVAL-07 Compare lexical, hybrid and reranked retrieval.** Use actual PostgreSQL lexical behavior and the proposed
   fusion/rerank path; distinguish PostgreSQL FTS from BM25. **Done:** configuration, Recall@k, nDCG@k, per-cohort failures,
   latency and incremental cost are reproducible. Depends on EVAL-06, INDEX-09–11.
@@ -273,6 +280,10 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
 - [ ] **EVAL-11 Run the deployed model canary.** Persist a bounded pilot generation and query it through authenticated
   HTTP and API-backed MCP, including a difficult table and historical/publication case. **Done:** exact IDs, input
   hashes, dimensions, citations and mode metadata agree end to end. Depends on VECTOR-01–07, HTTP-14/17, TOOLS-05.
+  A recovered local lexical pilot now persists two difficult-table generations and a complete, acknowledged 33-version
+  Title 3 scope. Authenticated typed HTTP and API-backed streamable HTTP MCP both returned the same 3 CFR 102.130
+  identity, and invalid API credentials returned 401. This is local lexical evidence only: selected-model vectors,
+  historical/publication coverage and deployed acceptance remain required, so EVAL-11 stays unchecked.
 - [ ] **EVAL-12 Record the selected regulatory route.** Publish model/dimensions/input contract, optional reranker,
   quality/cost rationale, unpassed cohorts and rollback configuration. **Done:** EVAL-01 thresholds, EVAL-09 and EVAL-11
   pass; explicitly authorize only the qualified regulatory scope for bulk jobs. This does not authorize old-vector rebuilds.
