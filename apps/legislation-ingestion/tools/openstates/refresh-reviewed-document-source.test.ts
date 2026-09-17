@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   evidence: "",
   digest: "",
   apply: false,
+  corruptArtifact: false,
   download: vi.fn<() => Promise<{ bytes: Uint8Array; contentType: string }>>(),
   extract: vi.fn<() => Promise<unknown>>(),
   requeue: vi.fn<() => Promise<{ requeued: boolean }>>(),
@@ -27,7 +28,20 @@ vi.mock("commander", () => ({
     }
   }
 }))
-vi.mock("../../src/config/config.js", () => ({ loadConfig: () => ({ database: {} }) }))
+vi.mock("../../src/config/config.js", () => ({
+  loadConfig: () => ({ database: {}, azure: { storageAccount: "test", normalizedDocumentContainer: "docs" } })
+}))
+vi.mock("../../src/ingestion/documents/artifact-store.js", () => ({
+  artifactPath: () => "documents/reviewed.pdf",
+  AzureBlobArtifactStore: class {
+    async put() {
+      return true
+    }
+    async read() {
+      return new Uint8Array([mocks.corruptArtifact ? 2 : 1])
+    }
+  }
+}))
 vi.mock("@repo/legislation-core/database/database", () => ({
   createDatabase: () => ({ database: {}, pool: { end: mocks.end } })
 }))
@@ -51,6 +65,7 @@ beforeEach(() => {
   vi.stubEnv("REVISION_TEST_DATABASE", "postgres://unused")
   vi.spyOn(process.stdout, "write").mockReturnValue(true)
   mocks.apply = false
+  mocks.corruptArtifact = false
   mocks.evidence = JSON.stringify({
     state: "ak",
     session: "34",
@@ -95,7 +110,10 @@ it("queues reviewed OCR content through the existing stored-version guard", asyn
   const { DocumentExtractionError } = await import("../../src/ingestion/documents/extract.js")
   mocks.extract.mockRejectedValue(new DocumentExtractionError("ocr-required", "Scanned PDF"))
   await import("./refresh-reviewed-document-source.js")
-  expect(mocks.requeue).toHaveBeenCalledWith({}, expect.objectContaining({ sourceSha256: "a".repeat(64) }))
+  expect(mocks.requeue).toHaveBeenCalledWith({}, expect.objectContaining({ sourceSha256: "a".repeat(64) }), {
+    path: "documents/reviewed.pdf",
+    contentType: "application/pdf"
+  })
   expect(mocks.end).toHaveBeenCalled()
 })
 it("rejects unsupported current content", async () => {
@@ -110,4 +128,10 @@ it("reports concurrent or active document guards as incomplete", async () => {
   mocks.requeue.mockResolvedValue({ requeued: false })
   await expect(import("./refresh-reviewed-document-source.js")).rejects.toThrow("Stored document changed or is active")
   expect(mocks.end).toHaveBeenCalled()
+})
+it("does not queue a corrupt retained replacement artifact", async () => {
+  mocks.apply = true
+  mocks.corruptArtifact = true
+  await expect(import("./refresh-reviewed-document-source.js")).rejects.toThrow("artifact checksum mismatch")
+  expect(mocks.requeue).not.toHaveBeenCalled()
 })

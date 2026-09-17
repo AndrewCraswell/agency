@@ -4,6 +4,7 @@ import { createDatabase } from "@repo/legislation-core/database/database"
 import { Command } from "commander"
 import { z } from "zod"
 import { loadConfig } from "../../src/config/config.js"
+import { artifactPath, AzureBlobArtifactStore } from "../../src/ingestion/documents/artifact-store.js"
 import { downloadDocument } from "../../src/ingestion/documents/download.js"
 import { DocumentExtractionError, extractDocument } from "../../src/ingestion/documents/extract.js"
 import { extractionRepairEvidence } from "../../src/ingestion/documents/extraction-repair-evidence.js"
@@ -54,11 +55,28 @@ try {
 }
 let requeued = false
 if (options.apply) {
-  const config = loadConfig({ DATABASE_URL: z.string().min(1).parse(process.env[options.databaseEnv]) })
+  const config = loadConfig({ ...process.env, DATABASE_URL: z.string().min(1).parse(process.env[options.databaseEnv]) })
+  const store = new AzureBlobArtifactStore(
+    z.string().min(1).parse(config.azure.storageAccount),
+    config.azure.normalizedDocumentContainer
+  )
+  const path = artifactPath(
+    "documents",
+    evidence.stored.documentId,
+    evidence.currentSourceSha256,
+    evidence.stored.sourceUrl
+  )
+  await store.put(path, downloaded.bytes)
+  if (hash(await store.read(path)) !== evidence.currentSourceSha256) {
+    throw new Error("Retained reviewed source artifact checksum mismatch")
+  }
   const { database, pool } = createDatabase(config.database)
   try {
     // Uses the same atomic optimistic source/text/status guards as audited extraction repair.
-    const result = await requeueVerifiedExtraction(database, evidence.stored)
+    const result = await requeueVerifiedExtraction(database, evidence.stored, {
+      path,
+      contentType: downloaded.contentType
+    })
     if (!result.requeued) throw new Error("Stored document changed or is active; no source refresh queued")
     requeued = true
   } finally {
