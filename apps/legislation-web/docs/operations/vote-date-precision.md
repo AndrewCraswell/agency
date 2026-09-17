@@ -30,3 +30,9 @@ constraint, verify schema readiness, and check query plans/index coverage under 
 readers against the old production schema. Original vote rows stay incomplete until source-verified re-ingestion.
 
 Deployment, full-corpus performance, journal replay and authenticated API/MCP acceptance remain independent gates.
+
+Existing databases can be inspected with `node --import tsx scripts/reconcile-vote-date.ts inspect` from C, using an
+explicit `DATABASE_URL`. The `apply` operation adds the nullable column and replaces the completeness constraint using
+the current canonical schema definition. DDL has a three-second lock timeout; validation runs separately with a
+30-second statement timeout. A schema-derived constraint fingerprint makes repeat application a no-op and lets an
+interrupted validation resume. The operation changes no vote facts, source references or completeness flags.

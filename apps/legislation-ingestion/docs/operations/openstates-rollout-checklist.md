@@ -2,6 +2,13 @@
 
 ## September 16 continuation and identity verification
 
+September 17 production vote-schema reconciliation:
+
+- [x] Added C `scripts/reconcile-vote-date.ts`, inspect by default, explicit apply. Constraint SQL comes directly from the canonical Drizzle schema, with a SHA256 fingerprint; no hand-maintained duplicate condition. Tested missing-column reconciliation and repeat no-op behavior in the isolated local database. C lint/type-check passed.
+- [x] Production inspect confirmed no `held_date` and the original exact-time constraint. Explicit apply completed: nullable calendar-date column present, schema fingerprint matching, completeness constraint validated. No existing facts or completeness flags changed. Verified HB1 action provenance still has zero missing URLs.
+- [ ] Production query-plan inspection before serving rollout shows a parallel sequential scan plus sort for default mixed-precision vote ordering. Existing `(held_at)` indexes cannot serve the new coalesced order. Add and validate ordinary date-aware vote indexes before declaring performance acceptance. No index builds were active at the inspection; embedding/HNSW indexes were untouched.
+- [ ] Reader/worker deployment, date-aware indexes, source journal replay and authenticated production acceptance remain open. Schema readiness alone is not endpoint completion.
+
 September 17 vote-reader integration:
 
 - [x] W readers now reuse the existing `date`/nullable `heldAt` public shape. Bill detail, vote lists, person-vote pagination and mixed bill timelines use a shared internal ordering anchor; projected unknown instants remain null. The query-service timeline also retains the source calendar date.
