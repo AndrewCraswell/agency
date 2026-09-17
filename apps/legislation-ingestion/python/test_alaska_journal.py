@@ -420,6 +420,25 @@ And so the effective date clause was adopted.
         result = parse_roll_call(text, "HB1", (2, 1, 1), "AM51", "776", True, "AM NO 51 NOT TABLED")
         self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
 
+    def test_reused_amendment_anchor_recovers_take_from_table_vote_on_cited_page(self):
+        tabled = self.sample("Adams, Brown").replace(
+            "Final Passage", "Amendment No. 21/Table"
+        )
+        taken = self.sample("Evans, Fox").replace(
+            "Final Passage",
+            'The question being: "Shall Amendment No. 21 be taken from the table?"\n'
+            "Amendment No. 21/Take from Table",
+        ).replace("Nays: Clark", "Nays: Green").replace("Excused: Davis", "Excused: Hill")
+        text = (
+            "[[JOURNAL_ANCHOR:2593]]\nPage 2593\n[[JOURNAL_ANCHOR:AM21]]\n" + tabled
+            + "[[JOURNAL_ANCHOR:2594]]\nPage 2594\n" + taken
+        )
+        result = parse_roll_call(
+            text, "HB1", (2, 1, 1), "AM21", "2594", True,
+            "(H) AM NO 21 TAKE FROM TABLE FAILED Y2 N1 E1",
+        )
+        self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
+
     def test_whole_bill_table_motion_requires_second_reading_question(self):
         text = (
             "[[JOURNAL_ANCHOR:1020]]\nPage 1020\n"

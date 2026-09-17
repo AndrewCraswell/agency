@@ -92,6 +92,9 @@ def motion_matches(hint, context):
         return "FINAL PASSAGE" in context
     if "NOT TABLED" in hint:
         return "NOT TABLED" in context or "/TABLE" in context
+    if "TAKE FROM TABLE" in hint:
+        return ("TAKE FROM TABLE" in context
+                or re.search(r"\bBE TAKEN FROM (?:THE )?TABLE\b", context) is not None)
     if re.search(r"\bAM\s*(?:NO\.?\s*)?\d+(?:\s+AS\s+AMD)?\s+TABLED\b", hint):
         return ("WAS TABLED" in context or "/TABLE" in context) and "NOT TABLED" not in context
     if "MOTION TO TABLE BILL" in hint:
