@@ -296,15 +296,21 @@ must not alter current bill/document embedding freshness. Small pilot writes may
   Selection fixes every generation to 16 SHA-256 passage-ID shards and caps a read at 512 candidates, 64 provider inputs
   and 1 MiB. It excludes stored vectors, rehashes input text, verifies the persisted count with the pinned tokenizer and
   returns a stable shard key plus keyset cursor. The integration smoke proves shard isolation and completed-row exclusion.
-- [ ] **VECTOR-04 Persist exact paired outputs.** Validate returned indices, count, model, finite dimensions and input
+- [x] **VECTOR-04 Persist exact paired outputs.** Validate returned indices, count, model, finite dimensions and input
   hash before transactional storage/checkpoint. **Done:** reordered valid responses pair correctly; duplicate/missing/
   corrupt responses cannot acknowledge a batch. Depends on VECTOR-03.
+  The shared client validates and orders provider indices, count, model and dimensions. Route-specific storage then
+  validates finite nonzero vectors, exact passage/input hashes and an immutable vector hash. Exact replay succeeds;
+  changed vectors, input hashes, model routes and partial-generation completion fail in the PostgreSQL smoke.
 - [ ] **VECTOR-05 Implement retries and reuse.** Reuse permitted identical inputs, preserve multiple owner memberships,
   and recover provider success followed by persistence failure without losing provenance. **Done:** accounting separates
   cache hits, possible repeated paid attempts and new writes; incomplete shards remain pending. Depends on VECTOR-04.
 - [ ] **VECTOR-06 Fence stale input and revoked rights.** Recheck selected input/route/rights before writes and serving;
   invalidate stale jobs, vector memberships and caches through the correction path. **Done:** a source change or rights
   revocation during provider execution cannot promote stale/forbidden vectors. Depends on VECTOR-04, INDEX-04–05.
+  Rights fencing is implemented for registration, batch writes and completion using the copied generation lock and a
+  nonrevoked search membership. Rights cleanup cascades the route-specific vectors and generation. Correction/removal
+  propagation and serving-time semantic selection remain open under INDEX-04/05 and VECTOR-11.
 - [ ] **VECTOR-07 Run the durable pilot.** Exercise malformed response, provider 429/outage, killed worker, lost lease,
   source correction and target write failure on a bounded persisted corpus. **Done:** exact vector inventory recovers
   with no falsely complete shards; pilot is queryable for EVAL-11. Depends on VECTOR-05–06, ORCH-08–10.

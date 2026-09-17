@@ -13,6 +13,15 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added search-rights fencing to regulatory vector registration, writes and completion. Each operation shares the copied
+passage generation's advisory lock with rights cleanup and requires at least one nonrevoked search membership. Storage
+then rechecks the immutable embedding generation and exact passage input before writing. Vector rows and their generation
+now cascade when the isolated search copy is removed, while canonical text and unrelated product embeddings remain
+untouched. The two-database integration test revokes the source rights after vector completion, removes the copied
+generation and proves both the vector row and vector generation are gone; a later registration remains blocked by the
+revocation. This closes exact paired output persistence and the rights-removal portion of stale-vector fencing. Source
+correction propagation remains tied to INDEX-04 and VECTOR-06.
+
 Added explicit regulatory candidate routes without changing any existing bill, amendment, document or supporting-
 material route. OpenAI Small and Voyage 4 now each declare their regulatory passage input contract, dimensions, query/
 document mode and isolated storage table. Trusted server configuration may select one of those exact routes; an absent
