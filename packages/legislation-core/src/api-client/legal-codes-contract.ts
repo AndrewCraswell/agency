@@ -31,12 +31,30 @@ export const legalCodeSchema = z.strictObject({
     .max(1000)
 })
 export const legalCodesResponseSchema = pageSchema.extend({ data: z.array(legalCodeSchema).max(100) })
-export const legalCodeResponseSchema = resourceSchema.extend({ data: legalCodeSchema })
+export const legalCodeDetailSchema = legalCodeSchema.extend({
+  editions: z.strictObject({
+    publishedComponents: z.int().positive(),
+    current: z
+      .strictObject({
+        id: z.uuid(),
+        codeId: z.uuid(),
+        sourceId: z.literal("ecfr"),
+        issueDate: z.iso.date().nullable(),
+        sourceCurrencyDate: z.iso.date().nullable()
+      })
+      .nullable()
+  })
+})
+export const legalCodeResponseSchema = resourceSchema.extend({ data: legalCodeDetailSchema })
 
 export function validateLegalCodeResponse(value: unknown, codeId: string) {
   const id = z.uuid().parse(codeId)
   const response = legalCodeResponseSchema.parse(value)
-  if (response.data.id !== id || response.data.canonicalUrl !== `/api/legal/codes/${id}`) {
+  if (
+    response.data.id !== id ||
+    response.data.canonicalUrl !== `/api/legal/codes/${id}` ||
+    (response.data.editions.current !== null && response.data.editions.current.codeId !== id)
+  ) {
     throw new Error("legal_code_response_mismatch")
   }
   return response

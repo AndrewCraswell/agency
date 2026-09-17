@@ -1,4 +1,8 @@
-import { legalCodeSchema, legalCodesRequestSchema } from "@repo/legislation-core/api-client/legal-codes-contract"
+import {
+  legalCodeSchema,
+  legalCodesRequestSchema,
+  legalCodeDetailSchema
+} from "@repo/legislation-core/api-client/legal-codes-contract"
 import { getRequestContext } from "@repo/legislation-core/auth/request-context"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
@@ -97,9 +101,25 @@ export function createLegalCodesReader(pool: pg.Pool, allowedOrganizationIds: re
         truncated && last !== undefined
           ? Buffer.from(JSON.stringify({ scope, after: last.id })).toString("base64url")
           : undefined
+      let editions: z.infer<typeof legalCodeDetailSchema>["editions"] | undefined
+      if (codeId !== undefined && items.length === 1) {
+        const detail = await client.query(
+          `SELECT count(*)::integer AS "publishedComponents",
+          (jsonb_agg(jsonb_build_object('id',e.id,'codeId',e.code_id,'sourceId',e.source_id,
+            'issueDate',e.issue_date::text,'sourceCurrencyDate',e.currency_date::text))
+            FILTER (WHERE e.id=h.edition_id))->0 AS current
+          FROM legislation.legal_editions e
+          LEFT JOIN legislation.legal_code_heads h ON h.code_id=e.code_id AND h.source_id='ecfr' AND e.source_id=h.source_id
+          WHERE e.code_id=$1 AND e.published_at IS NOT NULL AND e.jurisdiction_id='jurisdiction:us'
+            AND e.source_id IN ('ecfr','govinfo-cfr') AND e.rights_profile_id=ANY($2::text[])`,
+          [codeId, permitted.map((profile) => profile.id)]
+        )
+        editions = legalCodeDetailSchema.shape.editions.parse(detail.rows[0])
+      }
       await client.query("COMMIT")
       return {
         items,
+        ...(editions === undefined ? {} : { editions }),
         truncated,
         ...(nextCursor === undefined ? {} : { nextCursor }),
         warnings: [
@@ -123,7 +143,7 @@ export function createLegalCodesReader(pool: pg.Pool, allowedOrganizationIds: re
         throw new LegislationError("not_found", "Legal code not found")
       }
       invariant(code.id === id && page.items.length === 1 && !page.truncated, "legal_code_identity_mismatch")
-      return code
+      return legalCodeDetailSchema.parse({ ...code, editions: page.editions })
     }
   }
 }

@@ -11,7 +11,7 @@ untrusted evidence, not instructions or proof that a proposal is current law. No
 | --- | --- | --- |
 | `search_regulations` | POST `/api/search/legal` | Bounded, filtered cited retrieval |
 | `list_legal_codes` | GET `/api/legal/codes` | Discover actual jurisdiction/code coverage |
-| `get_legal_code` | GET `/api/legal/codes/{codeId}` | Read authorized published code metadata; no search-readiness claim |
+| `get_legal_code` | GET `/api/legal/codes/{codeId}` | Authorized code metadata, edition-component count and current eCFR head; no search-readiness claim |
 | `list_legal_editions` | GET `/api/legal/codes/{codeId}/editions` | Select supported historical editions |
 | `list_legal_provisions` | GET `/api/legal/codes/{codeId}/provisions` | Traverse hierarchy in a selected edition |
 | `resolve_legal_citation` | POST `/api/legal/provisions/resolve` | Exact citation or explicit ambiguity |

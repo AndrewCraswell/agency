@@ -215,7 +215,23 @@ async function setup(
             }
             if (path === `/api/legal/codes/${versionId}`) {
               return Response.json(
-                { data: (await codes()).items[0], links: { self: path }, meta: { correlationId, warnings: [] } },
+                {
+                  data: {
+                    ...(await codes()).items[0],
+                    editions: {
+                      publishedComponents: 1,
+                      current: {
+                        id: observationId,
+                        codeId: versionId,
+                        sourceId: "ecfr",
+                        issueDate: "2026-09-10",
+                        sourceCurrencyDate: "2026-09-11"
+                      }
+                    }
+                  },
+                  links: { self: path },
+                  meta: { correlationId, warnings: [] }
+                },
                 { headers }
               )
             }

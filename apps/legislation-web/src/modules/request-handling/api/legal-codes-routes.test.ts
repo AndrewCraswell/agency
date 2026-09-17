@@ -18,7 +18,8 @@ const code = legalCodeSchema.parse({
   updatedAt: "2026-09-15T00:00:00Z",
   sources: [{ sourceId: "ecfr", rightsProfileId: "official" }]
 })
-const readCode = vi.fn<() => Promise<typeof code>>(async () => code)
+const detailCode = { ...code, editions: { publishedComponents: 1, current: null } }
+const readCode = vi.fn<() => Promise<typeof detailCode>>(async () => detailCode)
 
 const pair = await generateKeyPair("RS256")
 const issuer = "https://auth.example"
@@ -96,7 +97,7 @@ it("binds code detail to the requested identity and rejects extra selectors befo
   })
   expect(await api.getLegalCode(codeId)).toMatchObject({ data: code })
   expect(readCode).toHaveBeenCalledWith(codeId)
-  readCode.mockResolvedValueOnce({ ...code, id: "00000000-0000-4000-8000-000000000002" })
+  readCode.mockResolvedValueOnce({ ...detailCode, id: "00000000-0000-4000-8000-000000000002" })
   await expect(api.getLegalCode(codeId)).rejects.toMatchObject({ status: 500 })
   const malformed = new LegislationApiClient({
     baseUrl: "https://api.example",

@@ -18,6 +18,10 @@ const code = {
 }
 const secondId = "00000000-0000-4000-8000-000000000002"
 const second = { ...code, id: secondId, canonicalUrl: `/api/legal/codes/${secondId}`, name: "Title 2" }
+const editions = {
+  publishedComponents: 3,
+  current: { id: secondId, codeId: id, sourceId: "ecfr", issueDate: "2026-09-10", sourceCurrencyDate: "2026-09-11" }
+}
 const pools: pg.Pool[] = []
 afterEach(async () => {
   vi.restoreAllMocks()
@@ -42,12 +46,19 @@ function fixture() {
       fields: []
     }))
   }
-  function catalog(items = [code, second], policy = officialFederalRights) {
+  function catalog(
+    items = [code, second],
+    policy = officialFederalRights,
+    summary?: typeof editions | { publishedComponents: number; current: null }
+  ) {
     rows([])
     rows([])
     rows([])
     rows([{ id: "official", policy, policy_hash: digest(JSON.stringify(policy)) }])
     rows(items)
+    if (summary !== undefined) {
+      rows([summary])
+    }
     rows([])
   }
   const detail = (codeId = id) =>
@@ -114,8 +125,8 @@ it("filters detail by exact code identity and hides missing or revoked codes", a
   const f = fixture()
   await expect(f.reader.getCode(id)).rejects.toMatchObject({ category: "unauthorized" })
   expect(f.connect).not.toHaveBeenCalled()
-  f.catalog([code])
-  expect(await f.detail()).toEqual(code)
+  f.catalog([code], officialFederalRights, editions)
+  expect(await f.detail()).toEqual({ ...code, editions })
   expect(
     f.query.mock.calls.findLast((call) => typeof call[0] === "string" && call[0].includes("GROUP BY"))?.[1]
   ).toEqual([["official"], null, null, id])
@@ -123,6 +134,18 @@ it("filters detail by exact code identity and hides missing or revoked codes", a
     f.catalog([], policy)
     await expect(f.detail()).rejects.toMatchObject({ category: "not_found" })
   }
-  f.catalog([second])
+  f.catalog([second], officialFederalRights, editions)
   await expect(f.detail()).rejects.toThrow("legal_code_identity_mismatch")
+})
+
+it("reports published annual components without inventing a current head or daily history", async () => {
+  const f = fixture()
+  const summary = { publishedComponents: 3, current: null }
+  f.catalog([code], officialFederalRights, summary)
+  expect(await f.detail()).toMatchObject({ editions: summary })
+  const call = f.query.mock.calls.find(
+    (call) => typeof call[0] === "string" && call[0].includes('"publishedComponents"')
+  )
+  expect(call?.[1]).toEqual([id, ["official"]])
+  expect(call?.[0]).toContain("e.rights_profile_id=ANY($2::text[])")
 })

@@ -11,8 +11,13 @@ ordered by jurisdiction, name using PostgreSQL C collation, then code ID. Names 
 Each row has a canonical code identity, jurisdiction, code key, name, kind, latest authorized publication timestamp
 and authorized source/rights-profile references. This timestamp is catalog publication time, not legal currency.
 Canonical detail URLs now resolve through `GET /api/legal/codes/{codeId}`, C's `getLegalCode` client and the
-`get_legal_code` MCP tool. Detail accepts no query parameters and returns `Resource<LegalCode>` with the same authorized
-metadata as its catalog row. Exact UUID and canonical-URL binding are verified by both server and client. Missing,
+`get_legal_code` MCP tool. Detail accepts no query parameters and returns `Resource<LegalCodeDetail>` with the same authorized
+metadata as its catalog row plus `editions.publishedComponents` and nullable `editions.current`. The count covers visible
+published source edition components; three annual volumes count as three, not three complete years. Current is the
+explicit authorized eCFR code head, never a guessed maximum date or an annual volume. It contains edition/code/source IDs,
+issue date and source currency date separately. An annual-only code, or a code whose current head is not visible, has null
+current. Counts and head metadata use the same transaction snapshot and permitted rights set as catalog detail.
+Exact code/current-edition ownership and canonical-URL binding are verified by the wire contract. Missing,
 unpublished or entirely rights-denied codes return the same 404, while unauthenticated/unapproved callers remain denied
 before database access. Responses are private and non-cacheable; no provision text is loaded.
 
@@ -33,7 +38,7 @@ mandatory. All pages are private and non-cacheable.
 The [edition and provision browser](legal-edition-browsing.md) now supports edition lists and structural traversal.
 Code membership establishes published metadata availability only. It does not certify complete historical coverage,
 passage preparation, lexical indexing or embeddings. Those capabilities require their own receipts and public
-coverage operation. Latest-edition selection and coverage/capability enrichment of code detail remain open, along with
+coverage operation. Complete-history coverage and indexing/embedding capability enrichment of code detail remain open, along with
 edition detail, public coverage reporting and deployed acceptance. This metadata slice does not close HTTP-04.
 
 Tests cover bounded pages, stale continuation, caller/filter/limit changes, rights exclusion before aggregation,

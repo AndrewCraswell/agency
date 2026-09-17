@@ -13,6 +13,23 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Enriched code detail with authorized published edition-component count and nullable current eCFR head. The head is selected
+from `legal_code_heads`, not inferred from the largest date; annual volumes never masquerade as a current whole code.
+The same repeatable-read snapshot and allowed rights set govern metadata, counts and head identity. The strict detail
+contract retains issue and source-currency dates separately and rejects cross-code heads or annual-source current claims.
+This advances HTTP-04; full history coverage, search capabilities, edition detail and deployed acceptance remain open.
+
+Nine reader/HTTP tests, two wire-contract tests and ten MCP transport tests passed. Live retained-database handler/client
+canaries confirmed Title 1's current eCFR edition (`bbf7b2a0-f65a-4f42-b499-04ac747ae2f3`, issue August 10, currency
+September 11) and annual Title 5's three components with null current. Both preserved 404/400/401 behavior. Receipts:
+`artifacts/regulatory-backfills/code-detail-editions-55438-canary.json` and `code-detail-editions-55440-canary.json`.
+No canonical, index or embedding writes occurred; these are local fixture-authentication checks, not deployed acceptance.
+Scoped lint and core/MCP/web type checks passed after correcting the optional detail-only return field; the nine web
+tests passed again. `git diff --check` passed. Final root `pnpm verify` stopped because `check:change` could not resolve
+`github.com` while fetching origin/main; coverage did not run. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-code-editions-final-verify.log`. The full-current tokenizer scanner remains live;
+ten editions and 67,332 members are complete with zero preparation failures, while the next edition remains in progress.
+
 Connected published-code canonical URLs to `GET /api/legal/codes/{codeId}`, the strict `getLegalCode` client and
 API-backed `get_legal_code` MCP tool. The detail reader shares the catalog's identity allowlist, locked active rights,
 policy-hash checks and published federal source scope; SQL filters by the exact code ID without loading source bodies.
