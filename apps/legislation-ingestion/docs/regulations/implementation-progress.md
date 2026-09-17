@@ -3547,3 +3547,37 @@ continuing. Local process ID `28776` writes to
 so completion must be established from a valid `inventory.json` with `complete: true`, all 49 selected editions and the
 same implementation hash. The detached checkout prevents unrelated commits in the active worktree from invalidating
 the scanner's implementation fingerprint again.
+
+## Full current eCFR canonical recovery after test-data loss
+
+The current federal corpus was reacquired from the official eCFR versioner inventory with cutoff 2026-09-17. The frozen
+manifest is `artifacts/regulatory-backfills/ecfr-recovery-2026-09-17.json`, manifest ID
+`c78337adbdec100afe517c85e007063420a17c38851d4c4d72003c83d246f3ee`. It contains all 49 non-reserved titles; title 35
+is explicitly excluded as reserved. Acquisition retained 49 matching receipts and 49 content-addressed XML blobs,
+811,905,922 bytes total, with no missing or extra units. Normalization produced 49 committed generation directories,
+275,138 records, no parser warnings or failures, and no abandoned staging directory.
+
+Recovery writes used a new isolated PostgreSQL 18 plus pgvector instance named `tabra-regulatory-recovery` on loopback
+port 55457 with database `regulations_test`. The damaged port-55438 pilot remains untouched. All 49 repository migrations
+were applied, then the required canonical United States jurisdiction directory row was inserted before import. This row
+is an explicit prerequisite because the importer deliberately refuses to invent jurisdiction ownership. The first clean
+import attempt exposed that missing prerequisite as SQLSTATE 23503 and wrote no canonical rows.
+
+The complete import initially published 47 titles. Titles 7 and 48 retained complete staging rows but their parent
+validation query was canceled with SQLSTATE 57014 while PostgreSQL was flushing the heavy write workload. With the
+database idle, `EXPLAIN ANALYZE` measured that exact title-7 validation at 61.733 ms. After `ANALYZE` and `CHECKPOINT`, the
+normal resumable replay published both unfinished generations without relaxing the 60-second statement bound. The final
+report is `artifacts/regulatory-backfills/ecfr-recovery-import-2026-09-17-retry-2.json`: 49 published units, zero blocked
+units and zero failures. The database has 49 published editions, 49 current heads, 275,138 edition memberships, 49
+lexical outbox rows, zero active leases and no title-35 code.
+
+Ten bounded retained-parser replay reports cover the same 49 units. Their aggregate is
+`artifacts/regulatory-backfills/ecfr-recovery-replay-complete-2026-09-17.json`: all 275,138 records were reused with
+`identical` disposition, no failures and no review-required result. The read-only canonical audit report
+`artifacts/regulatory-backfills/ecfr-recovery-canonical-audit-2026-09-17.json` then verified all 49 editions and all
+275,138 canonical records against those retained normalized shards. Every edition is current, parser hashes match, and
+the audit found zero mismatched records or failures.
+
+This restores the canonical input required for qualification and indexing; it does not itself complete passage
+preparation, lexical copy, API/MCP canaries or held-out embedding-model comparison. No embedding provider request,
+vector write, recurring ingestion schedule or customer notification was enabled during recovery.
