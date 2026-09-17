@@ -2,6 +2,21 @@
 
 ## Latest scoped requalification
 
+The restored canonical database confirms the complete 21 CFR 176.170 version is eligible with both models:
+79 OpenAI / 81 Voyage passages, maximum 798 / 832 tokens. This closes one of the prior eight known blockers;
+the other seven have not been rerun during this check. Evidence:
+`artifacts/regulatory-backfills/food-contact-version-recheck.json`, parser hash
+`454f6a65578bfa902a37a655dca2b7481e9a00e10f43044447def9842744eda5`.
+The pending-database status in the older entry below is superseded; full-title qualification remains open.
+
+The 21 CFR 176.170 food-contact table now preserves the reviewed split substance name and earlier limitation
+reference. [The official 2025 CFR PDF, printed page 231](https://www.govinfo.gov/content/pkg/CFR-2025-title21-vol3/pdf/CFR-2025-title21-vol3-sec176-170.pdf)
+wraps `Titanium dioxide-magnesium silicate` in the substance column with a single ditto in the limitation column.
+The retained eCFR XML instead has a second `silicate` row with an empty limitation. Recognition requires these
+exact fragments and publisher layout; there is no generic lowercase-name or blank-cell inference. All 80 table
+tests pass, including complete source reconstruction and both tokenizers. Whole-version qualification is pending
+database availability, so the verified remaining count remains eight.
+
 The latest canonical recheck leaves eight blocked versions after resolving 49 CFR 1152.32. The expense table's
 exact headers, empty-account headings and contiguous populated child rows sharing an account-code family establish
 bounded subgroup context despite varying heading indentation. At least two children are required; broken family

@@ -13,6 +13,62 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Docker access is restored, and retained container `tabra-fr-html-storage-pilot` was started without reset or data
+replacement. Recovery preserved inaccessible transient socket directories under timestamped
+`run-before-regulatory-recovery-*` and `docker-secrets-engine-before-regulatory-recovery-*` names; no container
+volumes, credentials or database files were removed. The user confirmed starting Docker. Earlier pending startup
+and unavailable-engine notes below are superseded.
+
+The pending canonical 21 CFR 176.170 recheck completed at `2026-09-17T04:08:50Z`, verifying exact version/edition
+membership and the retained content hash. Both models are eligible: 79 OpenAI passages, maximum 798 tokens;
+81 Voyage passages, maximum 832 tokens. Parser hash:
+`454f6a65578bfa902a37a655dca2b7481e9a00e10f43044447def9842744eda5`.
+Report: `artifacts/regulatory-backfills/food-contact-version-recheck.json`. No source/index/vector writes or provider
+calls occurred. This closes one of the eight known blocked versions; the other seven were not rerun in this check.
+Full-corpus requalification remains required. All work now targets `apps/legislation-ingestion` and the shared
+`packages/legislation-core`; web and MCP consumers live in their separate applications. Historical artifact paths
+under the former `apps/legislation` directory are not evidence of current file availability.
+
+Commit `5c18178` repaired 24 shared-core relative imports across 13 files to include `.js` extensions required by ingestion's
+NodeNext module resolution. The package split exposed these errors in embeddings, legal text, storage, domain
+contracts and database primitives. No runtime logic, dependencies or source contracts changed. Ingestion's current
+type-check now passes, including the previously cascading implicit-any errors. Scoped lint and all 55 shared
+embedding/legal-text tests passed. Logs: `C:/Users/andcra/AppData/Local/Temp/tabra-ingestion-types-fixed.log` and
+`C:/Users/andcra/AppData/Local/Temp/tabra-core-import-tests.log`. Scoped `git diff --check` passed.
+Root `pnpm verify` still fails before coverage on the generated Storybook worker's unused eslint-disable directive;
+the shared-core type-check also reported OS thread-creation failure (`runtime.newosproc`, 98 existing threads).
+Log: `C:/Users/andcra/AppData/Local/Temp/tabra-core-imports-verify.log`. No full repository pass is claimed.
+
+Docker's startup failure is now confirmed by its backend log, rather than inferred from a slow start: initializing
+the Ingest listener failed to rename `AppData/Local/Docker/run/sailor-ingest.sock` to `.stale` because Windows could
+not access the file. The backend reported a crash at `2026-09-17T04:00:02Z` and exposed an error dialog. Pending
+CLI handles do not establish a healthy engine. No factory reset or database deletion was attempted. Recover this
+transient socket/startup issue while preserving the retained containers before the pending canonical qualification.
+
+Implemented a source-reviewed continuation for the wrapped `Titanium dioxide-magnesium` / `silicate` name in
+21 CFR 176.170. The exact substance/limitations headers, name fragments, equal indentation, unspanned cells,
+preceding ditto and empty continuation limitation are required. Parent and earlier limitation references survive
+without changing source text. Unknown names and headers remain rejected. The official
+[2025 CFR, printed page 231](https://www.govinfo.gov/content/pkg/CFR-2025-title21-vol3/pdf/CFR-2025-title21-vol3-sec176-170.pdf)
+shows the wrapped name with one limitation entry; this corroborates the retained source layout, not a new legal rule.
+`fixtures/food-contact-material-table.json` retains the full source block and its canonical hashes. All 80 table tests
+pass in the reorganized `apps/legislation-ingestion` package, including exact reconstruction under both tokenizers.
+Log: `C:/Users/andcra/AppData/Local/Temp/tabra-food-contact-tests.log`. Scoped lint passed before the reorganization.
+
+Whole-version qualification remains pending: Docker Desktop processes are live, but its Linux engine pipe is not
+available. Startup command session `99020` and status session `92531` were still pending at the last observation.
+The read-only recheck is prepared at `artifacts/regulatory-backfills/recheck-food-contact.ts`; it has not run.
+Keep the verified remaining count at eight until the whole-version check completes. Old ignored qualification
+artifacts were not found at their former workspace paths after the package split; do not claim they were restored.
+
+The old root verification session `78277` is gone, with no terminal success in its dependency-preparation log.
+A fresh `pnpm verify` failed before coverage on the generated web Storybook worker's unused eslint-disable
+directive at `apps/legislation-web/.storybook/public/mockServiceWorker.js:1`.
+Log: `C:/Users/andcra/AppData/Local/Temp/tabra-food-contact-verify.log`.
+The reorganized ingestion type-check also fails on shared-core relative imports under NodeNext resolution and
+resulting implicit-any errors. The earlier service type pass does not establish a pass for this new package layout.
+No source/index/vector writes or embedding provider calls occurred.
+
 Resolved the full 49 CFR 1152.32 railroad expense table. Recognition requires the exact expense/account/basis
 headers, a nonempty heading with empty account and assignment cells, and at least two populated children at
 publisher indentation two with matching account-code family suffixes. The heading's varying indentation does
