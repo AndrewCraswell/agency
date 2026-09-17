@@ -3591,3 +3591,35 @@ hash `7efa3fb450d20dce118c4f3107b6dc78fd00dd7aa61392608b501ed627f476b2` and read
 `0f87a950daf5cb60a70a8b7840b8e11baa523c62058a0e1f733273a3bd3272ba`. It made no canonical writes, exercised no
 public API and left recurring ingestion disabled. This closes the full retained reader smoke for the current eCFR
 baseline; tokenizer qualification, persisted passage preparation and search serving remain separate gates.
+
+## Full current eCFR tokenizer qualification
+
+The recovered 49-title corpus completed a fresh read-only structural and dual-tokenizer qualification under
+implementation hash `df80596a461d3404ba25fd53ff9f8f0036142cc9cf6163cc7a5b31295f6604e4`. The terminal inventory is
+`artifacts/regulatory-backfills/ecfr-recovery-qualification-2026-09-17/inventory.json`; it binds all 49 selected editions
+and 275,138 canonical records to the exact source, rights, reader, passage and tokenizer identities. A stopped local
+process left one incomplete `.pending` stream and an empty exclusivity marker after 41 editions. The resumable replay
+rehash-verified and reused those 41 reports, preserved the interrupted evidence, and completed only the remaining eight
+editions. No canonical source, existing embedding or provider state changed.
+
+The independent terminal audit is
+`artifacts/regulatory-backfills/ecfr-recovery-qualification-audit-2026-09-17.json`. It rehashed every retained NDJSON
+stream and report, verified 49 exact selected/result identities, and found zero empty, invalid, oversized or
+tokenizer-blocked records. OpenAI `text-embedding-3-small` produced 501,543 candidate passages and 171,181,687 tokens,
+with 62 continuations and a 1,200-token maximum. Voyage 4 produced 522,180 candidate passages and 187,709,146 tokens,
+with 91 continuations and the same 1,200-token maximum. Both routes prepared all 275,138 records; the maximum input was
+6,422 characters.
+
+One structural defect remains in the current eCFR rendition of 33 CFR 110.214: its table begins with Anchorage B but
+references the omitted Anchorage A predecessor. The recovered edition/version/table was revalidated against its current
+eCFR artifact, active rights and the retained 517,451-byte official 2025 annual CFR PDF, then recorded as an exact
+`quarantined_source_gap` review. Plan `221fb5514a7c9090683f0f22ffd0bc65c967f1bc26788589c717b9f69cf277c9`
+recorded review `da60a4f4a2dc61ea821fa9ac905f3a6936f2b81ea66ff2ba8e266b2b83c408e7`; canonical text was not changed,
+external context was not injected and derived passages remain disallowed for that provision. The audit matched this one
+blocked table exactly, leaving zero unaccounted table blocks. `tokenizerQualified`, `terminalIntegrity` and
+`tableShapeAccounted` are true; `tableShapeQualified` remains false to state honestly that the publisher source defect
+is quarantined rather than repaired.
+
+This closes the full-corpus tokenizer and structural-accounting gate for the recovered current eCFR baseline. Persisted
+passage preparation, selected-model lexical copy, held-out embedding comparison, vector generation and authenticated
+HTTP/MCP canaries remain separate gates. Recurring ingestion remains disabled.
