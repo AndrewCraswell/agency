@@ -36,6 +36,7 @@ describe("committed NC cycle ledger", () => {
       productionReady: false
     })
     expect(state.pending).toEqual([plan.batches[1]])
+    expect(state.available).toEqual([plan.batches[1]])
   })
   it("never treats all committed batches as production or identity readiness", () => {
     expect(assessScraperBillCycle(plan, plan.batches.map(record))).toMatchObject({
@@ -47,6 +48,13 @@ describe("committed NC cycle ledger", () => {
   })
   it("starts all batches when no canonical receipts exist", () => {
     expect(assessScraperBillCycle(plan, []).pending).toEqual(plan.batches)
+  })
+  it("excludes active ownership from dispatch without treating it as promoted", () => {
+    const active = new Set([plan.batches[0]!.id])
+    const state = assessScraperBillCycle(plan, [], active)
+    expect(state.pending).toEqual(plan.batches)
+    expect(state.available).toEqual([plan.batches[1]])
+    expect(state.promotionComplete).toBe(false)
   })
   it.each([
     { status: "extracted" },

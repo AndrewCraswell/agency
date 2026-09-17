@@ -19,6 +19,7 @@ const planPathSchema = z
   .string()
   .regex(/^openstates\/scraper-plans\/(?:ak\/34|nc\/2025)\/[A-Za-z0-9][A-Za-z0-9-]{0,100}\/plan\.json$/)
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/)
+const dispatchWidth = 2
 
 export const openStatesBillPlanPayload = z.strictObject({
   state: stateSchema,
@@ -117,17 +118,27 @@ export const openStatesBillScraperDispatch = task({
     } finally {
       await pool.end()
     }
-    const first = state.pending[0]
-    if (!first) return { status: "cycle_promoted" as const, inventoryId: state.inventoryId }
-    const key = await idempotencyKeys.create(`${payload.state}-bills:${state.inventoryId}:${first.id}`, {
-      scope: "global"
-    })
-    const handle = await tasks.trigger(
-      "openstates-bill-scraper-cloud",
-      { ...payload, batchId: first.id },
-      { concurrencyKey: stateConcurrencyKey(payload.state), idempotencyKey: key }
+    const selected = state.available.slice(0, dispatchWidth)
+    if (selected.length === 0) {
+      return {
+        status: state.promotionComplete ? ("cycle_promoted" as const) : ("awaiting_in_flight_batches" as const),
+        inventoryId: state.inventoryId
+      }
+    }
+    const runs = await Promise.all(
+      selected.map(async (batch) => {
+        const key = await idempotencyKeys.create(`${payload.state}-bills:${state.inventoryId}:${batch.id}`, {
+          scope: "global"
+        })
+        const handle = await tasks.trigger(
+          "openstates-bill-scraper-cloud",
+          { ...payload, batchId: batch.id },
+          { concurrencyKey: stateConcurrencyKey(payload.state), idempotencyKey: key }
+        )
+        return { batchId: batch.id, runId: handle.id }
+      })
     )
-    return { status: "dispatched" as const, inventoryId: state.inventoryId, batchId: first.id, runId: handle.id }
+    return { status: "dispatched" as const, inventoryId: state.inventoryId, runs }
   }
 })
 
@@ -156,7 +167,17 @@ export const openStatesBillScraperCloud = task({
       const before = await inspectScraperBillCycle(database, store, payload.planPath)
       const requested = payload.batchId && before.pending.some((batch) => batch.id === payload.batchId)
       const selected = requested ? payload.batchId : before.pending[0]?.id
-      if (!selected) return await dispatchStateContent(payload.state, plan.session, inventoryId, before.promotedBatches)
+      if (!selected) {
+        if (before.promotionComplete) {
+          return await dispatchStateContent(payload.state, plan.session, inventoryId, before.promotedBatches)
+        }
+        return {
+          status: "awaiting_in_flight_batches" as const,
+          inventoryId,
+          completed: before.promotedBatches,
+          pending: before.pending.length
+        }
+      }
       const runId = attemptId(payload.state, ctx.run.id, ctx.attempt.number)
       result = await executeScraperBillBatch(database, {
         store,
@@ -177,7 +198,15 @@ export const openStatesBillScraperCloud = task({
         }
       })
       const after = await inspectScraperBillCycle(database, store, payload.planPath)
-      nextBatchId = after.pending[0]?.id
+      nextBatchId = after.available[0]?.id
+      if (!nextBatchId && !after.promotionComplete) {
+        return {
+          ...result,
+          status: "awaiting_in_flight_batches" as const,
+          inventoryId,
+          pending: after.pending.length
+        }
+      }
     } finally {
       await pool.end()
     }

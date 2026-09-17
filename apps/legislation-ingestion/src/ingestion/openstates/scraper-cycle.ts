@@ -1,6 +1,6 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
-import { and, eq, like } from "drizzle-orm"
+import { and, eq, like, sql } from "drizzle-orm"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { pendingScraperBillBatches, readScraperBillPlan } from "./scraper-batches.js"
@@ -24,7 +24,8 @@ const receiptSchema = z.strictObject({
 /** Validate committed ledger evidence, not scraper status. Does not establish archive health or identity completeness. */
 export function assessScraperBillCycle(
   plan: Awaited<ReturnType<typeof readScraperBillPlan>>,
-  records: readonly { stream: string; cursor: unknown }[]
+  records: readonly { stream: string; cursor: unknown }[],
+  activeBatchIds: ReadonlySet<string> = new Set()
 ) {
   const seen = new Set<string>()
   const receipts = records.map((record) => {
@@ -59,6 +60,7 @@ export function assessScraperBillCycle(
     unresolvedPositions: receipts.reduce((sum, receipt) => sum + receipt.unresolvedPositions, 0),
     promotionComplete: remaining.complete,
     pending: remaining.pending,
+    available: remaining.pending.filter((batch) => !activeBatchIds.has(batch.id)),
     productionReady: false as const
   }
 }
@@ -70,14 +72,28 @@ export async function inspectScraperBillCycle(
   planPath: string
 ) {
   const plan = await readScraperBillPlan(store, planPath)
-  const records = await database
-    .select({ stream: syncCheckpoints.stream, cursor: syncCheckpoints.cursor })
-    .from(syncCheckpoints)
-    .where(
-      and(
-        eq(syncCheckpoints.source, "openstates"),
-        like(syncCheckpoints.stream, `${plan.jurisdiction}-bills:${plan.session}:${plan.inventoryId}:%`)
+  const [records, ownership] = await Promise.all([
+    database
+      .select({ stream: syncCheckpoints.stream, cursor: syncCheckpoints.cursor })
+      .from(syncCheckpoints)
+      .where(
+        and(
+          eq(syncCheckpoints.source, "openstates"),
+          like(syncCheckpoints.stream, `${plan.jurisdiction}-bills:${plan.session}:${plan.inventoryId}:%`)
+        )
+      ),
+    database
+      .select({ stream: syncCheckpoints.stream })
+      .from(syncCheckpoints)
+      .where(
+        and(
+          eq(syncCheckpoints.source, "openstates"),
+          like(syncCheckpoints.stream, `ownership:${plan.jurisdiction}-bills:${plan.session}:${plan.inventoryId}:%`),
+          sql`coalesce(${syncCheckpoints.cursor}->>'released', 'false') <> 'true'`,
+          sql`(${syncCheckpoints.cursor}->>'expiresAt')::timestamptz > clock_timestamp()`
+        )
       )
-    )
-  return assessScraperBillCycle(plan, records)
+  ])
+  const activeBatchIds = new Set(ownership.map((entry) => entry.stream.slice(entry.stream.lastIndexOf(":") + 1)))
+  return assessScraperBillCycle(plan, records, activeBatchIds)
 }
