@@ -157,6 +157,18 @@ And so the effective date clause was adopted.
             4,
         )
 
+    def test_special_order_passage_uses_explicit_chamber_question(self):
+        text = (
+            "[[JOURNAL_ANCHOR:1347]]\nPage 1347\nSCR 6\nSpecial Order of Business\n"
+            'The question being: "Shall SCR 6 pass the House?"\n'
+            + self.sample(heading="SCR 6").replace("Final Passage\n", "Special Order of Business\n")
+        )
+        self.assertEqual(
+            len(parse_roll_call(text, "SCR6", (2, 1, 1), "1347", "1347", True,
+                                "(H) PASSED Y2 N1 E1")),
+            4,
+        )
+
     def test_zero_dash_passage_tally_excludes_same_page_reserve_fund_vote(self):
         passage = self.sample(counts="2   NAYS: 0   EXCUSED: 0   ABSENT: 0").replace(
             "Nays: Clark\n\nExcused: Davis\n\n", ""

@@ -89,7 +89,11 @@ def motion_matches(hint, context):
     if "RECON SAME DAY" in hint:
         return re.search(r"\bTAKE UP RECONSIDERATION (?:ON (?:THE )?)?SAME DAY\b", context) is not None
     if re.fullmatch(r"\([HS]\)\s+PASSED(?:\s+[YNEA](?:\d+|-))*", hint):
-        return "FINAL PASSAGE" in context
+        return ("FINAL PASSAGE" in context
+                or re.search(
+                    r"THE QUESTION BEING:\s*[\"'\u2018\u201c]?SHALL [^?]{1,160}\bPASS THE (?:HOUSE|SENATE)\b",
+                    context,
+                ) is not None)
     if "NOT TABLED" in hint:
         return "NOT TABLED" in context or "/TABLE" in context
     if "TAKE FROM TABLE" in hint:
