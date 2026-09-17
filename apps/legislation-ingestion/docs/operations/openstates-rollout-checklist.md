@@ -2,6 +2,22 @@
 
 ## September 16 continuation and identity verification
 
+September 17 05:01Z action-provenance canary:
+
+- [x] Bounded production audit before repair: AK34 has 21,465 actions, all missing source URLs across 857 bills. NC2025 has 19,976 actions, 19,930 missing across 2,337 bills. The previously reconciled NC S1041 has no missing action URLs. A broad cross-state join timed out; indexed 25-bill batches completed without changing timeouts.
+- [x] Retrieved AK34's original retained archive and verified SHA256 `f2469b6e2039fd7a30bbd645b626a018adb33f1ba637e6bc0195643b915e166d`, 857 records, acquired August 17 07:41:51Z. Current shared normalization supplies all 65 HB1 action URLs; the persisted rows lacked them. Existing archive checkpoints skip completed input hashes unless explicitly forced, so document/OCR continuation does not repair these action records.
+- [x] Added `tools/openstates/reconcile-action-provenance.ts`: explicit state/session/bill, archive stream and SHA256, dry-run default. Reads checksum-verified retained bytes and uses the shared normalizer. Requires complete timeline identity/count, ordinal, description, date and classifications to match; refuses conflicting non-null provenance. Apply locks the parent and actions and changes only missing source URLs in one transaction. It never rewrites documents, OCR, embeddings, people or votes.
+- [x] HB1 production canary: all 65 action URLs filled from the exact retained archive; repeat dry-run reports zero missing. Nine focused safety tests, ingestion type-check and ingestion lint passed.
+- [ ] Authenticated HB1 detail now advances past the action guard but still returns 422, `Vote canonical persistence is incomplete`, correlation `d24b9534-840a-4eb1-850b-cbd222ea73ef`. The endpoint is not yet working. Reconcile vote provenance/completeness from retained evidence before calling bill-detail acceptance complete; do not weaken the projection guard.
+- [ ] Remaining action repair needs bounded session orchestration and acceptance on both states, including changed-timeline quarantine. No broad archive replay or deployment occurred in this canary.
+- [ ] `pnpm verify` fails on three unrelated curly-brace lint errors in web `ResearchActivity.tsx`; full verification is not green.
+
+Example dry run from the ingestion app (add `--apply` only after reviewing the result):
+
+```powershell
+node --env-file=../legislation-web/.env --import tsx tools/openstates/reconcile-action-provenance.ts --state ak --session 34 --archive-stream ak-34 --archive-sha256 f2469b6e2039fd7a30bbd645b626a018adb33f1ba637e6bc0195643b915e166d --bill-id bill:ak:34:hb:1 --database-env DATABASE_URL
+```
+
 September 17 04:46Z authenticated retrieval diagnosis:
 
 - [x] SB277 docid12203 reviewed source refresh completed: processed/OCR processed, 103,631 characters, source hash `ab0d701c2699eeae89fcd92d2dbb440ead1dc8f45f3926063272a6b0c4f98904` exactly matches reviewed publisher bytes. Downstream embedding/search refresh still needs specific acceptance.
