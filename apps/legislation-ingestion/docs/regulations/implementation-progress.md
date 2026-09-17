@@ -13,6 +13,22 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Reduced INDEX-03 finalization round trips without weakening its exact-copy boundary. Canonical and retained inventory
+readers now accept a validated page size up to 1,000, and checkpoint finalization uses that bound for inventory,
+generation metadata, membership, checkpoint and revision traversal. Diagnostic inspection and bounded validation remain
+at 60 seconds and 25 generations; finalization has a 150-second application/database deadline below its 180-second
+Trigger task ceiling. It still requires the complete immutable inventory, current rights, exact membership, source
+provenance, matching saved checkpoints and locked source/target revisions before target-first acknowledgement.
+
+The real-PostgreSQL finalization acceptance passed in 8.82 seconds, including incomplete-checkpoint refusal, stale
+revision rejection, target-first commit recovery, idempotent replay, correction replacement and serving invalidation.
+The retained Title 3 scope then renewed acknowledgement in 230.51 ms for 33 generations and 35 passages. A focused
+two-test cursor/page-bound regression, the existing 11 focused orchestration tests, ingestion lint, formatting and
+type-check all pass. Evidence:
+`artifacts/regulatory-backfills/copy-finalization-large-batch-canary.json`. This is retained local evidence, not a
+controlled speedup result. INDEX-03 remains open for a large retained scope, deployed Trigger recovery and
+national-scale finalization/serving measurements. No embedding, provider or recurring-ingestion job ran.
+
 Closed PASS-08 for the advertised current-eCFR text scope by joining three independent retained checks. The raw-source
 reader smoke rehashed each recovered XML artifact and normalized shard before reconstructing all 275,138 bodies through
 5,186,341 reader blocks with zero failures. The canonical recovery audit separately matched the same 275,138 normalized

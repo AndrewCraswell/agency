@@ -63,7 +63,13 @@ export async function requireLegalPreparationRights(client: pg.PoolClient, scope
   await requireRights(client, profile, "displayText")
   await requireRights(client, profile, "localSearch")
 }
-export async function readLegalPassageInventory(client: pg.PoolClient, scope: Scope, preparationId?: string) {
+export async function readLegalPassageInventory(
+  client: pg.PoolClient,
+  scope: Scope,
+  preparationId?: string,
+  pageSizeInput = 100
+) {
+  const pageSize = z.int().min(1).max(1000).parse(pageSizeInput)
   const plan: z.infer<typeof itemSchema>[] = []
   let after = -1
   let bytes = 0
@@ -71,15 +77,15 @@ export async function readLegalPassageInventory(client: pg.PoolClient, scope: Sc
     let result: pg.QueryResult
     if (preparationId) {
       result = await client.query(
-        "SELECT ordinal,version_id,left(context,16001) AS context FROM legislation.legal_passage_preparation_items WHERE preparation_id=$1 AND ordinal>$2 ORDER BY ordinal LIMIT 100",
-        [preparationId, after]
+        "SELECT ordinal,version_id,left(context,16001) AS context FROM legislation.legal_passage_preparation_items WHERE preparation_id=$1 AND ordinal>$2 ORDER BY ordinal LIMIT $3",
+        [preparationId, after, pageSize]
       )
     } else if (scope.kind === "edition") {
       result = await client.query(
         `SELECT m.ordinal,m.version_id,left(concat_ws(E'\n',c.jurisdiction_id,c.name,m.native_id,v.heading),16001) AS context
       FROM legislation.legal_edition_provisions m JOIN legislation.legal_codes c ON c.id=m.code_id
-      JOIN legislation.legal_provision_versions v ON v.id=m.version_id WHERE m.edition_id=$1 AND m.ordinal>$2 ORDER BY m.ordinal LIMIT 100 FOR SHARE OF m,v,c`,
-        [scope.id, after]
+      JOIN legislation.legal_provision_versions v ON v.id=m.version_id WHERE m.edition_id=$1 AND m.ordinal>$2 ORDER BY m.ordinal LIMIT $3 FOR SHARE OF m,v,c`,
+        [scope.id, after, pageSize]
       )
     } else {
       result = await client.query(
@@ -94,7 +100,7 @@ export async function readLegalPassageInventory(client: pg.PoolClient, scope: Sc
     bytes += Buffer.byteLength(JSON.stringify(page))
     invariant(bytes <= 64 * 1024 * 1024 && plan.length + page.length <= 1_000_000, "legal_preparation_inventory_limit")
     plan.push(...page)
-    if ((!preparationId && scope.kind === "publication") || page.length < 100) {
+    if ((!preparationId && scope.kind === "publication") || page.length < pageSize) {
       break
     }
     const last = page.at(-1)

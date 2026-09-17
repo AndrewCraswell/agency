@@ -1,8 +1,10 @@
 # Resumable copy-validation boundaries
 
-INDEX-03 remains open. Whole-copy inspection retains a 60-second deadline; the measured Title 23 pilot took 44.95
-seconds after batching metadata reads. Explicit finalization now consumes verified pages without rereading passage
-bodies. Copy traversal ending does not authorize serving.
+INDEX-03 remains open. Diagnostic whole-copy inspection retains a 60-second deadline; the measured Title 23 pilot took
+44.95 seconds after batching metadata reads. Explicit finalization consumes verified pages without rereading passage
+bodies. It traverses inventories, metadata, memberships, checkpoints and revision fences in batches of up to 1,000
+generations with a 150-second database/application deadline, below the Trigger task's 180-second runtime ceiling. Copy
+traversal ending does not authorize serving. National-scale finalization and deployed Trigger recovery remain unverified.
 
 ## Implemented mutation counters
 
@@ -58,8 +60,11 @@ concurrent first insertion. Missing, duplicated, mismatched or stale checkpoints
 Finalization reuses passage reconstruction, input-hash and manifest verification already performed by the saved
 pages, without rereading passage bodies. It sums verified passage counts, commits the target scope receipt first,
 then commits the canonical lexical acknowledgement. Retrying after a lost canonical commit reuses unchanged pages.
-The operation retains its 60-second deadline; national-scale inventory and revision traversal still need measurement.
-Counters alone never establish correctness. Deadlock or serialization failures abort and require retry.
+The finalizer has a 150-second deadline and uses 1,000-generation traversal batches; bounded validation pages retain
+their 25-generation maximum and 60-second deadline. The finalizer remains idempotent after a target-first commit, but a
+failed attempt restarts its metadata and revision traversal from the saved page checkpoints. National-scale inventory
+and revision traversal still need measurement. Counters alone never establish correctness. Deadlock or serialization
+failures abort and require retry.
 
 Each resumed page must recheck rights and preparation identity. Revalidate a generation when either revision differs.
 Changed source, missing generations, extra memberships or incomplete pages prevent new acknowledgement. Both the
@@ -81,6 +86,9 @@ Both retained search pilots now have renewed snapshots for 1,270 generations and
 50 pages per target, taking 36.99/37.26 seconds in total; final acknowledgement took 1.39/1.58 seconds without rereading
 passage bodies. These are local two-title measurements, not national-scale throughput acceptance. Evidence:
 `artifacts/regulatory-backfills/retained-copy-proof-renewal.json`. Renewed HTTP/MCP canaries passed against 55455.
+After increasing finalization traversal batches, the retained Title 3 scope renewed acknowledgement in 230.51 ms for 33
+generations and 35 passages. This confirms the new path against retained data but is not a controlled comparison or a
+large-scope result. Evidence: `artifacts/regulatory-backfills/copy-finalization-large-batch-canary.json`.
 Generation counters do not cover edition membership, code names or publication observation metadata. Serving therefore
 also reconstructs the selected live inventory in PostgreSQL, locks its source rows and requires its complete count,
 ordinal/version identities and trimmed preparation context to match the retained preparation. Publication context

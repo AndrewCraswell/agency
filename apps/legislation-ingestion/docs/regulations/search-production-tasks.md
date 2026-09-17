@@ -165,9 +165,11 @@ representative-volume plans remain open; these tasks are not closed by the appli
   from the canonical inventory, in addition to validating every expected generation/passage. A real PostgreSQL
   regression injects 30 extra memberships and verifies both paths reject them before rights cleanup. Durable bounded
   pages and explicit finalization now validate saved revision-bound checkpoints without rereading passage bodies.
-  Serving-time receipt revision binding and retained Title 3/23 pilot renewal are verified locally; deployed verification and
-  national-scale finalization/serving measurements remain outstanding. Both the
-  diagnostic whole-copy operation and finalizer retain a 60-second deadline. See
+  Serving-time receipt revision binding and retained Title 3/23 pilot renewal are verified locally. Finalization now
+  traverses inventory, metadata, membership, checkpoint and revision rows in batches of up to 1,000 with a 150-second
+  deadline below the Trigger task's 180-second ceiling. A retained Title 3 acknowledgement completed in 230.51 ms for
+  33 generations and 35 passages. The diagnostic whole-copy operation retains its 60-second deadline. Deployed
+  verification and national-scale finalization/serving measurements remain outstanding. See
   [checkpoint boundaries](copy-validation-checkpoints.md).
   Local timing exposed an actual deadline failure on the indexed pilot. Metadata and membership validation now use
   two locked target queries per 25-generation batch rather than two per generation, preserving exact equality and
@@ -175,9 +177,8 @@ representative-volume plans remain open; these tasks are not closed by the appli
   generations/1,918 passages) in 44.95 seconds. Evidence: `artifacts/regulatory-backfills/copy-inspection-timing.json`.
   Workstation load differs between runs; this is not a controlled speedup claim. Resumable validation remains required.
   Mutation counters now exist in both original schemas, with PostgreSQL checks for changes, rollback,
-  deletion/recreation and truncation. Bounded pages now save revision/hash checkpoints without acknowledging a scope.
-  Finalization and serving invalidation are not yet connected.
-  See [checkpoint boundaries](copy-validation-checkpoints.md).
+  deletion/recreation and truncation. Bounded pages save revision/hash checkpoints without acknowledging a scope;
+  finalization and serving both reject stale revision evidence.
 - [ ] **INDEX-04 Wire correction and removal propagation.** Emit/replay target updates for changed versions, membership
   removal and current-head replacement; distinguish removal from revocation and historical retention. **Done:** stale
   current hits disappear while allowed historical citations remain available. Depends on ING-11, INDEX-01.

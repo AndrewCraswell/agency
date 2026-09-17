@@ -13,6 +13,11 @@ import { readCopyValidationInventory } from "./copy-validation-inventory.js"
 import { projectFrAgencyReferences } from "./fr-source-references.js"
 import { readLegalPassageInventory, requireLegalPreparationRights } from "./passage-preparation.js"
 
+const copyInspectionTimeoutMilliseconds = 60_000
+const copyFinalizationTimeoutMilliseconds = 150_000
+const copyInspectionGenerationBatch = 25
+const copyFinalizationGenerationBatch = 1000
+
 /** Read-only application operation. Holds row locks, but never acknowledges jobs or authorizes public search. */
 export async function inspectLegalPassageCopy(sourcePool: pg.Pool, targetPool: pg.Pool, preparationId: string) {
   return checkLegalPassageCopy(sourcePool, targetPool, preparationId, false)
@@ -53,7 +58,8 @@ async function checkLegalPassageCopy(
     .regex(/^[a-f0-9]{64}$/)
     .parse(preparationId)
   invariant(sourcePool !== targetPool, "legal_search_requires_separate_database")
-  const deadline = Date.now() + 60_000
+  const timeoutMilliseconds = useCheckpoints ? copyFinalizationTimeoutMilliseconds : copyInspectionTimeoutMilliseconds
+  const deadline = Date.now() + timeoutMilliseconds
   const checkDeadline = () => invariant(Date.now() < deadline, "legal_copy_inspection_deadline")
   const target = await targetPool.connect()
   try {
@@ -63,7 +69,7 @@ async function checkLegalPassageCopy(
     )
     await target.query("BEGIN ISOLATION LEVEL REPEATABLE READ")
     await target.query("SET LOCAL lock_timeout='5s'")
-    await target.query("SET LOCAL statement_timeout='60s'")
+    await target.query(`SET LOCAL statement_timeout='${timeoutMilliseconds}ms'`)
     const source = await sourcePool.connect()
     try {
       invariant(
@@ -72,7 +78,7 @@ async function checkLegalPassageCopy(
       )
       await source.query("BEGIN ISOLATION LEVEL REPEATABLE READ")
       await source.query("SET LOCAL lock_timeout='5s'")
-      await source.query("SET LOCAL statement_timeout='60s'")
+      await source.query(`SET LOCAL statement_timeout='${timeoutMilliseconds}ms'`)
       const job = z
         .object({
           edition_id: z.uuid().nullable(),
@@ -100,9 +106,21 @@ async function checkLegalPassageCopy(
         page === undefined
           ? undefined
           : await readCopyValidationInventory(source, scope, id, page.afterOrdinal, page.limit)
-      const inventory = selection?.inventory ?? (await readLegalPassageInventory(source, scope))
+      const inventory =
+        selection?.inventory ??
+        (await readLegalPassageInventory(
+          source,
+          scope,
+          undefined,
+          useCheckpoints ? copyFinalizationGenerationBatch : 100
+        ))
       if (page === undefined) {
-        const retained = await readLegalPassageInventory(source, scope, id)
+        const retained = await readLegalPassageInventory(
+          source,
+          scope,
+          id,
+          useCheckpoints ? copyFinalizationGenerationBatch : 100
+        )
         invariant(
           inventory.length === job.expected_count &&
             isDeepStrictEqual(inventory, retained) &&
@@ -148,7 +166,14 @@ async function checkLegalPassageCopy(
           JOIN legislation.${scope.kind === "edition" ? "legal_provision_versions" : "regulatory_document_versions"} v ON v.id=i.version_id
           LEFT JOIN legislation.legal_passage_source_provenance provenance ON provenance.generation_id=g.id
           WHERE i.preparation_id=$1 AND i.ordinal>$2 ORDER BY i.ordinal LIMIT $3 FOR SHARE OF i,g`,
-          [id, inventory[checked - 1]?.ordinal ?? page?.afterOrdinal ?? -1, Math.min(25, inventory.length - checked)]
+          [
+            id,
+            inventory[checked - 1]?.ordinal ?? page?.afterOrdinal ?? -1,
+            Math.min(
+              useCheckpoints ? copyFinalizationGenerationBatch : copyInspectionGenerationBatch,
+              inventory.length - checked
+            )
+          ]
         )
         invariant(items.rows.length > 0, "legal_copy_incomplete_preparation")
         const batch = z
