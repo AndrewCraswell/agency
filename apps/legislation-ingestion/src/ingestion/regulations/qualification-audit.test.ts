@@ -32,10 +32,15 @@ async function fixture() {
       versionId: reviewedVersionId,
       contentHash: reviewedContentHash,
       inspection: {
+        status: "classified",
+        sourceBlocks: 2,
+        readerBlocks: 3,
+        readerReconstructsExactly: true,
         tableBlocks: [
           {
             blockHash: reviewedBlockHash,
             status: "classified",
+            cells: 4,
             layoutFailure: "passage_table_unresolved_ditto"
           }
         ]
@@ -46,7 +51,13 @@ async function fixture() {
       ordinal: 1,
       versionId: randomUUID(),
       contentHash: "2".repeat(64),
-      inspection: { tableBlocks: [] }
+      inspection: {
+        status: "classified",
+        sourceBlocks: 1,
+        readerBlocks: 1,
+        readerReconstructsExactly: true,
+        tableBlocks: []
+      }
     }) +
     "\n"
   const counters = {
@@ -149,11 +160,17 @@ it("verifies retained bytes and reports tokenizer readiness separately from tabl
   ).resolves.toMatchObject({
     terminalIntegrity: true,
     tokenizerQualified: true,
+    sourceReconstructionQualified: true,
     tableShapeQualified: false,
     totals: {
       editions: 1,
       records: 2,
       blockedTableBlocks: 1,
+      sourceBlocks: 3,
+      readerBlocks: 4,
+      readerReconstructedRecords: 2,
+      classifiedTableBlocks: 1,
+      tableCells: 4,
       preparation: { "openai/text-embedding-3-small": { prepared: 2, blocked: 0, passages: 3, tokens: 20 } }
     }
   })

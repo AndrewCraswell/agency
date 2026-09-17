@@ -201,6 +201,14 @@ manifest hashes. OpenAI Small's catalog hash is
 `182877d0af5398031ae430ae496a4a258245a759d01545cc65c19d8b0ca0b6d8`; Voyage 4's is
 `bb6999acc86604f8dff42237b8c9026f77d270fb9fbcc2a6661f58cc4ffe68d5`.
 
+The terminal source-reconstruction audit independently rehashes every qualification record and requires its exact
+reader reconstruction and classified table-cell inventory. It accounts for 2,744,881 source blocks, 5,186,341 reader
+blocks, all 22,347 table blocks and 1,929,912 cells across 275,138 versions. Paired with the raw-artifact reader smoke
+and normalized-to-canonical recovery audit, this leaves no unexplained dropped or duplicated text spans. Its retained
+report and replay have identical SHA-256
+`18b821155360958b7b27759cea93ae6c7278e044639ea292fd766831d7433b73`. The Title 33 source omission remains visible as
+an explained quarantine; source graphics with meaning beyond retained text remain outside the text-search claim.
+
 ## Ditto scope and preparation gates
 
 A fully spanning group heading inside one table can qualify later rows without replacing earlier column values.

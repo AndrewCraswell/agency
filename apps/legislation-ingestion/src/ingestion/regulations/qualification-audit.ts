@@ -74,14 +74,19 @@ const requestSchema = z.strictObject({
   sourceReviews: z.array(legalProvisionSourceReviewRequestSchema).default([])
 })
 
-const reviewedRecordSchema = z.object({
+const qualificationRecordSchema = z.object({
   versionId: z.uuid(),
   contentHash: hashSchema,
   inspection: z.object({
+    status: z.literal("classified"),
+    sourceBlocks: z.int().nonnegative(),
+    readerBlocks: z.int().nonnegative(),
+    readerReconstructsExactly: z.literal(true),
     tableBlocks: z.array(
       z.object({
         blockHash: hashSchema,
-        status: z.string(),
+        status: z.literal("classified"),
+        cells: z.int().nonnegative(),
         layoutFailure: z.string().nullable().optional(),
         reason: z.string().optional()
       })
@@ -89,21 +94,13 @@ const reviewedRecordSchema = z.object({
   })
 })
 
-async function hashLines(path: string, inspectLine?: (line: string) => void) {
+async function hashLines(path: string) {
   const hash = createHash("sha256")
   let lines = 0
   for await (const chunk of createReadStream(path)) {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     hash.update(bytes)
     for (const byte of bytes) lines += Number(byte === 10)
-  }
-  if (inspectLine) {
-    let inspectedLines = 0
-    for await (const line of createInterface({ input: createReadStream(path), crlfDelay: Infinity })) {
-      inspectLine(line)
-      inspectedLines++
-    }
-    invariant(inspectedLines === lines, "qualification_record_line_count_mismatch")
   }
   return { hash: hash.digest("hex"), lines }
 }
@@ -147,6 +144,11 @@ export async function auditRegulatoryQualification(inventoryPath: string, reques
     empty: 0,
     tableBlocks: 0,
     blockedTableBlocks: 0,
+    sourceBlocks: 0,
+    readerBlocks: 0,
+    readerReconstructedRecords: 0,
+    classifiedTableBlocks: 0,
+    tableCells: 0,
     reasons: {} as Record<string, number>,
     preparation: {} as Record<string, z.infer<typeof modelCountersSchema>>
   }
@@ -160,33 +162,35 @@ export async function auditRegulatoryQualification(inventoryPath: string, reques
     const report = summarySchema.parse(JSON.parse(await readFile(join(directory, result.key, "report.json"), "utf8")))
     const { key: _, reused: __, ...expectedReport } = result
     invariant(isDeepStrictEqual(report, expectedReport), "qualification_report_mismatch")
-    const data = await hashLines(
-      join(directory, result.key, "records.ndjson"),
-      reviews.size === 0
-        ? undefined
-        : (line) => {
-            const record = reviewedRecordSchema.parse(JSON.parse(line))
-            for (const [tableIndex, table] of record.inspection.tableBlocks.entries()) {
-              if (table.status === "classified" && table.layoutFailure === null) continue
-              const key = `${result.edition.id}:${record.versionId}:${tableIndex}`
-              const review = reviews.get(key)
-              if (!review) continue
-              invariant(
-                record.contentHash === review.expected.contentHash,
-                "qualification_source_review_content_changed"
-              )
-              invariant(table.blockHash === review.expected.blockHash, "qualification_source_review_table_changed")
-              invariant(
-                table.layoutFailure === "passage_table_unresolved_ditto",
-                "qualification_source_review_failure_changed"
-              )
-              invariant(!matchedReviews.has(key), "qualification_duplicate_source_review_match")
-              matchedReviews.add(key)
-            }
-          }
-    )
+    const recordsPath = join(directory, result.key, "records.ndjson")
+    const data = await hashLines(recordsPath)
     invariant(data.hash === report.dataHash, "qualification_data_hash_mismatch")
     invariant(data.lines === report.counters.records, "qualification_record_count_mismatch")
+    let inspectedLines = 0
+    for await (const line of createInterface({ input: createReadStream(recordsPath), crlfDelay: Infinity })) {
+      const record = qualificationRecordSchema.parse(JSON.parse(line))
+      totals.sourceBlocks += record.inspection.sourceBlocks
+      totals.readerBlocks += record.inspection.readerBlocks
+      totals.readerReconstructedRecords++
+      for (const [tableIndex, table] of record.inspection.tableBlocks.entries()) {
+        totals.classifiedTableBlocks++
+        totals.tableCells += table.cells
+        if (table.layoutFailure === null) continue
+        const key = `${result.edition.id}:${record.versionId}:${tableIndex}`
+        const review = reviews.get(key)
+        if (!review) continue
+        invariant(record.contentHash === review.expected.contentHash, "qualification_source_review_content_changed")
+        invariant(table.blockHash === review.expected.blockHash, "qualification_source_review_table_changed")
+        invariant(
+          table.layoutFailure === "passage_table_unresolved_ditto",
+          "qualification_source_review_failure_changed"
+        )
+        invariant(!matchedReviews.has(key), "qualification_duplicate_source_review_match")
+        matchedReviews.add(key)
+      }
+      inspectedLines++
+    }
+    invariant(inspectedLines === data.lines, "qualification_record_line_count_mismatch")
     totals.editions++
     totals.records += report.counters.records
     totals.invalid += report.counters.invalid
@@ -228,6 +232,8 @@ export async function auditRegulatoryQualification(inventoryPath: string, reques
   const quarantinedSourceGapBlocks = matchedReviews.size
   const unresolvedTableBlocks = totals.blockedTableBlocks - quarantinedSourceGapBlocks
   invariant(unresolvedTableBlocks >= 0, "qualification_source_review_count_invalid")
+  const sourceReconstructionQualified =
+    totals.readerReconstructedRecords === totals.records && totals.classifiedTableBlocks === totals.tableBlocks
   return {
     contract: inventory.contract,
     implementationHash: inventory.implementationHash,
@@ -256,6 +262,7 @@ export async function auditRegulatoryQualification(inventoryPath: string, reques
     ),
     quarantinedSourceGapBlocks,
     unresolvedTableBlocks,
+    sourceReconstructionQualified,
     tableShapeAccounted: unresolvedTableBlocks === 0,
     tableShapeQualified: totals.blockedTableBlocks === 0
   }

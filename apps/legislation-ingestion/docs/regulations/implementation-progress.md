@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Closed PASS-08 for the advertised current-eCFR text scope by joining three independent retained checks. The raw-source
+reader smoke rehashed each recovered XML artifact and normalized shard before reconstructing all 275,138 bodies through
+5,186,341 reader blocks with zero failures. The canonical recovery audit separately matched the same 275,138 normalized
+records into all 49 current PostgreSQL editions with zero mismatches. The strengthened terminal qualification audit now
+requires each record's exact-reader assertion and each table block's classified cell inventory while independently
+rehashing every retained NDJSON stream.
+
+The resulting source-reconstruction audit accounts for 2,744,881 source blocks, 5,186,341 reader blocks, 22,347 table
+blocks and 1,929,912 cells. All 275,138 records reconstructed exactly; all table blocks were classified. The sole
+nonqualified layout is the already reviewed 33 CFR 110.214 publisher omission, bound to its annual-CFR evidence and
+explicit quarantine, leaving zero unexplained table blocks. A second complete audit produced the same report SHA-256,
+`18b821155360958b7b27759cea93ae6c7278e044639ea292fd766831d7433b73`. Difficult-layout review remains linked from
+`ditto-source-review.md`; meaningful graphics outside retained text are not claimed as searchable text. No source,
+passage, vector or schedule was changed. PASS-09 full preparation materialization is the next passage gate.
+
 Closed PASS-06 with deterministic final passage manifests for both still-eligible model candidates. The streaming
 freezer independently rehashes the terminal qualification NDJSON, rejects missing, reordered or blocked members, and
 writes one immutable edition/model entry stream plus a bound partition manifest. Each version entry retains membership,

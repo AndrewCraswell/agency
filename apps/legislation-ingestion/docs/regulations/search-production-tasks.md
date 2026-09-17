@@ -82,9 +82,18 @@ release inventory and tokenizer eligibility remain open.
   selected record; OpenAI Small produced 501,543 passages/171,181,687 tokens and Voyage 4 produced 522,180 passages/
   187,709,146 tokens. The one remaining Title 33 source rendition gap is explicitly quarantined and exactly accounted,
   so it does not represent a tokenizer failure. The persisted final passage manifests are recorded under PASS-06.
-- [ ] **PASS-08 Validate source reconstruction.** Independently compare reconstructed reader bodies and table cell
+- [x] **PASS-08 Validate source reconstruction.** Independently compare reconstructed reader bodies and table cell
   coverage against retained source; review difficult real samples visually where text extraction loses layout meaning.
   **Done:** zero unexplained dropped/duplicated source spans in the advertised scope. Depends on PASS-05–07.
+  The recovered-source reader smoke independently rehashed the retained XML and normalized shards, then reproduced all
+  275,138 bodies through 5,186,341 bounded reader blocks with zero failures. The canonical recovery audit separately
+  matched those 275,138 normalized records to all 49 stored editions with zero mismatches. The terminal qualification
+  audit now requires every record's exact-reconstruction assertion and every source table's classified cell inventory;
+  it accounts for 2,744,881 source blocks, 5,186,341 reader blocks, 22,347 table blocks and 1,929,912 cells. Both audit
+  runs produced SHA-256 `18b821155360958b7b27759cea93ae6c7278e044639ea292fd766831d7433b73`.
+  Difficult table reviews are retained in `ditto-source-review.md`; the sole publisher omission in 33 CFR 110.214 is
+  bound to its official annual-CFR corroboration and explicit quarantine. It is an explained upstream gap and no value
+  is synthesized. Graphics that carry meaning beyond retained text remain outside the advertised text-search scope.
 - [ ] **PASS-09 Prepare full selected partitions.** Run the deployed preparation worker on validated current/FR/history
   partitions using the selected passage contract. **Done:** expected version inventory equals completed or explicitly
   ineligible inventory; interrupted generations resume without provider calls. Depends on PASS-08, ORCH-06, ING partitions.
