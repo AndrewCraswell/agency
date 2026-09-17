@@ -67,6 +67,7 @@ import {
   withImportLease,
   withLease
 } from "./storage.js"
+import { selectLegalEmbeddingShard } from "./vector-shards.js"
 import {
   completeLegalEmbeddingGeneration,
   registerLegalEmbeddingGeneration,
@@ -1400,6 +1401,23 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           state: "pending",
           reused: true
         })
+        const shardIndex = Number.parseInt(passage.id.slice(0, 2), 16) % 16
+        const shardRequest = { generationId: generation.generationId, shardCount: 16 as const, shardIndex }
+        const selected = await selectLegalEmbeddingShard(target, shardRequest)
+        expect(selected).toMatchObject({
+          dimensions: 1536,
+          exhausted: true,
+          scanned: 1,
+          shardCount: 16,
+          shardIndex,
+          items: [{ passageId: passage.id, inputHash: passage.input_hash }]
+        })
+        expect(
+          await selectLegalEmbeddingShard(target, {
+            ...shardRequest,
+            shardIndex: (shardIndex + 1) % 16
+          })
+        ).toMatchObject({ exhausted: true, items: [], scanned: 0 })
         const vector = Array.from({ length: 1536 }, (_value, index) => (index === 0 ? 1 : 0))
         const batch = {
           generationId: generation.generationId,
@@ -1407,6 +1425,11 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           items: [{ passageId: passage.id, inputHash: passage.input_hash, embedding: vector }]
         }
         expect(await storeLegalEmbeddingBatch(target, batch)).toEqual({ inserted: 1, reused: 0 })
+        expect(await selectLegalEmbeddingShard(target, shardRequest)).toMatchObject({
+          exhausted: true,
+          items: [],
+          scanned: 0
+        })
         expect(await storeLegalEmbeddingBatch(target, batch)).toEqual({ inserted: 0, reused: 1 })
         await expect(
           storeLegalEmbeddingBatch(target, {

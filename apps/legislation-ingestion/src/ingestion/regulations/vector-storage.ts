@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util"
 import { regulatoryEmbeddingRouteForModel } from "@repo/legislation-core/embeddings/embedding-routing"
+import { embeddingTokenizer } from "@repo/legislation-core/embeddings/embedding-tokenizer"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import type pg from "pg"
 import invariant from "tiny-invariant"
@@ -68,6 +69,7 @@ function route(model: keyof typeof routes) {
 export async function registerLegalEmbeddingGeneration(pool: pg.Pool, input: unknown) {
   const request = generationRequestSchema.parse(input)
   const selected = route(request.model)
+  const tokenizer = await embeddingTokenizer(request.model)
   const id = digest(
     JSON.stringify([
       "legal-embedding-generation",
@@ -82,9 +84,10 @@ export async function registerLegalEmbeddingGeneration(pool: pg.Pool, input: unk
   return transaction(pool, async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [id])
     const source = (
-      await client.query<{ passage_count: number; eligibility: string; actual_count: number }>(
+      await client.query<{ passage_count: number; eligibility: string; tokenizer_id: string; actual_count: number }>(
         `SELECT (g.metadata->>'passage_count')::integer AS passage_count,
-        g.metadata->>'eligibility' AS eligibility,count(p.id)::integer AS actual_count
+        g.metadata->>'eligibility' AS eligibility,g.metadata->>'tokenizer_id' AS tokenizer_id,
+        count(p.id)::integer AS actual_count
         FROM legislation.legal_search_generations g
         LEFT JOIN legislation.legal_search_passages p ON p.generation_id=g.id
         WHERE g.id=$1 GROUP BY g.id`,
@@ -93,6 +96,7 @@ export async function registerLegalEmbeddingGeneration(pool: pg.Pool, input: unk
     ).rows[0]
     invariant(source, "legal_embedding_passage_generation_missing")
     invariant(source.eligibility === "eligible", "legal_embedding_passage_generation_ineligible")
+    invariant(source.tokenizer_id === tokenizer.id, "legal_embedding_tokenizer_mismatch")
     invariant(
       source.passage_count === request.expectedCount && source.actual_count === request.expectedCount,
       "legal_embedding_passage_inventory_mismatch"
