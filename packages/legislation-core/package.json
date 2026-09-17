@@ -68,6 +68,8 @@
     "db:down": "docker compose -f infra/local/compose.yaml down",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:migrate": "tsx scripts/database.ts migrate",
+    "db:reconcile-vote-date": "tsx scripts/reconcile-vote-date.ts",
+    "db:reconcile-vote-order-indexes": "tsx scripts/reconcile-vote-order-indexes.ts",
     "db:reset": "docker compose -f infra/local/compose.yaml down --volumes",
     "db:status": "docker compose -f infra/local/compose.yaml ps",
     "db:up": "docker compose -f infra/local/compose.yaml up -d --wait",

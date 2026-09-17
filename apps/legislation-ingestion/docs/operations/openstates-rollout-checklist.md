@@ -2,6 +2,14 @@
 
 ## September 16 continuation and identity verification
 
+September 17 production vote-order index rollout:
+
+- [x] Added the explicit direct-session reconciliation command, reading index DDL from the original migration baseline. Local concurrent creation and repeat no-op read-back passed. Fixed the local catalog check to compare table OIDs rather than search-path-dependent regclass display names.
+- [x] Applied both vote-order indexes concurrently and sequentially to production pgvector in the legislation production environment. Both are valid/ready with matching expressions, predicates and sort directions; each is 32 kB. No existing index was removed or rebuilt, and no embedding/HNSW maintenance overlapped.
+- [x] Production EXPLAIN ANALYZE confirms the new ordered scans for ascending/descending global and AK/NC-filtered list queries. Sample global ascending execution was 0.052 ms; scoped samples were 1.847–6.243 ms. These are database execution samples, not end-to-end API latency or proof of scaled jurisdiction filtering.
+- [ ] Only 221 production votes currently satisfy canonical completeness. Scoped list samples returned zero AK and two NC votes. This explicitly confirms the remaining source-provenance/position replay gap; index readiness is not data completion. Reader/worker release and positive source-backed API/MCP acceptance remain open.
+- [x] Registered both reconciliation commands as package entrypoints after knip correctly identified them as unreferenced executable files. Final verification still stops on the separate 63 theme/template unused files, dependency/binary findings and conversation `EntityResults` export; coverage is not reached. Focused core lint/type-check and local operations checks passed.
+
 September 17 vote-order index implementation and scale test:
 
 - [x] Added canonical partial B-tree indexes for ascending and descending mixed-precision vote order to the Drizzle schema and original migration baseline. Both retain ascending ID tie order, including large groups of date-only votes; no embedding indexes changed.

@@ -44,3 +44,11 @@ The isolated integration suite inserts 100,000 mixed date-only/exact-time votes,
 checks the real reader ordering expression uses the matching index without a full sort. The transaction rolls back
 all fixtures and test-created indexes. Existing databases require a separately observed concurrent index build and
 production query-plan verification before deployment. These are vote-query indexes, not embedding indexes.
+
+Use C `scripts/reconcile-vote-order-indexes.ts inspect|apply` with `VOTE_INDEX_DATABASE_URL` pointing to a direct
+PostgreSQL connection (not PgBouncer). It builds the baseline definitions concurrently, one at a time, with a
+three-second lock timeout and ten-minute statement timeout. A session advisory lock prevents duplicate invocations;
+an existing native index build prevents starting another. Catalog read-back checks expression, predicate, ordering,
+target table, validity and readiness. Existing invalid or mismatched indexes stop the operation for explicit diagnosis;
+the tool never drops an index. Repeat application skips already-valid matching indexes. On interruption, inspect
+`pg_stat_progress_create_index` and index state before any retry.
