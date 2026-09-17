@@ -608,6 +608,23 @@ And so the effective date clause was adopted.
         result = parse_roll_call(text, "HB1", (4, 2, 2), "3101")
         self.assertEqual(len(result), 8)
 
+    def test_joint_passage_total_retains_context_before_both_chamber_calls(self):
+        senate = self.sample("Adams, Brown", heading="SSCR 1")
+        house = self.sample("Evans, Fox", heading="SSCR 1").replace(
+            "Nays: Clark", "Nays: Green"
+        ).replace("Excused: Davis", "Excused: Hill")
+        text = (
+            "[[JOURNAL_ANCHOR:0566]]\nPage 0566\n"
+            'The question being: "Shall SSCR 1 pass the Joint Session?"\n'
+            + senate + house
+            + "TOTALS: YEAS: 4 NAYS: 2 EXCUSED: 2 ABSENT: 0\n"
+        )
+        result = parse_roll_call(
+            text, "SSCR1", (4, 2, 2), "566", "566", True,
+            "(S) PASSED Y4 N2 E2",
+        )
+        self.assertEqual(len(result), 8)
+
     def test_accepts_plural_published_joint_totals_label(self):
         house = self.sample("Adams, Brown")
         senate = self.sample("Evans, Fox").replace("Nays: Clark", "Nays: Green").replace(

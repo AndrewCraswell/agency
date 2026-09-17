@@ -91,7 +91,8 @@ def motion_matches(hint, context):
     if re.fullmatch(r"\([HS]\)\s+PASSED(?:\s+[YNEA](?:\d+|-))*", hint):
         return ("FINAL PASSAGE" in context
                 or re.search(
-                    r"THE QUESTION BEING:\s*[\"'\u2018\u201c]?SHALL [^?]{1,160}\bPASS THE (?:HOUSE|SENATE)\b",
+                    r"THE QUESTION BEING:\s*[\"'\u2018\u201c]?SHALL [^?]{1,160}\bPASS THE "
+                    r"(?:HOUSE|SENATE|JOINT SESSION)\b",
                     context,
                 ) is not None)
     if "NOT TABLED" in hint:
@@ -328,8 +329,12 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
             # preceding printed-page boundary when an action spans pages.
             semantic_floor = (0 if ((target_anchor is not None and target_anchor.isdigit())
                                     or cited_range) else search_start)
-            context_start = (summaries[index - 1].end() if index else
-                             max(semantic_floor, summary.start() - 12000))
+            if is_joint_total and index >= 2:
+                context_start = (summaries[index - 3].end() if index >= 3 else
+                                 max(semantic_floor, summaries[index - 2].start() - 12000))
+            else:
+                context_start = (summaries[index - 1].end() if index else
+                                 max(semantic_floor, summary.start() - 12000))
             candidate_context = re.sub(
                 r"\s+", " ", text[context_start:summary.end()]
             )[-1500:]
