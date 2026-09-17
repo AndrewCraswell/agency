@@ -13,6 +13,19 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Promoted official Federal Register agency evidence into the publication search projection and API. Of the 110 retained
+publications, 107 carry 171 source references across 50 publisher agency IDs; three PDF-only records have no agency
+metadata. Six references without publisher IDs retain deterministic document-occurrence identities instead of being
+merged by name. All 110 scopes were re-finalized with zero failures, binding ordered unresolved agency references and a
+hash of the exact source agency JSON. The target contains 56 distinct source agency IDs and a GIN filter index.
+
+The typed authenticated HTTP canary filtered by `fr-agency-406` and returned only 65 FR 2521 with the unresolved
+Federal Register reference named Personnel Management Office. The response explicitly warns that the source
+identity is not mapped to a canonical organization. An unfiltered whole-partition search also passed the expanded
+canonical/target agency manifest, including the six document-scoped identities. The focused source-reference, search
+and PostgreSQL publication acknowledgement tests passed. MCP parity now forwards the agency ID with kind/date filters.
+No organization assignment was inferred, and the three source-metadata gaps remain explicit.
+
 Generalized the frozen lexical candidate snapshot from edition-only identities to explicit edition/publication scope
 identities, then routed Federal Register ranking through it. Publication cursors now bind the principal, normalized
 public request, limit, complete partition generation and candidate hash for 15 minutes; continuation reads the frozen

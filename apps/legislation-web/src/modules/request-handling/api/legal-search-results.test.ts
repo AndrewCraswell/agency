@@ -122,6 +122,7 @@ it("freezes filtered publication identities and resumes without reranking", asyn
     generation: request.generation,
     query: "notice",
     publicationKinds: ["notice"],
+    agencyIds: ["fr-agency-1"],
     publishedFrom: "2000-01-18",
     publishedTo: "2000-01-18",
     limit: 2
@@ -129,7 +130,7 @@ it("freezes filtered publication identities and resumes without reranking", asyn
   expect(first.candidates).toEqual(publications.slice(0, 2))
   expect(first.nextCursor).toBeTruthy()
   expect(f.query.mock.calls[0]?.[0]).toContain("legal_search_scope_projections")
-  expect(f.query.mock.calls[0]?.[1]).toEqual([["notice"], "notice", "2000-01-18", "2000-01-18"])
+  expect(f.query.mock.calls[0]?.[1]).toEqual([["notice"], "notice", "2000-01-18", "2000-01-18", ["fr-agency-1"]])
 
   const resumed = fixture()
   resumed.rows([
@@ -141,6 +142,7 @@ it("freezes filtered publication identities and resumes without reranking", asyn
       generation: request.generation,
       query: "notice",
       publicationKinds: ["notice"],
+      agencyIds: ["fr-agency-1"],
       publishedFrom: "2000-01-18",
       publishedTo: "2000-01-18",
       limit: 2,

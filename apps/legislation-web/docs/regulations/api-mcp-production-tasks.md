@@ -69,8 +69,10 @@ vertical slices: application service, serializer, strict client parser, explicit
   the request and rejects duplicate versions and inconsistent continuation. Wire tests exercise empty-result fallback
   and exact historical-date evidence. Public projection, current-code/explicit-edition selectors, POST route and typed
   client are now locally implemented and covered by a real-database authenticated handler canary. Federal Register
-  kind/date search is implemented with projection-first filtering and canonical partition/candidate verification;
-  agency filters and deployed acceptance remain open. The API-backed MCP search tool now passes
+  kind/date/source-agency search is implemented with projection-first filtering and canonical partition/candidate
+  verification. Source agency filters use publisher identities, preserve unresolved references and verify the exact
+  agency evidence before returning candidates. Canonical organization resolution and deployed acceptance remain open.
+  The API-backed MCP search tool now passes
   local real-database search/pagination/text parity; see [serving evidence](legal-search-serving.md).
 - [ ] **HTTP-10 Implement public coverage reporting.** Ship coverage filters and stage-specific capability, requested/
   available/excluded scope, publisher currency and collection attempt fields. **Done:** source collection, canonical,
@@ -118,8 +120,9 @@ evidence in [search production](../../../legislation-ingestion/docs/regulations/
 - [x] **INDEX-07 Implement canonical result hydration.** Group by owner/exact version and attach citation, locator,
   dates, agencies and warnings without contradictory context or duplicate documents. Depends on INDEX-02, ING-09.
   Edition and publication candidates are grouped by exact version, compared with canonical passage/generation content
-  and hydrated with source, citation, locator and dates. Unresolved agency mapping remains an explicit empty array and
-  coverage warning rather than inferred metadata.
+  and hydrated with source, citation, locator, dates and exact Federal Register source-agency references. References
+  without canonical organization mappings remain explicit unresolved entries with a coverage warning rather than
+  inferred metadata. Regulation results still return an empty agency array until their source evidence is projected.
 - [x] **INDEX-08 Implement lexical cursor binding.** Bind caller, normalized query/filters, limit, stable ranking and
   generation; invalidate incompatible rights/generation. Done: no skipped/duplicate pages and safe changed-account,
   filter and expiry errors. Depends on INDEX-07. Local evidence: a 15-minute, 1,000-version frozen window and DB checks

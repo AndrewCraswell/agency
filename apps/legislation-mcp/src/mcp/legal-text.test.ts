@@ -435,6 +435,7 @@ it("searches through the typed HTTP client and checks identity on every call", a
     query: "notice",
     corpora: ["regulatory_publication"],
     publicationKinds: ["notice"],
+    agencyIds: ["fr-agency-406"],
     publishedFrom: "2000-01-18",
     publishedTo: "2000-01-18",
     limit: 100

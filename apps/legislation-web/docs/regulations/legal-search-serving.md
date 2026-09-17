@@ -18,7 +18,8 @@ isolated projection before ranking and serves only when the complete canonical f
 identities, receipts, memberships and source/target revision fences. It has no document-count cap. Exact verification
 currently traverses receipts in bounded 100-scope pages on each request; representative-volume measurements and a
 durable precomputed revision manifest remain required before national promotion. Publication ranking uses the same
-15-minute frozen-candidate pagination contract as edition search.
+15-minute frozen-candidate pagination contract as edition search. Federal Register publication requests may also filter
+by `sourceAgencyId`.
 
 Lexical limit is 1–100, default 20. Pagination persists the frozen ranked window described in
 [cross-edition retrieval](edition-search-canary.md). Repost the same JSON filters with `meta.nextCursor` as `cursor`.
@@ -28,8 +29,8 @@ resume a different generation. Publication cursors additionally bind the complet
 changed filters or any canonical/target revision fail instead of resuming another result set. No national readiness is
 implied by the retained pilots.
 
-Statute corpora, state jurisdictions and agency filters return 503 with a safe capability reason. The default mixed
-regulation/publication request therefore currently returns 503. Date-based `asOf` returns 409
+Regulation agency filters, statute corpora and state jurisdictions return 503 with a safe capability reason. The default
+mixed regulation/publication request therefore currently returns 503. Date-based `asOf` returns 409
 `historical_coverage_unavailable`. Semantic/hybrid returns 503 unless `allowDegraded: true`, in which case lexical
 results explicitly report the requested mode, effective lexical mode, degradation and an explanatory warning.
 No embeddings or reranker calls occur in this implementation.
@@ -41,7 +42,11 @@ rights attribution, canonical version hash, locator, parent, edition observation
 update timestamp is the selected edition's publication into Rostra; unavailable source modification time remains null.
 eCFR selections are labeled observed snapshots, not proof of arbitrary historical legal status. Annual editions use
 published-edition context. Section native IDs produce CFR citations; other structural IDs remain explicit native
-identifiers with a warning. Agency arrays remain empty with a mapping-unavailable warning.
+identifiers with a warning. Publication agency arrays retain official Federal Register source IDs and names as
+unresolved references. Records without a publisher ID use a deterministic document-occurrence identity and are never
+merged by name. PDF-only records without agency metadata retain an empty array and explicit warning. No source reference
+is presented as a resolved canonical organization. Regulation results retain empty agency arrays until code-agency
+mapping ships.
 
 Snippets are at most 500 characters. The canonical URL points to the existing exact-version text endpoint with its
 edition selector. Publisher/supplier are the stored official publisher for this direct federal acquisition path;
@@ -79,8 +84,12 @@ rejected a missing filter-partition member, a corrupted projection hash and a ch
 The typed authenticated HTTP boundary returned the complete 92-notice result set in four stable pages with no duplicate
 versions and rejected changed filters on continuation.
 
-This is not deployed Next-router or real WorkOS credential evidence. Agency retrieval, publication paging, full-corpus
-performance, semantic/vector search, remaining reconciliation and deployment acceptance are open.
+The retained agency canary filtered the complete partition by `fr-agency-406` and returned only 65 FR 2521 with the
+unresolved Personnel Management Office source reference. All 110 projection identities bind the exact agency
+evidence hash. Of those scopes, 107 have agency references and three explicitly have no source agency metadata.
+
+This is not deployed Next-router or real WorkOS credential evidence. Canonical organization resolution, a source-agency
+directory, full-corpus performance, semantic/vector search, remaining reconciliation and deployment acceptance are open.
 
 ## Target query semantics
 

@@ -157,6 +157,7 @@ export async function readLegalPublicationSearchResultPage(
     generation: string
     query: string
     publicationKinds?: string[]
+    agencyIds?: string[]
     publishedFrom?: string
     publishedTo?: string
     limit: number
@@ -191,10 +192,17 @@ export async function readLegalPublicationSearchResultPage(
               AND ($1::text[] IS NULL OR projection.projection->>'publication_kind'=ANY($1::text[]))
               AND ($3::date IS NULL OR projection.projection->>'publication_date' >= $3::date::text)
               AND ($4::date IS NULL OR projection.projection->>'publication_date' <= $4::date::text)
+              AND ($5::text[] IS NULL OR projection.projection->'agency_ids' ?| $5::text[])
               AND p.search_vector @@ q.query)
            SELECT id,"scopeKind","scopeId","generationId","versionId",score FROM ranked WHERE position=1
            ORDER BY score DESC,id,"scopeId" LIMIT 1001`,
-          [input.publicationKinds ?? null, input.query, input.publishedFrom ?? null, input.publishedTo ?? null]
+          [
+            input.publicationKinds ?? null,
+            input.query,
+            input.publishedFrom ?? null,
+            input.publishedTo ?? null,
+            input.agencyIds ?? null
+          ]
         )
       ).rows
   })

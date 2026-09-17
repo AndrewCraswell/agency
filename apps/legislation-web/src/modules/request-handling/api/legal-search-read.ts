@@ -52,9 +52,6 @@ export function createLegalSearch(
     if (input.jurisdictionIds?.some((id) => id !== "jurisdiction:us")) {
       throw unavailable("jurisdiction_search_unavailable")
     }
-    if (input.agencyIds !== undefined) {
-      throw unavailable("agency_search_unavailable")
-    }
     if (input.mode !== "lexical" && !input.allowDegraded) {
       throw unavailable("semantic_search_unavailable")
     }
@@ -70,6 +67,7 @@ export function createLegalSearch(
       const page = await searchPublications({
         query: input.query,
         publicationKinds: input.publicationKinds,
+        agencyIds: input.agencyIds,
         publishedFrom: input.publishedFrom,
         publishedTo: input.publishedTo,
         limit: input.limit,
@@ -104,12 +102,20 @@ export function createLegalSearch(
           heading: hit.heading,
           citation: hit.citation,
           jurisdiction: { id: "jurisdiction:us", name: "United States" },
-          agencies: [],
+          agencies: hit.agencies,
           snippet: hit.passage.text.slice(0, 500),
           matchMode: "lexical" as const,
           sourceLocator: hit.source_locator,
           versionHash: hit.version_hash,
-          coverageWarnings: ["Agency mapping is not available for this result."],
+          coverageWarnings: (() => {
+            if (hit.agencies.length === 0) {
+              return ["Federal Register source agency metadata is not available for this result."]
+            }
+            if (hit.agencies.some((agency) => agency.status === "unresolved")) {
+              return ["Agency references use Federal Register source identities and are not mapped to organizations."]
+            }
+            return []
+          })(),
           publicationKind: hit.publication_kind,
           publishedOn: hit.published_on,
           effectiveOn: hit.effective_on,
@@ -128,6 +134,9 @@ export function createLegalSearch(
           candidateSetTruncated: page.candidateSetTruncated
         }
       }
+    }
+    if (input.agencyIds !== undefined) {
+      throw unavailable("agency_search_unavailable")
     }
     const explicit = input.editionIds === undefined ? undefined : z.array(z.uuid()).safeParse(input.editionIds)
     const codes = input.codeIds === undefined ? undefined : z.array(z.uuid()).safeParse(input.codeIds)

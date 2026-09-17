@@ -22,3 +22,5 @@ CREATE INDEX IF NOT EXISTS legal_search_scope_projection_common_idx ON legislati
 CREATE INDEX IF NOT EXISTS legal_search_scope_projection_publication_idx ON legislation.legal_search_scope_projections
   ((projection->>'publication_kind'),(projection->>'publication_date'),scope_id)
   WHERE scope_kind='publication';
+CREATE INDEX IF NOT EXISTS legal_search_scope_projection_agencies_idx ON legislation.legal_search_scope_projections
+  USING gin ((projection->'agency_ids')) WHERE scope_kind='publication';

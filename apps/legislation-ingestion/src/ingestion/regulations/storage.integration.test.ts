@@ -38,6 +38,7 @@ import { frPdfValidationContract } from "./fr-pdf-validation.js"
 import { normalizeFrHtmlPublication } from "./fr-publication-input.js"
 import { registerFrSourceInventory, resolveFrSourceNumber } from "./fr-source-inventory.js"
 import { publishReviewedFrSourceIssue } from "./fr-source-publication.js"
+import { projectFrAgencyReferences } from "./fr-source-references.js"
 import { registerFrSourceReviews } from "./fr-source-review.js"
 import { publishFrIssue } from "./fr-storage.js"
 import { importNormalizedRegulatoryUnit } from "./import-normalized.js"
@@ -1142,27 +1143,40 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         const canonicalProjection = (
           await pool.query(
             `SELECT o.id AS scope_id,o.version_id AS document_version_id,v.publication_kind,
-            o.publication_date::text AS publication_date
+            o.publication_date::text AS publication_date,o.metadata->>'document_number' AS document_number,
+            coalesce(o.metadata->'agencies','[]'::jsonb) AS agency_evidence,
+            encode(sha256(convert_to(coalesce(o.metadata->'agencies','[]'::jsonb)::text,'UTF8')),'hex')
+              AS agency_evidence_hash
             FROM legislation.regulatory_document_observations o
             JOIN legislation.regulatory_document_versions v ON v.id=o.version_id WHERE o.id=$1`,
             [observation.id]
           )
         ).rows[0]
-        expect(
-          (
-            await target.query(
-              "SELECT projection FROM legislation.legal_search_scope_projections WHERE scope_kind='publication' AND scope_id=$1",
-              [observation.id]
-            )
-          ).rows[0]?.projection
-        ).toMatchObject({
-          ...canonicalProjection,
+        const agencyReferences = projectFrAgencyReferences(
+          canonicalProjection.document_number,
+          canonicalProjection.agency_evidence
+        )
+          .map((agency) => agency.reference)
+          .filter((agency) => agency !== null)
+        const storedProjection = (
+          await target.query(
+            "SELECT projection FROM legislation.legal_search_scope_projections WHERE scope_kind='publication' AND scope_id=$1",
+            [observation.id]
+          )
+        ).rows[0]?.projection
+        expect(storedProjection).toMatchObject({
+          scope_id: canonicalProjection.scope_id,
+          document_version_id: canonicalProjection.document_version_id,
+          publication_kind: canonicalProjection.publication_kind,
+          publication_date: canonicalProjection.publication_date,
+          agency_evidence_hash: canonicalProjection.agency_evidence_hash,
           scope_kind: "publication",
           observation_id: observation.id,
           corpus: "regulatory_publication",
           jurisdiction_id: "jurisdiction:us",
           source_id: "govinfo-fr",
-          agency_ids: []
+          agency_ids: agencyReferences.map((agency) => agency.sourceAgencyId),
+          agencies: agencyReferences
         })
         const publicationSearch = {
           scope: { kind: "publication" as const, observationId: observation.id, versionId: observation.version_id },

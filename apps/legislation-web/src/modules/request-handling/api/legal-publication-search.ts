@@ -21,6 +21,7 @@ const publicationKind = z.enum(["proposed_rule", "final_rule", "notice", "other"
 const requestSchema = z.strictObject({
   query: z.string().trim().min(1).max(500),
   publicationKinds: z.array(publicationKind).min(1).max(4).optional(),
+  agencyIds: z.array(z.string().min(1).max(256)).min(1).max(25).optional(),
   publishedFrom: z.iso.date().optional(),
   publishedTo: z.iso.date().optional(),
   limit: z.int().min(1).max(100),
@@ -46,6 +47,7 @@ const publicationSchema = z.object({
   source_url: z.url(),
   publisher: z.string().min(1),
   attribution: z.string().nullable(),
+  agency_evidence_hash: hash,
   retrieved_at: z.iso.datetime(),
   updated_at: z.iso.datetime(),
   version_hash: hash
@@ -98,7 +100,12 @@ export function createLegalPublicationSearch(
     }
     const input = requestSchema.parse(value)
     invariant(sourcePool !== targetPool, "legal_search_requires_separate_database")
-    const filters = [input.publicationKinds ?? null, input.publishedFrom ?? null, input.publishedTo ?? null]
+    const filters = [
+      input.publicationKinds ?? null,
+      input.publishedFrom ?? null,
+      input.publishedTo ?? null,
+      input.agencyIds ?? null
+    ]
     const source = await sourcePool.connect()
     try {
       invariant(
@@ -113,8 +120,9 @@ export function createLegalPublicationSearch(
           await source.query(
             `select o.publication_date::text as publication_date,count(*)::int as scopes,
               encode(sha256(convert_to(string_agg(concat_ws(chr(31),o.id::text,'publication',
-                'regulatory_publication',o.jurisdiction_id,o.source_id,o.rights_profile_id,'[]',o.id::text,
-                o.version_id::text,v.publication_kind,o.publication_date::text),chr(30) order by o.id),'UTF8')),'hex')
+                'regulatory_publication',o.jurisdiction_id,o.source_id,o.rights_profile_id,agencies.agency_ids::text,
+                agencies.evidence_hash,o.id::text,o.version_id::text,v.publication_kind,o.publication_date::text),
+                chr(30) order by o.id),'UTF8')),'hex')
                 as identity_hash,
               array_agg(distinct o.rights_profile_id order by o.rights_profile_id) as rights_profile_ids,
               true as valid
@@ -122,10 +130,22 @@ export function createLegalPublicationSearch(
             join legislation.regulatory_document_versions v on v.id=o.version_id
             join legislation.regulatory_publication_outbox x on x.observation_id=o.id
               and x.operation='lexical' and x.state='acknowledged'
+            cross join lateral (
+              select coalesce(jsonb_agg(to_jsonb(case when agency.value ? 'id'
+                then 'fr-agency-'||(agency.value->>'id')
+                else 'fr-agency-unidentified-'||encode(sha256(convert_to(format('[%s,%s]',
+                  to_jsonb(o.metadata->>'document_number')::text,agency.ordinality-1),'UTF8')),'hex') end)
+                order by agency.ordinality) filter (where coalesce(nullif(btrim(agency.value->>'name'),''),
+                  btrim(agency.value->>'raw_name'),'')<>''),'[]'::jsonb) as agency_ids,
+                encode(sha256(convert_to(coalesce(o.metadata->'agencies','[]'::jsonb)::text,'UTF8')),'hex')
+                  as evidence_hash
+              from jsonb_array_elements(coalesce(o.metadata->'agencies','[]'::jsonb)) with ordinality agency(value,ordinality)
+            ) agencies
             where o.jurisdiction_id='jurisdiction:us' and o.source_id='govinfo-fr'
               and ($1::text[] is null or v.publication_kind=any($1::text[]))
               and ($2::date is null or o.publication_date >= $2::date)
               and ($3::date is null or o.publication_date <= $3::date)
+              and ($4::text[] is null or agencies.agency_ids ?| $4::text[])
             group by o.publication_date order by o.publication_date`,
             filters
           )
@@ -165,6 +185,7 @@ export function createLegalPublicationSearch(
                 encode(sha256(convert_to(string_agg(concat_ws(chr(31),scope_id::text,scope_kind,
                   projection->>'corpus',projection->>'jurisdiction_id',projection->>'source_id',
                   projection->>'rights_profile_id',(projection->'agency_ids')::text,
+                  projection->>'agency_evidence_hash',
                   projection->>'observation_id',projection->>'document_version_id',
                   projection->>'publication_kind',projection->>'publication_date'),chr(30) order by scope_id),'UTF8')),'hex')
                   as identity_hash,
@@ -173,13 +194,15 @@ export function createLegalPublicationSearch(
                 bool_and(projection->>'scope_id'=scope_id::text and projection->>'observation_id'=scope_id::text
                   and projection->>'scope_kind'='publication' and projection->>'corpus'='regulatory_publication'
                   and projection->>'jurisdiction_id'='jurisdiction:us' and projection->>'source_id'='govinfo-fr'
-                  and jsonb_typeof(projection->'agency_ids')='array') as valid
+                  and jsonb_typeof(projection->'agency_ids')='array' and jsonb_typeof(projection->'agencies')='array'
+                  and projection->>'agency_evidence_hash' ~ '^[a-f0-9]{64}$') as valid
               from legislation.legal_search_scope_projections
               where scope_kind='publication' and projection->>'corpus'='regulatory_publication'
                 and projection->>'jurisdiction_id'='jurisdiction:us' and projection->>'source_id'='govinfo-fr'
                 and ($1::text[] is null or projection->>'publication_kind'=any($1::text[]))
                 and ($2::date is null or projection->>'publication_date' >= $2::date::text)
                 and ($3::date is null or projection->>'publication_date' <= $3::date::text)
+                and ($4::text[] is null or projection->'agency_ids' ?| $4::text[])
               group by projection->>'publication_date' order by projection->>'publication_date'`,
               filters
             )
@@ -198,6 +221,7 @@ export function createLegalPublicationSearch(
                   and ($1::text[] is null or projection->>'publication_kind'=any($1::text[]))
                   and ($2::date is null or projection->>'publication_date' >= $2::date::text)
                   and ($3::date is null or projection->>'publication_date' <= $3::date::text)
+                  and ($4::text[] is null or projection->'agency_ids' ?| $4::text[])
               ), revisions as (
                 select v.scope_id,count(*)::int as generations,
                   bool_and(v.target_revision=r.revision) as current,
@@ -252,7 +276,8 @@ export function createLegalPublicationSearch(
                   and ($1::text[] is null or projection.projection->>'publication_kind'=any($1::text[]))
                   and ($2::date is null or projection.projection->>'publication_date' >= $2::date::text)
                   and ($3::date is null or projection.projection->>'publication_date' <= $3::date::text)
-                  and ($4::uuid is null or projection.scope_id>$4::uuid)
+                  and ($4::text[] is null or projection.projection->'agency_ids' ?| $4::text[])
+                  and ($5::uuid is null or projection.scope_id>$5::uuid)
                 order by projection.scope_id limit 100 for share of receipt`,
                 [...filters, receiptCursor]
               )
@@ -328,6 +353,7 @@ export function createLegalPublicationSearch(
           generation,
           query: input.query,
           publicationKinds: input.publicationKinds,
+          agencyIds: input.agencyIds,
           publishedFrom: input.publishedFrom,
           publishedTo: input.publishedTo,
           limit: input.limit,
@@ -374,6 +400,8 @@ export function createLegalPublicationSearch(
                       coalesce(nullif(o.metadata->>'citation',''),d.native_number) as citation,o.source_locator,
                       coalesce(nullif(o.metadata->>'html_url',''),g.unit->>'sourceUrl') as source_url,s.publisher,
                       r.policy->>'attribution' as attribution,
+                      encode(sha256(convert_to(coalesce(o.metadata->'agencies','[]'::jsonb)::text,'UTF8')),'hex')
+                        as agency_evidence_hash,
                       to_char(a.acquired_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as retrieved_at,
                       to_char(b.published_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as updated_at,
                       v.content_hash as version_hash
@@ -438,11 +466,18 @@ export function createLegalPublicationSearch(
               candidate.projection.publication_kind === publication.publication_kind &&
               candidate.projection.publication_date === publication.published_on &&
               candidate.projection.rights_profile_id === publication.rights_profile_id &&
+              candidate.projection.agency_evidence_hash === publication.agency_evidence_hash &&
               digest(candidate.input_text) === candidate.data.inputHash &&
               candidate.id === digest(JSON.stringify([candidate.generation_id, candidate.ordinal])),
             "legal_search_candidate_mismatch"
           )
-          return { ...publication, passage: candidate.data, passageId: candidate.id, score: candidate.score }
+          return {
+            ...publication,
+            agencies: candidate.projection.agencies,
+            passage: candidate.data,
+            passageId: candidate.id,
+            score: candidate.score
+          }
         })
         await target.query("commit")
         await source.query("commit")

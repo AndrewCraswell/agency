@@ -10,6 +10,7 @@ import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import { readCopyValidationInventory } from "./copy-validation-inventory.js"
+import { projectFrAgencyReferences } from "./fr-source-references.js"
 import { readLegalPassageInventory, requireLegalPreparationRights } from "./passage-preparation.js"
 
 /** Read-only application operation. Holds row locks, but never acknowledges jobs or authorizes public search. */
@@ -460,18 +461,32 @@ async function readLegalSearchScopeProjection(
   const row = (
     await source.query(
       `SELECT o.id AS scope_id,o.jurisdiction_id,o.source_id,o.rights_profile_id,o.id AS observation_id,
-      o.version_id AS document_version_id,v.publication_kind,o.publication_date::text
+      o.version_id AS document_version_id,v.publication_kind,o.publication_date::text,
+      o.metadata->>'document_number' AS document_number,coalesce(o.metadata->'agencies','[]'::jsonb) AS agency_evidence,
+      encode(sha256(convert_to(coalesce(o.metadata->'agencies','[]'::jsonb)::text,'UTF8')),'hex') AS agency_evidence_hash
       FROM legislation.regulatory_document_observations o
       JOIN legislation.regulatory_document_versions v ON v.id=o.version_id
       WHERE o.id=$1 FOR SHARE OF o,v`,
       [scope.id]
     )
   ).rows[0]
+  const agencies = projectFrAgencyReferences(row.document_number, row.agency_evidence)
+    .map((agency) => agency.reference)
+    .filter((agency) => agency !== null)
   return legalSearchScopeProjectionSchema.parse({
-    ...row,
+    scope_id: row.scope_id,
+    jurisdiction_id: row.jurisdiction_id,
+    source_id: row.source_id,
+    rights_profile_id: row.rights_profile_id,
+    observation_id: row.observation_id,
+    document_version_id: row.document_version_id,
+    publication_kind: row.publication_kind,
+    publication_date: row.publication_date,
+    agency_evidence_hash: row.agency_evidence_hash,
     scope_kind: "publication",
     corpus: "regulatory_publication",
-    agency_ids: []
+    agency_ids: agencies.map((agency) => agency.sourceAgencyId),
+    agencies
   })
 }
 

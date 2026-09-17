@@ -140,6 +140,8 @@ CREATE INDEX legal_search_scope_projection_common_idx ON legislation.legal_searc
 CREATE INDEX legal_search_scope_projection_publication_idx ON legislation.legal_search_scope_projections
   ((projection->>'publication_kind'),(projection->>'publication_date'),scope_id)
   WHERE scope_kind='publication';
+CREATE INDEX legal_search_scope_projection_agencies_idx ON legislation.legal_search_scope_projections
+  USING gin ((projection->'agency_ids')) WHERE scope_kind='publication';
 CREATE TABLE legislation.legal_search_revocations (
   scope_kind text NOT NULL CHECK(scope_kind IN ('edition','publication')),
   scope_id uuid NOT NULL,

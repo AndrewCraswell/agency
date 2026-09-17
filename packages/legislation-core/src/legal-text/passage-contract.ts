@@ -1,4 +1,7 @@
 import { z } from "zod"
+import { legalAgencyReferenceSchema } from "./reader-contract.js"
+
+const hash = z.string().regex(/^[a-f0-9]{64}$/)
 
 export const legalPassageScopeSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("provision"), versionId: z.uuid(), editionId: z.uuid() }),
@@ -28,14 +31,15 @@ export const legalSearchPublicationScopeProjectionSchema = z.strictObject({
   observation_id: z.uuid(),
   document_version_id: z.uuid(),
   publication_kind: z.enum(["proposed_rule", "final_rule", "notice", "other"]),
-  publication_date: z.iso.date()
+  publication_date: z.iso.date(),
+  agencies: z.array(legalAgencyReferenceSchema).max(100),
+  agency_evidence_hash: hash
 })
 export const legalSearchScopeProjectionSchema = z.discriminatedUnion("scope_kind", [
   legalSearchEditionScopeProjectionSchema,
   legalSearchPublicationScopeProjectionSchema
 ])
 
-const hash = z.string().regex(/^[a-f0-9]{64}$/)
 const span = z.strictObject({ blockId: z.string(), start: z.int().nonnegative(), end: z.int().nonnegative() })
 const passage = z.strictObject({
   id: hash,
