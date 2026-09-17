@@ -14,6 +14,7 @@ export const legalPreparationScopeSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("publication"), id: z.uuid() })
 ])
 type Scope = z.infer<typeof legalPreparationScopeSchema>
+type Model = "openai/text-embedding-3-small" | "voyageai/voyage-4"
 const itemSchema = z.object({
   ordinal: z.int().nonnegative(),
   version_id: z.uuid(),
@@ -36,6 +37,14 @@ async function transaction<T>(pool: pg.Pool, action: (client: pg.PoolClient) => 
     throw error
   } finally {
     client.release()
+  }
+}
+export async function legalPassagePreparationIdentity(scopeValue: unknown, model: Model) {
+  const scope = legalPreparationScopeSchema.parse(scopeValue)
+  const tokenizer = await embeddingTokenizer(model)
+  return {
+    id: digest(JSON.stringify(["legal-passage-preparation", scope, tokenizer.id, legalPassageContract])),
+    tokenizer
   }
 }
 export async function requireLegalPreparationRights(client: pg.PoolClient, scope: Scope) {
@@ -101,7 +110,7 @@ export async function runLegalPassagePreparationBatch(
   pool: pg.Pool,
   input: {
     scope: Scope
-    model: "openai/text-embedding-3-small" | "voyageai/voyage-4"
+    model: Model
     limit?: number
     retryBlocked?: boolean
   }
@@ -113,8 +122,7 @@ export async function runLegalPassagePreparationBatch(
     .min(1)
     .max(25)
     .parse(input.limit ?? 10)
-  const tokenizer = await embeddingTokenizer(input.model)
-  const id = digest(JSON.stringify(["legal-passage-preparation", scope, tokenizer.id, legalPassageContract]))
+  const { id, tokenizer } = await legalPassagePreparationIdentity(scope, input.model)
   const token = randomUUID()
   const claim = await transaction(pool, async (client) => {
     await requireLegalPreparationRights(client, scope)

@@ -70,7 +70,7 @@ beforeEach(() => {
       },
       { idempotencyKey: "durable-key", idempotencyKeyTTL: "7d" }
     )
-    return { dispatchId: "a".repeat(64), runId: result.id, reused: false }
+    return { dispatchId: "a".repeat(64), runId: result.id, attempt: 0, reused: false }
   })
 })
 afterEach(() => vi.unstubAllEnvs())

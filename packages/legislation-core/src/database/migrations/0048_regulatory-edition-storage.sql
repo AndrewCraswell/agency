@@ -530,8 +530,13 @@ CREATE TABLE legislation.legal_preparation_dispatches (
   payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
   payload jsonb NOT NULL CHECK(jsonb_typeof(payload)='object'),
   state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','submitting','submitted')),
+  attempt integer NOT NULL DEFAULT 0 CHECK(attempt>=0),
   first_attempt_at timestamptz,
   run_id text,
+  run_history jsonb NOT NULL DEFAULT '[]'::jsonb CHECK(jsonb_typeof(run_history)='array'),
+  last_observed_status text,
+  last_observed_at timestamptz,
+  completed_at timestamptz,
   lease_token uuid,
   lease_expires_at timestamptz,
   last_error text,
@@ -546,6 +551,9 @@ CREATE INDEX legal_preparation_dispatches_pending_idx ON legislation.legal_prepa
   WHERE state<>'submitted';
 --> statement-breakpoint
 CREATE INDEX legal_preparation_dispatches_wave_idx ON legislation.legal_preparation_dispatches(wave_id,id);
+--> statement-breakpoint
+CREATE INDEX legal_preparation_dispatches_recovery_idx ON legislation.legal_preparation_dispatches(wave_id,id)
+  WHERE completed_at IS NULL AND state IN ('submitting','submitted');
 --> statement-breakpoint
 CREATE TABLE legislation.legal_preparation_plans (
   wave_id uuid PRIMARY KEY,

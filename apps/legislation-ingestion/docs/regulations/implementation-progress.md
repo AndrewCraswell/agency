@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added bounded Trigger run-disposition recovery for passage-preparation dispatches. The manual task inspects at most ten
+immutable intents from one wave, retains active runs and still-protected missing handles, and records prior attempt/run
+history before an eligible replacement receives an incremented global idempotency key. Trigger 404 is treated as missing
+history; other inspection errors propagate. Remote `COMPLETED` never substitutes for canonical state: only a matching
+`prepared` or `blocked` passage preparation closes the dispatch, while premature completion records
+`completed_without_preparation` for repair. The recovery task has no schedule and makes no embedding-provider call.
+
+On a database recreated from every migration, the existing current-eCFR integration test now continues past canonical
+publication and pending-outbox admission. It persisted attempt 0, rejected premature remote completion, replaced a
+failed run with attempt 1, prepared both canonical versions with the pinned OpenAI tokenizer, then reconciled the final
+remote completion only after canonical `prepared` state. The old run ID and failed disposition remained in durable JSON
+history. One fresh-PostgreSQL end-to-end test, 23 preparation task/recovery tests, ingestion TypeScript, scoped format and
+lint passed. This advances ORCH-07/08 locally. Deployed cancellation and late-worker faults, automatic scanning,
+copy/validation/finalization disposition recovery, aggregate admission and completion accounting remain open. Recurring
+schedules and bulk embeddings remain disabled. Root `pnpm verify` started the repository formatter and package checks but
+stopped before coverage because six concurrently edited `legislation-web` files were memory-mapped and could not be saved
+by `oxfmt` (`os error 1224`). Those unrelated files were preserved.
+
 Added bounded publication-outbox admission to the preparation dispatcher. A durable plan with `pendingOnly: true`
 selects only due pending lexical jobs for eCFR/annual editions or Federal Register observations, validates rights,
 persists at most ten immutable preparation intents and submits one recovery page. The caller supplies the pinned

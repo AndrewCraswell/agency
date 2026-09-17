@@ -46,16 +46,23 @@ export async function submitLegalPreparation(pool: pg.Pool, unparsed: unknown, s
     WHERE id=$1 AND payload_hash=$2 AND state IN ('pending','submitting')
       AND (lease_token IS NULL OR lease_expires_at<clock_timestamp())
       AND (first_attempt_at IS NULL OR first_attempt_at>clock_timestamp()-interval '6 days')
-    RETURNING id`,
+    RETURNING id,attempt`,
     [id, payloadHash, token]
   )
   if (claimed.rows.length === 0) {
     const row = z
-      .object({ payload_hash: z.string(), state: z.string(), run_id: z.string().nullable(), expired: z.boolean() })
+      .object({
+        payload_hash: z.string(),
+        state: z.string(),
+        run_id: z.string().nullable(),
+        attempt: z.int().nonnegative(),
+        expired: z.boolean()
+      })
       .parse(
         (
           await pool.query(
-            `SELECT payload_hash,state,run_id,COALESCE(first_attempt_at<=clock_timestamp()-interval '6 days',false) AS expired
+            `SELECT payload_hash,state,run_id,attempt,
+              COALESCE(first_attempt_at<=clock_timestamp()-interval '6 days',false) AS expired
         FROM legislation.legal_preparation_dispatches WHERE id=$1`,
             [id]
           )
@@ -65,17 +72,18 @@ export async function submitLegalPreparation(pool: pg.Pool, unparsed: unknown, s
       throw new Error("legal_dispatch_payload_changed")
     }
     if (row.state === "submitted" && row.run_id !== null) {
-      return { dispatchId: id, runId: row.run_id, reused: true }
+      return { dispatchId: id, runId: row.run_id, attempt: row.attempt, reused: true }
     }
     if (row.expired) {
       throw new Error("legal_dispatch_requires_reconciliation")
     }
     throw new Error("legal_dispatch_busy")
   }
+  const attempt = z.int().nonnegative().parse(claimed.rows[0].attempt)
   try {
     const result = z
       .object({ id: z.string().min(1).max(256) })
-      .parse(await submit(payload, { idempotencyKey: `legal-preparation:${id}`, idempotencyKeyTTL: "7d" }))
+      .parse(await submit(payload, { idempotencyKey: `legal-preparation:${id}:${attempt}`, idempotencyKeyTTL: "7d" }))
     const saved = await pool.query(
       `UPDATE legislation.legal_preparation_dispatches SET state='submitted',run_id=$3,
       lease_token=NULL,lease_expires_at=NULL,last_error=NULL WHERE id=$1 AND lease_token=$2
@@ -85,7 +93,7 @@ export async function submitLegalPreparation(pool: pg.Pool, unparsed: unknown, s
     if (saved.rows.length !== 1) {
       throw new Error("legal_dispatch_lease_lost")
     }
-    return { dispatchId: id, runId: result.id, reused: false }
+    return { dispatchId: id, runId: result.id, attempt, reused: false }
   } catch (error) {
     // Acceptance may have happened remotely. Never mint a replacement key based on an observation failure.
     await pool.query(

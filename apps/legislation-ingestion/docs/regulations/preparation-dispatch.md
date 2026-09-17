@@ -74,6 +74,21 @@ uncertain records do not prevent other ready rows in the page from progressing. 
 scan ended, not that the wave completed. Restart a later scan from the beginning to revisit deferred rows. Concurrent
 new inserts may require another scan. Unexpected submission failures propagate and retain the original intent.
 
+Remote run disposition has a separate manual `regulatory-preparation-recovery` task. It scans at most ten submitted or
+uncertain intents from one wave by dispatch-ID keyset. Active Trigger runs remain assigned to their saved attempt. A
+submission without a run ID remains protected for six days; a saved run missing from Trigger history remains protected
+for seven days. After those windows, or immediately after a terminal failed/cancelled/expired run, recovery first appends
+the old attempt, run ID, observed disposition and observation time to durable history, increments the database attempt,
+then submits the immutable payload under `legal-preparation:<dispatch-id>:<attempt>`. A Trigger 404 is missing history;
+other inspection errors propagate without changing assignment.
+
+Trigger `COMPLETED` is not canonical completion. Recovery derives the preparation ID from the stored scope, selected
+pinned tokenizer and passage contract, then checks `legal_passage_preparations`. Only canonical `prepared` or `blocked`
+states close the dispatch; `blocked` retains `source_records_blocked`. Remote completion while canonical state remains
+absent or pending records `completed_without_preparation` and submits no replacement. This preserves the mismatch for
+operator repair instead of converting a lost checkpoint into success. The task shares the serialized preparation queue,
+uses a two-connection canonical pool, has no schedule and never calls an embedding provider.
+
 At `2026-09-16T04:21:31Z`, a real PostgreSQL canary on disposable database 55453 passed lost-response key reuse,
 stored-handle replay, changed-payload rejection, expired-key refusal, concurrent exclusion, expired-lease fencing and
 recovery. Trigger responses were simulated; no child, source, preparation, provider or vector work was started.
@@ -92,8 +107,8 @@ inventory and current source/target revisions before acknowledging the canonical
 copy failure, stale checkpoint or finalization failure dispatches no successor. None of these handoffs creates an
 embedding request or changes the embedding rollout gate.
 
-This advances ORCH-02/06/07 but does not close them. Indexed national manifest selection, background intent scanning,
-preparation-dispatch disposition repair, aggregate database admission and deployed fault injection remain open. Source
+This advances ORCH-02/06/07/08 but does not close them. Indexed national manifest selection, background intent scanning,
+aggregate database admission and deployed fault injection remain open. Source
 publication/rights validation remains in the preparation worker; submitting an ID grants no source read permission and
 proves no eligibility. Recurring ingestion and bulk embedding gates remain unchanged.
 

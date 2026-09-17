@@ -172,8 +172,10 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   canaries pass; disposition reconciliation, automatic scanning and deployed faults remain open. See
   [durable preparation dispatch](preparation-dispatch.md).
   Explicit wave recovery now reads verified stored payloads with bounded keyset paging and read-only preview by
-  default. Executing a page reuses original keys/handles and defers busy/old uncertain intents. It does not yet inspect
-  Trigger run disposition or repair cancelled/expired accepted children.
+  default. Executing a page reuses original keys/handles and defers busy/old uncertain intents. A separate manual
+  preparation-run recovery path now inspects Trigger disposition, retains protected attempts, records prior run history
+  and increments the persisted attempt before replacing cancelled, expired or failed children. Deployed
+  submit-before-ack and late-worker fault injection remain open.
   The source-stage controller now applies the same persist-before-submit boundary to acquisition, parsing and
   publication. Each stage intent retains its immutable payload, lease, first attempt and Trigger run ID; uncertain
   submission retries keep the original attempt key. Bounded reconciliation now preserves active and recent uncertain
@@ -188,7 +190,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   is accepted only after canonical stage advancement; otherwise the state mismatch remains visible. Fresh PostgreSQL
   tests cover active retention, failed-run replacement, uncertain submission retention and expiry, missing-history
   replacement, premature completion, completed-stage reconciliation and replay-safe publication. Deployed cancellation,
-  killed-worker, late-original and parent-replacement smoke still keep ORCH-08 open.
+  killed-worker, late-original and parent-replacement smoke still keep ORCH-08 open. Preparation dispatches now use the
+  same canonical-state rule and attempt-specific replacement keys; fresh-database evidence is recorded in the progress
+  ledger. Copy/validation/finalization run-disposition recovery and deployed faults remain open.
 - [ ] **ORCH-09 Share provider admission and cooldown.** Reuse host/key budgets across GovInfo legislative and regulatory
   callers; persist Retry-After cooldown and bounded jittered retry. **Done:** two parents cannot multiply the provider
   allowance, a 429 pauses the affected budget, and unrelated providers can progress. Depends on ORCH-03.

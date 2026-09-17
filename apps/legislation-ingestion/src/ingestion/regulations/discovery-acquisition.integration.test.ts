@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 import { acquireLegalDiscoveryArtifact } from "./discovery-acquisition.js"
 import {
   commitLegalDiscoveryPage,
@@ -18,7 +19,10 @@ import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
 import { publishLegalDiscoveryUnit } from "./discovery-publication.js"
 import { recoverLegalDiscoveryDispatchPage } from "./discovery-recovery.js"
 import { registerLegalDiscoveryManifest } from "./discovery-registration.js"
+import { runLegalPassagePreparationBatch } from "./passage-preparation.js"
+import { submitLegalPreparation } from "./preparation-dispatch.js"
 import { planLegalPreparationPage } from "./preparation-plan.js"
+import { recoverLegalPreparationRunPage } from "./preparation-run-recovery.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
 const databaseUrl = process.env.REGULATORY_TEST_DATABASE_URL
@@ -43,7 +47,7 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
   }, 60_000)
   beforeEach(async () => {
     await pool.query(
-      "TRUNCATE legislation.legal_artifacts,legislation.legal_import_manifests,legislation.legal_discovery_pages,legislation.legal_discovery_units,legislation.legal_discovery_checkpoints CASCADE"
+      "TRUNCATE legislation.legal_preparation_plans,legislation.legal_preparation_dispatches,legislation.legal_artifacts,legislation.legal_import_manifests,legislation.legal_discovery_pages,legislation.legal_discovery_units,legislation.legal_discovery_checkpoints CASCADE"
     )
     await pool.query(`INSERT INTO legislation.jurisdictions(id,name,classification,country_code)
       VALUES('jurisdiction:us','United States','country','US') ON CONFLICT DO NOTHING`)
@@ -367,7 +371,10 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
       ]
     })
     const preparationWaveId = "00000000-0000-4000-8000-000000000001"
-    const publishedBefore = new Date().toISOString()
+    const publishedBefore = z
+      .date()
+      .parse((await pool.query("SELECT clock_timestamp() AS value")).rows[0].value)
+      .toISOString()
     const preparationPlan = await planLegalPreparationPage(pool, {
       waveId: preparationWaveId,
       source: "ecfr",
@@ -386,6 +393,143 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
         pendingOnly: true
       })
     ).resolves.toMatchObject({ planned: 0, selectedCount: 1, exhausted: true })
+    const preparationDispatchId = preparationPlan.dispatchIds[0]
+    if (preparationDispatchId === undefined) throw new Error("Missing preparation dispatch")
+    const preparationInput = {
+      waveId: preparationWaveId,
+      scope: { kind: "edition" as const, id: firstPublication.editionId },
+      model: "openai/text-embedding-3-small" as const,
+      limit: 10,
+      retryBlocked: false
+    }
+    await expect(
+      submitLegalPreparation(pool, preparationInput, async (_payload, options) => {
+        expect(options.idempotencyKey).toBe(`legal-preparation:${preparationDispatchId}:0`)
+        return { id: "run-preparation" }
+      })
+    ).resolves.toMatchObject({
+      dispatchId: preparationDispatchId,
+      runId: "run-preparation",
+      attempt: 0,
+      reused: false
+    })
+    const retainedPreparationRuns = [
+      { status: "EXECUTING", message: "an active preparation run must not be replaced" },
+      { status: "MISSING", message: "recently missing preparation history must remain protected" }
+    ] satisfies { status: "EXECUTING" | "MISSING"; message: string }[]
+    for (const { status, message } of retainedPreparationRuns) {
+      await expect(
+        recoverLegalPreparationRunPage(
+          pool,
+          { waveId: preparationWaveId, limit: 10 },
+          async (runId) => {
+            expect(runId).toBe("run-preparation")
+            return { status }
+          },
+          async () => {
+            throw new Error(message)
+          }
+        )
+      ).resolves.toMatchObject({
+        inspected: 1,
+        results: [
+          {
+            dispatchId: preparationDispatchId,
+            status,
+            disposition: "retained",
+            replacement: false
+          }
+        ]
+      })
+    }
+    const prematurePreparationCompletion = await recoverLegalPreparationRunPage(
+      pool,
+      { waveId: preparationWaveId, limit: 10 },
+      async (runId) => {
+        expect(runId).toBe("run-preparation")
+        return { status: "COMPLETED" }
+      },
+      async () => {
+        throw new Error("remote completion without canonical preparation must remain visible")
+      }
+    )
+    expect(prematurePreparationCompletion).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: preparationDispatchId,
+          status: "COMPLETED",
+          disposition: "state_mismatch",
+          replacement: false
+        }
+      ]
+    })
+    const recoveredPreparation = await recoverLegalPreparationRunPage(
+      pool,
+      { waveId: preparationWaveId, limit: 10 },
+      async (runId) => {
+        expect(runId).toBe("run-preparation")
+        return { status: "FAILED" }
+      },
+      async (_payload, options) => {
+        expect(options.idempotencyKey).toBe(`legal-preparation:${preparationDispatchId}:1`)
+        return { id: "run-preparation-retry" }
+      }
+    )
+    expect(recoveredPreparation).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: preparationDispatchId,
+          status: "FAILED",
+          disposition: "replacement_ready",
+          replacement: { runId: "run-preparation-retry", attempt: 1, reused: false }
+        }
+      ]
+    })
+    await expect(runLegalPassagePreparationBatch(pool, preparationInput)).resolves.toMatchObject({
+      state: "prepared",
+      total: 2,
+      complete: 2,
+      blocked: 0
+    })
+    const preparationCompletion = await recoverLegalPreparationRunPage(
+      pool,
+      { waveId: preparationWaveId, limit: 10 },
+      async (runId) => {
+        expect(runId).toBe("run-preparation-retry")
+        return { status: "COMPLETED" }
+      },
+      async () => {
+        throw new Error("canonically prepared work must not be replaced")
+      }
+    )
+    expect(preparationCompletion).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: preparationDispatchId,
+          status: "COMPLETED",
+          disposition: "prepared",
+          replacement: false
+        }
+      ]
+    })
+    expect(
+      (
+        await pool.query(
+          `SELECT attempt,run_id,run_history,completed_at IS NOT NULL completed,last_observed_status
+           FROM legislation.legal_preparation_dispatches WHERE id=$1`,
+          [preparationDispatchId]
+        )
+      ).rows[0]
+    ).toEqual({
+      attempt: 1,
+      run_id: "run-preparation-retry",
+      run_history: [expect.objectContaining({ attempt: 0, runId: "run-preparation", status: "FAILED" })],
+      completed: true,
+      last_observed_status: "COMPLETED"
+    })
     await expect(planLegalDiscoveryDispatchPage(pool, planInput)).resolves.toMatchObject({
       selected: 0,
       exhausted: true
