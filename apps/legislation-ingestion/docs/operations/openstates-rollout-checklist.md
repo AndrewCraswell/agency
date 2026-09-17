@@ -9,6 +9,12 @@ September 17 Alaska HB1 vote-provenance closure:
 - [x] Production dry-run uniquely matched the two existing HB1 vote IDs. Apply and repeat read-back completed: House passage is date-only May 7, 2026 with 40 positions; Senate passage is date-only May 12, 2026 with 20 positions; both retain their existing canonical IDs and now satisfy timeline completeness. No document, OCR, embedding, action, sponsor or person rows were part of the transaction.
 - [x] Authenticated production acceptance passed after reconciliation: HB1 detail returned 200, the bill vote collection returned the two retained canonical IDs, Senate positions returned all 20 observations, and House positions paginated 25 plus 15 with 40 unique observations and no third page. Statewide vote-provenance coverage is not implied by this one-bill closure.
 
+September 17 hosted content continuation:
+
+- [x] Both prior controllers exhausted their bounded 100-continuation budgets rather than completing ingestion. Authoritative outputs were `ingestionComplete=false`; Alaska had zero complete scan rounds and North Carolina had one. No live state-content leases remained, and the durable cursors were retained at AK `bill:ak:34:sb:200` and NC `bill:nc:2025:hb:1191`.
+- [x] Initial replacement handles entered `PENDING_VERSION`, exposing that the currently promoted Trigger deployment no longer offered the reorganized ingestion task. Deployed clean committed snapshot `2851985` as production Trigger version `20260917.1` with all 36 tasks detected. The snapshot was archived and built separately so unrelated dirty monorepo work was not included.
+- [x] Cancelled only the two never-started `PENDING_VERSION` handles after the new version was active. Replacement controllers `run_06gas18u1m6p5cva4fd8h7qj01` (AK) and `run_06gas19bs3i2tad6l4636a9q01` (NC) are executing on `20260917.1` with new idempotency keys and the existing state/session concurrency keys. No ingestion cursor was reset and no overlapping state lease was launched.
+
 September 17 production vote-order index rollout:
 
 - [x] Final clean reader release `8a9c90ec-cc99-4767-8c1d-0d976e5ab8cb` from committed snapshot `5a52967` reached SUCCESS after the type-annotation fix. Authenticated `/ready` returned 200. Global vote list returned 200 in 635 ms, AK-filtered list 200/empty in 193 ms, NC-filtered list 200/two S1041 votes in 251 ms. This is machine-token API smoke, not MCP user-consent acceptance.
