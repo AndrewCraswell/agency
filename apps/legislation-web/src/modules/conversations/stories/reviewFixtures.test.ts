@@ -1,0 +1,51 @@
+import { safeValidateUIMessages } from "ai"
+import { describe, expect, it } from "vitest"
+import { entityKindSchema } from "../entityResults"
+import { researchToolLabels } from "../researchTools"
+import { activityPart, activityStates, capturedCards, failureCodes, reviewData, toolCaptures } from "./reviewFixtures"
+
+describe("captured Storybook review", () => {
+  it("covers every tool and card kind using successful real captures", () => {
+    expect(reviewData.failures).toEqual([])
+    expect(toolCaptures.map((capture) => capture.toolName)).toEqual(Object.keys(researchToolLabels))
+    expect(new Set(capturedCards.map(({ record }) => record.kind))).toEqual(new Set(entityKindSchema.options))
+    expect(
+      capturedCards.every(({ resultId, record }) =>
+        reviewData.captures.some(
+          (capture) =>
+            capture.output.resultSet?.id === resultId &&
+            capture.output.resultSet.items.some((item) => item.id === record.id)
+        )
+      )
+    ).toBe(true)
+  })
+
+  it("uses all supported lifecycle permutations without changing record facts", async () => {
+    expect(activityStates).toHaveLength(8)
+    const capture = toolCaptures[0]!
+    const original = JSON.stringify(capture)
+    for (const state of activityStates) {
+      const { part } = activityPart(capture, state)
+      const result = await safeValidateUIMessages({ messages: [{ id: state, role: "assistant", parts: [part] }] })
+      expect(result.success).toBe(true)
+    }
+    expect(activityPart(capture, "Complete").part).toMatchObject({ output: capture.output, input: capture.input })
+    expect(JSON.stringify(capture)).toBe(original)
+    expect(failureCodes).toHaveLength(11)
+  })
+
+  it("retains inspector data for all primary interactive card kinds", () => {
+    for (const kind of ["vote", "meeting", "person", "organization", "material"] as const) {
+      const selected = capturedCards.find(({ record }) => record.kind === kind)!
+      expect(reviewData.details[`${selected.resultId}/${selected.record.id}`]?.record.id).toBe(selected.record.id)
+    }
+  })
+
+  it("retains real inspector data for every captured interactive variant", () => {
+    for (const { record } of capturedCards.filter(({ record }) =>
+      ["vote", "meeting", "person", "organization", "material"].includes(record.kind)
+    )) {
+      expect(Object.values(reviewData.details).some((details) => details.record.id === record.id)).toBe(true)
+    }
+  })
+})

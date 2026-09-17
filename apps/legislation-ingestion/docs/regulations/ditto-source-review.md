@@ -2,6 +2,17 @@
 
 ## Latest scoped requalification
 
+38 CFR 3.261 now qualifies with 61 passages per model, maximum 482 OpenAI / 669 Voyage tokens. The two reviewed
+child-only income entries preserve earlier parent-benefit references for later explicit dittos. Recognition requires
+all six income headers, exact row labels, empty parent/citation cells and populated pension cells, without spans.
+Blank parent cells gain no reference. The
+[published CFR, printed pages 233–234](https://www.govinfo.gov/content/pkg/CFR-2025-title38-vol1/pdf/CFR-2025-title38-vol1-sec3-261.pdf)
+corroborates this layout. All 84 tests pass, including blank-parent context, source-backed gift-property references,
+changed-label/header rejection and complete reconstruction with both tokenizers. Report:
+`artifacts/regulatory-backfills/income-version-recheck.json`; parser hash
+`e5aa67792abe9f1d301543e61dcba04da1a5f8ca26f7e28476da75b310a4c0ef`.
+Three known versions remain: 40 CFR 152.175, 9 CFR 424.21 and 21 CFR 177.1520. A fresh full-corpus run is still required.
+
 47 CFR 90.35 now qualifies with 341 OpenAI / 354 Voyage passages, maximum 766 / 793 tokens. Exact frequency,
 station-class, limitations and coordinator headers plus a numeric frequency and populated sibling cells are required
 to preserve the last printed station class across an empty class cell. Only a later explicit ditto receives that

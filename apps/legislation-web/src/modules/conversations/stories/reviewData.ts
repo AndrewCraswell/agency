@@ -1,0 +1,28 @@
+import { z } from "zod"
+import { entityKindSchema, entityPageSchema } from "../entityResults"
+import { meetingDetailsSchema, profileDetailsSchema, voteDetailsSchema } from "../recordDetails"
+
+export const reviewCaptureSchema = z.object({
+  toolName: z.string(),
+  input: z.record(z.string(), z.json()),
+  output: z.object({ data: z.json(), resultSet: entityPageSchema.optional() })
+})
+export const reviewDatasetSchema = z
+  .object({
+    capturedAt: z.iso.datetime(),
+    captures: z.array(reviewCaptureSchema),
+    details: z.record(z.string(), z.union([voteDetailsSchema, meetingDetailsSchema, profileDetailsSchema])),
+    failures: z.array(z.object({ toolName: z.string(), message: z.string() }))
+  })
+  .superRefine((dataset, context) => {
+    const kinds = new Set(
+      dataset.captures.flatMap((capture) => capture.output.resultSet?.items.map((record) => record.kind) ?? [])
+    )
+    for (const kind of entityKindSchema.options) {
+      if (!kinds.has(kind)) {
+        context.addIssue({ code: "custom", message: `No fetched ${kind} record was captured.` })
+      }
+    }
+  })
+export type ReviewDataset = z.infer<typeof reviewDatasetSchema>
+export type ReviewCapture = z.infer<typeof reviewCaptureSchema>

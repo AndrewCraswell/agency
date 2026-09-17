@@ -468,6 +468,67 @@ describe("regulatory table passages", () => {
     }
   }, 30_000)
 
+  it("retains parent-benefit references across reviewed child-only income rows", async () => {
+    const fixtures = z
+      .object({
+        fixtures: z.array(
+          z.object({
+            nativeId: z.string(),
+            blockXmlHash: z.string(),
+            block: z.object({ text: z.string(), xml: z.string() })
+          })
+        )
+      })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/ditto-continuation-tables.json", import.meta.url), "utf8")))
+    const fixture = fixtures.fixtures.find((item) => item.nativeId === "cfr:38:section:3.261")
+    invariant(fixture, "income_fixture_required")
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "income_table_required")
+    const rows = legalTableRows(table).rows
+    for (const label of ["(4) Earned income of child-claimant", "Educational assistance (38 U.S.C. ch. 35)"]) {
+      const row = rows.find((row) => table.text.slice(row.start, row.end).startsWith(label))
+      invariant(row, "child_income_row_required")
+      expect(row.context.some((span) => ["Column 2 ditto source", "Column 3 ditto source"].includes(span.label))).toBe(
+        false
+      )
+    }
+    const property = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Property\n"))
+    invariant(property, "gift_property_row_required")
+    expect(
+      property.context
+        .filter((span) => span.label === "Column 2 ditto source")
+        .map((span) => table.text.slice(span.start, span.end))
+    ).toEqual(["Included"])
+    expect(property.context.map((span) => table.text.slice(span.start, span.end))).toContain(
+      "(5) Gifts, including contributions from adult members of family:"
+    )
+    for (const [before, after] of [
+      ["Dependency (parents)", "Other benefit"],
+      ["(4) Earned income of child-claimant", "(4) Unspecified income"]
+    ]) {
+      expect(() =>
+        legalTableRows({ text: table.text.replace(before, after), xml: table.xml.replace(before, after) })
+      ).toThrow("passage_table_unresolved_ditto")
+    }
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
   it("resolves reviewed sparse flavoring limitations without filling blank entries", async () => {
     const fixture = z
       .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })

@@ -328,6 +328,27 @@ function isSparseStationClass(row: ReturnType<ReturnType<typeof load>>, hasFrequ
   )
 }
 
+/** The reviewed income table leaves parent-benefit cells blank for these child-only entries. */
+function isChildIncomeRow(row: ReturnType<ReturnType<typeof load>>, hasIncomeHeaders: boolean) {
+  const cells = row.children("TD")
+  return (
+    hasIncomeHeaders &&
+    cells.length === 6 &&
+    ["(4) Earned income of child-claimant", "Educational assistance (38 U.S.C. ch. 35)"].includes(
+      sourceText(cells.first())
+    ) &&
+    cells
+      .toArray()
+      .every(
+        (cell, index) =>
+          Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+          ([1, 2, 5].includes(index)
+            ? cell.children.every((node) => node.type === "text" && node.data.trim() === "")
+            : sourceText(cells.eq(index)).length > 0)
+      )
+  )
+}
+
 /** Reviewed flavoring tables print sparse limitations; a blank row itself inherits no limitation. */
 function isSparseFlavoringLimitation(row: ReturnType<ReturnType<typeof load>>, hasFlavoringHeaders: boolean) {
   const cells = row.children("TD")
@@ -700,6 +721,17 @@ export function legalTableRows(input: { text: string; xml: string }) {
   const expenseGroups = sourceExpenseGroups(rows)
   const nameContinuations = sourceReviewedNameContinuations(rows)
   const approvalHeaders = tables.find("THEAD TH")
+  const incomeHeaders = [
+    "Income",
+    "Dependency (parents)",
+    "Dependency and indemnity compensation (parents)",
+    "Pension; old-law (veterans, surviving spouses and children)",
+    "Pension; section 306 (veterans, surviving spouses and children)",
+    "See—"
+  ]
+  const hasIncomeHeaders =
+    approvalHeaders.length === incomeHeaders.length &&
+    incomeHeaders.every((value, index) => sourceText(approvalHeaders.eq(index)) === value)
   const hasFrequencyHeaders =
     approvalHeaders.length === 4 &&
     sourceText(approvalHeaders.eq(0)) === "Frequency or band" &&
@@ -779,6 +811,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
       const isReservedApproval = isReservedApprovalRow(selection, hasApprovalHeaders)
       const isSparseLimitation = isSparseFlavoringLimitation(selection, hasFlavoringHeaders)
       const isSparseStation = isSparseStationClass(selection, hasFrequencyHeaders)
+      const isChildIncome = isChildIncomeRow(selection, hasIncomeHeaders)
       const isGroup =
         cells.length === 1 && Number(cells.first().attr("colspan") ?? cells.first().attr("COLSPAN") ?? 1) > 1
       const categoryLevel = sourceCategoryLevel(selection)
@@ -857,7 +890,9 @@ export function legalTableRows(input: { text: string; xml: string }) {
             context.push(reference)
           } else {
             if (
-              (((isReservedApproval || isSparseLimitation) && column === 3) || (isSparseStation && column === 2)) &&
+              (((isReservedApproval || isSparseLimitation) && column === 3) ||
+                (isSparseStation && column === 2) ||
+                (isChildIncome && (column === 2 || column === 3))) &&
               value.length === 0 &&
               width === 1
             ) {

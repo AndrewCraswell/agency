@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Resolved the reviewed child-only rows in the 38 CFR 3.261 income table. Parent-benefit reference retention is limited
+to the exact earned-child-income and chapter-35 educational-assistance labels, all six reviewed headers, empty
+parent/citation cells and populated pension cells. These blank parent cells receive no inferred inclusion/exclusion.
+Later explicit dittos reference the earlier printed value, with source offsets and intervening gift-group context.
+The [published CFR](https://www.govinfo.gov/content/pkg/CFR-2025-title38-vol1/pdf/CFR-2025-title38-vol1-sec3-261.pdf)
+corroborates the retained layout. Changed labels or headers remain rejected.
+
+All 84 table tests, scoped lint and ingestion types passed. Canonical version
+`6049b627-cfbb-4eb9-85bf-319095b51d97` prepares 61 passages per model, maximum 482 OpenAI / 669 Voyage tokens.
+Parser hash: `e5aa67792abe9f1d301543e61dcba04da1a5f8ca26f7e28476da75b310a4c0ef`; report:
+`artifacts/regulatory-backfills/income-version-recheck.json`; tests:
+`C:/Users/andcra/AppData/Local/Temp/tabra-income-tests.log`. No provider calls or source/index/vector writes occurred.
+Three known versions remain blocked; complete current-title requalification remains open. Docker's retained source
+database is live. Historical process 76852 is absent; no duplicate qualification process was started.
+Root `pnpm verify` stopped at knip's unrelated theme-file inventory, root dependency/binary declarations,
+Storybook dependencies and the web `EntityResults` export. Coverage was not reached. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-income-verify.log`.
+
 Resolved the sparse station-class reference in 47 CFR 90.35. Exact reviewed headers, numeric frequency, four
 unspanned cells and populated limitations/coordinator cells bound recognition. Blank station-class entries remain
 blank; later explicit dittos retain the last printed class. The complete retained table reconstructs exactly under

@@ -11,6 +11,9 @@
     },
     "apps/legislation-web": {
       "entry": [
+        ".storybook/{main,preview,mocks}.ts{,x}",
+        "src/modules/conversations/stories/**/*.stories.tsx",
+        "scripts/capture-storybook.ts",
         "src/modules/request-handling/api/next/http.ts!",
         "src/modules/legislation/runtime/runtime.ts!",
         "scripts/{next,tool,infra-what-if,smoke-dependencies,smoke-deployment,smoke-foundation,smoke-local}.mjs!",
