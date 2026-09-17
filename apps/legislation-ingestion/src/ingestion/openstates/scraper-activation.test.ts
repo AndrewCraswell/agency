@@ -9,6 +9,6 @@ describe("shared scraper activation", () => {
   })
 
   it("pins one reviewed runtime fingerprint across state domains", () => {
-    expect(approvedScraperBuildInputsSha256).toMatch(/^[a-f0-9]{64}$/)
+    expect(approvedScraperBuildInputsSha256).toBe("b9ba2dbe321b86084243119f0f36c83d304abca89e1061457453114629c60314")
   })
 })
