@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Repaired the blind relevance-review contract so EVAL-04 can actually reach a truthful terminal state. Candidates now
+hold up to eight independent judgments plus a separate adjudication. Every judgment records grade, rationale, reviewer
+and human/automated kind. Automated suggestions can be scored provisionally but never count as human completion. Every
+candidate requires at least one human judgment; conflicting human grades fail until a human adjudicator resolves them.
+Only complete resolved human evidence reports `humanReviewComplete` and `protocolCompliance`. Scoring still reports
+`modelSelected: false` and `bulkEmbeddingAuthorized: false`, keeping EVAL-12 as an explicit later decision.
+
+Regenerated the rank-blind all-system packet under the new contract with the same frozen identities: 60 questions,
+2,094 candidates, manifest hash `712f47db1218ac76eab1a174d4e6ebd814551f47ef8d0e030ac7046668181169` and systems hash
+`258ea4afbf37d47da753e2bb6fb0e5dfec1cc0cc5a193b252540d8a0660a9856`. All 2,094 review arrays are empty and
+all adjudications are null. Seven focused judgment/scoring tests pass, including automated-only incompleteness, complete
+human review, unresolved disagreement refusal and adjudicated completion; ingestion format, lint and type-check pass.
+Artifact: `artifacts/regulatory-backfills/evaluation-recovered-all-systems-blind-review-packet-v2.json`. EVAL-04 remains
+open for actual domain/product review. No model, provider request, embedding, vector or schedule was changed.
+
 Added a frozen-catalog admission gate before full PASS-09 passage preparation. The new read-only tool validates the
 catalog hash, partition manifests, ordered entry streams and bounded artifact paths inside one repeatable-read database
 snapshot. It compares every live edition, source generation, active rights policy, membership, content identity, source

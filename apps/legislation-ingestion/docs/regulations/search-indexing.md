@@ -226,13 +226,23 @@ tokens. Evidence: `regulatory-cache-smoke-manifest.json`, `regulatory-cache-chec
 Earlier cache-fill/replay artifacts predate vector checksums and remain historical evidence only.
 
 `pool:regulatory-judgments` creates a blind relevance-review packet from a frozen manifest and complete system rankings.
-It pools the first ten candidates per system plus known answers missed by those systems, removes duplicate candidates,
+It pools the configured candidates per system plus known answers missed by those systems, removes duplicate candidates,
 and orders evidence deterministically without exposing system names, ranks or existing relevance labels in the query
-view. Each candidate retains its exact version ID, input hash and source excerpt, with blank grade/rationale/reviewer
-fields. The scale is 0 (does not answer), 1 (context), 2 (partial), 3 (direct answer). It rejects incomplete query coverage,
-unknown/duplicate ranked IDs, duplicate systems and excessive evidence size. It does not submit or approve judgments.
+view. Each candidate retains its exact version ID, input hash and source excerpt, an initially empty `reviews` array and
+a nullable `adjudication`. The scale is 0 (does not answer), 1 (context), 2 (partial), 3 (direct answer). Every review
+records a rationale, reviewer and `human` or `automated` kind. Automated suggestions never count as human completion.
+At least one human review is required for every candidate; conflicting human grades require a separate human
+adjudication before the scorer reports `humanReviewComplete` and `protocolCompliance`. Model selection and bulk
+authorization remain false after review scoring. The pool rejects incomplete query coverage, unknown/duplicate ranked
+IDs, duplicate systems and excessive evidence size. It does not submit or approve judgments.
 The local packet `regulatory-judgment-review.json` has 60 questions and 1,315 candidate excerpts across seven compared
 configurations; `regulatory-review-systems.json` retains its system inputs. No external model requests were needed.
+
+The recovered final-passage comparison uses
+`evaluation-recovered-all-systems-blind-review-packet-v2.json`: 60 questions and 2,094 candidates at depth 25. It is
+bound to manifest hash `712f47db1218ac76eab1a174d4e6ebd814551f47ef8d0e030ac7046668181169` and systems hash
+`258ea4afbf37d47da753e2bb6fb0e5dfec1cc0cc5a193b252540d8a0660a9856`. All review arrays are empty and no
+adjudications are claimed.
 
 ```powershell
 pnpm tool regulations/pool-regulatory-judgments --manifest artifacts/regulatory-backfills/regulatory-comparison-manifest.json --systems artifacts/regulatory-backfills/regulatory-review-systems.json --output artifacts/regulatory-backfills/fresh-review.json

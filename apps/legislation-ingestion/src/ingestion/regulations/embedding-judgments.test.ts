@@ -20,7 +20,9 @@ describe("regulatory relevance review pool", () => {
       systems
     )
     expect(result.queries[0]?.candidates.map((row) => row.id).sort()).toEqual(["a", "b"])
-    expect(result.queries[0]?.candidates.every((row) => row.grade === null && row.reviewer === null)).toBe(true)
+    expect(result.queries[0]?.candidates.every((row) => row.reviews.length === 0 && row.adjudication === null)).toBe(
+      true
+    )
     expect(result.humanReviewComplete).toBe(false)
   })
   it("retains pooled candidates and missed known answers without exposing ranking or fabricating grades", () => {
@@ -28,7 +30,7 @@ describe("regulatory relevance review pool", () => {
     expect(result.queries[0]?.candidates.map((row) => row.id).sort()).toEqual(["a", "b", "c"])
     expect(
       result.queries[0]?.candidates.every(
-        (row) => row.grade === null && row.reviewer === null && row.versionId === `${row.id}-version`
+        (row) => row.reviews.length === 0 && row.adjudication === null && row.versionId === `${row.id}-version`
       )
     ).toBe(true)
     expect(JSON.stringify(result.queries)).not.toContain('"model"')

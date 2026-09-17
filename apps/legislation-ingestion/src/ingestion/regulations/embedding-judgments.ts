@@ -80,10 +80,8 @@ export function buildRegulatoryJudgmentPool(input: unknown, systemsInput: unknow
               versionId: record.versionId,
               inputHash: digest(record.input),
               text: record.input,
-              grade: null,
-              rationale: null,
-              reviewer: null,
-              reviewerKind: null
+              reviews: [],
+              adjudication: null
             }
           })
       }

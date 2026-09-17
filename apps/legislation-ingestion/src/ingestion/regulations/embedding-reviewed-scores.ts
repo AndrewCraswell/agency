@@ -5,15 +5,19 @@ import { z } from "zod"
 import { buildRegulatoryJudgmentPool } from "./embedding-judgments.js"
 import { regulatoryEmbeddingSmokeSchema } from "./embedding-smoke.js"
 
+const judgmentSchema = z.strictObject({
+  grade: z.int().min(0).max(3),
+  rationale: z.string().trim().min(1),
+  reviewer: z.string().trim().min(1),
+  reviewerKind: z.enum(["human", "automated"])
+})
 const candidateSchema = z.object({
   id: z.string().min(1),
   versionId: z.string().min(1),
   inputHash: z.string(),
   text: z.string(),
-  grade: z.int().min(0).max(3),
-  rationale: z.string().trim().min(1),
-  reviewer: z.string().trim().min(1),
-  reviewerKind: z.enum(["human", "automated"])
+  reviews: z.array(judgmentSchema).min(1).max(8),
+  adjudication: judgmentSchema.nullable()
 })
 const systemsSchema = z.array(
   z.object({
@@ -27,7 +31,33 @@ const systemsSchema = z.array(
   })
 )
 
-/** Scores bound review evidence. Declared reviewer metadata is not independent proof of human adjudication. */
+function resolveJudgment(candidate: z.infer<typeof candidateSchema>) {
+  invariant(
+    new Set(candidate.reviews.map(({ reviewer }) => reviewer)).size === candidate.reviews.length,
+    "regulatory_review_duplicate_reviewer"
+  )
+  const human = candidate.reviews.filter(({ reviewerKind }) => reviewerKind === "human")
+  const humanGrades = new Set(human.map(({ grade }) => grade))
+  const allGrades = new Set(candidate.reviews.map(({ grade }) => grade))
+  if (humanGrades.size > 1) {
+    invariant(candidate.adjudication?.reviewerKind === "human", "regulatory_review_human_disagreement_unresolved")
+  }
+  const grade =
+    humanGrades.size === 1
+      ? human[0]!.grade
+      : humanGrades.size > 1
+        ? candidate.adjudication!.grade
+        : allGrades.size === 1
+          ? candidate.reviews[0]!.grade
+          : candidate.adjudication?.grade
+  invariant(grade !== undefined, "regulatory_review_automated_disagreement_unresolved")
+  return {
+    grade,
+    humanComplete: human.length > 0 && (humanGrades.size <= 1 || candidate.adjudication?.reviewerKind === "human")
+  }
+}
+
+/** Scores bound review evidence. Reviewer declarations still require an external review/sign-off record. */
 export function scoreReviewedRegulatoryJudgments(manifestInput: unknown, systemsInput: unknown, reviewInput: unknown) {
   const manifest = regulatoryEmbeddingSmokeSchema.parse(manifestInput)
   const systems = systemsSchema.parse(systemsInput)
@@ -73,13 +103,21 @@ export function scoreReviewedRegulatoryJudgments(manifestInput: unknown, systems
       )
     }
   }
+  const resolved = new Map(
+    review.queries.flatMap((query) =>
+      query.candidates.map((candidate) => [`${query.id}:${candidate.id}`, resolveJudgment(candidate)] as const)
+    )
+  )
+  const humanReviewComplete = [...resolved.values()].every(({ humanComplete }) => humanComplete)
   const results = systems.map((system) => {
     const queries = system.queries.map((query) => {
       const definition = manifest.queries.find((row) => row.id === query.queryId)
       const judgment = review.queries.find((row) => row.id === query.queryId)
       invariant(definition && judgment, "regulatory_review_query_coverage")
-      const grades = new Map(judgment.candidates.map((row) => [row.id, row.grade]))
-      const relevant = judgment.candidates.filter((row) => row.grade >= 2)
+      const grades = new Map(
+        judgment.candidates.map((row) => [row.id, resolved.get(`${judgment.id}:${row.id}`)!.grade])
+      )
+      const relevant = judgment.candidates.filter((row) => grades.get(row.id)! >= 2)
       const noAnswer = definition.answerability === "no_answer"
       invariant(noAnswer ? relevant.length === 0 : relevant.length > 0, "regulatory_review_answerability_conflict")
       const ranked = query.ranked.slice(0, 25).map((row) => row.id)
@@ -93,7 +131,7 @@ export function scoreReviewedRegulatoryJudgments(manifestInput: unknown, systems
       const relevantAt = (k: number) => ranked.slice(0, k).filter((id) => (grades.get(id) ?? 0) >= 2).length
       const gain = (values: number[]) =>
         values.slice(0, 10).reduce((sum, grade, index) => sum + (2 ** grade - 1) / Math.log2(index + 2), 0)
-      const ideal = gain(judgment.candidates.map((row) => row.grade).sort((a, b) => b - a))
+      const ideal = gain([...grades.values()].sort((a, b) => b - a))
       return {
         queryId: query.queryId,
         metrics: {
@@ -120,10 +158,19 @@ export function scoreReviewedRegulatoryJudgments(manifestInput: unknown, systems
     systemsHash: expected.systemsHash,
     reviewHash: digest(JSON.stringify(review)),
     judgmentCoverage: "pooled_top25_plus_known_answers",
-    declaredReviewerKinds: [...new Set(review.queries.flatMap((q) => q.candidates.map((c) => c.reviewerKind)))].sort(),
+    declaredReviewerKinds: [
+      ...new Set(
+        review.queries.flatMap((query) =>
+          query.candidates.flatMap((candidate) => [
+            ...candidate.reviews.map(({ reviewerKind }) => reviewerKind),
+            ...(candidate.adjudication === null ? [] : [candidate.adjudication.reviewerKind])
+          ])
+        )
+      )
+    ].sort(),
     results,
-    humanReviewComplete: false,
-    protocolCompliance: false,
+    humanReviewComplete,
+    protocolCompliance: humanReviewComplete,
     modelSelected: false,
     bulkEmbeddingAuthorized: false
   }

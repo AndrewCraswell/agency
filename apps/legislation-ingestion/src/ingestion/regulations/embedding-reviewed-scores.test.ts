@@ -7,7 +7,7 @@ const manifest = {
   queries: [{ id: "q", input: "question", relevantIds: ["a"] }]
 }
 const systems = [{ model: "fixture", queries: [{ queryId: "q", ranked: [{ id: "c" }, { id: "a" }, { id: "b" }] }] }]
-function reviewFor(input: unknown = manifest, noAnswer = false) {
+function reviewFor(input: unknown = manifest, noAnswer = false, reviewerKind: "automated" | "human" = "automated") {
   const pool = buildRegulatoryJudgmentPool(input, systems, 25)
   return {
     ...pool,
@@ -15,15 +15,20 @@ function reviewFor(input: unknown = manifest, noAnswer = false) {
       ...query,
       candidates: query.candidates.map((candidate) => ({
         ...candidate,
-        grade: noAnswer
-          ? 1
-          : (new Map([
-              ["a", 3],
-              ["b", 2]
-            ]).get(candidate.id) ?? 1),
-        rationale: "Synthetic regression fixture",
-        reviewer: "test",
-        reviewerKind: "automated"
+        reviews: [
+          {
+            grade: noAnswer
+              ? 1
+              : (new Map([
+                  ["a", 3],
+                  ["b", 2]
+                ]).get(candidate.id) ?? 1),
+            rationale: "Synthetic regression fixture",
+            reviewer: "test",
+            reviewerKind
+          }
+        ],
+        adjudication: null
       }))
     }))
   }
@@ -60,14 +65,60 @@ describe("reviewed regulatory scoring", () => {
     })
     const contradiction = {
       ...review,
-      queries: review.queries.map((q) => ({ ...q, candidates: q.candidates.map((c) => ({ ...c, grade: 2 })) }))
+      queries: review.queries.map((q) => ({
+        ...q,
+        candidates: q.candidates.map((c) => ({
+          ...c,
+          reviews: c.reviews.map((judgment) => ({ ...judgment, grade: 2 }))
+        }))
+      }))
     }
     expect(() => scoreReviewedRegulatoryJudgments(input, systems, contradiction)).toThrow("answerability_conflict")
+  })
+  it("reports complete human review and requires human adjudication for disagreement", () => {
+    const human = reviewFor(manifest, false, "human")
+    expect(scoreReviewedRegulatoryJudgments(manifest, systems, human)).toMatchObject({
+      declaredReviewerKinds: ["human"],
+      humanReviewComplete: true,
+      protocolCompliance: true,
+      modelSelected: false,
+      bulkEmbeddingAuthorized: false
+    })
+    const disputed = {
+      ...human,
+      queries: human.queries.map((query) => ({
+        ...query,
+        candidates: query.candidates.map((candidate) => ({
+          ...candidate,
+          reviews: [
+            ...candidate.reviews,
+            { ...candidate.reviews[0]!, grade: candidate.reviews[0]!.grade === 3 ? 2 : 3, reviewer: "second" }
+          ]
+        }))
+      }))
+    }
+    expect(() => scoreReviewedRegulatoryJudgments(manifest, systems, disputed)).toThrow("human_disagreement_unresolved")
+    const adjudicated = {
+      ...disputed,
+      queries: disputed.queries.map((query) => ({
+        ...query,
+        candidates: query.candidates.map((candidate) => ({
+          ...candidate,
+          adjudication: {
+            grade: candidate.reviews[0]!.grade,
+            rationale: "Resolved against the cited source",
+            reviewer: "adjudicator",
+            reviewerKind: "human" as const
+          }
+        }))
+      }))
+    }
+    expect(scoreReviewedRegulatoryJudgments(manifest, systems, adjudicated).humanReviewComplete).toBe(true)
   })
   it("refuses unreviewed, incomplete, duplicated, or altered evidence", () => {
     expect(() =>
       scoreReviewedRegulatoryJudgments(manifest, systems, buildRegulatoryJudgmentPool(manifest, systems, 25))
-    ).toThrow("grade")
+    ).toThrow("reviews")
     const review = reviewFor()
     for (const field of ["text", "versionId", "inputHash"]) {
       const altered = {

@@ -30,7 +30,8 @@ await writeFile(resolve(z.string().min(1).parse(values.output)), JSON.stringify(
 process.stdout.write(
   JSON.stringify({
     systems: report.results.length,
-    humanReviewComplete: false,
+    humanReviewComplete: report.humanReviewComplete,
+    protocolCompliance: report.protocolCompliance,
     modelSelected: false,
     externalRequests: false
   })
