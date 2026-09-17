@@ -95,6 +95,7 @@ export function createCallBudget(
 
 export async function executeCase(options: {
   item: EvalCase
+  sessionId?: string
   model: LanguageModel
   instructions: string
   budget: ReturnType<typeof createCallBudget>
@@ -113,7 +114,7 @@ export async function executeCase(options: {
   }))
   const toolSchemaHash = digest(catalog)
   const store = createClarificationStore()
-  const sessionKey = crypto.randomUUID()
+  const sessionKey = options.sessionId ?? crypto.randomUUID()
   const messages: ModelMessage[] = structuredClone(item.messages)
   const turns: RecordedTurn[] = []
   const events: EvalEvent[] = []

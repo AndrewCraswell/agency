@@ -31,7 +31,11 @@ export function runResearchAgent(options: {
   prepareStep?: Parameters<typeof streamText>[0]["prepareStep"]
 }): ReturnType<typeof streamText<ToolSet>> {
   return propagateAttributes(
-    { sessionId: options.sessionId, ...(options.captureId ? { metadata: { captureId: options.captureId } } : {}) },
+    {
+      traceName: "legislative-research-conversation",
+      sessionId: options.sessionId,
+      ...(options.captureId ? { metadata: { captureId: options.captureId } } : {})
+    },
     () =>
       streamText({
         model: options.model,

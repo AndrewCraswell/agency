@@ -1,4 +1,5 @@
-import { startActiveObservation } from "@langfuse/tracing"
+import { LangfuseClient } from "@langfuse/client"
+import { getActiveSpanId, propagateAttributes, startActiveObservation } from "@langfuse/tracing"
 import { z } from "zod"
 import { createLangfuseClient, langfuseSettings, type LangfuseEnvironment } from "../../services/langfuse/client"
 import { startLangfuseTelemetry } from "../../services/langfuse/telemetry"
@@ -145,43 +146,60 @@ export function createEvalLangfuse(environment: LangfuseEnvironment) {
     },
     async publishResult(options: {
       runName: string
+      datasetName: string
       datasetItemId: string
       datasetVersion: string
       traceId: string
       observationId: string
-      metadata: unknown
+      output: unknown
+      metadata: Record<string, unknown>
       scores: EvalScore[]
     }) {
-      await request("dataset-run-items", {
+      assertSafeArtifact(options)
+      const sdk = new LangfuseClient({ ...langfuseSettings(environment), timeout: 20 })
+      const dataset = await sdk.dataset.get(options.datasetName, { version: options.datasetVersion })
+      const item = dataset.items.find((entry) => entry.id === options.datasetItemId)
+      if (!item) {
+        throw new Error("Frozen dataset item is unavailable; publication was not attempted.")
+      }
+      assertSafeArtifact(item.input)
+      assertSafeArtifact(item.expectedOutput)
+      assertSafeArtifact(item.metadata)
+      let observationId: string | undefined
+      const published = await sdk.experiment.run({
+        name: options.runName,
         runName: options.runName,
-        datasetItemId: options.datasetItemId,
         datasetVersion: options.datasetVersion,
-        traceId: options.traceId,
-        observationId: options.observationId,
-        metadata: options.metadata
+        data: [item],
+        maxConcurrency: 1,
+        metadata: {
+          ...options.metadata,
+          sourceTraceId: options.traceId,
+          sourceObservationId: options.observationId,
+          publicationOnly: true
+        },
+        task: async () => {
+          observationId = getActiveSpanId()
+          return options.output
+        }
       })
-      const batch = options.scores
-        .filter((score) => score.value !== null)
-        .map((score) => ({
-          id: crypto.randomUUID(),
-          timestamp: new Date().toISOString(),
-          type: "score-create",
-          body: {
+      const result = published.itemResults[0]
+      if (published.itemResults.length !== 1 || !result?.datasetRunId || !result.traceId || !observationId) {
+        throw new Error("Langfuse experiment publication failed; retry the saved upload.")
+      }
+      for (const score of options.scores) {
+        if (score.value !== null) {
+          await request("scores", {
             id: digest({ traceId: options.traceId, name: score.name }),
-            traceId: options.traceId,
-            observationId: options.observationId,
+            traceId: result.traceId,
+            observationId,
             name: score.name,
             value: score.value,
             dataType: "NUMERIC",
             comment: score.detail,
             environment: "evaluation",
             metadata: { releaseApproved: false }
-          }
-        }))
-      if (batch.length) {
-        const response = z.object({ errors: z.array(z.unknown()) }).parse(await request("ingestion", { batch }))
-        if (response.errors.length) {
-          throw new Error("Langfuse rejected part of the score batch; retry the saved upload.")
+          })
         }
       }
     },
@@ -230,17 +248,33 @@ export function createEvalLangfuse(environment: LangfuseEnvironment) {
   }
 }
 
-export async function observeEval<T>(input: unknown, metadata: Record<string, unknown>, operation: () => Promise<T>) {
+export async function observeEval<T>(
+  input: unknown,
+  metadata: Record<string, unknown>,
+  operation: (sessionId: string) => Promise<T>
+) {
   assertSafeArtifact({ input, metadata })
-  return startActiveObservation(
-    "legislative-research-evaluation",
-    async (observation) => {
-      observation.update({ input, metadata })
-      const result = await operation()
-      assertSafeArtifact(result)
-      observation.update({ output: result })
-      return { result, traceId: observation.traceId, observationId: observation.id }
-    },
-    { asType: "agent" }
+  const sessionId = crypto.randomUUID()
+  const correlation = Object.fromEntries(
+    Object.entries(metadata).flatMap(([key, value]) => {
+      if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+        return []
+      }
+      const serialized = String(value)
+      return serialized.length <= 200 ? [[key, serialized]] : []
+    })
+  )
+  return propagateAttributes({ sessionId, traceName: "legislative-research-evaluation", metadata: correlation }, () =>
+    startActiveObservation(
+      "legislative-research-evaluation",
+      async (observation) => {
+        observation.update({ input, metadata })
+        const result = await operation(sessionId)
+        assertSafeArtifact(result)
+        observation.update({ output: result })
+        return { result, traceId: observation.traceId, observationId: observation.id }
+      },
+      { asType: "agent" }
+    )
   )
 }

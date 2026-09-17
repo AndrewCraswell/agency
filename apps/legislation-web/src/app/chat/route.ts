@@ -274,26 +274,25 @@ export async function POST(request: Request) {
       }
       return { role: message.role, content }
     })
-    const result = runResearchAgent({
-      sessionId: parsed.data.sessionKey,
-      captureId: runId,
-      model: createResearchModel(process.env.OPENROUTER_API_KEY),
-      instructions: `${prompt.prompt}\n\n${compositionInstructions}`,
-      tools,
-      messages,
-      onChunk: ({ chunk }) => {
-        if (chunk.type === "tool-error" || (chunk.type === "tool-call" && chunk.invalid)) {
-          reportToolFailure({ toolCallId: chunk.toolCallId, toolName: chunk.toolName, error: chunk.error })
-        }
-      },
-      signal
-    })
     const acceptedAt = new Date().toISOString()
-    const [uiStream, captureStream] = result.stream.tee()
     const composed = Promise.withResolvers<ComposedAnswer>()
-    const captured = observeChatResponse({
+    const capture = observeChatResponse({
       sessionId: parsed.data.sessionKey,
-      stream: captureStream,
+      start: () =>
+        runResearchAgent({
+          sessionId: parsed.data.sessionKey,
+          captureId: runId,
+          model: createResearchModel(process.env.OPENROUTER_API_KEY),
+          instructions: `${prompt.prompt}\n\n${compositionInstructions}`,
+          tools,
+          messages,
+          onChunk: ({ chunk }) => {
+            if (chunk.type === "tool-error" || (chunk.type === "tool-call" && chunk.invalid)) {
+              reportToolFailure({ toolCallId: chunk.toolCallId, toolName: chunk.toolName, error: chunk.error })
+            }
+          },
+          signal
+        }).stream,
       composed: composed.promise,
       citationTelemetry: { runId, model: researchModelId, promptVersion: prompt.version },
       input: {
@@ -318,7 +317,8 @@ export async function POST(request: Request) {
         reasoningEffort: "low",
         referenceMode: "evidence-relative"
       }
-    }).catch((error: unknown) => {
+    })
+    const captured = capture.completed.catch((error: unknown) => {
       captureException(error, { tags: { operation: "chat_capture", runId } })
     })
     after(async () => {
@@ -327,7 +327,7 @@ export async function POST(request: Request) {
     })
     const userMessage = parsed.data.messages.at(-1)
     const responseStream = toUIMessageStream({
-      stream: uiStream,
+      stream: await capture.stream,
       sendReasoning: false,
       messageMetadata: ({ part }) => (part.type === "start" ? { createdAt: new Date().toISOString() } : undefined),
       onError: (error) => {

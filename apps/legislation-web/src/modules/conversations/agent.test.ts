@@ -69,7 +69,10 @@ describe("runResearchAgent", () => {
     })
 
     expect(result).toEqual({ stream: "test-stream" })
-    expect(propagateAttributes).toHaveBeenCalledWith({ sessionId: "conversation-123" }, expect.any(Function))
+    expect(propagateAttributes).toHaveBeenCalledWith(
+      { sessionId: "conversation-123", traceName: "legislative-research-conversation" },
+      expect.any(Function)
+    )
     expect(streamText).toHaveBeenCalledWith({
       model: "test-model",
       instructions: "Pinned instructions",

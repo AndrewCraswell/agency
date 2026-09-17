@@ -139,8 +139,10 @@ async function main() {
         const upload = {
           ...originalUpload,
           runName: `regrade-${path.basename(directory)}-${unit}`,
+          datasetName: dataset.name,
           traceId: observed.traceId,
           observationId: observed.observationId,
+          output: evaluation,
           metadata: { inputContract: evaluationInputContract, sourceRun: manifest.runId },
           scores: scores.map((name) => ({
             name: `regrade-${name}`,

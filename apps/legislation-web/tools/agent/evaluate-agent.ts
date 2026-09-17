@@ -76,11 +76,13 @@ function print(value: unknown) {
 const scoreSchema = z.object({ name: z.string(), value: z.number().nullable(), detail: z.string() })
 const uploadSchema = z.object({
   runName: z.string(),
+  datasetName: z.string(),
   datasetItemId: z.string(),
   datasetVersion: z.string(),
   traceId: z.string(),
   observationId: z.string(),
-  metadata: z.unknown(),
+  output: z.json(),
+  metadata: z.record(z.string(), z.unknown()),
   scores: z.array(scoreSchema)
 })
 
@@ -156,10 +158,15 @@ async function main() {
   if (values.upload) {
     const langfuse = createEvalLangfuse(process.env)
     await langfuse.verifyProject()
-    for (const name of (await readdir(values.upload)).filter((entry) => entry.endsWith(".upload.json"))) {
-      await langfuse.publishResult(
-        uploadSchema.parse(JSON.parse(await readFile(path.join(values.upload, name), "utf8")))
-      )
+    const tracing = langfuse.startTracing()
+    try {
+      for (const name of (await readdir(values.upload)).filter((entry) => entry.endsWith(".upload.json"))) {
+        await langfuse.publishResult(
+          uploadSchema.parse(JSON.parse(await readFile(path.join(values.upload, name), "utf8")))
+        )
+      }
+    } finally {
+      await tracing.shutdown()
     }
     print("Stored experiment links and scores uploaded without repeating inference.")
     return
@@ -385,9 +392,10 @@ async function main() {
                   model: candidate.model,
                   review: item.review
                 },
-                () =>
+                (sessionId) =>
                   executeCase({
                     item,
+                    sessionId,
                     model: createResearchModel(process.env.OPENROUTER_API_KEY, candidate.model, candidate),
                     instructions: prompt.prompt,
                     budget,
@@ -446,10 +454,12 @@ async function main() {
           }
           const upload = {
             runName: `${runId}-${candidate.id}-repeat-${repeat}`,
+            datasetName: dataset.name,
             datasetItemId,
             datasetVersion: synced.timestamp,
             traceId: observed.traceId,
             observationId: observed.observationId,
+            output: observed.result,
             metadata: {
               runId,
               candidate,

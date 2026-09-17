@@ -129,28 +129,53 @@ export function observeChatResponse(options: {
   sessionId: string
   input: unknown
   metadata: Record<string, unknown>
-  stream: ReadableStream<TextStreamPart<ToolSet>>
+  start: () => ReadableStream<TextStreamPart<ToolSet>>
   composed?: Promise<ComposedAnswer>
   citationTelemetry?: CitationTelemetryContext
 }) {
-  return propagateAttributes({ sessionId: options.sessionId }, () =>
-    startActiveObservation(
-      "legislative-research-conversation",
-      async (observation) => {
-        observation.update({ input: redactCredentials(options.input), metadata: options.metadata })
-        const raw = await collectChatStream(options.stream)
-        const composition = await options.composed
-        if (composition && options.citationTelemetry) {
-          createCitationFailureReporter(options.citationTelemetry)({
-            text: composition.text,
-            events: raw.events,
-            termination: raw.output.termination,
-            isInterrupted: composition.isInterrupted
-          })
-        }
-        observation.update({ output: redactCredentials({ ...raw, ...(composition ? { composition } : {}) }) })
-      },
-      { asType: "agent" }
-    )
+  const stream = Promise.withResolvers<ReadableStream<TextStreamPart<ToolSet>>>()
+  const redacted = redactCredentials(options.metadata)
+  const redactedMetadata = Object.fromEntries(
+    Object.entries(typeof redacted === "object" && redacted !== null ? redacted : {})
   )
+  const metadata = Object.fromEntries(
+    Object.entries(redactedMetadata).flatMap(([key, value]) => {
+      if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+        return []
+      }
+      const serialized = String(redactCredentials(value))
+      return serialized.length <= 200 ? [[key, serialized]] : []
+    })
+  )
+  const completed = propagateAttributes(
+    { sessionId: options.sessionId, traceName: "legislative-research-conversation", metadata },
+    () =>
+      startActiveObservation(
+        "legislative-research-conversation",
+        async (observation) => {
+          observation.update({ input: redactCredentials(options.input), metadata: redactedMetadata })
+          const [uiStream, captureStream] = options.start().tee()
+          stream.resolve(uiStream)
+          const raw = await collectChatStream(captureStream)
+          const composition = await options.composed
+          if (composition && options.citationTelemetry) {
+            createCitationFailureReporter(options.citationTelemetry)({
+              text: composition.text,
+              events: raw.events,
+              termination: raw.output.termination,
+              isInterrupted: composition.isInterrupted
+            })
+          }
+          observation.update({ output: redactCredentials({ ...raw, ...(composition ? { composition } : {}) }) })
+        },
+        { asType: "agent" }
+      )
+  )
+  return {
+    stream: stream.promise,
+    completed: completed.catch((error: unknown) => {
+      stream.reject(error)
+      throw error
+    })
+  }
 }

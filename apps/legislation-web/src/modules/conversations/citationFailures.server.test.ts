@@ -115,14 +115,14 @@ describe("missing citation telemetry", () => {
       sessionId: context.runId,
       input: "PRIVATE QUESTION",
       metadata: {},
-      stream,
+      start: () => stream,
       composed: Promise.resolve({
         text: "Claim [1](#citation-known) [2](#citation-missing)",
         blocks: [],
         isInterrupted: false
       }),
       citationTelemetry: context
-    })
+    }).completed
     expect(captureException).toHaveBeenCalledOnce()
     expect(captureException).toHaveBeenCalledWith(
       expect.any(Error),
