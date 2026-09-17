@@ -133,6 +133,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
 - [ ] **ORCH-03 Add the acquisition worker adapter.** Wrap existing source clients/artifact acquisition with strict
   payloads, source budgets, artifact references and committed checkpoints. **Done:** interrupted downloads never
   produce a complete artifact; retry verifies checksum and reuses valid retained bytes. Depends on ORCH-01.
+  Local progress: one current discovery unit now streams through the existing bounded XML/checksum implementation and
+  atomically records its artifact and receipt on the registered discovery row. Retry revalidates retained bytes. Shared
+  provider admission/cooldown, persisted worker leases and deployed durable artifact storage remain open.
 - [ ] **ORCH-04 Add the parser and validation worker adapters.** Invoke the existing Python bridge with bounded
   manifests/shards, resource limits and safe failure summaries. **Done:** process exit, timeout, missing shard and
   invalid envelope leave the unit unpublished; retry preserves deterministic normalized hashes. Depends on ORCH-03.

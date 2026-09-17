@@ -54,12 +54,25 @@ CREATE TABLE legislation.legal_discovery_units (
   unit_key text NOT NULL CHECK(unit_key ~ '^[a-f0-9]{64}$'),
   payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
   unit jsonb NOT NULL CHECK(jsonb_typeof(unit)='object'),
-  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','registered','quarantined')),
+  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','registered','acquired','quarantined')),
   discovered_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   registered_at timestamptz,
+  artifact_hash text CHECK(artifact_hash IS NULL OR artifact_hash ~ '^[a-f0-9]{64}$'),
+  artifact_bytes bigint CHECK(artifact_bytes IS NULL OR artifact_bytes>0),
+  storage_locator text,
+  acquisition_receipt jsonb,
+  acquired_at timestamptz,
   PRIMARY KEY(source_id,scope_key,unit_key),
   FOREIGN KEY(source_id,scope_key) REFERENCES legislation.legal_discovery_checkpoints(source_id,scope_key),
-  CHECK((state='registered')=(registered_at IS NOT NULL))
+  CHECK(
+    (state='pending' AND registered_at IS NULL) OR
+    (state IN ('registered','acquired') AND registered_at IS NOT NULL) OR
+    state='quarantined'
+  ),
+  CHECK(
+    (state='acquired')=(artifact_hash IS NOT NULL AND artifact_bytes IS NOT NULL AND storage_locator IS NOT NULL AND
+      acquisition_receipt IS NOT NULL AND acquired_at IS NOT NULL)
+  )
 );
 --> statement-breakpoint
 CREATE INDEX legal_discovery_units_pending_idx ON legislation.legal_discovery_units(source_id,scope_key,discovered_at,unit_key)
@@ -77,6 +90,9 @@ CREATE TABLE legislation.legal_artifacts (
   storage_locator text NOT NULL,
   acquired_at timestamptz NOT NULL
 );
+--> statement-breakpoint
+ALTER TABLE legislation.legal_discovery_units ADD CONSTRAINT legal_discovery_units_artifact_fk
+  FOREIGN KEY(artifact_hash) REFERENCES legislation.legal_artifacts(hash);
 --> statement-breakpoint
 CREATE TABLE legislation.legal_import_generations (
   id text PRIMARY KEY CHECK (id ~ '^[a-f0-9]{64}$'),

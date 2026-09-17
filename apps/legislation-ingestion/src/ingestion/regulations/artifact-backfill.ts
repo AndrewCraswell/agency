@@ -9,6 +9,7 @@ import {
 } from "@repo/legislation-core/legal-text/contracts"
 import { z } from "zod"
 import { ProviderHttpError } from "../http-client.js"
+import { legalDiscoveryUnitSchema, type LegalDiscoveryUnit } from "./discovery-checkpoint.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
 export const receiptSchema = z.strictObject({
@@ -22,12 +23,16 @@ export const receiptSchema = z.strictObject({
   stage: z.literal("acquired"),
   parseValidated: z.literal(false)
 })
+export const currentReceiptSchema = receiptSchema.extend({ unit: legalDiscoveryUnitSchema })
+type RegulatoryArtifactUnit = AcquisitionUnit | LegalDiscoveryUnit
+type RegulatoryArtifactReceipt = z.infer<typeof receiptSchema> | z.infer<typeof currentReceiptSchema>
+type ReceiptSchema = typeof receiptSchema | typeof currentReceiptSchema
 
 function isMissing(error: unknown) {
   return error instanceof Error && "code" in error && error.code === "ENOENT"
 }
 
-function assertXmlPrefix(value: Uint8Array, sourceId: AcquisitionUnit["sourceId"]) {
+function assertXmlPrefix(value: Uint8Array, sourceId: RegulatoryArtifactUnit["sourceId"]) {
   const text = Buffer.from(value)
     .toString("utf8")
     .replace(/^\uFEFF/, "")
@@ -60,7 +65,7 @@ export async function validateRegulatoryArtifactRetention(path: string, hash: st
   }
 }
 
-async function cachedReceipt(directory: string, unit: AcquisitionUnit) {
+async function cachedReceipt(directory: string, unit: RegulatoryArtifactUnit, schema: ReceiptSchema) {
   let raw: string
   try {
     raw = await readFile(join(directory, "units", `${unit.key}.json`), "utf8")
@@ -70,7 +75,7 @@ async function cachedReceipt(directory: string, unit: AcquisitionUnit) {
     }
     throw error
   }
-  const receipt = receiptSchema.parse(JSON.parse(raw))
+  const receipt = schema.parse(JSON.parse(raw)) as RegulatoryArtifactReceipt
   if (receipt.unit.key !== unit.key || receipt.unit.sourceUrl !== unit.sourceUrl) {
     throw new Error("Cached acquisition receipt belongs to another unit")
   }
@@ -83,11 +88,12 @@ async function cachedReceipt(directory: string, unit: AcquisitionUnit) {
 
 async function acquireUnit(
   directory: string,
-  unit: AcquisitionUnit,
+  unit: RegulatoryArtifactUnit,
   client: RegulatorySourceClient,
-  maximumBytes: number
+  maximumBytes: number,
+  schema: ReceiptSchema
 ) {
-  const cached = await cachedReceipt(directory, unit)
+  const cached = await cachedReceipt(directory, unit, schema)
   if (cached !== null) {
     return { ...cached, reused: true }
   }
@@ -152,7 +158,7 @@ async function acquireUnit(
         throw new Error("Existing immutable artifact is corrupt")
       }
     }
-    const receipt = receiptSchema.parse({
+    const receipt = schema.parse({
       unit,
       sha256,
       bytes,
@@ -170,12 +176,46 @@ async function acquireUnit(
     } finally {
       await rm(receiptTemp, { force: true })
     }
-    return { ...receipt, reused: false }
+    return { ...(receipt as RegulatoryArtifactReceipt), reused: false }
   } finally {
     await reader.cancel().catch(() => undefined)
     await handle?.close()
     await rm(tempPath, { force: true })
   }
+}
+
+/** Acquires one current discovery unit using the same verified immutable-byte path as historical backfills. */
+export async function acquireCurrentRegulatoryArtifact(
+  directory: string,
+  value: unknown,
+  options: { maximumBytes?: number; client?: RegulatorySourceClient } = {}
+) {
+  const unit = legalDiscoveryUnitSchema.parse(value)
+  const maximumBytes = z
+    .int()
+    .positive()
+    .max(512 * 1024 * 1024)
+    .parse(options.maximumBytes ?? 256 * 1024 * 1024)
+  for (const name of ["blobs", "units", "temporary", "attempts"]) {
+    await mkdir(join(directory, name), { recursive: true })
+  }
+  const client = options.client ?? new RegulatorySourceClient()
+  let receipt
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      receipt = await acquireUnit(directory, unit, client, maximumBytes, currentReceiptSchema)
+      break
+    } catch (error) {
+      if (!(error instanceof ProviderHttpError) || !error.retryable || attempt === 2) {
+        throw error
+      }
+      await client.retryDelay(attempt)
+    }
+  }
+  if (receipt === undefined) {
+    throw new Error("Acquisition did not produce a receipt")
+  }
+  return currentReceiptSchema.extend({ reused: z.boolean() }).parse(receipt)
 }
 
 /** One local writer per artifact directory. No database, Azure, Trigger or source-schedule mutations. */
@@ -210,7 +250,7 @@ export async function acquireRegulatoryBackfill(
     let attempted = 0
     for (const unit of manifest.units) {
       try {
-        const cached = await cachedReceipt(directory, unit)
+        const cached = await cachedReceipt(directory, unit, receiptSchema)
         if (cached !== null) {
           acquired.push({ key: unit.key, sha256: cached.sha256, bytes: cached.bytes, reused: true })
           continue
@@ -222,7 +262,7 @@ export async function acquireRegulatoryBackfill(
         let receipt
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            receipt = await acquireUnit(directory, unit, client, maximumBytes)
+            receipt = await acquireUnit(directory, unit, client, maximumBytes, receiptSchema)
             break
           } catch (error) {
             if (!(error instanceof ProviderHttpError) || !error.retryable || attempt === 2) {

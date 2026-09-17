@@ -2250,7 +2250,12 @@ export const legalDiscoveryUnits = legislationSchema.table(
     unit: jsonb("unit").$type<Record<string, unknown>>().notNull(),
     state: text("state").notNull().default("pending"),
     discoveredAt: timestamp("discovered_at", { withTimezone: true }).notNull().defaultNow(),
-    registeredAt: timestamp("registered_at", { withTimezone: true })
+    registeredAt: timestamp("registered_at", { withTimezone: true }),
+    artifactHash: text("artifact_hash").references(() => legalArtifacts.hash),
+    artifactBytes: bigint("artifact_bytes", { mode: "number" }),
+    storageLocator: text("storage_locator"),
+    acquisitionReceipt: jsonb("acquisition_receipt").$type<Record<string, unknown>>(),
+    acquiredAt: timestamp("acquired_at", { withTimezone: true })
   },
   (t) => [
     primaryKey({ columns: [t.sourceId, t.scopeKey, t.unitKey] }),
@@ -2261,8 +2266,15 @@ export const legalDiscoveryUnits = legislationSchema.table(
     check("legal_discovery_units_key_check", sql`${t.unitKey} ~ '^[a-f0-9]{64}$'`),
     check("legal_discovery_units_payload_hash_check", sql`${t.payloadHash} ~ '^[a-f0-9]{64}$'`),
     check("legal_discovery_units_payload_check", sql`jsonb_typeof(${t.unit})='object'`),
-    check("legal_discovery_units_state_check", sql`${t.state} IN ('pending','registered','quarantined')`),
-    check("legal_discovery_units_registered_check", sql`(${t.state}='registered')=(${t.registeredAt} IS NOT NULL)`),
+    check("legal_discovery_units_state_check", sql`${t.state} IN ('pending','registered','acquired','quarantined')`),
+    check(
+      "legal_discovery_units_registered_check",
+      sql`(${t.state}='pending' AND ${t.registeredAt} IS NULL) OR (${t.state} IN ('registered','acquired') AND ${t.registeredAt} IS NOT NULL) OR ${t.state}='quarantined'`
+    ),
+    check(
+      "legal_discovery_units_acquired_check",
+      sql`(${t.state}='acquired')=(${t.artifactHash} IS NOT NULL AND ${t.artifactBytes} IS NOT NULL AND ${t.storageLocator} IS NOT NULL AND ${t.acquisitionReceipt} IS NOT NULL AND ${t.acquiredAt} IS NOT NULL)`
+    ),
     index("legal_discovery_units_pending_idx")
       .on(t.sourceId, t.scopeKey, t.discoveredAt, t.unitKey)
       .where(sql`${t.state}='pending'`)

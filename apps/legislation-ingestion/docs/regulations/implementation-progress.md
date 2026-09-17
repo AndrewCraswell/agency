@@ -3031,6 +3031,27 @@ official 2026-09-15 inventory and registered a limit-10 page as manifest
 Two database files with three tests and four task tests passed. Ingestion TypeScript, scoped oxlint and oxfmt passed.
 Artifact acquisition, persisted submission intent/run handles, parser dispatch and deployed verification remain open.
 
+## Current-unit artifact acquisition checkpoint
+
+Registered discovery units now have an explicit acquired state with artifact hash, byte count, storage locator,
+validated receipt and acquisition timestamp. `regulatory-discovery-acquisition` reloads one immutable manifest/unit
+identity, streams official XML through the historical backfill's bounded download and root/checksum validation, inserts
+the content-addressed artifact and advances only the matching registered row in one serializable transaction. If the
+download finishes but the transaction fails, retry verifies and reuses the retained bytes before attempting the commit.
+Historical receipts remain `historical: true`; current receipts remain `historical: false`.
+
+The fresh-migration PostgreSQL run passed three database files and four tests, including download replay with one source
+request, byte/hash retention and acquired-state persistence. The historical acquisition regression plus registration and
+acquisition task suites passed 28 tests. Ingestion/core types and `drizzle-kit check` passed. A live official eCFR Title
+1 canary acquired 477,387 bytes from the 2026-09-15 inventory as SHA-256
+`fe18aad18e3b6e8fde18478d1f64d946bb9963bb74f1c164183627663c695c72`; immediate replay returned `reused: true`
+without another source download. Manifest:
+`de0b3b53b3a5ff69fd6f67a4dfb148e0cf205f7754a859b61106a4013a196f76`. The retained local canary is under
+`artifacts/regulatory-backfills/current-acquisition-canary`.
+
+This is local/disposable evidence. Shared provider admission/cooldown, persisted Trigger submission/lease recovery,
+deployed durable artifact storage, parser handoff and recurring activation remain open.
+
 ## Pinned resumption of the full current-title qualification
 
 The earlier full 49-edition tokenizer qualification stopped after 12 editions with

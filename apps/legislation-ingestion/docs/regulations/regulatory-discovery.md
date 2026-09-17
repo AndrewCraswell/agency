@@ -27,7 +27,13 @@ Selection, manifest insertion and the pending-to-registered transition share one
 use row locks with `SKIP LOCKED`, so competing bounded runs cannot claim the same unit. An empty pending set produces no
 manifest. Registration does not download source bytes, submit a child task or imply that acquisition succeeded.
 
+`regulatory-discovery-acquisition` accepts one manifest ID and unit key. The worker reloads the immutable manifest,
+streams the official XML through the existing bounded checksum path, validates its regulatory root, retains bytes under
+their SHA-256 and commits the artifact reference plus receipt to the matching discovery row. A crash after the file is
+complete but before the database commit reuses and revalidates the retained file. The artifact root comes from
+`REGULATORY_ARTIFACT_DIRECTORY`; deployment still requires a verified shared durable mount or object-store adapter.
+
 The discovery-unit and current-manifest contracts require `historical: false`; the existing acquisition/backfill
 contract remains strictly `historical: true`. Keeping these schemas separate prevents recurring observations from
-silently becoming completed backfill coverage. Artifact acquisition, deployed verification, completion accounting and
-scheduled cadence are separate gates.
+silently becoming completed backfill coverage. Parser dispatch, deployed shared artifact storage, completion accounting
+and scheduled cadence are separate gates.
