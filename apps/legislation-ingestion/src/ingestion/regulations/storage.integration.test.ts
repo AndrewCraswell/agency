@@ -1336,101 +1336,131 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
     await expect(materializeLegalPassages(pool, request)).rejects.toThrow("rights_profile_unavailable")
   })
 
-  it("isolates dimension-constrained regulatory vectors and completes only an exact passage inventory", async () => {
-    const data = await materialized(await input())
-    await publishRegulatoryEdition(pool, data.lease, null)
-    const member = await pool.query(
-      "SELECT version_id FROM legislation.legal_edition_provisions WHERE edition_id=$1 AND ordinal=1",
-      [data.editionId]
-    )
-    const prepared = await materializeLegalPassages(pool, {
-      scope: {
-        kind: "provision",
-        versionId: z.uuid().parse(member.rows[0]?.version_id),
-        editionId: data.editionId
-      },
-      model: "openai/text-embedding-3-small",
-      context: "United States CFR"
-    })
-    expect(prepared.passages).toBe(1)
-    const passage = (
-      await pool.query<{ id: string; input_hash: string }>(
-        "SELECT id,data->>'inputHash' AS input_hash FROM legislation.legal_passages WHERE generation_id=$1",
-        [prepared.generationId]
+  it.skipIf(!process.env.REGULATORY_SEARCH_TEST_DATABASE_URL)(
+    "isolates dimension-constrained regulatory vectors and completes only an exact passage inventory",
+    async () => {
+      const targetUrl = new URL(z.string().parse(process.env.REGULATORY_SEARCH_TEST_DATABASE_URL))
+      invariant(
+        targetUrl.pathname === "/legislation_passage_search" &&
+          ["localhost", "127.0.0.1", "[::1]"].includes(targetUrl.hostname),
+        "unexpected_search_test_database"
       )
-    ).rows[0]
-    invariant(passage, "vector_test_passage_missing")
-    const registration = {
-      passageGenerationId: prepared.generationId,
-      model: "openai/text-embedding-3-small" as const,
-      inputContract: "legal-passage-context-text",
-      manifestHash: digest(JSON.stringify([passage.id, passage.input_hash])),
-      expectedCount: 1
+      const target = new pg.Pool({ connectionString: targetUrl.href, max: 3 })
+      try {
+        if (!(await target.query("SELECT to_regclass('legislation.legal_search_generations') AS name")).rows[0].name) {
+          await target.query(
+            await readFile(
+              new URL(import.meta.resolve("@repo/legislation-core/infra/passage-search/legal.sql")),
+              "utf8"
+            )
+          )
+        }
+        await target.query(
+          "TRUNCATE legislation.legal_search_generations,legislation.legal_search_scopes,legislation.legal_search_revocations CASCADE"
+        )
+        const data = await materialized(await input())
+        await publishRegulatoryEdition(pool, data.lease, null)
+        const member = await pool.query(
+          "SELECT version_id FROM legislation.legal_edition_provisions WHERE edition_id=$1 AND ordinal=1",
+          [data.editionId]
+        )
+        const scope = {
+          kind: "provision" as const,
+          versionId: z.uuid().parse(member.rows[0]?.version_id),
+          editionId: data.editionId
+        }
+        const prepared = await materializeLegalPassages(pool, {
+          scope,
+          model: "openai/text-embedding-3-small",
+          context: "United States CFR"
+        })
+        expect(prepared.passages).toBe(1)
+        await replicateLegalPassageGeneration(pool, target, { scope, generationId: prepared.generationId })
+        const passage = (
+          await target.query<{ id: string; input_hash: string }>(
+            "SELECT id,data->>'inputHash' AS input_hash FROM legislation.legal_search_passages WHERE generation_id=$1",
+            [prepared.generationId]
+          )
+        ).rows[0]
+        invariant(passage, "vector_test_passage_missing")
+        const registration = {
+          passageGenerationId: prepared.generationId,
+          model: "openai/text-embedding-3-small" as const,
+          inputContract: "legal-passage-context-text",
+          manifestHash: digest(JSON.stringify([passage.id, passage.input_hash])),
+          expectedCount: 1
+        }
+        const generation = await registerLegalEmbeddingGeneration(target, registration)
+        expect(generation).toMatchObject({ dimensions: 1536, state: "pending", reused: false })
+        await expect(registerLegalEmbeddingGeneration(target, { ...registration, expectedCount: 2 })).rejects.toThrow(
+          "legal_embedding_passage_inventory_mismatch"
+        )
+        expect(await registerLegalEmbeddingGeneration(target, registration)).toMatchObject({
+          generationId: generation.generationId,
+          state: "pending",
+          reused: true
+        })
+        const vector = Array.from({ length: 1536 }, (_value, index) => (index === 0 ? 1 : 0))
+        const batch = {
+          generationId: generation.generationId,
+          model: registration.model,
+          items: [{ passageId: passage.id, inputHash: passage.input_hash, embedding: vector }]
+        }
+        expect(await storeLegalEmbeddingBatch(target, batch)).toEqual({ inserted: 1, reused: 0 })
+        expect(await storeLegalEmbeddingBatch(target, batch)).toEqual({ inserted: 0, reused: 1 })
+        await expect(
+          storeLegalEmbeddingBatch(target, {
+            ...batch,
+            items: [
+              {
+                ...batch.items[0],
+                embedding: Array.from({ length: 1536 }, (_value, index) => (index === 1 ? 1 : 0))
+              }
+            ]
+          })
+        ).rejects.toThrow("legal_embedding_batch_replay_conflict")
+        await expect(
+          storeLegalEmbeddingBatch(target, {
+            ...batch,
+            items: [{ ...batch.items[0], inputHash: "0".repeat(64) }]
+          })
+        ).rejects.toThrow("legal_embedding_input_mismatch")
+        await expect(
+          storeLegalEmbeddingBatch(target, {
+            ...batch,
+            items: [{ ...batch.items[0], embedding: [1] }]
+          })
+        ).rejects.toThrow("legal_embedding_invalid_vector")
+        await expect(
+          storeLegalEmbeddingBatch(target, {
+            ...batch,
+            model: "voyageai/voyage-4",
+            items: [{ ...batch.items[0], embedding: Array.from({ length: 1024 }, () => 1) }]
+          })
+        ).rejects.toThrow("legal_embedding_generation_route_mismatch")
+        expect(await completeLegalEmbeddingGeneration(target, generation.generationId)).toMatchObject({
+          vectors: 1,
+          reused: false
+        })
+        expect(await completeLegalEmbeddingGeneration(target, generation.generationId)).toMatchObject({
+          vectors: 1,
+          reused: true
+        })
+        expect(await storeLegalEmbeddingBatch(target, batch)).toEqual({ inserted: 0, reused: 1 })
+        expect(await registerLegalEmbeddingGeneration(target, registration)).toMatchObject({
+          state: "embedded",
+          reused: true
+        })
+        await expect(
+          target.query("UPDATE legislation.legal_openai_small_embeddings SET dimensions=1024 WHERE generation_id=$1", [
+            generation.generationId
+          ])
+        ).rejects.toThrow()
+      } finally {
+        await target.end()
+      }
     }
-    const generation = await registerLegalEmbeddingGeneration(pool, registration)
-    expect(generation).toMatchObject({ dimensions: 1536, state: "pending", reused: false })
-    await expect(registerLegalEmbeddingGeneration(pool, { ...registration, expectedCount: 2 })).rejects.toThrow(
-      "legal_embedding_passage_inventory_mismatch"
-    )
-    expect(await registerLegalEmbeddingGeneration(pool, registration)).toMatchObject({
-      generationId: generation.generationId,
-      state: "pending",
-      reused: true
-    })
-    const vector = Array.from({ length: 1536 }, (_value, index) => (index === 0 ? 1 : 0))
-    const batch = {
-      generationId: generation.generationId,
-      model: registration.model,
-      items: [{ passageId: passage.id, inputHash: passage.input_hash, embedding: vector }]
-    }
-    expect(await storeLegalEmbeddingBatch(pool, batch)).toEqual({ inserted: 1, reused: 0 })
-    expect(await storeLegalEmbeddingBatch(pool, batch)).toEqual({ inserted: 0, reused: 1 })
-    await expect(
-      storeLegalEmbeddingBatch(pool, {
-        ...batch,
-        items: [
-          { ...batch.items[0], embedding: Array.from({ length: 1536 }, (_value, index) => (index === 1 ? 1 : 0)) }
-        ]
-      })
-    ).rejects.toThrow("legal_embedding_batch_replay_conflict")
-    await expect(
-      storeLegalEmbeddingBatch(pool, {
-        ...batch,
-        items: [{ ...batch.items[0], inputHash: "0".repeat(64) }]
-      })
-    ).rejects.toThrow("legal_embedding_input_mismatch")
-    await expect(
-      storeLegalEmbeddingBatch(pool, {
-        ...batch,
-        items: [{ ...batch.items[0], embedding: [1] }]
-      })
-    ).rejects.toThrow("legal_embedding_invalid_vector")
-    await expect(
-      storeLegalEmbeddingBatch(pool, {
-        ...batch,
-        model: "voyageai/voyage-4",
-        items: [{ ...batch.items[0], embedding: Array.from({ length: 1024 }, () => 1) }]
-      })
-    ).rejects.toThrow("legal_embedding_generation_route_mismatch")
-    expect(await completeLegalEmbeddingGeneration(pool, generation.generationId)).toMatchObject({
-      vectors: 1,
-      reused: false
-    })
-    expect(await completeLegalEmbeddingGeneration(pool, generation.generationId)).toMatchObject({
-      vectors: 1,
-      reused: true
-    })
-    expect(await storeLegalEmbeddingBatch(pool, batch)).toEqual({ inserted: 0, reused: 1 })
-    expect(await registerLegalEmbeddingGeneration(pool, registration)).toMatchObject({
-      state: "embedded",
-      reused: true
-    })
-    await expect(
-      pool.query("UPDATE legislation.legal_openai_small_embeddings SET dimensions=1024 WHERE generation_id=$1", [
-        generation.generationId
-      ])
-    ).rejects.toThrow()
-  })
+  )
 
   it("rolls back failed passage writes and detects missing retained passage rows on replay", async () => {
     const data = await materialized(

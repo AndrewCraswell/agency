@@ -42,6 +42,10 @@ const routes = {
 async function transaction<T>(pool: pg.Pool, action: (client: pg.PoolClient) => Promise<T>) {
   const client = await pool.connect()
   try {
+    invariant(
+      (await client.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
+      "legal_embedding_wrong_target"
+    )
     await client.query("BEGIN")
     await client.query("SET LOCAL lock_timeout='5s'")
     await client.query("SET LOCAL statement_timeout='60s'")
@@ -79,9 +83,10 @@ export async function registerLegalEmbeddingGeneration(pool: pg.Pool, input: unk
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [id])
     const source = (
       await client.query<{ passage_count: number; eligibility: string; actual_count: number }>(
-        `SELECT g.passage_count,g.eligibility,count(p.id)::integer AS actual_count
-        FROM legislation.legal_passage_generations g
-        LEFT JOIN legislation.legal_passages p ON p.generation_id=g.id
+        `SELECT (g.metadata->>'passage_count')::integer AS passage_count,
+        g.metadata->>'eligibility' AS eligibility,count(p.id)::integer AS actual_count
+        FROM legislation.legal_search_generations g
+        LEFT JOIN legislation.legal_search_passages p ON p.generation_id=g.id
         WHERE g.id=$1 GROUP BY g.id`,
         [request.passageGenerationId]
       )
@@ -164,7 +169,7 @@ export async function storeLegalEmbeddingBatch(pool: pg.Pool, input: unknown) {
     )
     invariant(["pending", "embedded"].includes(generation.state), "legal_embedding_generation_not_writable")
     const passages = await client.query<{ id: string; input_hash: string }>(
-      `SELECT id,data->>'inputHash' AS input_hash FROM legislation.legal_passages
+      `SELECT id,data->>'inputHash' AS input_hash FROM legislation.legal_search_passages
       WHERE generation_id=$1 AND id=ANY($2::text[]) ORDER BY id FOR SHARE`,
       [generation.passage_generation_id, rows.map((row) => row.passageId)]
     )
