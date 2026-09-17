@@ -170,6 +170,47 @@ And so the effective date clause was adopted.
         result = parse_roll_call(text, "HB1", (2, 1, 1), "AM50", "775")
         self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
 
+    def test_named_anchor_on_cited_page_is_not_counted_twice(self):
+        text = "[[JOURNAL_ANCHOR:0812]]\nPage 0812\n[[JOURNAL_ANCHOR:AM1]]\n" + self.sample()
+        self.assertEqual(len(parse_roll_call(text, "HB1", (2, 1, 1), "AM1", "812")), 4)
+
+    def test_cited_page_recovers_reused_named_anchor_behind_later_amendment(self):
+        text = (
+            "[[JOURNAL_ANCHOR:0812]]\nPage 0812\n[[JOURNAL_ANCHOR:AM1]]\n"
+            + self.sample("Adams, Brown")
+            + "[[JOURNAL_ANCHOR:AM2]]\nA later amendment begins\n"
+            + "[[JOURNAL_ANCHOR:0814]]\nPage 0814\nAmendment No. 1 was before the House\n"
+            + self.sample("Evans, Fox").replace("Final Passage", "Amendment No. 1")
+        )
+        result = parse_roll_call(text, "HB1", (2, 1, 1), "AM1", "814", True, "AM NO 1 FAILED")
+        self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
+
+    def test_cited_page_recovers_action_when_named_anchor_is_on_next_page(self):
+        text = (
+            "[[JOURNAL_ANCHOR:1155]]\nPage 1155\nAmendment No. 2 was before the Senate\n"
+            "[[JOURNAL_ANCHOR:1156]]\nPage 1156\n[[JOURNAL_ANCHOR:AM2]]\n"
+            "[[JOURNAL_ANCHOR:HB1]]\n[[JOURNAL_ANCHOR:AM3]]\n"
+            + self.sample().replace("Final Passage", "Amendment No. 2")
+            + "[[JOURNAL_ANCHOR:1157]]\nPage 1157\n"
+        )
+        result = parse_roll_call(text, "HB1", (2, 1, 1), "AM2", "1155", True,
+                                 "AM NO 2 FAILED")
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
+    def test_direct_amendment_hint_rejects_nearby_rescind_call(self):
+        direct = self.sample("Adams, Brown").replace(
+            "Final Passage", 'The question being: "Shall Amendment No. 10 be adopted?"'
+        )
+        rescind = self.sample("Evans, Fox").replace(
+            "Final Passage",
+            'The question being: "Shall the House rescind previous action in failing to adopt '
+            'Amendment No. 10?"',
+        )
+        text = "[[JOURNAL_ANCHOR:0729]]\n[[JOURNAL_ANCHOR:AM10]]\n" + direct + rescind
+        result = parse_roll_call(text, "HB1", (2, 1, 1), "AM10", "729", True,
+                                 "AM NO 10 FAILED")
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
     def test_explicit_procedural_motion_disambiguates_same_page_tallies(self):
         withdrawn = self.sample("Adams, Brown").replace(
             "Final Passage", "Amendment No. 51/Withdraw"

@@ -37,6 +37,13 @@ def motion_matches(hint, context):
         return True
     hint = re.sub(r"\s+", " ", hint).upper()
     context = re.sub(r"\s+", " ", context).upper()
+    # The journal can finish the previous motion after its tally and before the
+    # next question. Classify the candidate from the most recent explicit
+    # question when one is published, so a nearby prior amendment number or
+    # procedural verb cannot be mistaken for this roll call's subject.
+    question = context.rfind("THE QUESTION BEING:")
+    if question >= 0:
+        context = context[question:]
     amendment = re.search(r"\bAM\s*(?:NO\.?\s*)?(\d+)\b", hint)
     if amendment and not re.search(
         rf"\bAM(?:ENDMENT)?\s*(?:NO\.?\s*)?{int(amendment.group(1))}\b", context
@@ -56,6 +63,14 @@ def motion_matches(hint, context):
         return "RESCIND" in context
     if "RULED OUT OF ORDER" in hint:
         return "OUT OF ORDER" in context
+    if "RESCIND" in context or "RESCINDED" in context:
+        return False
+    if "WITHDRAW" in context:
+        return False
+    if "NOT TABLED" in context or re.search(r"\bTABLED?\b", context):
+        return False
+    if "OUT OF ORDER" in context:
+        return False
     return True
 
 
@@ -122,7 +137,7 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
         raise ValueError("journal_size_limit")
     expected_bill = re.sub(r"\s+", "", bill_identifier).upper()
     anchors = list(ANCHOR.finditer(text))
-    search_ranges = [(0, len(text), None, None, False)]
+    search_ranges = [(0, len(text), None, None, False, False)]
     if target_anchor is not None:
         if not isinstance(target_anchor, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", target_anchor):
             raise ValueError("journal_anchor_invalid")
@@ -185,12 +200,29 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
                             continue
                     search_end = later.start()
                     break
-            search_ranges.append((search_start, search_end, preferred_end, None, False))
+            search_ranges.append((search_start, search_end, preferred_end, None, False, False))
             if backward_start is not None:
-                search_ranges.append((backward_start, search_end, preferred_end, cited_offset, True))
+                search_ranges.append((backward_start, search_end, preferred_end, cited_offset, True, False))
+        # The publisher can reuse a named amendment fragment from an earlier
+        # page without emitting that anchor again for a later reconsideration.
+        # Search the URL's cited printed page as a bounded alternative to the
+        # named fragment. Some journals reuse a stale amendment fragment, while
+        # others put the fragment on the following printed page after the action
+        # has begun. Repeated named fragments remain ambiguous and must not be
+        # rescued by this fallback.
+        if fallback_anchor is not None and not target_anchor.isdigit() and len(selected) == 1:
+            fallback_pages = [match for match in anchors
+                              if anchor_identity(match.group(1)) == anchor_identity(fallback_anchor)
+                              and is_printed_page_anchor(text, match)]
+            for fallback_page in fallback_pages:
+                later_pages = [later for later in anchors if later.start() > fallback_page.start()
+                               and is_printed_page_anchor(text, later)]
+                fallback_end = later_pages[1].start() if len(later_pages) >= 2 else len(text)
+                search_ranges.append((fallback_page.end(), fallback_end, None, None, False, True))
     candidates = []
     cited_candidates = []
-    for search_start, search_end, preferred_end, cited_offset, backward_only in search_ranges:
+    for (search_start, search_end, preferred_end, cited_offset, backward_only,
+         cited_range) in search_ranges:
         range_candidates = []
         summaries = list(SUMMARY.finditer(text, search_start, search_end))
         for index, summary in enumerate(summaries):
@@ -261,6 +293,8 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
                     candidate_page = printed_page_at(text, anchors, summary.start())
                     if cited_offset is not None and summary.start() < cited_offset < end:
                         candidate_page = anchor_identity(target_anchor)
+                    elif cited_range:
+                        candidate_page = anchor_identity(fallback_anchor)
                     range_candidates.append((summary.start(), candidate_page, combined))
             else:
                 try:
@@ -277,6 +311,8 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
                             # a cross-page continuation.
                             continue
                         candidate_page = anchor_identity(target_anchor)
+                    elif cited_range:
+                        candidate_page = anchor_identity(fallback_anchor)
                     range_candidates.append((summary.start(), candidate_page,
                                              positions))
                 except ValueError:
@@ -286,14 +322,15 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
         preferred = ([candidate for candidate in range_candidates if candidate[0] < preferred_end]
                      if preferred_end is not None else [])
         if cited:
-            cited_candidates.extend(positions for _, _, positions in cited)
+            cited_candidates.extend((offset, positions) for offset, _, positions in cited)
         else:
             selected_candidates = preferred or range_candidates
             if target_anchor is not None and target_anchor.isdigit() and selected_candidates:
                 selected_candidates = selected_candidates[:1]
-            candidates.extend(positions for _, _, positions in selected_candidates)
+            candidates.extend((offset, positions) for offset, _, positions in selected_candidates)
     if cited_candidates:
         candidates = cited_candidates
+    candidates = list({offset: positions for offset, positions in candidates}.values())
     if len(candidates) != 1:
         raise ValueError("journal_roll_call_missing_or_ambiguous")
     positions = candidates[0]
