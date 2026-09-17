@@ -1430,6 +1430,20 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           model: registration.model,
           items: [{ passageId: passage.id, inputHash: passage.input_hash, embedding: vector }]
         }
+        await target.query(
+          "ALTER TABLE legislation.legal_openai_small_embeddings ADD CONSTRAINT injected_vector_write_failure CHECK (dimensions=1024)"
+        )
+        try {
+          await expect(
+            runLegalEmbeddingShardJob(target, shardJobRequest, {
+              embed: async () => ({ embeddings: [vector], model: registration.model, totalTokens: 12 })
+            })
+          ).rejects.toThrow("injected_vector_write_failure")
+        } finally {
+          await target.query(
+            "ALTER TABLE legislation.legal_openai_small_embeddings DROP CONSTRAINT injected_vector_write_failure"
+          )
+        }
         await expect(
           runLegalEmbeddingShardJob(target, shardJobRequest, {
             embed: async () => ({ embeddings: [vector], model: "voyageai/voyage-4" })
@@ -1444,9 +1458,9 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
             }
           })
         ).toMatchObject({
-          attempts: 2,
+          attempts: 3,
           inserted: 1,
-          possibleRepeatedPaidAttempts: 1,
+          possibleRepeatedPaidAttempts: 2,
           reused: 0,
           promptTokens: 12,
           totalTokens: 12,
