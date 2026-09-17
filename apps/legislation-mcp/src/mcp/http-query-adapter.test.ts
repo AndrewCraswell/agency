@@ -74,6 +74,34 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe("createMcpHttpQueryAdapter", () => {
+  it("forwards analytics plans in one correlated authenticated HTTP request", async () => {
+    const fetch = vi.fn<FetchLike>(async () =>
+      resourceResponse({ rows: [{ total: 12 }], receipt: { queryHash: "analytics-query" } })
+    )
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "api-token"
+    })
+    const tool = createLegislationResearchTools(
+      adapter,
+      createLogger({ service: "analytics-test", level: "error" })
+    ).find((tool) => tool.name === "analyze_legislation")
+    expect(tool).toBeDefined()
+    const result = await runWithRequestContext(
+      { correlationId },
+      async () =>
+        await tool?.execute({ dataset: "bills", metrics: [{ name: "total", operation: "countDistinct", field: "id" }] })
+    )
+    expect(result).toHaveProperty("structuredContent.data.rows.0.total", 12)
+    expect(fetch).toHaveBeenCalledOnce()
+    const [url, init] = fetch.mock.calls[0] ?? []
+    expect(String(url)).toBe("https://api.example.test/api/analytics")
+    expect(init?.method).toBe("POST")
+    expect(new Headers(init?.headers).get("x-correlation-id")).toBe(correlationId)
+    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer api-token")
+    expect(JSON.parse(String(init?.body))).toMatchObject({ dataset: "bills", limit: 20 })
+  })
   it("gathers all 430 positions through the typed HTTP client and preserves published counts", async () => {
     const positions = votePositions()
     const detail = voteDetail()

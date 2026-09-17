@@ -44,6 +44,9 @@ import {
   embeddingRouteFor,
   type EmbeddingSearchTool
 } from "@repo/legislation-core/embeddings/embedding-routing"
+import { analyzeLegislation } from "@repo/legislation-core/research/analytics"
+import { describeAnalytics } from "@repo/legislation-core/research/analytics-catalog"
+import type { AnalyticsQuery } from "@repo/legislation-core/research/analytics-contract"
 import { readRecordCollection } from "@repo/legislation-core/research/record-collections"
 import type { RecordCollectionInput, RecordResolutionInput } from "@repo/legislation-core/research/record-contracts"
 import { resolveRecord, publishedNameMatches } from "@repo/legislation-core/research/record-resolution"
@@ -98,6 +101,7 @@ import {
   validatePassageSearchInput,
   validateSearchInput
 } from "../search/search"
+import { createAnalyticsTelemetry } from "./analytics-telemetry"
 import {
   assertBillRelatedParentExists,
   BILL_RELATION_CLASSIFICATIONS,
@@ -1666,6 +1670,12 @@ function decodeChangeCursor(cursor: string | undefined): { id?: string; observed
 }
 
 export class LegislationQueryService {
+  async describeAnalytics(datasets?: string[]) {
+    return describeAnalytics(datasets)
+  }
+  async analyzeLegislation(input: AnalyticsQuery) {
+    return await analyzeLegislation(this.#database, input, createAnalyticsTelemetry())
+  }
 
   async readRecordCollection(input: RecordCollectionInput) {
     return await readRecordCollection(this.#database, input)

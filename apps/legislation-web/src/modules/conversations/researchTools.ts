@@ -1,4 +1,6 @@
 export const researchToolLabels: Readonly<Record<string, string>> = {
+  describe_analytics: "Explore data relationships",
+  analyze_legislation: "Analyze legislative data",
   read_record_collection: "Read record details",
   resolve_record: "Resolve record identity",
   list_jurisdictions: "List jurisdictions",

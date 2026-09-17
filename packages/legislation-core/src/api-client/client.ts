@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { analyticsQuerySchema, type AnalyticsQuery } from "@repo/legislation-core/research/analytics-contract"
 import { z } from "zod"
 import {
   recordCollectionSchema,
@@ -200,6 +201,14 @@ export class LegislationApiClient {
       { method: "POST", path: "/api/records/resolve", body: recordResolutionSchema.parse(input) },
       options
     )
+  }
+
+  analyzeLegislation(input: AnalyticsQuery, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ method: "POST", path: "/api/analytics", body: analyticsQuerySchema.parse(input) }, options)
+  }
+
+  describeAnalytics(datasets: string[] = [], options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ method: "GET", path: "/api/analytics", query: { dataset: datasets } }, options)
   }
 
   readRecordCollection(input: RecordCollectionInput, options?: ApiRequestOptions): Promise<ResourceResponse> {

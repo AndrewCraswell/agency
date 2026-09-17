@@ -3,6 +3,7 @@ import { researchResultByteLimit } from "@repo/legislation-core/research/result-
 import { createLegislationResearchTools, type LegislationQueryApi } from "@repo/legislation-core/research/tools"
 import { dynamicTool, type ToolSet } from "ai"
 import { z } from "zod"
+import { createAnalyticsTelemetry } from "../legislation/analytics-telemetry"
 import { getNextLegislationApplication } from "../legislation/runtime/runtime"
 import { getResearchRuntime } from "../search/research-runtime"
 import { researchAgentLimits } from "./agent"
@@ -122,7 +123,9 @@ export function createResearchTools(
     }
     return getResearchRuntime().run(async (service) => {
       executionSignal.throwIfAborted()
-      const definition = createLegislationResearchTools(service, logger).find(
+      const telemetry =
+        name === "describe_analytics" || name === "analyze_legislation" ? createAnalyticsTelemetry() : undefined
+      const definition = createLegislationResearchTools(service, logger, telemetry).find(
         (candidate) => candidate.name === name
       )
       if (!definition) {

@@ -82,6 +82,28 @@ export function createMcpTelemetry(): Telemetry {
         async (span) => {
           try {
             const result = await operation()
+            if (name === "mcp.analyze_legislation" || name === "mcp.describe_analytics") {
+              const summary = z
+                .object({
+                  receipt: z
+                    .object({
+                      queryHash: z.string(),
+                      returned: z.number(),
+                      durationMs: z.number(),
+                      nextOffset: z.number().nullable()
+                    })
+                    .optional(),
+                  datasets: z.array(z.string()).optional()
+                })
+                .safeParse(result)
+              span.setAttribute("analytics.input", JSON.stringify(sanitizeTelemetry(metadata)))
+              if (summary.success) {
+                span.setAttribute("analytics.query_hash", summary.data.receipt?.queryHash ?? "")
+                span.setAttribute("analytics.row_count", summary.data.receipt?.returned ?? 0)
+                span.setAttribute("analytics.database_duration_ms", summary.data.receipt?.durationMs ?? 0)
+                span.setAttribute("analytics.dataset_count", summary.data.datasets?.length ?? 0)
+              }
+            }
             span.setStatus({ code: 1 })
             return result
           } catch (error) {

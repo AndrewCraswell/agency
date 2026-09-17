@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { LegislationError } from "../domain/errors"
 import { createLogger } from "../observability/logger"
 import type { Telemetry } from "../observability/telemetry"
+import { describeAnalytics } from "./analytics-catalog"
 import { prepareResultPage } from "./result-pages"
 import { createLegislationResearchTools, type LegislationQueryApi } from "./tools"
 
@@ -92,6 +93,23 @@ describe("shared research definitions", () => {
       limit: 1,
       cursor: undefined
     })
+  })
+  it("registers analytical discovery and executes validated analytical plans", async () => {
+    const analyzeLegislation = vi.fn(async () => ({ rows: [{ total: 3 }] }))
+    const api = {
+      ...service(),
+      analyzeLegislation,
+      describeAnalytics: async (datasets?: string[]) => describeAnalytics(datasets)
+    }
+    const catalog = await definition(api, "describe_analytics").execute({ datasets: ["bills"] })
+    expect(catalog).toHaveProperty("structuredContent.data.details.0.name", "bills")
+    const result = await definition(api, "analyze_legislation").execute({
+      dataset: "bills",
+      metrics: [{ name: "total", operation: "countDistinct", field: "id" }]
+    })
+    expect(result).toHaveProperty("structuredContent.data.rows.0.total", 3)
+    expect(analyzeLegislation).toHaveBeenCalledWith(expect.objectContaining({ dataset: "bills", limit: 20 }))
+    expect(definition(api, "analyze_legislation").annotations?.readOnlyHint).toBe(true)
   })
   it("reports validation, execution, and handled batch failures", async () => {
     const reportFailure = vi.fn<NonNullable<Telemetry["reportFailure"]>>()

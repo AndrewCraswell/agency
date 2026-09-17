@@ -144,6 +144,10 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
   }
 
   return withApiErrors({
+    describeAnalytics: async (datasets) =>
+      await apiCall(async () => resourceData(await api.describeAnalytics(datasets, requestOptions()))),
+    analyzeLegislation: async (input) =>
+      await apiCall(async () => resourceData(await api.analyzeLegislation(input, requestOptions()))),
     readRecordCollection: async (input) =>
       await apiCall(async () => resourceData(await api.readRecordCollection(input, requestOptions()))),
     resolveRecord: async (input) =>

@@ -1,3 +1,8 @@
+import {
+  analyticsCatalogSchema,
+  analyticsQuerySchema,
+  type AnalyticsQuery
+} from "@repo/legislation-core/research/analytics-contract"
 import { z } from "zod"
 import {
   legalEditionsRequestSchema,
@@ -97,6 +102,8 @@ type BillTextSearchInput = Readonly<{
 }>
 
 export type LegislationQueryApi = Readonly<{
+  describeAnalytics?: (datasets?: string[]) => Promise<unknown>
+  analyzeLegislation?: (input: AnalyticsQuery) => Promise<unknown>
   readRecordCollection?: (input: RecordCollectionInput) => Promise<unknown>
   resolveRecord?: (input: RecordResolutionInput) => Promise<unknown>
   listJurisdictions?: (input: PageInput & { query?: string }) => Promise<unknown>
@@ -403,6 +410,43 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   }
 
   const searchLegal = service.searchLegal
+  if (service.analyzeLegislation) {
+    const analyze = service.analyzeLegislation.bind(service)
+    const annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+    server.registerTool(
+      "describe_analytics",
+      {
+        description:
+          "Discover structured datasets, fields and relationship paths for legislative listings, counts, comparisons and rankings. Omit datasets for the complete compact catalog in one call, or request up to six dataset names for a focused subset. Use this before analyze_legislation instead of guessing field paths. Reuse returned definitions throughout the turn.",
+        inputSchema: analyticsCatalogSchema,
+        outputSchema,
+        annotations
+      },
+      (input) =>
+        tool(
+          "describe_analytics",
+          input,
+          async () => {
+            if (!service.describeAnalytics)
+              throw new LegislationError("dependency_unavailable", "Analytics catalog is unavailable")
+            return await service.describeAnalytics(input.datasets)
+          },
+          logger,
+          telemetry
+        )
+    )
+    server.registerTool(
+      "analyze_legislation",
+      {
+        description:
+          "Query relationships and compute aggregates over the full filtered recorded population in one read-only database query. Use describe_analytics first. select fields group results when metrics are present; countDistinct counts the chosen field or _key. Metric filters are conditional counts; rates name count metrics and return percentages. Filters are ANDed, in values are OR. Use explicit jurisdiction/session scope and canonical identities, separate primary sponsorship from cosponsorship and abstain from absent/not-voting. orderBy must name selected fields or metrics. Empty or missing links are unknown, not proof of absence. Report coverage caveats and the actual numerator/denominator. Do not count pages with other tools or invent publisher citations for aggregates. Follow receipt.nextOffset with otherwise unchanged inputs for another window.",
+        inputSchema: analyticsQuerySchema,
+        outputSchema,
+        annotations
+      },
+      (input) => tool("analyze_legislation", input, () => analyze(input), logger, telemetry)
+    )
+  }
   if (service.readRecordCollection) {
     const read = service.readRecordCollection.bind(service)
     server.registerTool(
