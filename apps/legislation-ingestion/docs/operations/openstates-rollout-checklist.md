@@ -2,6 +2,14 @@
 
 ## September 16 continuation and identity verification
 
+September 17 04:37Z validation and source-refresh correction:
+
+- [x] All four stale malformed-document audit gaps completed OCR: HB261 8,216 characters; SB124 73,032; SB148 7,184; SB174 15,287. Their downstream retrieval acceptance remains to be verified.
+- [x] NC2019 freshness: 2,109 bill / 31,146 section vectors. NC2017: 1,953 / 29,035. NC2017e1: 12 / 81; e2: 8 / 46; e3: 9 / 171. All zero missing/stale, read-only snapshots. Together with earlier snapshots, every inventoried NC session has now had a freshness check, not a completeness certification.
+- [x] Reviewed-source refresh CLI added (`8aa7b93`); live validation exposed retained-blob reuse. Initial SB277 retry OCRed the older blob into 105,675 characters but did not replace its source bytes. That attempt is not source-refresh completion.
+- [x] Fixed refresh to upload and checksum-verify the reviewed immutable blob, then atomically switch the pending record's blob pointer under the existing source/text/status guard (`9f2e329`, seven focused tests and ingestion type-check passed). Old blob and served text remain retained. Corrected SB277 refresh was successfully requeued against its revalidated text hash; await the reviewed source hash in completed production output.
+- [ ] Full repository verification remains non-clean; do not substitute focused tests for that gate.
+
 September 17 04:25Z continuation:
 
 - [x] New-inventory first ten repairs: all ten processed/OCR processed with original raw hashes unchanged; all 63 resulting section IDs/hashes match the hosted search copy. Retrieval behavior is not implied by copy parity.
