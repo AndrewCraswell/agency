@@ -2,6 +2,13 @@
 
 ## September 16 continuation and identity verification
 
+September 17 continuation after vote-contract mapping:
+
+- [x] Both previous content controllers completed their 100-continuation budgets with zero complete scan rounds, not ingestion completion. Verified no unexpired AK/NC ingestion leases before resuming saved checkpoints.
+- [ ] Resumed pinned `20260916.3` controllers: Alaska `run_06garg91jikvu57cng9hf50601` (two bills per batch), NC `run_06garg93gu95310vmlld063k01` (eight). Each retains one-bill concurrency and a 100-continuation budget. No queue increase, overlap, default promotion or activation change.
+- [x] Narrowed date-contract implementation scope: public `VoteSummary` already exposes required `date` and nullable `heldAt`, and canonical projection tests already accept that shape. Reuse it. The missing pieces are persisted calendar date, normalizer/persistence support, completeness constraints, vote/timeline projections, sort keys, filters and pagination. Do not introduce a second public vote shape.
+- [ ] Date-precision code and production schema deployment remain unimplemented. Existing migration `0034_timeline-canonical-facts.sql` and C schema require exact `held_at` for completeness; W `vote-reads.ts`, `vote-read-routes.ts`, `bill-detail-read.ts` and `bill-timeline-read-routes.ts` also assume exact timestamps. These must move together before replay can pass serving acceptance.
+
 September 17 vote-date contract diagnosis:
 
 - [x] Production HB1 contains two incomplete vote rows, House passage 40-0 and Senate passage 19-1. Both lack held-at, source URL, provider, retrieval date and source sequence; `timeline_complete` is false. This is not fixed by setting the completeness flag.
