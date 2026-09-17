@@ -14,7 +14,7 @@ describe("shared scraper activation", () => {
   })
 
   it("pins one reviewed runtime fingerprint across state domains", () => {
-    expect(approvedScraperBuildInputsSha256).toBe("77472ea67ca34927bbb8eb779066c7dff768e946e660565ad56b47c4d6ccfd06")
+    expect(approvedScraperBuildInputsSha256).toBe("d8914ee780f0bb9d17e818d7d29b9ca4606b36c6ed91fc4b114fe067ab75b280")
   })
 
   it("admits only the current runtime and the exact retained Alaska event build for receipt replay", () => {

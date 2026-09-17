@@ -26,7 +26,7 @@ def journal_text(document):
     return "\n".join(pres[0].xpath(".//text()"))
 
 
-def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None):
+def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, fallback_anchor=None):
     """Require a unique bill/tally match and complete disjoint named positions.
 
     Multiple same-tally motions on a journal page are deliberately ambiguous.
@@ -41,19 +41,28 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None):
             raise ValueError("journal_anchor_invalid")
         anchors = list(ANCHOR.finditer(text))
         selected = [index for index, match in enumerate(anchors) if match.group(1).casefold() == target_anchor.casefold()]
+        if not selected and fallback_anchor is not None:
+            if not isinstance(fallback_anchor, str) or not re.fullmatch(r"[1-9][0-9]{0,9}", fallback_anchor):
+                raise ValueError("journal_fallback_anchor_invalid")
+            selected = [index for index, match in enumerate(anchors) if match.group(1) == fallback_anchor]
+            target_anchor = fallback_anchor
         if not selected:
             raise ValueError("journal_anchor_missing_or_ambiguous")
         search_ranges = []
         for selected_index in selected:
             search_start = anchors[selected_index].end()
             search_end = len(text)
-            for later in anchors[selected_index + 1:]:
-                name = re.sub(r"\s+", "", later.group(1)).upper()
-                # Bill and printed-page anchors are references inside one journal action.
-                if name.isdigit() or BILL.fullmatch(name):
-                    continue
-                search_end = later.start()
-                break
+            # A numeric fragment identifies the printed page where an action
+            # starts; the roll call can continue across later amendment/page
+            # anchors. Its exact bill+tally must remain unique in the suffix.
+            if not target_anchor.isdigit():
+                for later in anchors[selected_index + 1:]:
+                    name = re.sub(r"\s+", "", later.group(1)).upper()
+                    # Bill and printed-page anchors are references inside one journal action.
+                    if name.isdigit() or BILL.fullmatch(name):
+                        continue
+                    search_end = later.start()
+                    break
             search_ranges.append((search_start, search_end))
     candidates = []
     for search_start, search_end in search_ranges:

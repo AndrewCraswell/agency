@@ -86,6 +86,27 @@ And so the effective date clause was adopted.
         text = "HB 1\n[[JOURNAL_ANCHOR:2901]]\n" + self.sample().replace("HB 1\n", "", 1)
         self.assertEqual(len(parse_roll_call(text, "HB1", (2, 1, 1), "2901")), 4)
 
+    def test_numeric_page_anchor_can_cross_an_embedded_amendment_anchor(self):
+        text = (
+            "[[JOURNAL_ANCHOR:2177]]\nAction begins\n"
+            "[[JOURNAL_ANCHOR:AM2]]\nAmendment text\n"
+            "[[JOURNAL_ANCHOR:2178]]\n" + self.sample()
+        )
+        self.assertEqual(len(parse_roll_call(text, "HB1", (2, 1, 1), "2177")), 4)
+
+    def test_uses_numeric_page_fallback_when_publisher_fragment_is_missing(self):
+        text = "[[JOURNAL_ANCHOR:2198]]\n" + self.sample()
+        self.assertEqual(len(parse_roll_call(text, "HB1", (2, 1, 1), "AM8", "2198")), 4)
+
+    def test_does_not_fallback_when_publisher_fragment_is_present_but_ambiguous(self):
+        text = (
+            "[[JOURNAL_ANCHOR:AM8]]\n" + self.sample()
+            + "[[JOURNAL_ANCHOR:AM8]]\n" + self.sample()
+            + "[[JOURNAL_ANCHOR:2198]]\n" + self.sample("Evans, Fox")
+        )
+        with self.assertRaises(ValueError):
+            parse_roll_call(text, "HB1", (2, 1, 1), "AM8", "2198")
+
     def test_preserves_valid_named_anchors_in_journal_text(self):
         class Anchor:
             text = "HB 1"

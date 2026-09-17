@@ -106,15 +106,19 @@ PATCHES = {
         for identifier in selected:
             bill_link = indexed[identifier]
 '''),
-        ("import datetime\n", "import datetime\nfrom urllib.parse import urlsplit\n"),
+        ("import datetime\n", "import datetime\nfrom urllib.parse import parse_qs, urlsplit\n"),
         ("from . import actions\n", "from . import actions\nfrom .journal import journal_text, parse_roll_call\n"),
         ("        vote.add_source(url)\n", '''        vote.add_source(url)
         response = self.get(url, timeout=(10, 60))
         response.raise_for_status()
         journal = lxml.html.fromstring(response.text)
         text = journal_text(journal)
-        anchor = urlsplit(url).fragment or None
-        for option, name in parse_roll_call(text, bill.identifier, (yes, no, other), anchor):
+        parsed_url = urlsplit(url)
+        anchor = parsed_url.fragment or None
+        page_values = parse_qs(parsed_url.query, keep_blank_values=True).get("Page", [])
+        page_anchor = (str(int(page_values[0])) if len(page_values) == 1
+                       and re.fullmatch(r"0*[1-9][0-9]{0,9}", page_values[0]) else None)
+        for option, name in parse_roll_call(text, bill.identifier, (yes, no, other), anchor, page_anchor):
             vote.vote(option, name)
 ''')
     ],
