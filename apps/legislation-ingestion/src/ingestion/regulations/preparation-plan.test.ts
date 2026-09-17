@@ -56,6 +56,7 @@ beforeEach(() => {
   vi.resetAllMocks()
   mocks.register.mockResolvedValue({
     id: "a".repeat(64),
+    preparationId: "c".repeat(64),
     payloadHash: "b".repeat(64),
     payload: {
       scope: { kind: "edition", id: waveId },

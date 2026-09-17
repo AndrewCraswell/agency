@@ -6,6 +6,9 @@ and optional `retryBlocked` (default false). Duplicate wave/scope/model identiti
 There is no recurring schedule or implicit national inventory selection.
 
 The canonical `legal_preparation_dispatches` table stores immutable payload hashes and small reference payloads.
+It also stores the exact preparation ID derived from scope, pinned tokenizer and passage contract, so later accounting
+and recovery do not guess which preparation generation belongs to an intent. Re-registering the same dispatch after any
+identity drift fails instead of silently attaching it to newer preparation behavior.
 Every item in the bounded wave is registered before the first child is submitted. Partial registration failures admit
 no children; replay completes registration. Submission runs serially, with one dispatcher and a two-connection pool.
 The existing preparation queue limits active children to two workers. This is not an aggregate all-stage connection budget.
@@ -88,6 +91,14 @@ states close the dispatch; `blocked` retains `source_records_blocked`. Remote co
 absent or pending records `completed_without_preparation` and submits no replacement. This preserves the mismatch for
 operator repair instead of converting a lost checkpoint into success. The task shares the serialized preparation queue,
 uses a two-connection canonical pool, has no schedule and never calls an embedding provider.
+
+`inspect:regulatory-readiness --wave <uuid>` reads one immutable planned wave under a repeatable-read inspection transaction.
+It reconciles the plan denominator with registered dispatches, durable run outcomes, exact preparation IDs, delayed or
+active preparation checkpoints, lexical outbox state and active display/search rights. `ready` requires an exhausted
+nonempty plan, exact registered/completed/prepared counts and an acknowledged lexical job for every selected scope. A
+pending or delayed lexical job, missing preparation, blocked source record, uncertain submission, premature remote
+completion, inactive/invalid rights profile or incomplete planner page keeps the wave unready. Historical failed and
+cancelled attempts remain counted even after a successful replacement. The inspector performs no writes or dispatches.
 
 At `2026-09-16T04:21:31Z`, a real PostgreSQL canary on disposable database 55453 passed lost-response key reuse,
 stored-handle replay, changed-payload rejection, expired-key refusal, concurrent exclusion, expired-lease fencing and

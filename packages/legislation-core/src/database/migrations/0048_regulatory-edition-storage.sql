@@ -527,6 +527,7 @@ CREATE TABLE legislation.legal_preparation_dispatches (
   scope_kind text NOT NULL CHECK(scope_kind IN ('edition','publication')),
   scope_id uuid NOT NULL,
   model text NOT NULL CHECK(model IN ('openai/text-embedding-3-small','voyageai/voyage-4')),
+  preparation_id text NOT NULL CHECK(preparation_id ~ '^[a-f0-9]{64}$'),
   payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
   payload jsonb NOT NULL CHECK(jsonb_typeof(payload)='object'),
   state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','submitting','submitted')),
@@ -551,6 +552,9 @@ CREATE INDEX legal_preparation_dispatches_pending_idx ON legislation.legal_prepa
   WHERE state<>'submitted';
 --> statement-breakpoint
 CREATE INDEX legal_preparation_dispatches_wave_idx ON legislation.legal_preparation_dispatches(wave_id,id);
+--> statement-breakpoint
+CREATE INDEX legal_preparation_dispatches_preparation_idx
+  ON legislation.legal_preparation_dispatches(preparation_id,wave_id);
 --> statement-breakpoint
 CREATE INDEX legal_preparation_dispatches_recovery_idx ON legislation.legal_preparation_dispatches(wave_id,id)
   WHERE completed_at IS NULL AND state IN ('submitting','submitted');

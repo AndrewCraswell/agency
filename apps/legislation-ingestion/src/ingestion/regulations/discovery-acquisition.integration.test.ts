@@ -23,6 +23,7 @@ import { runLegalPassagePreparationBatch } from "./passage-preparation.js"
 import { submitLegalPreparation } from "./preparation-dispatch.js"
 import { planLegalPreparationPage } from "./preparation-plan.js"
 import { recoverLegalPreparationRunPage } from "./preparation-run-recovery.js"
+import { inspectLegalPreparationWaveCompletion } from "./preparation-wave-completion.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
 const databaseUrl = process.env.REGULATORY_TEST_DATABASE_URL
@@ -384,6 +385,14 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     })
     expect(preparationPlan).toMatchObject({ planned: 1, selectedCount: 1, exhausted: true, submitted: false })
     expect(preparationPlan.dispatchIds).toHaveLength(1)
+    await expect(inspectLegalPreparationWaveCompletion(pool, { waveId: preparationWaveId })).resolves.toMatchObject({
+      planning: { complete: true, selected: 1, registered: 1, fullyRegistered: true },
+      dispatch: { pending: 1, completed: 0 },
+      preparation: { missing: 1, prepared: 0 },
+      lexical: { pending: 1, acknowledged: 0 },
+      accounted: false,
+      ready: false
+    })
     await expect(
       planLegalPreparationPage(pool, {
         waveId: preparationWaveId,
@@ -487,6 +496,21 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
         }
       ]
     })
+    const partialPreparation = await runLegalPassagePreparationBatch(pool, { ...preparationInput, limit: 1 })
+    expect(partialPreparation).toMatchObject({ state: "pending", processed: 1, total: 2, complete: 1, blocked: 0 })
+    await pool.query(
+      "UPDATE legislation.legal_passage_preparations SET retry_at=clock_timestamp()+interval '1 hour' WHERE id=$1",
+      [partialPreparation.preparationId]
+    )
+    await expect(inspectLegalPreparationWaveCompletion(pool, { waveId: preparationWaveId })).resolves.toMatchObject({
+      preparation: { pending: 1, delayed: 1, prepared: 0 },
+      lexical: { pending: 1 },
+      accounted: false,
+      ready: false
+    })
+    await pool.query("UPDATE legislation.legal_passage_preparations SET retry_at=clock_timestamp() WHERE id=$1", [
+      partialPreparation.preparationId
+    ])
     await expect(runLegalPassagePreparationBatch(pool, preparationInput)).resolves.toMatchObject({
       state: "prepared",
       total: 2,
@@ -514,6 +538,13 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
           replacement: false
         }
       ]
+    })
+    await expect(inspectLegalPreparationWaveCompletion(pool, { waveId: preparationWaveId })).resolves.toMatchObject({
+      dispatch: { completed: 1 },
+      preparation: { prepared: 1, blocked: 0, delayed: 0 },
+      lexical: { pending: 1, acknowledged: 0 },
+      accounted: true,
+      ready: false
     })
     expect(
       (

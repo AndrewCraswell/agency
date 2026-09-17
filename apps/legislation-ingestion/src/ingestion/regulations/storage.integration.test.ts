@@ -50,7 +50,9 @@ import {
 import { runLegalPassagePreparationBatch } from "./passage-preparation.js"
 import { replicateLegalPassageGeneration } from "./passage-replication.js"
 import { materializeLegalPassages, searchLegalPassages } from "./passage-storage.js"
+import { registerLegalPreparationDispatch } from "./preparation-dispatch.js"
 import { inspectLegalPreparationStatus } from "./preparation-status.js"
+import { inspectLegalPreparationWaveCompletion } from "./preparation-wave-completion.js"
 import { reconcileLegalSearchRightsBatch, reconcileLegalSearchScopeRights } from "./search-rights.js"
 import {
   claimRegulatoryLease,
@@ -180,7 +182,8 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
       VALUES('jurisdiction:us','United States','country','US') ON CONFLICT DO NOTHING`)
   }, 60_000)
   beforeEach(async () => {
-    await pool.query(`TRUNCATE legislation.regulatory_documents,legislation.legal_codes,legislation.legal_import_manifests,
+    await pool.query(`TRUNCATE legislation.legal_preparation_plans,legislation.legal_preparation_dispatches,
+      legislation.regulatory_documents,legislation.legal_codes,legislation.legal_import_manifests,
       legislation.legal_sources,legislation.legal_rights_profiles,legislation.legal_artifacts CASCADE`)
   })
   afterEach(async () => {
@@ -418,6 +421,41 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           model: "openai/text-embedding-3-small",
           limit: 25
         })
+        const waveId = "00000000-0000-4000-8000-000000000004"
+        const parameters = {
+          source: "ecfr",
+          model: "openai/text-embedding-3-small",
+          publishedBefore: "2026-09-15T00:00:00.000Z",
+          limit: 25,
+          retryBlocked: false,
+          pendingOnly: true
+        }
+        await pool.query(
+          `INSERT INTO legislation.legal_preparation_plans
+           (wave_id,request_hash,parameters,after_id,exhausted,selected_count)
+           VALUES($1,$2,$3::jsonb,$4,true,1)`,
+          [waveId, digest(JSON.stringify(parameters)), JSON.stringify(parameters), first.editionId]
+        )
+        const completionDispatch = await registerLegalPreparationDispatch(pool, {
+          waveId,
+          scope: { kind: "edition", id: first.editionId },
+          model: "openai/text-embedding-3-small",
+          limit: 25
+        })
+        await pool.query(
+          `UPDATE legislation.legal_preparation_dispatches
+           SET state='submitted',first_attempt_at=clock_timestamp(),run_id='run-prepared',
+             completed_at=clock_timestamp(),last_observed_status='COMPLETED'
+           WHERE id=$1`,
+          [completionDispatch.id]
+        )
+        await expect(inspectLegalPreparationWaveCompletion(pool, { waveId })).resolves.toMatchObject({
+          accounted: true,
+          ready: false,
+          dispatch: { completed: 1 },
+          preparation: { prepared: 1 },
+          lexical: { pending: 1, acknowledged: 0 }
+        })
         const request = { preparationId: prepared.preparationId, limit: 1 }
         const firstBatch = await runLegalPassageCopyBatch(pool, target, request)
         expect(firstBatch).toMatchObject({ copied: 1, exhausted: false, publicSearchReady: false })
@@ -465,6 +503,18 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         expect(await acknowledgeLegalPassageCopy(pool, target, prepared.preparationId)).toMatchObject({
           acknowledged: true
         })
+        await expect(inspectLegalPreparationWaveCompletion(pool, { waveId })).resolves.toMatchObject({
+          accounted: true,
+          ready: true,
+          dispatch: { completed: 1 },
+          preparation: { prepared: 1, blocked: 0, delayed: 0 },
+          lexical: { pending: 0, acknowledged: 1 },
+          rightsInactive: 0
+        })
+        await pool.query("UPDATE legislation.legal_rights_profiles SET is_active=false")
+        await expect(inspectLegalPreparationWaveCompletion(pool, { waveId })).rejects.toThrow(
+          "rights_profile_unavailable"
+        )
       } finally {
         await target.end()
       }

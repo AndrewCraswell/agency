@@ -6,21 +6,46 @@ import {
   inspectLegalPreparationStatus,
   legalPreparationStatusRequestSchema
 } from "../../src/ingestion/regulations/preparation-status.js"
+import {
+  inspectLegalPreparationWaveCompletion,
+  legalPreparationWaveCompletionSchema
+} from "../../src/ingestion/regulations/preparation-wave-completion.js"
 
-/** The current command inspects preparation checkpoints only; broader stage reconciliation remains separate work. */
+/** Read-only preparation checkpoint or planned-wave completion inspection. */
 async function main() {
   const { values } = parseArgs({
     options: {
       preparation: { type: "string" },
+      wave: { type: "string" },
       after: { type: "string" },
       limit: { type: "string" }
     }
   })
-  const request = legalPreparationStatusRequestSchema.parse({
-    preparationId: values.preparation,
-    afterOrdinal: values.after === undefined ? -1 : z.coerce.number().int().parse(values.after),
-    limit: values.limit === undefined ? 25 : z.coerce.number().int().parse(values.limit)
-  })
+  const request = z
+    .union([
+      z.strictObject({
+        kind: z.literal("preparation"),
+        value: legalPreparationStatusRequestSchema
+      }),
+      z.strictObject({ kind: z.literal("wave"), value: legalPreparationWaveCompletionSchema })
+    ])
+    .parse(
+      values.preparation !== undefined && values.wave === undefined
+        ? {
+            kind: "preparation",
+            value: {
+              preparationId: values.preparation,
+              afterOrdinal: values.after === undefined ? -1 : z.coerce.number().int().parse(values.after),
+              limit: values.limit === undefined ? 25 : z.coerce.number().int().parse(values.limit)
+            }
+          }
+        : values.wave !== undefined &&
+            values.preparation === undefined &&
+            values.after === undefined &&
+            values.limit === undefined
+          ? { kind: "wave", value: { waveId: values.wave } }
+          : { kind: "invalid" }
+    )
   const url = new URL(z.url().parse(process.env.DATABASE_URL))
   invariant(
     ["postgres:", "postgresql:"].includes(url.protocol) &&
@@ -30,7 +55,13 @@ async function main() {
   )
   const pool = new pg.Pool({ connectionString: url.href, max: 1, connectionTimeoutMillis: 10_000 })
   try {
-    const report = await inspectLegalPreparationStatus(pool, request)
+    if (request.kind === "wave") {
+      const report = await inspectLegalPreparationWaveCompletion(pool, request.value)
+      process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
+      if (!report.ready) process.exitCode = 1
+      return
+    }
+    const report = await inspectLegalPreparationStatus(pool, request.value)
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
     const { blocked, unattempted, missing, unexpected } = report.counts
     if (

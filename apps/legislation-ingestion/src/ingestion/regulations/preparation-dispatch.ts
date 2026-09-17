@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import type pg from "pg"
 import { z } from "zod"
-import { legalPreparationScopeSchema } from "./passage-preparation.js"
+import { legalPassagePreparationIdentity, legalPreparationScopeSchema } from "./passage-preparation.js"
 
 export const preparationDispatchSchema = z.strictObject({
   waveId: z.uuid(),
@@ -22,17 +22,20 @@ export async function registerLegalPreparationDispatch(pool: Pick<pg.Pool, "quer
   const input = preparationDispatchSchema.parse(unparsed)
   const { waveId, ...payload } = input
   const id = digest(JSON.stringify([waveId, input.scope.kind, input.scope.id, input.model]))
+  const { id: preparationId } = await legalPassagePreparationIdentity(input.scope, input.model)
   const payloadHash = digest(JSON.stringify(payload))
   const registered = await pool.query(
-    `INSERT INTO legislation.legal_preparation_dispatches(id,wave_id,scope_kind,scope_id,model,payload_hash,payload)
-    VALUES($1,$2,$3,$4,$5,$6,$7::jsonb) ON CONFLICT(id) DO UPDATE SET id=EXCLUDED.id
-    WHERE legislation.legal_preparation_dispatches.payload_hash=EXCLUDED.payload_hash RETURNING id`,
-    [id, waveId, input.scope.kind, input.scope.id, input.model, payloadHash, JSON.stringify(payload)]
+    `INSERT INTO legislation.legal_preparation_dispatches
+    (id,wave_id,scope_kind,scope_id,model,preparation_id,payload_hash,payload)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT(id) DO UPDATE SET id=EXCLUDED.id
+    WHERE legislation.legal_preparation_dispatches.payload_hash=EXCLUDED.payload_hash
+      AND legislation.legal_preparation_dispatches.preparation_id=EXCLUDED.preparation_id RETURNING id`,
+    [id, waveId, input.scope.kind, input.scope.id, input.model, preparationId, payloadHash, JSON.stringify(payload)]
   )
   if (registered.rows.length !== 1) {
     throw new Error("legal_dispatch_payload_changed")
   }
-  return { id, payload, payloadHash }
+  return { id, preparationId, payload, payloadHash }
 }
 
 /** Submission bookkeeping only. Source workers still own canonical leases and completion checkpoints. */

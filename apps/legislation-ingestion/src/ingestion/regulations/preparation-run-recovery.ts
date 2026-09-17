@@ -24,6 +24,7 @@ const payloadSchema = z.strictObject({
 })
 const candidateSchema = z.object({
   id: hash,
+  preparation_id: hash,
   run_id: z.string().nullable(),
   payload: payloadSchema,
   uncertain_expired: z.boolean(),
@@ -111,7 +112,7 @@ async function reconcileDisposition(
 export async function recoverLegalPreparationRunPage(pool: pg.Pool, value: unknown, inspect: Inspect, submit: Submit) {
   const input = preparationRunRecoverySchema.parse(value)
   const selected = await pool.query(
-    `SELECT id,run_id,payload,
+    `SELECT id,preparation_id,run_id,payload,
        COALESCE(first_attempt_at<=clock_timestamp()-interval '6 days',false) uncertain_expired,
        COALESCE(first_attempt_at<=clock_timestamp()-interval '7 days',false) missing_expired
      FROM legislation.legal_preparation_dispatches
@@ -126,6 +127,7 @@ export async function recoverLegalPreparationRunPage(pool: pg.Pool, value: unkno
       candidate.payload.scope,
       candidate.payload.model
     )
+    invariant(preparationId === candidate.preparation_id, "legal_preparation_dispatch_identity_changed")
     const status =
       candidate.run_id === null ? "MISSING" : triggerRunStatusSchema.parse((await inspect(candidate.run_id)).status)
     const replaceEligible =

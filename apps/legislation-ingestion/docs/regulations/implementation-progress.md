@@ -13,6 +13,26 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added bounded completion accounting for planned passage-preparation waves. Each dispatch now persists the exact
+preparation ID derived from its scope, pinned tokenizer and passage contract; replay refuses identity drift. The read-only
+wave inspector reconciles planner exhaustion and selected count with registered/completed dispatches, run-attempt
+history, canonical preparation state, delays/leases, lexical outbox acknowledgement and active display/search rights.
+It reports accounting separately from readiness and cannot treat an empty queue, remote-only completion, blocked source,
+delayed retry or unacknowledged copy as ready. The existing readiness CLI now accepts `--wave <uuid>` and exits nonzero
+until the complete lexical gate passes.
+
+Two sequential fresh-database acceptances passed. The discovery-to-preparation test proved pending registration, a
+missing preparation, a deliberately delayed partial preparation and a completed-but-unacknowledged copy all remained
+unready. The separate canonical/search-database test copied the complete scope through the real lexical acknowledgement
+transaction: the same wave changed from accounted/unready to `ready: true` only after acknowledgement. The actual CLI
+then returned the one selected, registered, completed, prepared and acknowledged scope with zero missing, delayed,
+blocked, uncertain or rights-denied items; revoking its rights profile made the same CLI exit nonzero. Forty-six focused
+planner/dispatch/recovery tests, ingestion/core types, scoped lint/format and `drizzle-kit check` passed. Root
+`pnpm verify` completed formatting and all 11 package lint/type tasks, then stopped at the existing unrelated Knip
+inventory for theme/template files, root dependencies/binaries and configuration hints; coverage did not run. This
+advances ORCH-15 for planned lexical waves; source-stage, embedding and multi-partition completion ledgers remain open.
+Recurring schedules and bulk embeddings remain disabled.
+
 Added bounded Trigger run-disposition recovery for passage-preparation dispatches. The manual task inspects at most ten
 immutable intents from one wave, retains active runs and still-protected missing handles, and records prior attempt/run
 history before an eligible replacement receives an incremented global idempotency key. Trigger 404 is treated as missing

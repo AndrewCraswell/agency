@@ -215,6 +215,11 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
 - [ ] **ORCH-15 Implement completion accounting.** Aggregate expected/completed/delayed/failed/quarantined/cancelled
   units and downstream stages without treating empty runnable queues as completion. **Done:** a delayed retry and
   an unacknowledged copy keep the appropriate gate incomplete. Depends on ORCH-01, ORCH-06–08.
+  Local progress: planned preparation waves now persist the exact model-bound preparation identity and have a read-only
+  aggregate inspector. It requires an exhausted nonempty plan, denominator equality, canonical run completion, prepared
+  passage state, active display/search rights and acknowledged lexical copy for every scope. Fresh PostgreSQL checks
+  prove pending planning, missing preparation, delayed retry and unacknowledged copy remain incomplete, while a real
+  copied and acknowledged scope becomes ready. Source-stage, embedding and multi-partition rollups remain open.
 - [ ] **ORCH-16 Run an interrupted multi-partition wave.** Complete a representative current/FR/annual manifest across
   controller restart and deployment replacement using the chosen concurrency. **Done:** final ING-16 ledger and
   canonical hashes match uninterrupted execution; actual costs and elapsed time are retained. Depends on ORCH-14–15.
