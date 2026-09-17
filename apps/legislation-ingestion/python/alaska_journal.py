@@ -50,9 +50,19 @@ def motion_matches(hint, context):
     ):
         return False
     if "CBRF" in hint:
-        return "CONSTITUTIONAL BUDGET RESERVE" in context
+        return re.search(
+            r"THE QUESTION BEING:\s*[\"']?SHALL THE [^?]{0,120}"
+            r"\bCONSTITUTIONAL BUDGET RESERVE",
+            context,
+        ) is not None
     if "EFFECTIVE DATE" in hint:
         return "EFFECTIVE DATE" in context
+    waive_rule = re.search(r"\bWAIVE (?:UNIFORM )?RULE\s+(\d+)\b", hint)
+    if waive_rule:
+        return re.search(
+            rf"\b(?:SUSPEND|WAIVE) (?:UNIFORM )?RULE\s+{int(waive_rule.group(1))}\b",
+            context,
+        ) is not None
     if "CONCUR" in hint:
         return "CONCUR" in context and "EFFECTIVE DATE" not in context
     if "PASSED ON RECONSIDERATION" in hint:
@@ -61,7 +71,7 @@ def motion_matches(hint, context):
                 or re.search(r"\bPASS THE (?:HOUSE|SENATE)\b", context) is not None)
     if "RECON SAME DAY" in hint:
         return re.search(r"\bTAKE UP RECONSIDERATION (?:ON (?:THE )?)?SAME DAY\b", context) is not None
-    if re.fullmatch(r"\([HS]\)\s+PASSED(?:\s+[YNEA]\d+)*", hint):
+    if re.fullmatch(r"\([HS]\)\s+PASSED(?:\s+[YNEA](?:\d+|-))*", hint):
         return "FINAL PASSAGE" in context
     if "NOT TABLED" in hint:
         return "NOT TABLED" in context or "/TABLE" in context

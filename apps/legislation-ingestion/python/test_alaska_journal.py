@@ -134,6 +134,30 @@ And so the effective date clause was adopted.
             4,
         )
 
+    def test_zero_dash_passage_tally_excludes_same_page_reserve_fund_vote(self):
+        passage = self.sample(counts="2   NAYS: 0   EXCUSED: 0   ABSENT: 0").replace(
+            "Nays: Clark\n\nExcused: Davis\n\n", ""
+        )
+        reserve = self.sample("Evans, Fox", counts="2   NAYS: 0   EXCUSED: 0   ABSENT: 0").replace(
+            "Nays: Clark\n\nExcused: Davis\n\n", ""
+        )
+        text = (
+            "[[JOURNAL_ANCHOR:1911]]\nPage 1911\n"
+            'The question being: "Shall HB 1, funded from the constitutional budget reserve, pass the Senate?"\n'
+            + passage
+            + 'The question being: "Shall the constitutional budget reserve fund section be adopted?"\n'
+            + reserve.replace("Final Passage", "Adopt Budget Reserve Fund Sections")
+        )
+        passage_result = parse_roll_call(
+            text, "HB1", (2, 0, 0), "1911", "1911", True, "(S) PASSED Y2 N-"
+        )
+        reserve_result = parse_roll_call(
+            text, "HB1", (2, 0, 0), "1911", "1911", True,
+            "(S) CBRF SECTION(S) ADP VOTE Y2 N-",
+        )
+        self.assertEqual(passage_result, [("yes", "Adams"), ("yes", "Brown")])
+        self.assertEqual(reserve_result, [("yes", "Evans"), ("yes", "Fox")])
+
     def test_adjacent_response_replaces_truncated_overlap_instead_of_duplicating_it(self):
         primary = (
             "[[JOURNAL_ANCHOR:2170]]\nPage 2170\nHB 1 Third Reading\n"
@@ -298,6 +322,19 @@ And so the effective date clause was adopted.
         result = parse_roll_call(text, "HB1", (2, 1, 1), "AM51", "776", True, "AM NO 51 NOT TABLED")
         self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
 
+    def test_compound_withdraw_action_matches_its_rule_suspension_question(self):
+        text = (
+            "[[JOURNAL_ANCHOR:1865]]\nPage 1865\nMotion to withdraw HB 1 from Rules.\n"
+            "[[JOURNAL_ANCHOR:1866]]\nPage 1866\n"
+            'The question being: "Shall the House suspend Uniform Rule 18?"\n'
+            + self.sample().replace("Final Passage", "Suspend Uniform Rule 18")
+        )
+        result = parse_roll_call(
+            text, "HB1", (2, 1, 1), "1865", "1865", True,
+            "(H) WAIVE RULE 18, WITHDRAW FROM RULES, TAKE UP CONCUR TODAY, PASSED Y2 N1 E1",
+        )
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
     def test_rescind_motion_uses_referenced_amendment_number(self):
         amendment_51 = self.sample("Adams, Brown").replace(
             "Final Passage", "Rescind Previous Action in failing to adopt Amendment No. 51"
@@ -311,8 +348,11 @@ And so the effective date clause was adopted.
 
     def test_passage_and_budget_reserve_votes_with_same_tally_are_distinct(self):
         passage = self.sample("Adams, Brown")
-        reserve = self.sample("Evans, Fox").replace(
-            "Final Passage", "Constitutional Budget Reserve Appropriations"
+        reserve = (
+            'The question being: "Shall the House adopt the constitutional budget reserve appropriations?"\n'
+            + self.sample("Evans, Fox").replace(
+                "Final Passage", "Constitutional Budget Reserve Appropriations"
+            )
         )
         text = "[[JOURNAL_ANCHOR:0816]]\nPage 0816\n" + passage + reserve
         passage_result = parse_roll_call(text, "HB1", (2, 1, 1), "816", "816", True, "(H) PASSED Y2 N1 E1")
