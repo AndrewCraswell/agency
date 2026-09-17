@@ -1,7 +1,75 @@
 # Evidence and identity
 
-Status: proposed. Foundation for [composition](answer-composition.md) and [rendering](generative-ui-rendering.md)
+Status: in progress. Foundation for the implemented [answer catalog](../../../src/modules/conversations/composition.ts)
+and [record renderer](../../../src/modules/conversations/components/ComposedRecord.tsx)
 within the active conversation.
+
+## Implementation progress
+
+September 16, 2026: the web conversation module now projects stable hashed evidence identities, retains provenance
+separately from an optional readable URL, and resolves supplied same-version HTML/PDF metadata. Unresolved readable
+sources produce a deduplicated, sanitized fallback event correlated to the research run. Resolution is metadata-only:
+it does not fetch missing renditions, guess PDF links, or guarantee readable alternatives for XML-only records.
+
+The response renderer parses actual Markdown citations, assigns answer-local numbers, and uses the same selection for
+inline badges, cited-only source rows, and the evidence panel. Ambiguous URL aliases and unknown IDs do not select an
+arbitrary passage. Inline markers use the user-approved 16px minimum width, 14px height, and raised bracket-free styling.
+
+The controlled browser workflow exercised repeated citations, excluded unused sources, URL-only previews, PDF links,
+panel numbering, keyboard activation/return focus, and a 390px modal layout. These checks do not establish live-model
+citation reliability or complete design acceptance. Reusable design references inspected: `d7GNxo`, `bFVbA`, `zumK5`,
+and `cbBs4`; the simple tooltip and superscript marker overrides take precedence over those older designs.
+
+Focused verification completed: 132 tests across seven evidence, citation, conversation, and origin-boundary files
+passed after correcting one obsolete test expectation and one test-lint issue. Web type-checking and scoped lint passed.
+No monorepo suite was run. Live California AB 2652 inspection confirmed matching tooltip/panel destinations, one cited
+source row, 16x14px superscript markers, focus restoration, and no overflow at 1280px and 390px viewport widths.
+
+Live-model citation reliability remains open: several ordinary requests fabricated or altered citation IDs and were
+correctly left inactive. A request explicitly reinforcing exact-ID copying succeeded in both direct HTTP and browser
+checks. This proves the rendering path, not reliable citation generation across ordinary questions. Do not accept unknown
+IDs or bind them to nearby records to hide this gap. Stable content-derived IDs use a UUID-shaped representation.
+
+The chat adapter now adds short run-local `citationRef` values such as `e1` to full evidence snapshots. Its AI SDK
+`toModelOutput` hook exposes those references as evidence IDs to the model without changing record IDs, source metadata,
+or the stable snapshot IDs retained by the browser and capture. Repeated evidence reuses its reference within a run.
+New turns allocate beyond citation references already present in assistant history so stale links cannot silently bind
+to different current-turn evidence. No persistent reference store is added. The shared parser resolves references
+exactly for rendering, missing-reference telemetry, and existing structural evaluation. Unknown or conflicting mappings
+remain unresolved. Reference shortening reduces copying complexity; it does not guarantee model grounding or correct
+source selection.
+
+Short-reference verification: 183 focused tests passed after correcting one evaluation-case fixture; web type-checking,
+scoped lint, and the production build passed. An ordinary California AB 2652 question and a follow-up completed with
+zero unresolved citations, without explicit copying instructions. The first answer cited `e18` and `e25` through `e28`;
+the follow-up allocated from `e29` and cited `e57`. Both retained canonical snapshot IDs. Browser reload, source URL,
+exact membership passage, keyboard focus return, and a 390px overflow check passed. These two live samples establish
+the path, not a measured reliability rate or semantic entailment. No remote prompt update or deployment was performed.
+
+Unmatched citation anchors receive an application-assigned number in the same sequence as valid citations, rendered in
+a compact red badge with an unavailable explanation instead of an unrelated evidence action. The sources list includes
+numbered unavailable placeholders; adjacent citation groups are sorted and deduplicated. Resolving late evidence retains
+the assigned number. On a normally completed response, server telemetry compares the composed
+Markdown against successful evidence from that run. Sentry receives one `citation_resolution` event per distinct
+missing reference per response, including run ID, model, prompt version, reference hash, and counts. The reporter sets
+its issue fingerprint directly; the demo-owner requested removal of the shared Sentry event scrubber. Interrupted, truncated, or
+still-streaming responses are excluded; browser re-renders and hover events do not emit telemetry.
+
+Live investigation found empty meeting searches cited through `resultSet.id` instead of an evidence reference. These
+failures are received in Sentry issue `LEGISLATION-J`; the reporter now labels this case `citationFailureKind=result_set_id`
+without resolving it as evidence. Model-facing evidence includes a copy-ready numeric Markdown link, such as
+`[1](#citation-e7)`. Numeric labels match the managed prompt; the browser still assigns the displayed answer-local numbers.
+Local composition rules explicitly distinguish result sets, record links, and evidence and prohibit citing empty results.
+The actual SDK multi-step regression verifies that the next model request receives the projected citation while the UI
+stream retains the stable snapshot. A live exact-bill lookup produced one valid citation and no unmatched references.
+
+This does not guarantee semantic grounding: a broader live empty-search sample attached a valid reference from an earlier,
+unrelated result. That sample is not accepted as citation-quality success. Keep this as remaining Langfuse-native evaluation
+work; never infer support from a valid reference alone or repair it with title/ID proximity. No hosted prompt label was changed.
+
+Remaining: measure and improve semantic source selection across ordinary questions and empty-result sequences; resolve
+absent readable rendition metadata upstream. Explicit entity placement and removal of automatic unused cards are implemented.
+No persistence, forking, MCP Apps, production prompt change, or deployment is included in this slice.
 
 ## Problem
 

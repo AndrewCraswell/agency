@@ -1,8 +1,25 @@
 # Composed research conversations
 
-Status: proposed implementation plan. Prepared September 16, 2026 from the conversation-design discussion.
-These documents describe work to do, not implemented behavior or production acceptance. Keep this planning set local
-and uncommitted until explicitly requested otherwise.
+Status: implementation in progress. Prepared September 16, 2026 from the conversation-design discussion.
+Owning pages distinguish implemented behavior and verification from remaining acceptance. This documentation-only
+closeout records the user's requested spec cleanup separately from implementation commits.
+
+## Document closeout
+
+Close these records one at a time against agreed scope and recorded evidence. An unchecked planning box is not proof of
+missing implementation, and an agent-suggested extension is not an agreed requirement. Completion here means local
+implementation, not deployment or a clean full-repository verification run.
+
+Delete completed specs after closeout. Text animation, generative UI rendering, answer composition, and ordered streaming are complete for the agreed local
+implementation scope; their specs have been removed. The [answer catalog](../../../src/modules/conversations/composition.ts),
+[record renderer](../../../src/modules/conversations/components/ComposedRecord.tsx),
+[stream adapter](../../../src/modules/conversations/compositionStream.ts), and
+[ordered response renderer](../../../src/modules/conversations/components/OrderedAnswerContent.tsx) remain the implementation references.
+
+| Document | Closeout status | Next action |
+| --- | --- | --- |
+| [Evidence and identity](evidence-and-identity.md) | Foundation implemented; review pending | Separate completed citation UI from semantic source-quality gaps and unconfirmed enrichment/access requirements. |
+| This index | Open until the workstreams are reviewed | Keep statuses and scope decisions aligned with the owning pages. |
 
 ## Outcome
 
@@ -15,10 +32,6 @@ the answer. Keep this effort focused on presenting grounded research within the 
 | Workstream | Owning document | Depends on |
 | --- | --- | --- |
 | Stable records, evidence, citations, and deduplication | [Evidence and identity](evidence-and-identity.md) | Existing retrieval and authorization contracts |
-| Model-selected prose and visual blocks | [Answer composition](answer-composition.md) | Evidence and identity |
-| Component catalog and schema-to-React rendering | [Generative UI rendering](generative-ui-rendering.md) | Answer composition |
-| Ordered text and UI event delivery | [Ordered streaming](ordered-streaming.md) | Composition contract; renderer integration |
-| Smooth typing and word reveals | [Text animation](text-animation.md) | Existing text stream; integrate with ordered streaming |
 
 ## Delivery order
 
@@ -28,7 +41,18 @@ the answer. Keep this effort focused on presenting grounded research within the 
 2. Deliver one vertical slice: streamed prose, one inline entity reference, one selected card, and a valid citation.
 3. Add comparisons, deduplication, cancellation, and ordered streaming behavior; tune typing animation using bursty input.
 
-Animation tuning can be prototyped independently and integrated when ordered streaming is ready.
+Text animation, generative UI rendering, answer composition, and ordered streaming are implemented; evidence and identity is the remaining workstream.
+
+Current work: [citation foundation progress](evidence-and-identity.md#implementation-progress). Text animation was closed
+against the recorded desktop/mobile measurements and the user's acceptance of the improved streaming behavior.
+The implemented answer catalog uses json-render 0.20.0. Installed Streamdown already
+provides word staggering and a bounded animation backlog, so no additional typing buffer has been added.
+Grounded inline record mentions reuse the existing profile, publisher-link, and inspector behavior. The
+bill metadata comparison uses the same constrained json-render stream.
+The [ordered response renderer](../../../src/modules/conversations/components/OrderedAnswerContent.tsx) coordinates prose and block visibility with
+a bounded drain policy. Malformed-fence diagnostics and exact model-facing citation links are implemented. Semantic
+citation-selection reliability remains a known quality gap. Richer policy-comparison components and cross-segment
+footnotes are suggestions/limitations recorded during implementation, not additional agreed scope.
 
 ## Decisions and boundaries
 

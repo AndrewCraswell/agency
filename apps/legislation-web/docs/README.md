@@ -6,6 +6,9 @@ claims of live availability or acceptance of the separated deployments.
 
 ## Conversation experience
 
+[Storybook review](engineering/storybook.md) provides one gallery of real entity cards and simulated research-activity
+states, with reproducible read-only data capture and individual component stories.
+
 [Composed research conversations](engineering/conversation-experience/README.md) contains the delivery plan and five
 independent workstreams: evidence identity, answer composition, React rendering, ordered streaming, and text animation.
 These are local planning documents, not claims of implemented behavior.
