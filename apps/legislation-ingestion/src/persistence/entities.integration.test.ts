@@ -206,7 +206,7 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
           (_, index) => ({
             path: `data/${state}/legislature/${type}-${index}.yml`,
             content: JSON.stringify({
-              id: `ocd-person/import-${type}-${index}`,
+              id: `ocd-person/import-${state}-${type}-${index}`,
               name: `Member ${type} ${index}`,
               roles: [
                 {
@@ -222,7 +222,7 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       current.push({
         path: `data/${state}/committees/import.yml`,
         content: JSON.stringify({
-          id: "ocd-organization/import-test",
+          id: `ocd-organization/import-${state}-test`,
           name: "Test committee",
           classification: "committee",
           chamber: "lower",
@@ -234,7 +234,7 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
         {
           path: `data/${state}/retired/import.yml`,
           content: JSON.stringify({
-            id: "ocd-person/import-retired",
+            id: `ocd-person/import-${state}-retired`,
             name: "Retired member",
             roles: [
               {
@@ -272,7 +272,7 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       expect((await readTerms()).map((term) => term.id)).toEqual(first.map((term) => term.id))
       const stored = await readTerms()
       const quarantinedPerson = await database.query.people.findFirst({
-        where: eq(schema.people.sourceId, "ocd-person/import-lower-0")
+        where: eq(schema.people.sourceId, `ocd-person/import-${state}-lower-0`)
       })
       const malformed = {
         ...current[0]!,
@@ -294,7 +294,9 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       ).toBe("partially_imported")
       expect((await readTerms()).map((term) => term.id)).toEqual(stored.map((term) => term.id))
       expect(
-        await database.query.people.findFirst({ where: eq(schema.people.sourceId, "ocd-person/import-lower-0") })
+        await database.query.people.findFirst({
+          where: eq(schema.people.sourceId, `ocd-person/import-${state}-lower-0`)
+        })
       ).toEqual(quarantinedPerson)
       expect((await readCheckpoint())?.cursor).toMatchObject({
         complete: false,
@@ -460,11 +462,24 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       isActive: true,
       sourceProvider: "openstates"
     })
-    await replaceEntitySnapshot(database, jurisdictionId, snapshot({ complete: true, role: "member" }), {
-      membershipDetectionDate: "2026-08-26",
-      organizationSourceProvider: "openstates",
-      preserveUnobservedOrganizations: true
-    })
+    const completeRoster = snapshot({ complete: true, role: "member" })
+    await replaceEntitySnapshot(
+      database,
+      jurisdictionId,
+      {
+        ...completeRoster,
+        memberships: completeRoster.memberships.map((membership) => ({
+          ...membership,
+          detectedStartDate: "2026-08-26",
+          lastObservedDate: "2026-08-26"
+        }))
+      },
+      {
+        membershipDetectionDate: "2026-08-26",
+        organizationSourceProvider: "openstates",
+        preserveUnobservedOrganizations: true
+      }
+    )
     const [unobserved] = await database
       .select()
       .from(schema.organizations)
@@ -475,7 +490,9 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       .where(eq(schema.organizations.id, organizationId))
     expect(unobserved?.isActive).toBe(true)
     expect(observed?.membershipRelationsComplete).toBe(true)
-    expect((await membershipsForTenure(organizationId))[0]).toMatchObject({
+    expect(
+      (await membershipsForTenure(organizationId)).find((membership) => membership.id === membershipId)
+    ).toMatchObject({
       detectedStartDate: "2026-08-26",
       isActive: true,
       lastObservedDate: "2026-08-26"
