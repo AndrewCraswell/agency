@@ -637,6 +637,50 @@ describe("regulatory table passages", () => {
     }
   }, 30_000)
 
+  it("retains the polymer solubility reference without filling the reviewed 3.1c blank", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/olefin-polymers-table.json", import.meta.url), "utf8")))
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "polymer_table_required")
+    const rows = legalTableRows(table).rows
+    const blank = rows.find((row) => table.text.slice(row.start, row.end).startsWith("3.1c."))
+    const repeated = rows.find((row) => table.text.slice(row.start, row.end).startsWith("3.2a."))
+    invariant(blank && repeated, "polymer_rows_required")
+    expect(blank.context.some((span) => span.label === "Column 5 ditto source")).toBe(false)
+    expect(
+      repeated.context
+        .filter((span) => span.label === "Column 5 ditto source")
+        .map((span) => table.text.slice(span.start, span.end))
+    ).toEqual(["30 pct at 25 °C"])
+    for (const [before, after] of [
+      ["Olefin polymers", "Other polymers"],
+      ["Not less than 0.92", "Not less than 0.90"],
+      ["3.1c.", "3.1d."]
+    ]) {
+      expect(() =>
+        legalTableRows({ text: table.text.replaceAll(before, after), xml: table.xml.replaceAll(before, after) })
+      ).toThrow("passage_table_unresolved_ditto")
+    }
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
   it("resolves reviewed sparse flavoring limitations without filling blank entries", async () => {
     const fixture = z
       .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })

@@ -388,6 +388,26 @@ function sparseIngredientColumns(row: ReturnType<ReturnType<typeof load>>, hasIn
     : []
 }
 
+/** The reviewed 3.1c entry leaves solubility blank; the next explicit ditto cites the last printed value. */
+function isSparsePolymerSolubility(row: ReturnType<ReturnType<typeof load>>, hasPolymerHeaders: boolean) {
+  const cells = row.children("TD")
+  return (
+    hasPolymerHeaders &&
+    cells.length === 5 &&
+    sourceText(cells.first()).startsWith(
+      "3.1c. Olefin copolymers described in paragraph (a)(3)(i)(a)(3) of this section "
+    ) &&
+    sourceText(cells.eq(1)) === "Not less than 0.92" &&
+    cells
+      .toArray()
+      .every(
+        (cell, index) =>
+          Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+          (index < 2 || cell.children.every((node) => node.type === "text" && node.data.trim() === ""))
+      )
+  )
+}
+
 /** Reviewed flavoring tables print sparse limitations; a blank row itself inherits no limitation. */
 function isSparseFlavoringLimitation(row: ReturnType<ReturnType<typeof load>>, hasFlavoringHeaders: boolean) {
   const cells = row.children("TD")
@@ -760,6 +780,16 @@ export function legalTableRows(input: { text: string; xml: string }) {
   const expenseGroups = sourceExpenseGroups(rows)
   const nameContinuations = sourceReviewedNameContinuations(rows)
   const approvalHeaders = tables.find("THEAD TH")
+  const polymerHeaders = [
+    "Olefin polymers",
+    "Density",
+    "Melting Point (MP) or softening point (SP) (Degrees Centigrade)—",
+    "Maximum extractable fraction (expressed as percent by weight of the polymer) in N-hexane at specified temperatures",
+    "Maximum soluble fraction (expressed as percent by weight of polymer) in xylene at specified temperatures"
+  ]
+  const hasPolymerHeaders =
+    approvalHeaders.length === polymerHeaders.length &&
+    polymerHeaders.every((value, index) => sourceText(approvalHeaders.eq(index)) === value)
   const ingredientHeaders = ["Class of substance", "Substance", "Purpose", "Products", "Amount"]
   const hasIngredientHeaders =
     approvalHeaders.length === ingredientHeaders.length &&
@@ -867,6 +897,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
       const isChildIncome = isChildIncomeRow(selection, hasIncomeHeaders)
       const isSparsePesticide = isSparsePesticideCriteria(selection, hasPesticideHeaders)
       const sparseIngredient = sparseIngredientColumns(selection, hasIngredientHeaders)
+      const isSparsePolymer = isSparsePolymerSolubility(selection, hasPolymerHeaders)
       const isGroup =
         cells.length === 1 && Number(cells.first().attr("colspan") ?? cells.first().attr("COLSPAN") ?? 1) > 1
       const categoryLevel = sourceCategoryLevel(selection)
@@ -955,7 +986,8 @@ export function legalTableRows(input: { text: string; xml: string }) {
                 (isSparseStation && column === 2) ||
                 (isChildIncome && (column === 2 || column === 3)) ||
                 preservesPesticideCriteria ||
-                sparseIngredient.includes(column)) &&
+                sparseIngredient.includes(column) ||
+                (isSparsePolymer && column === 5)) &&
               value.length === 0 &&
               width === 1
             ) {

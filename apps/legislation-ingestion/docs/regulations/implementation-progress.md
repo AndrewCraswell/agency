@@ -13,6 +13,30 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Resolved 21 CFR 177.1520's sparse item 3.1c solubility reference. Exact source headers, item identity, density and
+blank-cell structure bound recognition. The blank entry gains no value; the subsequent explicit ditto retains its
+earlier printed source. Current PDF pages 301–302 were visually checked. The full canonical block is retained in
+`fixtures/olefin-polymers-table.json` with membership/content/XML hashes. All 87 table tests, scoped lint and ingestion
+types passed, including both tokenizers' complete reconstruction and independent recounts.
+
+Canonical version `c87d689a-d651-43fa-9c5e-d7d8c7ca4a73` prepares 36 OpenAI / 37 Voyage passages with maximum
+765 / 795 tokens. Parser hash: `b936bee309d065119090ab1708fb8967e297089b7427653f077a0060084a0933`; report:
+`artifacts/regulatory-backfills/polymers-version-recheck.json`; tests:
+`C:/Users/andcra/AppData/Local/Temp/tabra-polymers-tests.log`. Only the pesticide section remains among known blockers;
+the full corpus has not yet been requalified. No provider calls or source/index/vector writes occurred.
+Root `pnpm verify` passed ingestion lint but stopped at five unrelated web lint errors before coverage. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-polymers-verify.log`.
+
+Restarted the full read-only current-eCFR qualification September 16 at 21:49 local as hidden Node process 59028.
+No matching scanner process was live beforehand; the former ignored output directory was absent after the repository
+reorganization. The scanner uses the retained database on port 55438 and the existing bounded inventory, rights,
+source-content and dependency-fingerprint checks. Output: `artifacts/regulatory-backfills/canonical-preparation-all-current`;
+implementation fingerprint `77e0b095ebbe1cbda67ea37d37b9119647f2be51b68a41e3c61588529b99227d`.
+The first completed edition has 33 members and zero blockers (35 OpenAI / 36 Voyage passages). Process 59028 was
+confirmed live after this output; completion remains unproven. Logs:
+`C:/Users/andcra/AppData/Local/Temp/tabra-current-requalification.stdout.log` and
+`C:/Users/andcra/AppData/Local/Temp/tabra-current-requalification.stderr.log`.
+
 Resolved both sparse-entry defects in 9 CFR 424.21 using the current published PDF, visually checked at printed pages
 577–578. Disodium guanylate's amount and Potassium hydroxide's purpose/products stay blank. Later explicit dittos
 retain source-backed earlier values. Exact headers, row names, blank-cell structure and populated siblings bound the

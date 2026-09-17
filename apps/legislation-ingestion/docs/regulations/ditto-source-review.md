@@ -2,6 +2,18 @@
 
 ## Latest scoped requalification
 
+21 CFR 177.1520 now qualifies with 36 OpenAI / 37 Voyage passages, maximum 765 / 795 tokens. Exact polymer-table
+headers, item 3.1c's source identity, density `Not less than 0.92` and empty unspanned final cells bound retention of
+the prior solubility reference. Item 3.1c itself gains no solubility value; item 3.2a's explicit ditto references the
+earlier printed value. The
+[current CFR PDF](https://www.govinfo.gov/content/pkg/CFR-2025-title21-vol3/pdf/CFR-2025-title21-vol3-sec177-1520.pdf)
+was rendered and checked at printed pages 301–302; SHA256
+`93403df1e15dcffdada0bb36c7a6cd05752fd696ad962b0e3a5a2734fdd4f525`.
+All 87 table tests passed, including full reconstruction, both tokenizers and rejection of changed headers, density
+or item identity. Report: `artifacts/regulatory-backfills/polymers-version-recheck.json`; parser hash
+`b936bee309d065119090ab1708fb8967e297089b7427653f077a0060084a0933`.
+Only 40 CFR 152.175 remains among the known blocked versions; a fresh full-corpus qualification is required.
+
 9 CFR 424.21 now qualifies with 160 passages per model, maximum 720 OpenAI / 790 Voyage tokens. Exact ingredient
 headers and unspanned five-cell rows recognize two reviewed sparse entries: Disodium guanylate's amount and Potassium
 hydroxide's purpose/products. These blanks receive no references; later explicit dittos retain the earlier printed
