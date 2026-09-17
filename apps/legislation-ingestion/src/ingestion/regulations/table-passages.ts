@@ -569,6 +569,198 @@ function sourceReviewedNameContinuations(rows: ReturnType<ReturnType<typeof load
   return parents
 }
 
+/** Exact current-eCFR sparse rows corroborated against the published CFR tables retained in source review. */
+function sourceReviewedSparseContinuations(rows: ReturnType<ReturnType<typeof load>>) {
+  const nodes = rows.toArray()
+  const $ = load("", { xml: true })
+  const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  const preservedColumns = new Map<(typeof nodes)[number], ReadonlySet<number>>()
+  const groupRows = new Set<(typeof nodes)[number]>()
+  const headers = rows
+    .first()
+    .parents("TABLE")
+    .find("THEAD TH")
+    .toArray()
+    .map((header) => sourceText($(header)))
+  const cells = (node: (typeof nodes)[number]) => $(node).children("TD")
+  const exact = (node: (typeof nodes)[number], values: string[]) => {
+    const rowCells = cells(node)
+    return (
+      rowCells.length === values.length &&
+      rowCells
+        .toArray()
+        .every(
+          (cell, index) =>
+            Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+            Number(cell.attribs.rowspan ?? cell.attribs.ROWSPAN ?? 1) === 1 &&
+            sourceText(rowCells.eq(index)) === values[index]
+        )
+    )
+  }
+
+  if (
+    headers.length === 4 &&
+    headers[0] === "Source" &&
+    headers[1] === "Location" &&
+    headers[2] === "Regulation involved" &&
+    headers[3] === "Date schedule adopted"
+  ) {
+    for (let index = 1; index < nodes.length - 1; index++) {
+      const parent = nodes[index - 1]
+      const continuation = nodes[index]
+      const following = nodes[index + 1]
+      invariant(parent && continuation && following, "passage_table_row_missing")
+      if (
+        exact(parent, [
+          "Union Oil Co. of California (a) No. 10 boiler",
+          "......do",
+          "204(c)",
+          "Jun. 19, 1973,Dec. 13, 1973."
+        ]) &&
+        exact(continuation, ["(b) 11BIA crude heater", "", "", ""]) &&
+        exact(following, ["W. H. Hutchingson & Son, Inc", "......do", "205(f)", "Aug. 12, 1973."])
+      ) {
+        parents.set(continuation, parent)
+        preservedColumns.set(continuation, new Set([2, 3, 4]))
+      }
+    }
+  }
+
+  if (
+    headers.length === 4 &&
+    headers[0] === "Source" &&
+    headers[1] === "Location" &&
+    headers[2] === "Regulation involved" &&
+    headers[3] === "Date adopted"
+  ) {
+    const childLabels = ["Clay storage bin", "Stone storage bin", "Krupp Ball Mill No. 2", "Krupp Ball Mill No. 3"]
+    for (let index = 0; index <= nodes.length - childLabels.length - 1; index++) {
+      const parent = nodes[index]
+      invariant(parent, "passage_table_row_missing")
+      if (!exact(parent, ["U.S. Steel—Universal Atlas Cement", "Independence", "", ""])) {
+        continue
+      }
+      const children = nodes.slice(index + 1, index + 1 + childLabels.length)
+      if (
+        children.length !== childLabels.length ||
+        !children.every((child, childIndex) => exact(child, [childLabels[childIndex] ?? "", "", "28-19-50A", "Do."]))
+      ) {
+        continue
+      }
+      preservedColumns.set(parent, new Set([3, 4]))
+      for (const child of children) {
+        parents.set(child, parent)
+        preservedColumns.set(child, new Set([2]))
+      }
+    }
+  }
+
+  if (
+    headers.length === 5 &&
+    headers[0] === "Paragraph and section" &&
+    headers[1] === "Noise source" &&
+    headers[2] === "Noise standard—A weighted sound level in dB" &&
+    headers[3] === "Noise measure 1" &&
+    headers[4] === "Measurement location"
+  ) {
+    const labels = [
+      "All Locomotives Manufactured After 31 December 1979",
+      "Rail Cars",
+      "Other Yard Equipment and Facilities"
+    ]
+    for (const node of nodes) {
+      const rowCells = cells(node)
+      if (
+        rowCells.length === 5 &&
+        labels.includes(sourceText(rowCells.eq(1))) &&
+        rowCells
+          .toArray()
+          .every(
+            (cell, index) =>
+              Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+              (index === 1
+                ? sourceText(rowCells.eq(index)).length > 0
+                : cell.children.every((child) => child.type === "text" && child.data.trim() === ""))
+          )
+      ) {
+        groupRows.add(node)
+      }
+    }
+  }
+
+  if (
+    headers.length === 3 &&
+    headers[0] === "Substances" &&
+    headers[1] === "Definitions and specifications" &&
+    headers[2] === "Restrictions"
+  ) {
+    const sparse = new Map([
+      ["Ethyl cellulose", "As set forth in sec. 172.868 of this chapter"],
+      ["Benzoin", "As set forth in U.S.P. XVI"],
+      ["Copal, Manila", ""],
+      ["Ethyl cellulose", "As set forth in sec. 172.868 of this chapter"]
+    ])
+    for (const node of nodes) {
+      const rowCells = cells(node)
+      const name = sourceText(rowCells.eq(0))
+      const definition = sourceText(rowCells.eq(1))
+      if (rowCells.length === 3 && sparse.get(name) === definition && exact(node, [name, definition, ""])) {
+        preservedColumns.set(node, new Set([3]))
+      }
+    }
+  }
+
+  if (
+    headers.length === 3 &&
+    headers[0] === "I—Name or synonym of canned vegetable" &&
+    headers[1] === "II—Source" &&
+    headers[2] === "III—Optional forms of vegetable ingredient"
+  ) {
+    const sparse = new Map([
+      ["Beet greens", "Leaves, or leaves and immature root, of the beet plant"],
+      ["Broccoli", "Heads of the broccoli plant"],
+      ["Brussels sprouts", "Sprouts of the brussels sprouts plant"],
+      ["Cabbage", "Cut pieces of the heads of the cabbage plant"]
+    ])
+    for (const node of nodes) {
+      const rowCells = cells(node)
+      const name = sourceText(rowCells.eq(0))
+      const source = sourceText(rowCells.eq(1))
+      if (rowCells.length === 3 && sparse.get(name) === source && exact(node, [name, source, ""])) {
+        preservedColumns.set(node, new Set([3]))
+      }
+    }
+  }
+
+  if (headers.length === 2 && headers[0] === "List of substances" && headers[1] === "Limitations") {
+    const sparse = ["Sodium hydrosulfite", "Sodium hypochlorite", "Sodium lauryl sulfate"]
+    for (const node of nodes) {
+      const name = sourceText(cells(node).eq(0))
+      if (sparse.includes(name) && exact(node, [name, ""])) {
+        preservedColumns.set(node, new Set([2]))
+      }
+    }
+  }
+
+  if (headers[0] === "Class of station" && headers[1] === "Class of channel used") {
+    for (let index = 1; index < nodes.length - 1; index++) {
+      const parent = nodes[index - 1]
+      const continuation = nodes[index]
+      const following = nodes[index + 1]
+      invariant(parent && continuation && following, "passage_table_row_missing")
+      if (
+        exact(parent, ["A", "Clear", "SC 100", "SC 500 50% SW", "SC 5", "SC 25."]) &&
+        exact(continuation, ["", "", "AC 500", "AC 500 GW", "AC 250", "AC 250."]) &&
+        exact(following, ["A (Alaskan)", "......do", "SC 100", "SC 100 50% SW", "SC 5", "SC 5."])
+      ) {
+        parents.set(continuation, parent)
+        preservedColumns.set(continuation, new Set([1, 2]))
+      }
+    }
+  }
+  return { groupRows, parents, preservedColumns }
+}
+
 /** In expense-group tables, empty-account headings scope a populated same-account-family run. */
 function sourceExpenseGroups(rows: ReturnType<ReturnType<typeof load>>) {
   const nodes = rows.toArray()
@@ -857,13 +1049,14 @@ export function legalTableRows(input: { text: string; xml: string }) {
   invariant(rows.length > 0 && rows.find("ROW, TR").length === 0, "passage_table_complex_structure")
   const conditionParents = sourceConditionRows(rows)
   const exceptionParents = sourceCommodityExceptionRows(rows)
-  const hasDesignatedAreaHeader = sourceText(tables.find("THEAD TH").first()) === "Designated area"
+  const hasDesignatedAreaHeader = sourceText(tables.find("THEAD TH").first()).toLowerCase() === "designated area"
   const countyBoundaryParents = sourceCountyBoundaryRows(rows, hasDesignatedAreaHeader)
   const classificationParents = sourceClassificationRows(rows)
   const reservationGroups = sourceReservationGroups(rows)
   const chemicalGroups = sourceChemicalGroups(rows)
   const expenseGroups = sourceExpenseGroups(rows)
   const nameContinuations = sourceReviewedNameContinuations(rows)
+  const reviewedSparseContinuations = sourceReviewedSparseContinuations(rows)
   const approvalHeaders = tables.find("THEAD TH")
   const polymerHeaders = [
     "Olefin polymers",
@@ -1002,7 +1195,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
           previousCells.clear()
           previousDataWidth = 0
         }
-      } else if (isGroup || categoryLevel !== null) {
+      } else if (isGroup || categoryLevel !== null || reviewedSparseContinuations.groupRows.has(row)) {
         groups = isGroup ? [] : groups.filter((entry) => entry.level < (categoryLevel ?? -1))
         context.push(...groups.map((entry) => entry.span))
         groups.push({
@@ -1013,7 +1206,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
         // earlier value in the same table, while retaining the new group label as separate context.
         // Partial groups and blank separators remain boundaries; never guess a missing column.
         if (
-          (categoryLevel !== null
+          (categoryLevel !== null || reviewedSparseContinuations.groupRows.has(row)
             ? cells.length
             : Number(cells.first().attr("colspan") ?? cells.first().attr("COLSPAN"))) !== previousDataWidth
         ) {
@@ -1034,7 +1227,8 @@ export function legalTableRows(input: { text: string; xml: string }) {
           reservationGroups.get(row) ??
           chemicalGroups.get(row) ??
           expenseGroups.get(row) ??
-          nameContinuations.get(row)
+          nameContinuations.get(row) ??
+          reviewedSparseContinuations.parents.get(row)
         const parentRange = parentNode === undefined ? undefined : rangesByNode.get(parentNode)
         if (parentRange) {
           context.push(...parentRange.context, {
@@ -1072,7 +1266,8 @@ export function legalTableRows(input: { text: string; xml: string }) {
                 (isChildIncome && (column === 2 || column === 3)) ||
                 preservesPesticideCriteria ||
                 sparseIngredient.includes(column) ||
-                (isSparsePolymer && column === 5)) &&
+                (isSparsePolymer && column === 5) ||
+                reviewedSparseContinuations.preservedColumns.get(row)?.has(column)) &&
               value.length === 0 &&
               width === 1
             ) {

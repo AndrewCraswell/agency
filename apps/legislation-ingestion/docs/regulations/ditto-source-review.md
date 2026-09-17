@@ -1,5 +1,28 @@
 # Remaining ditto-reference source review
 
+## Terminal current-title review
+
+The terminal 49-title qualification found ten structural ditto diagnostics across nine versions. Hash-bound canonical
+review resolved nine with narrow retained layouts. Published CFR evidence corroborates the affected group and sparse-row
+boundaries in [40 CFR 52.730](https://www.govinfo.gov/content/pkg/CFR-2025-title40-vol3/pdf/CFR-2025-title40-vol3-sec52-730.pdf),
+[40 CFR 52.876](https://www.govinfo.gov/content/pkg/CFR-2025-title40-vol3/pdf/CFR-2025-title40-vol3-sec52-876.pdf),
+[40 CFR 81.331](https://www.govinfo.gov/content/pkg/CFR-2025-title40-vol20/pdf/CFR-2025-title40-vol20-sec81-331.pdf),
+[Appendix A to 49 CFR Part 210](https://www.govinfo.gov/link/cfr/49/210?link-type=pdf&sectionnum=31&year=mostrecent),
+[21 CFR 73.1](https://www.govinfo.gov/content/pkg/CFR-2025-title21-vol1/pdf/CFR-2025-title21-vol1-sec73-1.pdf),
+[21 CFR 155.200](https://www.govinfo.gov/link/cfr/21/155?link-type=pdf&sectionnum=200&year=mostrecent),
+[21 CFR 177.2800](https://www.govinfo.gov/content/pkg/CFR-2025-title21-vol3/pdf/CFR-2025-title21-vol3-chapI.pdf) and
+[47 CFR 73.182](https://www.govinfo.gov/content/pkg/CFR-2025-title47-vol4/pdf/CFR-2025-title47-vol4-sec73-182.pdf).
+The rules preserve reference state only through those exact reviewed rows. They neither fill blank cells nor replace
+ditto text.
+
+One source defect remains. The current eCFR block for 33 CFR 110.214 starts with Anchorage B and therefore lacks the
+Anchorage A values referenced by its first two ditto cells. The
+[official 2025 annual CFR table](https://www.govinfo.gov/content/pkg/CFR-2025-title33-vol1/pdf/CFR-2025-title33-vol1-part110.pdf)
+contains the A row directly before B. The reviewed 517,451-byte PDF has SHA-256
+`59993d7377fbbecd6a50acec9e524ac3229b514c6e51168dfbdf85a9a7a5ab88`. Keep the current eCFR table structurally blocked
+until rendition reconciliation or an explicit quarantine disposition is recorded; external values are not injected
+into its canonical body or embedding inputs.
+
 ## Latest scoped requalification
 
 40 CFR 152.175 now qualifies with 52 passages per model, maximum 173 OpenAI / 185 Voyage tokens. The cited

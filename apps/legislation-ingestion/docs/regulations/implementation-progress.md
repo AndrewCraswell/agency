@@ -13,6 +13,27 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Resolved nine of the ten terminal unresolved-ditto diagnostics with exact source-reviewed boundaries. The retained
+fixtures bind the canonical edition/version/content and table hashes to the official eCFR artifacts. Narrow rules now
+cover the Illinois equipment continuation, Kansas facility parent/children, EPA `Designated Area` capitalization,
+railroad noise category rows, two FDA restriction tables, canned-vegetable sparse form rows, textile-preservative rows
+and the paired AM-station layout. Blank cells remain blank, original text reconstructs exactly, and changed identities,
+headers or group labels remain rejected. The published CFR renderings corroborate the row groupings; no values were
+copied into canonical eCFR text.
+
+The complete structural recheck covered 62,245 canonical members across Titles 21, 33, 40, 47 and 49 under
+implementation hash `64d511222780d9e595722579cdb9bdf0d344c634e6801e52e1fff5e0c619f696`. Titles 21, 40, 47 and 49 now have zero
+unresolved-ditto diagnostics; their remaining 34 structural diagnostics are header/caption-only tables. Title 33 alone
+retains one unresolved diagnostic in 33 CFR 110.214. Its current eCFR table starts at Anchorage B, but the official 2025
+annual CFR prints the missing Anchorage A row immediately before it. The retained annual PDF is 517,451 bytes with
+SHA-256 `59993d7377fbbecd6a50acec9e524ac3229b514c6e51168dfbdf85a9a7a5ab88`. This is a source-rendition omission, not
+permission to invent a previous value inside the eCFR passage. One hundred two table tests passed, including both
+pinned tokenizers in the broader suite; ingestion TypeScript and scoped lint passed. A fresh 49-title structural
+qualification and an explicit source-gap disposition remain before PASS-05/06 close.
+Root `pnpm verify` then stopped before coverage: the global formatter could not save 17 concurrently mapped
+`legislation-web` files (`os error 1224`), and that unrelated package also reported eight active lint errors. The
+regulations files passed their focused format, lint, TypeScript and 102-test table suite.
+
 Added a read-only table source-review exporter for the terminal qualification diagnostics. It requires an exact
 diagnostic edition/version membership, recomputes the canonical provision content hash, checks the published import
 generation and active display/search rights, selects the exact table block by the retained diagnostic index, and emits

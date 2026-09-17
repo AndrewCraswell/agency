@@ -165,6 +165,19 @@ XML and a row/cell rendering with span and publisher-style attributes. Its repor
 `566001f48ba0391db84fd7020f01080e3a5c4d8391f9b67ada9de12ba0b8ad1b`. This packet makes source review reproducible;
 it is not a disposition and does not authorize carrying a value across a blank or group boundary.
 
+Source review resolved nine of the ten ditto diagnostics without changing canonical text. Complete canonical scans of
+Titles 21, 40, 47 and 49 report no remaining unresolved-ditto tables under implementation hash
+`64d511222780d9e595722579cdb9bdf0d344c634e6801e52e1fff5e0c619f696`. The retained fixtures require each exact header,
+row identity and sparse/group sequence, and mutation tests continue to reject a changed source shape.
+
+The remaining 33 CFR 110.214 diagnostic is an upstream rendition gap. The current eCFR block begins with Anchorage B,
+whose purpose and regulation are ditto markers, while the
+[official 2025 CFR table](https://www.govinfo.gov/content/pkg/CFR-2025-title33-vol1/pdf/CFR-2025-title33-vol1-part110.pdf)
+prints Anchorage A immediately before B with the referenced values. The reviewed PDF is 517,451 bytes, SHA-256
+`59993d7377fbbecd6a50acec9e524ac3229b514c6e51168dfbdf85a9a7a5ab88`. The parser must not synthesize that missing row
+inside the current eCFR version. Reconcile or explicitly quarantine the source rendition before freezing the final
+passage manifest.
+
 ## Ditto scope and preparation gates
 
 A fully spanning group heading inside one table can qualify later rows without replacing earlier column values.
