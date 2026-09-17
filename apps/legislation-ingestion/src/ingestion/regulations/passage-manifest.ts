@@ -69,18 +69,78 @@ const recordSchema = z.object({
   preparation: z.array(z.discriminatedUnion("status", [preparedSchema, blockedSchema])).min(1)
 })
 
-type ManifestEntry = {
-  ordinal: number
-  versionId: string
-  contentHash: string
-  nativeId: string
-  sourceLocator: string
-  contextHash: string
-  eligibility: "eligible" | "empty_text"
-  generationId: string
-  inputManifestHash: string
-  passageCount: number
-}
+export const legalPassageManifestEntrySchema = z.strictObject({
+  ordinal: z.int().nonnegative(),
+  versionId: z.uuid(),
+  contentHash: hashSchema,
+  nativeId: z.string().min(1),
+  sourceLocator: z.string().startsWith("/"),
+  contextHash: hashSchema,
+  eligibility: z.enum(["eligible", "empty_text"]),
+  generationId: hashSchema,
+  inputManifestHash: hashSchema,
+  passageCount: z.int().nonnegative()
+})
+type ManifestEntry = z.infer<typeof legalPassageManifestEntrySchema>
+
+export const legalPassagePartitionManifestSchema = z.strictObject({
+  contract: z.literal(legalPassageManifestContract),
+  contracts: z.strictObject({
+    qualification: z.string().min(1),
+    qualificationImplementation: hashSchema,
+    sourceInput: z.string().min(1),
+    reader: z.string().min(1),
+    passage: z.string().min(1)
+  }),
+  owner: z.strictObject({
+    kind: z.literal("edition"),
+    id: z.uuid(),
+    sourceId: z.enum(["ecfr", "govinfo-cfr"]),
+    sourceGenerationId: hashSchema,
+    rightsProfileId: z.string().min(1),
+    nativeKey: z.string().min(1),
+    currencyDate: z.string().nullable()
+  }),
+  sourceMembership: z.strictObject({
+    inventoryHash: hashSchema,
+    qualificationDataHash: hashSchema,
+    rightsHash: hashSchema,
+    records: z.int().positive()
+  }),
+  preparation: z.strictObject({ model: z.string().min(1), tokenizerId: z.string().min(1) }),
+  entries: z.strictObject({
+    file: z.string().min(1),
+    sha256: hashSchema,
+    versions: z.int().positive(),
+    passages: z.int().nonnegative(),
+    eligibility: z.strictObject({ eligible: z.int().nonnegative(), emptyText: z.int().nonnegative() })
+  })
+})
+
+export const legalPassageCatalogSchema = z.strictObject({
+  contract: z.literal(legalPassageManifestContract),
+  qualificationInventoryHash: hashSchema,
+  implementationHash: hashSchema,
+  model: z.string().min(1),
+  tokenizerId: z.string().min(1),
+  partitions: z
+    .array(
+      z.strictObject({
+        ownerId: z.uuid(),
+        manifestHash: hashSchema,
+        entriesHash: hashSchema,
+        versions: z.int().positive(),
+        passages: z.int().nonnegative(),
+        manifest: z.string().min(1)
+      })
+    )
+    .min(1),
+  totals: z.strictObject({
+    partitions: z.int().positive(),
+    versions: z.int().positive(),
+    passages: z.int().nonnegative()
+  })
+})
 
 function entryLine(entry: ManifestEntry) {
   return `${JSON.stringify(entry)}\n`

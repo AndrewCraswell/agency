@@ -26,6 +26,19 @@ a completion signal. Worker canonical leases and checkpoints remain the final pr
 
 ## Evidence and remaining work
 
+Before creating a full PASS-09 wave, run `pnpm tool regulations/audit-passage-manifest-admission --catalog <catalog>
+--hash <catalog-sha256>` against the explicit local `REGULATORY_TEST_DATABASE_URL`. The read-only audit rehashes the
+catalog, every partition manifest and every ordered entry stream inside a repeatable-read transaction. It rejects paths
+outside the catalog directory and requires the live edition identity, source generation, rights profile and policy hash,
+membership count, ordinal/version/content/source-locator identity, and preparation context to match the frozen catalog.
+
+For a generation already stored in PostgreSQL, the audit also derives its storage ID from the frozen generation identity
+and requires exact passage contract, tokenizer, context, input manifest, eligibility, expected and actual passage counts,
+version ownership, and current source-provenance hash. A conflict fails the whole audit. Missing generations are counted
+as pending and do not fail admission. The report accounts for every version and passage by partition; it performs no
+passage writes, dispatches, provider calls, readiness promotion or embedding work. Passing admission authorizes only
+preparation against that exact catalog. The wave still requires an explicitly chosen candidate and immutable cutoff.
+
 The same task accepts `{ "plan": { "waveId": "<uuid>", "source": "ecfr", "model":
 "openai/text-embedding-3-small", "publishedBefore": "2026-09-16T00:00:00Z" } }` to select published federal
 edition references. `source` is `ecfr`, `govinfo-cfr` or `govinfo-fr`; the model may also be `voyageai/voyage-4`.
@@ -48,6 +61,13 @@ and a publication cutoff do not account for concurrent backdated insertions or c
 the checkpoint. Source reconciliation and a fresh wave are required after such changes. A rights-denied edition stops
 the page without advancing; it is not silently omitted. Historical completeness, shared database admission, automatic
 controller continuation and deployed throughput qualification remain separate gates.
+
+The September 17 retained-database admission passed both frozen current-eCFR candidate catalogs. OpenAI Small accounts
+for 49 editions, 275,138 versions and 501,543 passages; 35 versions are already materialized and 275,103 are pending.
+Voyage 4 accounts for the same 49 editions and 275,138 versions with 522,180 passages, all pending. Reports are retained
+as `artifacts/regulatory-backfills/openai-small-passage-admission.json` and
+`artifacts/regulatory-backfills/voyage-4-passage-admission.json`. These are local read-only admission results. They do
+not select a model or claim PASS-09 completion.
 
 The task also accepts `{ "admission": { ...plan, "pendingOnly": true } }`. This selects only due pending lexical
 outbox scopes, registers at most ten intents under the durable wave checkpoint and immediately executes one recovery

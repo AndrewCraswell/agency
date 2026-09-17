@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added a frozen-catalog admission gate before full PASS-09 passage preparation. The new read-only tool validates the
+catalog hash, partition manifests, ordered entry streams and bounded artifact paths inside one repeatable-read database
+snapshot. It compares every live edition, source generation, active rights policy, membership, content identity, source
+locator and preparation context with PASS-06. Existing passage generations must also match the frozen storage identity,
+passage contract, tokenizer, context, input manifest, eligibility, expected/actual passage count, owner version and
+current source-provenance hash. Missing generations are reported as pending; any conflicting generation fails closed.
+
+Both complete current-eCFR catalogs pass against retained canonical port 55457. OpenAI Small accounts for 49 editions,
+275,138 versions and 501,543 passages, with 35 versions materialized and 275,103 pending. Voyage 4 accounts for 49
+editions, 275,138 versions and 522,180 passages, all pending. Focused manifest/admission tests pass catalog tampering,
+pending/materialized accounting and conflicting-generation rejection; ingestion formatting, lint and type-check pass.
+Reports: `artifacts/regulatory-backfills/openai-small-passage-admission.json` and
+`artifacts/regulatory-backfills/voyage-4-passage-admission.json`. PASS-09 remains open because EVAL-12 has not selected
+the route and no deployed full preparation wave has run. No provider, embedding, vector or recurring-ingestion job ran.
+
 Reduced INDEX-03 finalization round trips without weakening its exact-copy boundary. Canonical and retained inventory
 readers now accept a validated page size up to 1,000, and checkpoint finalization uses that bound for inventory,
 generation metadata, membership, checkpoint and revision traversal. Diagnostic inspection and bounded validation remain

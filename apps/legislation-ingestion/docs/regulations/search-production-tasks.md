@@ -97,6 +97,11 @@ release inventory and tokenizer eligibility remain open.
 - [ ] **PASS-09 Prepare full selected partitions.** Run the deployed preparation worker on validated current/FR/history
   partitions using the selected passage contract. **Done:** expected version inventory equals completed or explicitly
   ineligible inventory; interrupted generations resume without provider calls. Depends on PASS-08, ORCH-06, ING partitions.
+  A read-only admission gate now binds a wave candidate to the exact PASS-06 catalog before dispatch. It rehashes every
+  retained artifact, compares all live edition/membership/context/rights identities and verifies any existing generation's
+  exact tokenizer, manifest, passage count and source provenance. Both 49-edition catalogs pass against the retained
+  canonical database: OpenAI Small has 35 materialized and 275,103 pending versions; Voyage 4 has zero materialized and
+  275,138 pending. Candidate selection, deployed execution and complete partition accounting remain open.
 - [ ] **PASS-10 Publish preparation readiness.** Expose counts/reasons by corpus, year, title and format; link failures
   to operator repair records. **Done:** downstream lexical/vector manifests cannot silently omit a failed passage or
   reuse a different tokenizer/context generation. Depends on PASS-09.
