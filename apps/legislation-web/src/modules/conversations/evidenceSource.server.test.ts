@@ -25,13 +25,36 @@ const html = {
   sourceUrl: "https://www.congress.gov/119/bills/hr1/BILLS-119hr1ih.htm"
 }
 
-function setup(runId = "run:one") {
+function setup(runId = "run:one", previousReferences: readonly string[] = []) {
   const lines: string[] = []
   const logger = createLogger({ service: "evidence-test", level: "warn", write: (line) => lines.push(line) })
-  return { lines, logger, project: createResearchEvidenceProjector(logger, runId) }
+  return { lines, logger, project: createResearchEvidenceProjector(logger, runId, previousReferences) }
 }
 
 describe("readable evidence sources", () => {
+  it("does not recycle references present in previous conversation turns", () => {
+    const initial = setup().project(document)[0]
+    const { project } = setup("run:two", ["e7", "e2", "e7", "not-a-reference", "e-1"])
+    const repeated = project(document)[0]
+    expect(repeated?.id).toBe(initial?.id)
+    expect(repeated?.citationRef).toBe("e8")
+    expect(project(pdf)[0]?.citationRef).toBe("e9")
+    expect(project(document)[0]?.citationRef).toBe("e8")
+  })
+
+  it("assigns short run-local references without changing stable evidence identity", () => {
+    const { project } = setup()
+    const first = project(document)[0]
+    const second = project(pdf)[0]
+    expect(first?.citationRef).toBe("e1")
+    expect(second?.citationRef).toBe("e2")
+    expect(project(document)[0]?.citationRef).toBe("e1")
+    const another = setup("run:two").project(pdf)[0]
+    expect(another?.citationRef).toBe("e1")
+    expect(another?.id).toBe(second?.id)
+    expect(another?.id).not.toBe(first?.id)
+  })
+
   it("recognizes publisher XHTML record pages without logging a fallback", () => {
     const { project, lines } = setup()
     const sourceUrl = "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB2652"

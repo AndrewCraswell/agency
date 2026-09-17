@@ -12,6 +12,10 @@ export const sourceUrlSchema = z.url({ protocol: /^https?$/ }).pipe(
 
 export const evidenceSnapshotSchema = z.strictObject({
   id: z.string().min(1).max(256),
+  citationRef: z
+    .string()
+    .regex(/^e[1-9][0-9]{0,30}$/)
+    .optional(),
   title: z.string().trim().min(1).max(1000),
   origin: z.enum(["canonical", "web"]),
   publisher: z.string().trim().min(1).max(240).optional(),

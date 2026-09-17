@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { createCitationPresentation } from "../conversations/components/citationPresentation"
 import { evidenceSnapshotSchema } from "../conversations/evidence"
 import type { EvalCase, EvalEvent, EvalScore, EvalTurn } from "./contracts"
 
@@ -17,14 +18,16 @@ export function checkRun(item: EvalCase, turns: EvalTurn[], events: EvalEvent[])
         return parsed.success ? parsed.data.evidence : []
       })
     const numbers = new Map<string, string>()
+    const presentation = createCitationPresentation(String(turnIndex), turn.text, evidence)
     for (const citation of turn.text.matchAll(/\[(\d+)\]\((#[^\s)]+)\)/g)) {
       const [, number, href] = citation
       if (!href || !number) {
         continue
       }
-      const id = href.slice("#citation-".length)
+      const selection = presentation.resolveCitation(href)
+      const id = selection?.evidence.id ?? href.slice("#citation-".length)
       anchorCount++
-      if (!href.startsWith("#citation-") || !evidence.some((snapshot) => snapshot.id === id)) {
+      if (!selection) {
         invalidAnchors++
       }
       const previous = numbers.get(id)

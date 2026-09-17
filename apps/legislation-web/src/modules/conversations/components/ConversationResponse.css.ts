@@ -225,6 +225,15 @@ export const citation = style([
     ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
   }
 ])
+export const unresolvedCitation = style([
+  citation,
+  {
+    color: "var(--state-danger)",
+    background: "var(--state-danger-soft)",
+    borderColor: "color-mix(in srgb, var(--state-danger) 25%, transparent)",
+    cursor: "help"
+  }
+])
 export const sourceNumber = style([
   citationNumber,
   { minWidth: 16, height: 16, padding: "0 2px", marginTop: 2, fontSize: 10, borderRadius: 3 }
@@ -242,6 +251,15 @@ export const source = style({
   ":hover": { color: "var(--primary)" },
   ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
 })
+export const unavailableSourceNumber = style([
+  sourceNumber,
+  {
+    color: "var(--state-danger)",
+    background: "var(--state-danger-soft)",
+    borderColor: "color-mix(in srgb, var(--state-danger) 25%, transparent)"
+  }
+])
+export const unavailableSource = style([source, { cursor: "default", ":hover": { color: "inherit" } }])
 export const sourcesTrigger = style({
   display: "flex",
   alignItems: "center",

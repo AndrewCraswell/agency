@@ -2,6 +2,7 @@ import { safeValidateUIMessages, type UIMessage } from "ai"
 import { z } from "zod"
 import { stagedReferenceSchema, type StagedReference } from "./chatRequest"
 import { clarificationRequestSchema, clarificationResponseSchema, type ClarificationResponse } from "./clarification"
+import { presentationBlockSchema } from "./composition"
 
 export const developmentConversationKey = "rostra.development.conversation"
 
@@ -36,7 +37,10 @@ export async function parseDevelopmentConversation(serialized: string): Promise<
   if (!snapshot.success) {
     return undefined
   }
-  const validated = await safeValidateUIMessages({ messages: snapshot.data.messages })
+  const validated = await safeValidateUIMessages({
+    messages: snapshot.data.messages,
+    dataSchemas: { presentation: presentationBlockSchema }
+  })
   if (!validated.success) {
     return undefined
   }

@@ -140,12 +140,26 @@ function retainedRenditions(source: EvidenceSourceContext) {
   return renditions
 }
 
-export function createResearchEvidenceProjector(logger: Logger, runId: string) {
+export function createResearchEvidenceProjector(
+  logger: Logger,
+  runId: string,
+  previousReferences: readonly string[] = []
+) {
   const reported = new Set<string>()
   const retained = new Map<string, Rendition>()
+  const references = new Map<string, string>()
+  let nextReference = 1n
+  for (const reference of previousReferences) {
+    if (/^e[1-9][0-9]{0,30}$/.test(reference)) {
+      const next = BigInt(reference.slice(1)) + 1n
+      if (next > nextReference) {
+        nextReference = next
+      }
+    }
+  }
   return (data: unknown) => {
     let hasIndexedSources = false
-    return projectResearchEvidence(data, evidenceId, (evidence, source, sources) => {
+    const snapshots = projectResearchEvidence(data, evidenceId, (evidence, source, sources) => {
       if (!hasIndexedSources) {
         hasIndexedSources = true
         for (const context of sources) {
@@ -193,6 +207,14 @@ export function createResearchEvidenceProjector(logger: Logger, runId: string) {
         })
       }
       return evidence
+    })
+    return snapshots.map((evidence) => {
+      let citationRef = references.get(evidence.id)
+      if (!citationRef) {
+        citationRef = `e${nextReference++}`
+        references.set(evidence.id, citationRef)
+      }
+      return { ...evidence, citationRef }
     })
   }
 }

@@ -1,6 +1,46 @@
 import { expect, it } from "vitest"
 import { z } from "zod"
-import { createResearchTools, modelInputSchema } from "./research"
+import { createResearchTools, modelInputSchema, researchModelOutput } from "./research"
+
+it("exposes short evidence ids to the model without mutating browser snapshots or record references", () => {
+  const evidence = {
+    id: "stable-evidence-identity",
+    citationRef: "e1",
+    title: "Introduced text",
+    origin: "canonical",
+    sourceUrl: "https://publisher.example/bill",
+    content: { state: "not-collected" }
+  }
+  const output = { data: { bill: { id: "bill:us:119:hr:1" } }, evidence: [evidence], resultSet: { id: "result-set" } }
+  const model = researchModelOutput({ output })
+  expect(model.type).toBe("text")
+  expect(JSON.parse(model.value)).toEqual({
+    ...output,
+    evidence: [
+      {
+        id: "e1",
+        title: evidence.title,
+        origin: evidence.origin,
+        sourceUrl: evidence.sourceUrl,
+        content: evidence.content
+      }
+    ]
+  })
+  expect(model.value).not.toContain("stable-evidence-identity")
+  expect(output.evidence[0]?.id).toBe("stable-evidence-identity")
+})
+
+it("requires run-scoped references in model output instead of falling back to long evidence ids", () => {
+  expect(() =>
+    researchModelOutput({
+      output: {
+        evidence: [
+          { id: "stable", title: "Text", origin: "canonical", sourceUrl: null, content: { state: "not-collected" } }
+        ]
+      }
+    })
+  ).toThrow(z.ZodError)
+})
 
 it("preserves canonical search limits and cursor inputs", () => {
   const schema = modelInputSchema(

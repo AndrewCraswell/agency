@@ -18,6 +18,10 @@ import {
 } from "../../modules/conversations/chatRequest"
 import { clarificationStore } from "../../modules/conversations/clarificationStore"
 import { createClarificationTool } from "../../modules/conversations/clarificationTool"
+import { createCitationPresentation } from "../../modules/conversations/components/citationPresentation"
+import { compositionInstructions } from "../../modules/conversations/composition"
+import { createPresentationRecords } from "../../modules/conversations/compositionRecords"
+import { createCompositionStream, type ComposedAnswer } from "../../modules/conversations/compositionStream"
 import { entityPageRequestSchema, ResultExpiredError } from "../../modules/conversations/entityResults"
 import { getResearchPrompt } from "../../modules/conversations/prompt"
 import {
@@ -231,6 +235,14 @@ export async function POST(request: Request) {
     let isAwaitingClarification = false
     const runId = crypto.randomUUID()
     const reportToolFailure = createToolFailureReporter(runId)
+    const presentationRecords = createPresentationRecords(parsed.data.sessionKey)
+    const previousCitationReferences = parsed.data.messages
+      .filter((message) => message.role === "assistant")
+      .flatMap(
+        (message) =>
+          createCitationPresentation(message.id, message.parts.map((part) => part.text).join("\n"), [])
+            .missingReferences
+      )
     const tools = createResearchTools(
       process.env,
       signal,
@@ -238,7 +250,9 @@ export async function POST(request: Request) {
       reportToolFailure,
       parsed.data.sessionKey,
       undefined,
-      runId
+      runId,
+      presentationRecords.register,
+      previousCitationReferences
     )
     tools.ask_clarification = createClarificationTool(parsed.data.sessionKey, signal, () => {
       isAwaitingClarification = true
@@ -257,7 +271,7 @@ export async function POST(request: Request) {
       sessionId: parsed.data.sessionKey,
       captureId: runId,
       model: createResearchModel(process.env.OPENROUTER_API_KEY),
-      instructions: prompt.prompt,
+      instructions: `${prompt.prompt}\n\n${compositionInstructions}`,
       tools,
       messages,
       onChunk: ({ chunk }) => {
@@ -269,13 +283,17 @@ export async function POST(request: Request) {
     })
     const acceptedAt = new Date().toISOString()
     const [uiStream, captureStream] = result.stream.tee()
+    const composed = Promise.withResolvers<ComposedAnswer>()
     const captured = observeChatResponse({
       sessionId: parsed.data.sessionKey,
       stream: captureStream,
+      composed: composed.promise,
+      citationTelemetry: { runId, model: researchModelId, promptVersion: prompt.version },
       input: {
         messages,
         request: parsed.data,
         prompt,
+        compositionInstructions,
         tools: Object.entries(tools).map(([name, definition]) => ({
           name,
           description: definition.description,
@@ -288,6 +306,7 @@ export async function POST(request: Request) {
         promptName: prompt.name,
         promptVersion: prompt.version,
         promptHash: digest(prompt.prompt),
+        compositionHash: digest(compositionInstructions),
         model: researchModelId,
         reasoningEffort: "low",
         referenceMode: "evidence-relative"
@@ -324,7 +343,15 @@ export async function POST(request: Request) {
               transient: true
             })
           }
-          writer.merge(responseStream)
+          writer.merge(
+            createCompositionStream(responseStream, {
+              resolveRecord: presentationRecords.resolve,
+              onComplete: composed.resolve,
+              onInvalid: (reason) => {
+                captureException(new Error(reason), { tags: { operation: "answer_composition", runId } })
+              }
+            })
+          )
         }
       }),
       headers: { "cache-control": "no-store" }

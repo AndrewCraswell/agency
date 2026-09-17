@@ -1,6 +1,8 @@
 import { propagateAttributes, startActiveObservation } from "@langfuse/tracing"
 import type { TextStreamPart, ToolSet } from "ai"
 import type { EvalEvent, EvalTurn } from "../evaluations/contracts"
+import { createCitationFailureReporter, type CitationTelemetryContext } from "./citationFailures.server"
+import type { ComposedAnswer } from "./compositionStream"
 
 export function redactCredentials(value: unknown): unknown {
   if (typeof value === "string") {
@@ -128,13 +130,25 @@ export function observeChatResponse(options: {
   input: unknown
   metadata: Record<string, unknown>
   stream: ReadableStream<TextStreamPart<ToolSet>>
+  composed?: Promise<ComposedAnswer>
+  citationTelemetry?: CitationTelemetryContext
 }) {
   return propagateAttributes({ sessionId: options.sessionId }, () =>
     startActiveObservation(
       "legislative-research-conversation",
       async (observation) => {
         observation.update({ input: redactCredentials(options.input), metadata: options.metadata })
-        observation.update({ output: redactCredentials(await collectChatStream(options.stream)) })
+        const raw = await collectChatStream(options.stream)
+        const composition = await options.composed
+        if (composition && options.citationTelemetry) {
+          createCitationFailureReporter(options.citationTelemetry)({
+            text: composition.text,
+            events: raw.events,
+            termination: raw.output.termination,
+            isInterrupted: composition.isInterrupted
+          })
+        }
+        observation.update({ output: redactCredentials({ ...raw, ...(composition ? { composition } : {}) }) })
       },
       { asType: "agent" }
     )

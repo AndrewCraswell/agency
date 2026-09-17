@@ -46,9 +46,15 @@ export function scrubSentryEvent(event: ErrorEvent): ErrorEvent {
   const operation = event.tags?.operation
   if (
     typeof operation === "string" &&
-    ["tool_call", "chat_transport", "clarification_submit", "http_api", "chat_stream", "react_boundary"].includes(
-      operation
-    )
+    [
+      "tool_call",
+      "chat_transport",
+      "clarification_submit",
+      "http_api",
+      "chat_stream",
+      "react_boundary",
+      "citation_resolution"
+    ].includes(operation)
   ) {
     tags.operation = operation
   }
@@ -61,6 +67,21 @@ export function scrubSentryEvent(event: ErrorEvent): ErrorEvent {
     tags.toolCallId = toolCallId
   }
   let message = tags.category ? `Research operation: ${tags.category}` : "Application error"
+  if (tags.operation === "citation_resolution") {
+    message = "Citation does not match retrieved evidence."
+    const hash = event.tags?.citationReferenceHash
+    if (typeof hash === "string" && /^[a-f0-9]{64}$/.test(hash)) {
+      tags.citationReferenceHash = hash
+    }
+    const model = event.tags?.model
+    if (typeof model === "string" && /^[a-zA-Z0-9_.:/-]{1,128}$/.test(model)) {
+      tags.model = model
+    }
+    const promptVersion = event.tags?.promptVersion
+    if (typeof promptVersion === "string" && /^[1-9][0-9]{0,8}$/.test(promptVersion)) {
+      tags.promptVersion = promptVersion
+    }
+  }
   if (
     !tags.category &&
     event.exception?.values?.some(
@@ -96,12 +117,19 @@ export function scrubSentryEvent(event: ErrorEvent): ErrorEvent {
   if (tags.category) {
     scrubbed.fingerprint = [tags.tool ?? "research", tags.category]
   }
+  if (tags.operation === "citation_resolution") {
+    scrubbed.fingerprint = ["citation_resolution", "unmatched_reference"]
+  }
   const replayId = event.contexts?.replay?.replay_id
   if (typeof replayId === "string" && /^[a-f0-9]{32}$/i.test(replayId)) {
     scrubbed.contexts = { replay: { replay_id: replayId } }
   }
   const extra: Record<string, number> = {}
-  for (const key of ["durationMs", "resultBytes"]) {
+  const allowedExtra = ["durationMs", "resultBytes"]
+  if (tags.operation === "citation_resolution") {
+    allowedExtra.push("unresolvedCitationCount", "evidenceCount")
+  }
+  for (const key of allowedExtra) {
     const value = event.extra?.[key]
     if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
       extra[key] = value

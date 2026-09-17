@@ -1,6 +1,7 @@
 import type { UIMessage } from "ai"
 import { z } from "zod"
 import { clarificationRequestSchema, clarificationResponseSchema } from "./clarification"
+import { presentationText } from "./composition"
 import { entityCardSchema, entityKindSchema } from "./entityResults"
 
 const clarificationSubmissionMetadata = z.object({ clarificationRequestId: z.uuid() })
@@ -44,6 +45,10 @@ export function conversationTextMessages(messages: readonly UIMessage[]) {
       parts: message.parts.flatMap((part) => {
         if (part.type === "text") {
           return [{ type: "text", text: part.text }]
+        }
+        if (part.type === "data-presentation") {
+          const text = presentationText(part.data)
+          return text ? [{ type: "text", text }] : []
         }
         if (
           part.type === "dynamic-tool" &&

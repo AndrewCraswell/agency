@@ -4,6 +4,7 @@ import { useState } from "react"
 import { z } from "zod"
 import { Badge } from "../../../components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible"
+import { entityPageSchema } from "../entityResults"
 import { researchToolLabels } from "../researchTools"
 import * as styles from "./ConversationResponse.css"
 
@@ -12,8 +13,12 @@ type ResearchActivityProps = Readonly<{
   isRunning: boolean
 }>
 
-const activityInputSchema = z.object({ query: z.string().max(500).nullable().optional() })
+const activityInputSchema = z.object({
+  query: z.string().max(500).nullable().optional(),
+  id: z.string().max(500).nullable().optional()
+})
 const activityOutputSchema = z.object({ data: z.object({ items: z.array(z.unknown()) }) })
+const activityResultSchema = z.object({ resultSet: entityPageSchema.pick({ items: true }) })
 
 export function ResearchActivity({ part, isRunning }: ResearchActivityProps) {
   const [isErrorExpanded, setIsErrorExpanded] = useState(true)
@@ -24,7 +29,12 @@ export function ResearchActivity({ part, isRunning }: ResearchActivityProps) {
   let stateClass = styles.activityPending
   const input = activityInputSchema.safeParse(part.input)
   const output = part.state === "output-available" ? activityOutputSchema.safeParse(part.output) : undefined
-  const detail = input.success ? input.data.query : undefined
+  let detail = input.success ? input.data.query : undefined
+  if (!detail && input.success && input.data.id) {
+    const result = part.state === "output-available" ? activityResultSchema.safeParse(part.output) : undefined
+    const record = result?.success ? result.data.resultSet.items.find((item) => item.id === input.data.id) : undefined
+    detail = record?.title || input.data.id
+  }
   if (part.state === "output-available") {
     state = "Complete"
     Icon = CircleCheck

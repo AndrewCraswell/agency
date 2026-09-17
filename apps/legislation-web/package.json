@@ -46,6 +46,8 @@
     "@azure/identity": "^4.13.1",
     "@azure/storage-blob": "^12.33.0",
     "@hookform/resolvers": "5.9.1",
+    "@json-render/core": "0.20.0",
+    "@json-render/react": "0.20.0",
     "@langfuse/otel": "^5.10.0",
     "@langfuse/tracing": "^5.10.0",
     "@langfuse/vercel-ai-sdk": "^5.11.0",

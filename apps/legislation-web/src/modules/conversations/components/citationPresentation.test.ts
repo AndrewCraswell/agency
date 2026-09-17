@@ -14,6 +14,36 @@ function source(id: string, overrides: Partial<EvidenceSnapshot> = {}): Evidence
 }
 
 describe("citation presentation", () => {
+  it("resolves short references to exact stable evidence and retains pending numbers", () => {
+    const evidence = source("stable", { citationRef: "e1" })
+    const text = "[9](#citation-e1) [2](#citation-unknown)"
+    const pending = createCitationPresentation("answer", text, [])
+    const complete = createCitationPresentation("answer", text, [evidence], pending.numbers)
+    expect(complete.resolveCitation("#citation-e1")).toEqual({ answerId: "answer", number: 1, evidence })
+    expect(complete.resolveReference("#citation-unknown")?.number).toBe(2)
+    expect(complete.missingReferences).toEqual(["unknown"])
+    expect(complete.formatCitationGroups("[9](#citation-e1) [1](#citation-stable)")).toBe("[1](#citation-stable)")
+  })
+
+  it("never resolves a conflicting short reference or carries evidence across answers", () => {
+    const first = source("first", { citationRef: "e1" })
+    const second = source("second", { citationRef: "e1" })
+    const ambiguous = createCitationPresentation("answer", "[1](#citation-e1)", [first, second])
+    expect(ambiguous.resolveCitation("#citation-e1")).toBeUndefined()
+    expect(ambiguous.missingReferences).toEqual(["e1"])
+    const another = createCitationPresentation("another", "[1](#citation-e1)", [second])
+    expect(another.resolveCitation("#citation-e1")?.evidence.id).toBe("second")
+  })
+
+  it("leaves stale conversation references unresolved against a new turn's evidence", () => {
+    const presentation = createCitationPresentation("next-answer", "[1](#citation-e1) [2](#citation-e8)", [
+      source("current", { citationRef: "e8" })
+    ])
+    expect(presentation.resolveCitation("#citation-e1")).toBeUndefined()
+    expect(presentation.resolveCitation("#citation-e8")?.evidence.id).toBe("current")
+    expect(presentation.missingReferences).toEqual(["e1"])
+  })
+
   it("numbers by citation order, ignoring model labels and consolidating repeated identities", () => {
     const first = source("first")
     const second = source("second")
@@ -23,12 +53,59 @@ describe("citation presentation", () => {
       [first, second, source("unused"), { ...second }]
     )
     expect(presentation.citations).toEqual([
-      { answerId: "answer", number: 1, evidence: second },
-      { answerId: "answer", number: 2, evidence: first }
+      { answerId: "answer", number: 2, evidence: second },
+      { answerId: "answer", number: 3, evidence: first }
     ])
-    expect(presentation.resolveCitation("#citation-second")?.number).toBe(1)
+    expect(presentation.resolveReference("#citation-unknown")).toEqual({
+      answerId: "answer",
+      number: 1,
+      referenceId: "unknown",
+      evidence: undefined
+    })
+    expect(presentation.resolveCitation("#citation-second")?.number).toBe(2)
     expect(presentation.resolveCitation("#citation-unknown")).toBeUndefined()
     expect(presentation.resolveCitation("#citation-unused")).toBeUndefined()
+  })
+
+  it("retains one number when missing evidence resolves and reuses missing references across claims", () => {
+    const text = "[4](#citation-missing) [4](#citation-first). Another claim [9](#citation-missing)."
+    const pending = createCitationPresentation("answer", text, [source("first")])
+    expect(pending.references.map(({ number, referenceId }) => [number, referenceId])).toEqual([
+      [1, "missing"],
+      [2, "first"]
+    ])
+    expect(pending.missingReferences).toEqual(["missing"])
+    const ready = createCitationPresentation("answer", text, [source("first"), source("missing")], pending.numbers)
+    expect(ready.resolveCitation("#citation-missing")?.number).toBe(1)
+    expect(ready.resolveCitation("#citation-first")?.number).toBe(2)
+    expect(ready.missingReferences).toEqual([])
+  })
+
+  it("sorts and deduplicates citation groups without crossing claims or changing code and ordinary links", () => {
+    const introduction = "[first](#citation-first), [missing](#citation-missing), [second](#citation-second).\n\n"
+    const claim = "Claim [3](#citation-second)[2](#citation-missing), [1](#citation-first); [again](#citation-second)."
+    const separate = "Different [3](#citation-second) and [1](#citation-first)."
+    const untouched =
+      "`[3](#citation-second) [1](#citation-first)` ![image](#citation-first) [link](https://unrelated.example)."
+    const text = introduction + [claim, separate, untouched].join("\n\n")
+    const presentation = createCitationPresentation("answer", text, [source("first"), source("second")])
+    expect(presentation.formatCitationGroups(text)).toBe(
+      "[first](#citation-first) [missing](#citation-missing) [second](#citation-second).\n\n" +
+        ["Claim [1](#citation-first) [2](#citation-missing) [again](#citation-second).", separate, untouched].join(
+          "\n\n"
+        )
+    )
+  })
+
+  it("consolidates unique URL aliases with explicit IDs and resolves reference links across prose segments", () => {
+    const definitions = "[missing]: #citation-missing"
+    const text = `[one](#citation-first) [two][missing].\n\n${definitions}`
+    const presentation = createCitationPresentation("answer", text, [source("first")])
+    expect(
+      presentation.formatCitationGroups(
+        `[2][missing] [9](https://publisher.example/first) [1](#citation-first)\n\n${definitions}`
+      )
+    ).toBe(`[1](#citation-first) [2][missing]\n\n${definitions}`)
   })
 
   it("uses Markdown syntax for references, nested labels, escaped links, code, images and GFM tables", () => {

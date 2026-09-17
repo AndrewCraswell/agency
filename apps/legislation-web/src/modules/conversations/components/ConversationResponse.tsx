@@ -14,15 +14,18 @@ import { entityPageSchema } from "../entityResults"
 import { evidenceSnapshotSchema, evidenceSourceUrl, sourceUrlSchema, type EvidenceSnapshot } from "../evidence"
 import { createCitationPresentation, type CitationSelection } from "./citationPresentation"
 import { ClarificationQuestion, ClarificationReceiptStatus } from "./ClarificationQuestion"
+import { ComposedRecord } from "./ComposedRecord"
 import { useConversationSession } from "./ConversationSession"
-import { EntityResults } from "./EntityResults"
 import { MessageActions } from "./MessageActions"
+import { answerReferenceDefinitions, orderedAnswerParts } from "./orderedAnswer"
 import { ResearchActivity } from "./ResearchActivity"
 import * as styles from "./ConversationResponse.css"
 
 const evidenceOutputSchema = z.object({ evidence: z.array(evidenceSnapshotSchema).max(40) })
+const resultWarningsSchema = z.object({ resultSet: entityPageSchema.pick({ warnings: true }) })
 type CitationContext = Readonly<{
   presentation: ReturnType<typeof createCitationPresentation>
+  isRunning: boolean
   onEvidence: (selection: CitationSelection) => void
 }>
 const EvidenceContext = createContext<CitationContext | undefined>(undefined)
@@ -88,6 +91,28 @@ function CitationLink({ href, children }: ComponentProps<"a">) {
       </Tooltip>
     )
   }
+  if (href?.startsWith("#citation-")) {
+    const reference = context?.presentation.resolveReference(href)
+    if (!reference) {
+      return null
+    }
+    const label = context?.isRunning
+      ? `Citation ${reference.number} pending`
+      : `Citation ${reference.number} unavailable`
+    const explanation = context?.isRunning
+      ? "This citation has not matched a retrieved source yet."
+      : "This citation does not match a retrieved source."
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" className={styles.unresolvedCitation} aria-label={label} aria-disabled="true">
+            {reference.number}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{explanation}</TooltipContent>
+      </Tooltip>
+    )
+  }
   const safeUrl = sourceUrlSchema.safeParse(href)
   if (!safeUrl.success) {
     return <span>{children}</span>
@@ -145,13 +170,19 @@ export function ConversationResponse({
   const failed = steps.filter((part) => part.state === "output-error" || part.state === "output-denied").length
   const activitySteps = steps.filter((part) => part.state !== "output-error" && part.state !== "output-denied")
   const number = new Intl.NumberFormat()
-  const resultPages = message.parts.flatMap((part) => {
-    if (part.type !== "dynamic-tool" || part.state !== "output-available") {
-      return []
-    }
-    const parsed = z.object({ resultSet: entityPageSchema }).safeParse(part.output)
-    return parsed.success ? [parsed.data.resultSet] : []
-  })
+  const answerParts = orderedAnswerParts(message.parts)
+  const referenceDefinitions = answerReferenceDefinitions(text)
+  const resultWarnings = [
+    ...new Set(
+      message.parts.flatMap((part) => {
+        if (part.type !== "dynamic-tool" || part.state !== "output-available") {
+          return []
+        }
+        const parsed = resultWarningsSchema.safeParse(part.output)
+        return parsed.success ? parsed.data.resultSet.warnings.map((warning) => warning.trim()).filter(Boolean) : []
+      })
+    )
+  ]
 
   return (
     <article
@@ -188,21 +219,33 @@ export function ConversationResponse({
         steps
           .filter((part) => part.state === "output-error" || part.state === "output-denied")
           .map((part) => <ResearchActivity key={part.toolCallId} part={part} isRunning={isRunning} />)}
-      {text && (
-        <EvidenceContext value={{ presentation, onEvidence }}>
-          <MessageResponse
-            className={styles.markdown}
-            mode={isRunning ? "streaming" : "static"}
-            isAnimating={isRunning}
-            animated={!isReducedMotion}
-            controls={false}
-            skipHtml
-            components={markdownComponents}
-          >
-            {text}
-          </MessageResponse>
-        </EvidenceContext>
-      )}
+      <EvidenceContext value={{ presentation, isRunning, onEvidence }}>
+        {answerParts.map((part) => {
+          const key = `${message.id}:${part.key}`
+          if (part.type === "presentation") {
+            return <ComposedRecord key={key} part={part.part} isRunning={isRunning} />
+          }
+          if (!part.text) {
+            return null
+          }
+          return (
+            <MessageResponse
+              key={key}
+              className={styles.markdown}
+              mode={isRunning ? "streaming" : "static"}
+              isAnimating={isRunning}
+              animated={!isReducedMotion}
+              controls={false}
+              skipHtml
+              components={markdownComponents}
+            >
+              {presentation.formatCitationGroups(
+                referenceDefinitions ? `${referenceDefinitions}\n\n${part.text}` : part.text
+              )}
+            </MessageResponse>
+          )
+        })}
+      </EvidenceContext>
       {clarification && !isRunning && (
         <ClarificationQuestion
           request={{
@@ -232,17 +275,19 @@ export function ConversationResponse({
           {text ? "Writing response..." : "Researching..."}
         </output>
       )}
-      {resultPages.map((page) => (
-        <EntityResults key={page.id} initialPage={page} answerId={message.id} />
+      {resultWarnings.map((warning) => (
+        <p key={warning} className="break-words text-xs text-muted-foreground">
+          {warning}
+        </p>
       ))}
-      {presentation.citations.length > 0 && (
+      {presentation.references.length > 0 && (
         <section aria-label="Sources" className="space-y-2">
           <Collapsible open={areSourcesExpanded} onOpenChange={setAreSourcesExpanded}>
             <h3>
               <CollapsibleTrigger className={styles.sourcesTrigger}>
                 <span>Sources</span>
                 <span className="font-mono text-xs text-muted-foreground">
-                  {number.format(presentation.citations.length)}
+                  {number.format(presentation.references.length)}
                 </span>
                 <ChevronDown
                   className={`ml-auto size-4 shrink-0 ${areSourcesExpanded ? "rotate-180" : ""}`}
@@ -251,8 +296,27 @@ export function ConversationResponse({
               </CollapsibleTrigger>
             </h3>
             <CollapsibleContent>
-              {presentation.citations.map((citation) => {
+              {presentation.references.map((citation) => {
                 const source = citation.evidence
+                if (!source) {
+                  return (
+                    <div
+                      key={citation.referenceId}
+                      className={styles.unavailableSource}
+                      role="note"
+                      aria-label={
+                        isRunning ? `Source ${citation.number} pending` : `Source ${citation.number} unavailable`
+                      }
+                    >
+                      <span className={styles.unavailableSourceNumber} aria-hidden="true">
+                        {citation.number}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {isRunning ? "Source pending" : "Source unavailable"}
+                      </span>
+                    </div>
+                  )
+                }
                 const url = evidenceSourceUrl(source)
                 return (
                   <button
@@ -260,7 +324,9 @@ export function ConversationResponse({
                     type="button"
                     className={styles.source}
                     aria-label={`Read source ${citation.number}: ${source.title}`}
-                    onClick={() => onEvidence(citation)}
+                    onClick={() =>
+                      onEvidence({ answerId: citation.answerId, number: citation.number, evidence: source })
+                    }
                   >
                     <span className={styles.sourceNumber} aria-hidden="true">
                       {citation.number}

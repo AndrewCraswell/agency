@@ -280,7 +280,7 @@ function recordHref(record: EntityCard, resultId: string) {
   return `/records/${record.kind}/${encodeURIComponent(record.id)}?${new URLSearchParams({ result: resultId })}`
 }
 
-function RecordCard({
+export function RecordCard({
   record,
   resultId,
   onOpenVote

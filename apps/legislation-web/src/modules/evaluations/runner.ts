@@ -7,6 +7,7 @@ import { researchAgentLimits, runResearchAgent } from "../conversations/agent"
 import { clarificationRequestSchema } from "../conversations/clarification"
 import { createClarificationStore } from "../conversations/clarificationStore"
 import { createClarificationTool } from "../conversations/clarificationTool"
+import { createCitationPresentation } from "../conversations/components/citationPresentation"
 import { createResearchTools } from "../conversations/research"
 import { checkRun } from "./checks"
 import {
@@ -137,13 +138,28 @@ export async function executeCase(options: {
           let firstTextMs: number | null = null
           const responses: RecordedTurn["responses"] = []
           const started = performance.now()
+          const previousCitationReferences = messages
+            .filter((message) => message.role === "assistant")
+            .flatMap((message) => {
+              const text =
+                typeof message.content === "string"
+                  ? message.content
+                  : message.content
+                      .filter((part) => part.type === "text")
+                      .map((part) => part.text)
+                      .join("\n")
+              return createCitationPresentation("history", text, []).missingReferences
+            })
           const tools = createResearchTools(
             { NODE_ENV: "development" },
             signal,
             () => !pending,
             () => undefined,
             undefined,
-            fixture.service
+            fixture.service,
+            undefined,
+            undefined,
+            previousCitationReferences
           )
           tools.ask_clarification = createClarificationTool(
             sessionKey,

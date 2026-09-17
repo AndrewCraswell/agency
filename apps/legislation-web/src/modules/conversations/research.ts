@@ -7,6 +7,8 @@ import { getNextLegislationApplication } from "../legislation/runtime/runtime"
 import { getResearchRuntime } from "../search/research-runtime"
 import { researchAgentLimits } from "./agent"
 import { chatIsAvailable } from "./chatRequest"
+import type { EntityPage } from "./entityResults"
+import { evidenceSnapshotSchema } from "./evidence"
 import { createResearchEvidenceProjector } from "./evidenceSource.server"
 import { ResearchFailure, researchFailureCode } from "./researchFailure"
 import { isResearchTool, researchToolLabels } from "./researchTools"
@@ -16,6 +18,20 @@ import { createToolFailureReporter } from "./toolFailures"
 const resultSchema = z.object({ structuredContent: z.object({ data: z.json() }) })
 const cursorInputSchema = z.object({ cursor: z.string().optional() })
 const failureSchema = z.object({ error: z.string(), message: z.string().optional() })
+const modelResultSchema = z.looseObject({
+  evidence: z.array(evidenceSnapshotSchema.required({ citationRef: true })).max(40)
+})
+
+export function researchModelOutput({ output }: { output: unknown }) {
+  const result = modelResultSchema.parse(output)
+  return {
+    type: "text" as const,
+    value: JSON.stringify({
+      ...result,
+      evidence: result.evidence.map(({ citationRef, ...source }) => ({ ...source, id: citationRef }))
+    })
+  }
+}
 
 export function modelInputSchema(schema: z.ZodType) {
   if (!(schema instanceof z.ZodObject)) {
@@ -63,7 +79,9 @@ export function createResearchTools(
   reportFailure?: ReturnType<typeof createToolFailureReporter>,
   sessionKey?: string,
   queryServiceOverride?: LegislationQueryApi,
-  runId: string = crypto.randomUUID()
+  runId: string = crypto.randomUUID(),
+  onResultSet?: (page: EntityPage) => void,
+  previousCitationReferences: readonly string[] = []
 ) {
   if (environment.NODE_ENV !== "development" && !chatIsAvailable(environment)) {
     throw new Error("Research is unavailable in this environment.")
@@ -71,7 +89,7 @@ export function createResearchTools(
   signal.throwIfAborted()
   const queryService = queryServiceOverride ?? getNextLegislationApplication().queryService
   const logger = createLogger({ service: "legislation-chat", level: "warn" })
-  const projectEvidence = createResearchEvidenceProjector(logger, runId)
+  const projectEvidence = createResearchEvidenceProjector(logger, runId, previousCitationReferences)
   const failureReporter = reportFailure ?? createToolFailureReporter(runId)
   const definitions = createLegislationResearchTools(queryService, logger)
   async function execute(name: string, input: unknown, executionSignal = signal) {
@@ -103,6 +121,7 @@ export function createResearchTools(
     tools[name] = dynamicTool({
       description: definition.description ?? researchToolLabels[name],
       inputSchema: modelInputSchema(definition.inputSchema),
+      toModelOutput: researchModelOutput,
       execute: async (input, { toolCallId }) => {
         const reference = crypto.randomUUID()
         const startedAt = performance.now()
@@ -161,6 +180,9 @@ export function createResearchTools(
                 }
               )
             : undefined
+          if (resultSet) {
+            onResultSet?.(resultSet)
+          }
           return {
             ...parsed.data.structuredContent,
             evidence: projectEvidence(parsed.data.structuredContent.data),
