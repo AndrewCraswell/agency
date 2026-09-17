@@ -27,7 +27,7 @@ export type SynchronizationScheduleManifestOptions = Readonly<{
    * Enables OpenStates schedules only when the caller has explicitly opted in.
    * This is intentionally independent from the standard provider activation.
    */
-  openStatesActive?: boolean
+  openStatesActiveJurisdictions?: readonly (typeof supportedOpenStatesJurisdictions)[number][]
 }>
 
 export type SynchronizationScheduleManifestEntry = Readonly<{
@@ -109,7 +109,7 @@ function resolveManifestOptions(
     active: options.active ?? false,
     currentCongress: options.currentCongress ?? defaultCurrentCongress,
     environment: parseSynchronizationEnvironment(options.environment ?? "development"),
-    openStatesActive: options.active === true && options.openStatesActive === true
+    openStatesActiveJurisdictions: options.active === true ? [...(options.openStatesActiveJurisdictions ?? [])] : []
   }
 }
 
@@ -118,13 +118,14 @@ function buildSynchronizationScheduleManifest(
 ): SynchronizationScheduleManifestEntry[] {
   const schedules: SynchronizationScheduleManifestEntry[] = []
 
+  const activeOpenStatesJurisdictions = new Set(options.openStatesActiveJurisdictions)
   for (const [index, jurisdiction] of supportedOpenStatesJurisdictions.entries()) {
     schedules.push(
       createSchedule(
         createOpenStatesSynchronizationIdentity("bills", jurisdiction),
         openStatesBillsCron(index),
         options.environment,
-        options.openStatesActive
+        activeOpenStatesJurisdictions.has(jurisdiction)
       )
     )
     schedules.push(
@@ -132,7 +133,7 @@ function buildSynchronizationScheduleManifest(
         createOpenStatesSynchronizationIdentity("entities", jurisdiction),
         openStatesEntitiesCron(index),
         options.environment,
-        options.openStatesActive
+        activeOpenStatesJurisdictions.has(jurisdiction)
       )
     )
     schedules.push(
@@ -140,7 +141,7 @@ function buildSynchronizationScheduleManifest(
         createOpenStatesSynchronizationIdentity("events", jurisdiction),
         openStatesEventsCron(index),
         options.environment,
-        options.openStatesActive
+        activeOpenStatesJurisdictions.has(jurisdiction)
       )
     )
   }

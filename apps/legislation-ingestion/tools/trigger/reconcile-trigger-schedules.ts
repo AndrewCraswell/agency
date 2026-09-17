@@ -10,6 +10,7 @@ import {
 } from "../../src/trigger/reconciliation.js"
 import {
   parseOpenStatesScheduleGate,
+  parseOpenStatesScheduleJurisdictions,
   resolveOpenStatesScheduleActivation
 } from "../../src/trigger/schedule-activation-policy.js"
 
@@ -19,7 +20,7 @@ const program = new Command()
   .option("--activate", "make Congress.gov and GovInfo schedules active")
   .option(
     "--activate-openstates",
-    "make OpenStates schedules active; requires --activate, --apply, and OPENSTATES_SCHEDULES_ENABLED=true"
+    "activate only the OpenStates jurisdictions allowlisted by OPENSTATES_SCHEDULES_ENABLED_STATES; requires --activate, --apply, and OPENSTATES_SCHEDULES_ENABLED=true"
   )
   .option("--apply", "apply the reconciliation plan; without this flag the command is read-only")
   .option("--current-congress <number>", "configured current Congress", "119")
@@ -59,16 +60,17 @@ async function reconcile(options: {
     throw new Error("--activate-openstates requires --apply")
   }
   const openStatesSchedulesEnabled = parseOpenStatesScheduleGate(process.env.OPENSTATES_SCHEDULES_ENABLED)
-  const openStatesActive = resolveOpenStatesScheduleActivation({
+  const openStatesActiveJurisdictions = resolveOpenStatesScheduleActivation({
     activate: options.activate === true,
     activateOpenStates: options.activateOpenstates === true,
+    enabledJurisdictions: parseOpenStatesScheduleJurisdictions(process.env.OPENSTATES_SCHEDULES_ENABLED_STATES),
     openStatesSchedulesEnabled
   })
   const manifest = createSynchronizationScheduleManifest({
     active: options.activate === true,
     currentCongress,
     environment,
-    openStatesActive
+    openStatesActiveJurisdictions
   })
   const remoteSchedules = await listRemoteSchedules()
 

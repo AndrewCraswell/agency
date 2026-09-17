@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import { supportedOpenStatesJurisdictions } from "../ingestion/openstates/coverage.js"
 import { createSynchronizationScheduleManifest } from "./manifest.js"
 import {
   applySynchronizationScheduleReconciliation,
@@ -161,7 +162,10 @@ describe("planSynchronizationScheduleReconciliation", () => {
   })
 
   it("only activates a newly created active schedule after safe configuration", async () => {
-    const schedule = createSynchronizationScheduleManifest({ active: true, openStatesActive: true })[0]
+    const schedule = createSynchronizationScheduleManifest({
+      active: true,
+      openStatesActiveJurisdictions: ["al"]
+    })[0]
     expect(schedule).toBeDefined()
     if (schedule === undefined) {
       return
@@ -183,7 +187,10 @@ describe("planSynchronizationScheduleReconciliation", () => {
   })
 
   it("uses the safe creation handshake for the complete active schedule inventory", async () => {
-    const activeManifest = createSynchronizationScheduleManifest({ active: true, openStatesActive: true })
+    const activeManifest = createSynchronizationScheduleManifest({
+      active: true,
+      openStatesActiveJurisdictions: supportedOpenStatesJurisdictions
+    })
     let nextId = 0
     const client = {
       activate: vi.fn<(id: string) => Promise<void>>(async () => undefined),

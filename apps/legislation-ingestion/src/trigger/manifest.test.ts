@@ -98,11 +98,29 @@ describe("synchronization schedule manifest", () => {
   })
 
   it("requires explicit provider opt-in before marking OpenStates schedules active", () => {
-    const manifest = createSynchronizationScheduleManifest({ active: true, openStatesActive: true })
+    const manifest = createSynchronizationScheduleManifest({
+      active: true,
+      openStatesActiveJurisdictions: ["ak", "nc"]
+    })
 
-    expect(manifest.filter((entry) => entry.identity.provider !== "congress").every((entry) => entry.active)).toBe(true)
+    expect(
+      manifest
+        .filter((entry) => entry.identity.provider === "openstates" && ["ak", "nc"].includes(entry.identity.scope))
+        .every((entry) => entry.active)
+    ).toBe(true)
+    expect(
+      manifest
+        .filter((entry) => entry.identity.provider === "openstates" && !["ak", "nc"].includes(entry.identity.scope))
+        .every((entry) => !entry.active)
+    ).toBe(true)
+    expect(manifest.filter((entry) => entry.identity.provider === "openstates" && entry.active)).toHaveLength(6)
+    expect(manifest.filter((entry) => entry.identity.provider === "govinfo").every((entry) => entry.active)).toBe(true)
     expect(manifest.filter((entry) => entry.identity.provider === "congress" && entry.active)).toHaveLength(1)
-    expect(createSynchronizationScheduleManifest({ openStatesActive: true }).every((entry) => !entry.active)).toBe(true)
+    expect(
+      createSynchronizationScheduleManifest({ openStatesActiveJurisdictions: ["ak", "nc"] }).every(
+        (entry) => !entry.active
+      )
+    ).toBe(true)
   })
 
   it("validates entries against the checked-in manifest and rejects unknown scheduled identities", () => {
