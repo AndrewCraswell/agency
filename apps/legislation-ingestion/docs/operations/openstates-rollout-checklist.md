@@ -2,6 +2,13 @@
 
 ## September 16 continuation and identity verification
 
+September 17 vote-date implementation checkpoint:
+
+- [x] Implemented strict source-date parsing: valid ISO calendar dates produce `heldDate` only; timezone-qualified timestamps produce `heldAt`; invalid dates, fuzzy dates and timezone-less timestamps produce neither. Ten parser cases and the expanded normalizer/Alaska suite pass (47 tests total); ingestion type-check passed.
+- [x] Worktree integration adds nullable `votes.held_date`, uses either date precision for ingestion completeness while retaining every other evidence/count guard, and includes the date in canonical observation fields. Updated original migration baseline rather than silently rewriting production. These integration edits overlap files already staged by another workstream and are not included in the isolated parser commit.
+- [x] Created isolated local database `legislation_vote_date_20260917` in the existing Docker PostgreSQL container. Fresh migrations passed. Transactional constraint probes accepted date-only with null `held_at` and exact-time with null `held_date`, and rejected a complete vote with neither (`votes_timeline_complete_check`). Probes rolled back; database retained for reader/pagination integration tests. Production/reference databases were not altered.
+- [ ] W date projection, ordering, filtering, cursor and fixture integration remains necessary before deployment. No worker/default promotion or production schema mutation for this change. Full `pnpm verify` stopped on unrelated nested-function lint in web `ResearchActivity.tsx`.
+
 September 17 continuation after vote-contract mapping:
 
 - [x] Both previous content controllers completed their 100-continuation budgets with zero complete scan rounds, not ingestion completion. Verified no unexpired AK/NC ingestion leases before resuming saved checkpoints.
