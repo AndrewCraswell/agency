@@ -13,6 +13,14 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added a read-only regulatory vector generation inspector and operator CLI. One repeatable-read snapshot reconciles the
+registered route/manifest, copied passage count, expected tokenizer tokens and input bytes, stored vectors, active
+rights memberships and every shard's state, lease, attempts, possible paid repeats, provider usage and insert/reuse
+counters. It reports separate dispatchable, completable, embedded and ready gates; it cannot initialize, dispatch,
+complete or promote work. The two-database smoke proves pending and embedded reports, exact 0/100 percent coverage,
+21 aggregate shard attempts after injected failures, and disappearance after rights cleanup. The focused PostgreSQL
+test and scoped lint passed. Package type checking reached only unrelated active `congress-events.test.ts` errors.
+
 Connected the durable regulatory vector shards to Trigger.dev without activating a schedule or dispatching provider
 work. An explicit operator task initializes exactly 16 shards and submits them with stable global idempotency keys. A
 four-worker queue processes one bounded provider page per run, checkpoints through the existing fenced lease, and
@@ -32,8 +40,8 @@ request occurred. Deployed Trigger recovery remains open.
 Restarted the read-only 49-title qualification after the new regulatory route definitions changed the fingerprinted
 dependency closure. The superseded attempt was stopped cleanly after five editions rather than being allowed to publish
 an obsolete terminal manifest. The active release-candidate run uses implementation hash
-`df80596a461d3404ba25fd53ff9f8f0036142cc9cf6163cc7a5b31295f6604e4` and currently retains seven completed editions,
-45,500 canonical records and zero structural, OpenAI-tokenizer or Voyage-tokenizer blockers. Its manifest remains
+`df80596a461d3404ba25fd53ff9f8f0036142cc9cf6163cc7a5b31295f6604e4` and currently retains ten completed editions,
+67,332 canonical records and zero structural, OpenAI-tokenizer or Voyage-tokenizer blockers. Its manifest remains
 `complete: false`; these are live checkpoint counts, not terminal qualification evidence.
 
 Added durable execution checkpoints for all 16 regulatory vector shards. Initialization creates the exact shard
@@ -46,13 +54,14 @@ Embedding-generation completion now requires all 16 shard checkpoints as well as
 The PostgreSQL smoke forced a provider-model failure, reclaimed the shard, stored the successful vector, completed all
 15 empty shards without provider access and rejected generation completion
 until every checkpoint was complete. It then replayed completion and verified rights cleanup still cascades the entire
-vector inventory. This advances VECTOR-05/07 but does not yet provide cross-generation vector reuse, Trigger deployment
-or provider 429/outage fault injection.
+vector inventory. Later additions cover synthetic provider rate limiting/outage and local Trigger contracts. This
+advances VECTOR-05/07 but does not yet provide cross-generation vector reuse, deployed Trigger recovery or authenticated
+queryability.
 
 The same smoke now also injects a target-table write failure after a simulated provider success. The shard remains
 pending, the failed attempt is retained, and the next claim increments conservative repeat-cost accounting before the
-successful retry. The resulting checkpoint records three attempts and two possible repeated paid attempts without ever
-claiming a partial vector inventory complete. A separate abandoned claim is forced past its lease deadline; the next
+successful retry. The combined current checkpoint records five attempts and four possible repeated paid attempts
+without ever claiming a partial vector inventory complete. A separate abandoned claim is forced past its lease deadline; the next
 worker preserves its cursor, records the possible repeat and completes that empty shard without provider access.
 
 Added search-rights fencing to regulatory vector registration, writes and completion. Each operation shares the copied

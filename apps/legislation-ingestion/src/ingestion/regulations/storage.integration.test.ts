@@ -71,6 +71,7 @@ import {
 } from "./storage.js"
 import { claimLegalEmbeddingShard, initializeLegalEmbeddingShards, runLegalEmbeddingShardJob } from "./vector-jobs.js"
 import { selectLegalEmbeddingShard } from "./vector-shards.js"
+import { inspectLegalEmbeddingGeneration } from "./vector-status.js"
 import {
   completeLegalEmbeddingGeneration,
   registerLegalEmbeddingGeneration,
@@ -1408,6 +1409,14 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           generationId: generation.generationId,
           shardCount: 16
         })
+        expect(await inspectLegalEmbeddingGeneration(target, generation.generationId)).toMatchObject({
+          generationId: generation.generationId,
+          inventory: { copiedPassages: 1, coveragePercent: 0, expectedPassages: 1, vectors: 0 },
+          execution: { completeShards: 0, pendingShards: 16, shardCount: 16 },
+          gates: { blockers: [], completable: false, dispatchable: true, embedded: false, ready: false },
+          rights: { activeMemberships: 1 },
+          state: "pending"
+        })
         const shardIndex = Number.parseInt(passage.id.slice(0, 2), 16) % 16
         const shardRequest = { generationId: generation.generationId, shardCount: 16 as const, shardIndex }
         const shardJobRequest = { generationId: generation.generationId, shardIndex }
@@ -1590,6 +1599,18 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           state: "embedded",
           reused: true
         })
+        expect(await inspectLegalEmbeddingGeneration(target, generation.generationId)).toMatchObject({
+          inventory: { coveragePercent: 100, expectedPassages: 1, vectors: 1 },
+          execution: {
+            attempts: 21,
+            completeShards: 16,
+            pendingShards: 0,
+            possibleRepeatedPaidAttempts: 5,
+            shardCount: 16
+          },
+          gates: { blockers: [], completable: false, dispatchable: false, embedded: true, ready: false },
+          state: "embedded"
+        })
         await expect(
           target.query("UPDATE legislation.legal_openai_small_embeddings SET dimensions=1024 WHERE generation_id=$1", [
             generation.generationId
@@ -1608,6 +1629,9 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         ).toEqual({ generations: 0, vectors: 0 })
         await expect(registerLegalEmbeddingGeneration(target, registration)).rejects.toThrow(
           "legal_embedding_search_membership_unavailable"
+        )
+        await expect(inspectLegalEmbeddingGeneration(target, generation.generationId)).rejects.toThrow(
+          "legal_embedding_generation_missing"
         )
       } finally {
         await target.end()

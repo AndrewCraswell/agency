@@ -328,6 +328,10 @@ must not alter current bill/document embedding freshness. Small pilot writes may
 - [ ] **VECTOR-08 Plan full manifest cost and dispatch.** Freeze eligible partitions, expected vectors/tokens, reuse,
   budget stop conditions and chosen route. **Done:** plan excludes old embedding rebuilds and unqualified historical
   cohorts; operator preview accounts for every selected passage. Depends on EVAL-12, PASS-10.
+  A read-only generation inspector now reports the bound passage/manifest/route identity, expected vectors, pinned
+  tokenizer tokens, input bytes, raw stored vector bytes, active rights, shard state, provider usage, retry exposure and
+  separate dispatchable/completable/embedded/ready gates. It does not price, initialize, dispatch, complete or promote a
+  generation. Full selected-scope manifest, measured reuse and budget stop conditions remain open.
 - [ ] **VECTOR-09 Execute staged bulk waves.** Increase regulatory vector concurrency only within measured provider/DB
   admission; checkpoint partitions and report spend/progress. **Done:** every expected vector has a verified result or
   explicit pending/ineligible disposition, with interrupted-wave replay evidence. Depends on VECTOR-08, ORCH-14, OPS-06.

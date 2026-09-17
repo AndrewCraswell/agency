@@ -266,6 +266,13 @@ at most four workers. `REGULATORY_EMBEDDING_MODEL` is trusted server configurati
 provider access; no payload may choose a model. The last shard to observe all 16 completed checkpoints runs the exact
 vector-count completion gate. Deployment and a bounded paid pilot remain separate acceptance steps.
 
+Before or during a wave, `pnpm tool regulations/inspect-regulatory-vectors --generation <sha256>` reads the isolated
+search database in a repeatable-read, read-only transaction. The report binds the generation, passage generation,
+route, input contract and manifest; reconciles expected/copied/vector counts; sums expected tokenizer tokens and input
+bytes; and exposes rights, shard, lease, attempt, provider-token and reuse counters. Optional `--output <new-file>` uses
+exclusive creation for retained evidence. Its gates distinguish permission to dispatch, exact completion eligibility,
+stored completion and later serving readiness. Inspection never performs those transitions.
+
 Create a unique input identity index and a passage-ID lookup index. Build the new feature's HNSW index after its initial
 bounded load, measure build RSS/time/disk and run ANALYZE before query-plan/recall acceptance. Use the existing index
 maintenance mechanism for an online build when the table already serves traffic; respect PostgreSQL's nontransactional

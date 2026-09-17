@@ -236,7 +236,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   readiness and refuses premature remote completion, delayed lexical work and incomplete source stages. Frozen-scope,
   A cross-database per-preparation inspector also reconciles the complete lexical handoff through target membership,
   validation checkpoints, exact receipt identity and live source/target revision fences; it cannot treat traversal or
-  checkpoint exhaustion as acknowledgement. Frozen-scope, embedding and multi-partition rollups remain open.
+  checkpoint exhaustion as acknowledgement. A separate read-only vector-generation inspector now reconciles one
+  model-bound passage inventory, all 16 shard states, provider usage/retry exposure, stored-vector coverage and distinct
+  completion/readiness gates. Frozen-scope aggregation and multi-partition rollups remain open.
 - [ ] **ORCH-16 Run an interrupted multi-partition wave.** Complete a representative current/FR/annual manifest across
   controller restart and deployment replacement using the chosen concurrency. **Done:** final ING-16 ledger and
   canonical hashes match uninterrupted execution; actual costs and elapsed time are retained. Depends on ORCH-14–15.
