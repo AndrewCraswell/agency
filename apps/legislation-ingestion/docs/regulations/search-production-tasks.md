@@ -125,14 +125,17 @@ returning globally ranked unique versions. A retained two-title query and six re
 Publication/default-current selection, public search DTO/route/MCP, frozen paging, full-body reconciliation and
 representative-volume plans remain open; these tasks are not closed by the application canary.
 
-- [ ] **INDEX-01 Design cross-version filter projections.** Add source/rights, jurisdiction, corpus, code, agency,
+- [x] **INDEX-01 Design cross-version filter projections.** Add source/rights, jurisdiction, corpus, code, agency,
   publication kind/date and selected edition fields needed before ranking; document which remain canonically hydrated.
   **Done:** projections are derived from explicit memberships and cannot mix metadata from another observation/version.
   The isolated schema now has one strict, hash-bound projection per acknowledged scope. Copy finalization derives it
   under canonical edition/observation locks and stores corpus, jurisdiction, source, rights profile, code/edition or
   publication version, dates, publication kind and agency IDs. Agency IDs are deliberately empty until reviewed source
-  references are promoted. Existing targets have an explicit `scope-projections.sql` upgrade. Full-corpus query use,
-  canonical serving-time comparison and promoted agency mappings remain before this task can close.
+  references are promoted. Existing targets have an explicit `scope-projections.sql` upgrade. Publication serving now
+  applies kind/date/source/rights/jurisdiction/corpus filters to these records before ranking, compares a daily identity
+  manifest with canonical observations and traverses exact copy receipts/revisions in bounded 100-scope pages. Returned
+  candidates retain exact canonical hydration. Reviewed agency resolution remains ING-09/HTTP-08 work; representative-
+  volume query planning and a durable manifest optimization remain INDEX-11 work rather than projection-design gaps.
 - [ ] **INDEX-03 Make whole-copy acknowledgement resumable.** Replace the current single 60-second full-scope inspection
   limit with durable, bounded validation checkpoints tied to immutable inventory/generation/rights evidence. **Done:**
   changed source, membership, target content or rights invalidates the receipt; only a fully revalidated scope can

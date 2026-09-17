@@ -68,9 +68,10 @@ vertical slices: application service, serializer, strict client parser, explicit
   Local progress: `validateLegalSearchResponse` binds mode/limit, degradation permission, scope and date filters to
   the request and rejects duplicate versions and inconsistent continuation. Wire tests exercise empty-result fallback
   and exact historical-date evidence. Public projection, current-code/explicit-edition selectors, POST route and typed
-  client are now locally implemented and covered by a real-database authenticated handler canary. Agency/publication
-  scopes and deployed acceptance remain open. The API-backed MCP search tool now passes local real-database
-  search/pagination/text parity; see [serving evidence](legal-search-serving.md).
+  client are now locally implemented and covered by a real-database authenticated handler canary. Federal Register
+  kind/date search is implemented with projection-first filtering and canonical partition/candidate verification;
+  publication paging, agency filters and deployed acceptance remain open. The API-backed MCP search tool now passes
+  local real-database search/pagination/text parity; see [serving evidence](legal-search-serving.md).
 - [ ] **HTTP-10 Implement public coverage reporting.** Ship coverage filters and stage-specific capability, requested/
   available/excluded scope, publisher currency and collection attempt fields. **Done:** source collection, canonical,
   lexical and semantic readiness differ correctly; account-inaccessible metadata is not disclosed. Depends on ING-16
@@ -104,9 +105,13 @@ vertical slices: application service, serializer, strict client parser, explicit
 These original INDEX IDs follow query ownership into W; I retains copy/reconciliation tasks and dated source-pilot
 evidence in [search production](../../../legislation-ingestion/docs/regulations/search-production-tasks.md).
 
-- [ ] **INDEX-02 Implement corpus-wide candidate selection.** Select authorized acknowledged scopes before ranking;
+- [x] **INDEX-02 Implement corpus-wide candidate selection.** Select authorized acknowledged scopes before ranking;
   honor validated current, explicit historical and publication filters. Done: no excluded/unacknowledged candidates
   across editions/publications. Depends on INDEX-01.
+  Edition selection validates every requested acknowledged scope. Publication selection uses the isolated filter
+  projection before ranking, compares canonical and projected daily identity manifests, verifies rights before target
+  text access and traverses every selected receipt/revision in bounded pages. The retained complete 12-rule partition
+  serves, while the intentionally incomplete notice/proposed-rule partition fails closed.
 - [ ] **INDEX-05 Complete rights invalidation across serving.** Invalidate filter projections, result/candidate caches
   and later vectors, coordinating I's existing bounded cleanup. Done: immediate read denial, resumable derivative
   removal and preservation of other allowed copies.

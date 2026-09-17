@@ -13,6 +13,22 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Replaced Federal Register search's pre-ranking 101-document source cap with projection-first corpus filtering. The
+serving transaction now compares daily canonical and target identity manifests for the complete kind/date partition,
+checks target receipt/membership/revision integrity, and traverses every selected canonical/target revision fence in
+bounded 100-scope pages before ranking. Only the bounded result set is hydrated, projection-hash checked and compared
+with canonical passage/version data. Rights for every profile in the partition are required before target text access.
+
+The retained complete final-rule partition served all 12 ranked documents and the South Texas onions canary still
+returned 65 FR 2526 and exact version `fba75581-a302-4967-af57-2b7d287999d0`. A disposable target clone then rejected a
+filter projection changed from final rule to notice and independently rejected a corrupted projection hash. An
+independent canonical/target clone changed a non-result final-rule version after acknowledgement; the complete
+partition was rejected before ranking. An unfiltered request correctly failed: canonical storage has 110 acknowledged
+January 18, 2000 observations, while the target currently has only the 12 final rules; the uncovered 92 notices and six
+proposed rules are now explicit copy work rather than silently omitted search results. INDEX-01 and INDEX-02 are
+complete. Publication cursor paging, representative-volume plans, durable revision manifests, agency mappings and the
+remaining target copies stay open.
+
 Added a strict filter projection for every acknowledged edition or publication in the isolated search database. Whole-
 copy finalization derives the projection while holding the canonical scope and rights locks, validates its exact
 discriminated shape, and stores a SHA-256-bound record beside the copy receipt. Edition projections carry source,

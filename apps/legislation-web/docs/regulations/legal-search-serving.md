@@ -6,11 +6,19 @@ checks both wire shape and agreement with requested filters, mode, limits and fa
 
 ## Available scope
 
-The current implementation requires `corpora: ["regulation"]`. It supports explicit published federal edition IDs,
-or current eCFR heads selected by code IDs. With neither selector it requests every published current eCFR head;
-every selected edition must have a verified search copy. It never narrows that request to just indexed titles.
-Selection is capped at 100 editions. All selected code IDs and edition IDs must be represented; incompatible
-intersection or missing published identities return 404. Jurisdiction can be omitted or `jurisdiction:us`.
+The current implementation accepts one corpus per request: `regulation` or `regulatory_publication`. Regulation search
+supports explicit published federal edition IDs or current eCFR heads selected by code IDs. With neither selector it
+requests every published current eCFR head; every selected edition must have a verified search copy. It never narrows
+that request to just indexed titles. Selection is capped at 100 editions. All selected code IDs and edition IDs must be
+represented; incompatible intersection or missing published identities return 404. Jurisdiction can be omitted or
+`jurisdiction:us`.
+
+Federal Register publication search supports publication-kind and inclusive publication-date filters. It filters the
+isolated projection before ranking and serves only when the complete canonical filter partition has matching projected
+identities, receipts, memberships and source/target revision fences. It has no document-count cap. Exact verification
+currently traverses receipts in bounded 100-scope pages on each request; representative-volume measurements and a
+durable precomputed revision manifest remain required before national promotion. Publication paging is not implemented,
+so a returned truncated window must be refined by query, kind or date.
 
 Lexical limit is 1–100, default 20. Pagination persists the frozen ranked window described in
 [cross-edition retrieval](edition-search-canary.md). Repost the same JSON filters with `meta.nextCursor` as `cursor`.
@@ -18,8 +26,8 @@ The next link is the same POST endpoint, not a GET query. Cursors also bind norm
 mode/fallback permission. Default-current head changes invalidate the underlying selection; they do not silently
 resume a different generation. No national readiness is implied by the two-title pilot.
 
-Publication/statute corpora, state jurisdictions and agency filters return 503 with a safe capability reason.
-The default mixed regulation/publication request therefore currently returns 503. Date-based `asOf` returns 409
+Statute corpora, state jurisdictions and agency filters return 503 with a safe capability reason. The default mixed
+regulation/publication request therefore currently returns 503. Date-based `asOf` returns 409
 `historical_coverage_unavailable`. Semantic/hybrid returns 503 unless `allowDegraded: true`, in which case lexical
 results explicitly report the requested mode, effective lexical mode, degradation and an explanatory warning.
 No embeddings or reranker calls occur in this implementation.
@@ -61,8 +69,14 @@ records and canonical lexical acknowledgement; no source content or embeddings c
 The corresponding September 16 MCP parity evidence and transport limits are retained in
 [M's legal tool record](../../../legislation-mcp/docs/engineering/legal-tools.md#retained-search-pilot-evidence).
 
-This is not deployed Next-router or real WorkOS credential evidence. Agency/publication
-retrieval, full-corpus performance, semantic/vector search, remaining reconciliation and deployment acceptance are open.
+The retained Federal Register canary now exercises projection-first final-rule retrieval across all 12 copied rules,
+including exact canonical revision verification. A disposable clone rejected both a missing filter-partition member and
+a corrupted projection hash. The canonical pilot also makes the remaining coverage gap explicit: 92 notices and six
+proposed rules are acknowledged in the source database but do not yet have target copies, so an unfiltered publication
+request fails closed while the complete final-rule partition serves.
+
+This is not deployed Next-router or real WorkOS credential evidence. Agency retrieval, publication paging, full-corpus
+performance, semantic/vector search, remaining reconciliation and deployment acceptance are open.
 
 ## Target query semantics
 
