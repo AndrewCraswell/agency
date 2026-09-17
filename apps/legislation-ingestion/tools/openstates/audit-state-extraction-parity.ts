@@ -22,8 +22,9 @@ const rowSchema = z.object({
   bill_id: z.string(),
   source_url: z.string(),
   source_sha256: z.string().nullable(),
-  text_hash: z.string(),
-  characters: z.number(),
+  text_hash: z.string().nullable(),
+  characters: z.number().nullable(),
+  processing_status: z.string(),
   ocr_status: z.string().nullable()
 })
 async function snapshot(variable: string) {
@@ -44,8 +45,8 @@ async function snapshot(variable: string) {
     for (let offset = 0; offset < billIds.length; offset += 25) {
       const batch = await client.query(
         `select id,bill_id,source_url,content_hash as source_sha256,md5(text) as text_hash,
-         length(text)::int as characters,ocr_status from legislation.bill_documents
-         where bill_id=any($1::text[]) and processing_status='processed' and text is not null order by id`,
+         length(text)::int as characters,ocr_status,processing_status from legislation.bill_documents
+         where bill_id=any($1::text[]) order by id`,
         [billIds.slice(offset, offset + 25)]
       )
       rows.push(...z.array(rowSchema).parse(batch.rows))
@@ -59,7 +60,9 @@ async function snapshot(variable: string) {
 }
 const reference = await snapshot(options.referenceDatabaseEnv)
 const target = await snapshot(options.targetDatabaseEnv)
-const referenceRows = reference.rows.filter((entry) => entry.ocr_status === "processed" && entry.characters > 0)
+const referenceRows = reference.rows.filter(
+  (entry) => entry.processing_status === "processed" && entry.ocr_status === "processed" && (entry.characters ?? 0) > 0
+)
 if (referenceRows.length === 0 || target.rows.length === 0) {
   throw new Error("Parity audit requires nonempty reference OCR and target document scopes")
 }
@@ -86,6 +89,13 @@ for (const row of referenceRows) {
   const match = matches[0]
   if (matches.length !== 1 || !match) {
     unresolved.push({ referenceId: row.id, reason: "missing-or-ambiguous-target", matches: matches.length })
+  } else if (match.processing_status !== "processed" || !match.text_hash || (match.characters ?? 0) === 0) {
+    unresolved.push({
+      referenceId: row.id,
+      productionId: match.id,
+      reason: "target-extraction-incomplete",
+      processingStatus: match.processing_status
+    })
   } else if (
     !row.source_sha256 ||
     !/^[a-f0-9]{64}$/.test(row.source_sha256) ||

@@ -74,7 +74,8 @@ const row = {
   source_sha256: "a".repeat(64),
   text_hash: "reference-text",
   characters: 200,
-  ocr_status: "processed"
+  ocr_status: "processed",
+  processing_status: "processed"
 }
 beforeEach(() => {
   vi.resetModules()
@@ -118,6 +119,21 @@ it("counts identical text without producing repair candidates", async () => {
   mocks.target = [{ ...row, id: "production" }]
   await import("./audit-state-extraction-parity.js")
   expect(JSON.parse(mocks.bytes.toString())).toMatchObject({ identical: 1, differences: [], unresolved: [] })
+})
+it("distinguishes existing failed extraction from absent source records", async () => {
+  mocks.target = [{ ...row, id: "production", processing_status: "failed", text_hash: null, characters: null }]
+  await import("./audit-state-extraction-parity.js")
+  expect(JSON.parse(mocks.bytes.toString())).toMatchObject({
+    differences: [],
+    unresolved: [
+      {
+        referenceId: "local",
+        productionId: "production",
+        reason: "target-extraction-incomplete",
+        processingStatus: "failed"
+      }
+    ]
+  })
 })
 it("rejects empty reference evidence", async () => {
   mocks.reference = []
