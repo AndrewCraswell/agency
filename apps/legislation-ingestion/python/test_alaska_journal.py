@@ -211,6 +211,52 @@ And so the effective date clause was adopted.
                                  "AM NO 10 FAILED")
         self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
 
+    def test_reconsidered_passage_rejects_same_day_reconsideration_call(self):
+        same_day = self.sample("Adams, Brown").replace(
+            "Final Passage", 'The question being: "Shall reconsideration be taken up on the same day?" '
+            "Take Up Reconsideration on the Same Day",
+        )
+        passage = self.sample("Evans, Fox").replace(
+            "Final Passage", 'The question to be reconsidered: "Shall HB 1 pass the House?" '
+            "Final Passage Reconsideration",
+        )
+        text = "[[JOURNAL_ANCHOR:0821]]\n" + same_day + passage
+        result = parse_roll_call(text, "HB1", (2, 1, 1), "821", "821", True,
+                                 "(H) PASSED ON RECONSIDERATION Y2 N1 E1")
+        self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
+
+    def test_same_day_reconsideration_accepts_senate_publisher_wording(self):
+        text = "[[JOURNAL_ANCHOR:2401]]\n" + self.sample().replace(
+            "Final Passage", "Take up Reconsideration Same Day?",
+        )
+        self.assertEqual(
+            len(parse_roll_call(text, "HB1", (2, 1, 1), "2401", "2401", True,
+                                "(S) RECON SAME DAY VOTE Y2 N1 E1 - IN 3RD RDG")),
+            4,
+        )
+
+    def test_effective_date_hint_rejects_equal_final_passage_tally(self):
+        passage = self.sample("Adams, Brown")
+        effective_date = self.sample("Evans, Fox").replace(
+            "Final Passage", "Effective Date Clause",
+        )
+        text = "[[JOURNAL_ANCHOR:1154]]\n" + passage + effective_date
+        result = parse_roll_call(text, "HB1", (2, 1, 1), "1154", "1154", True,
+                                 "(H) EFFECTIVE DATE(S) FAILED Y2 N1 E1")
+        self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
+
+    def test_concurrence_hint_rejects_equal_effective_date_tally(self):
+        concurrence = self.sample("Adams, Brown").replace(
+            "Final Passage", "Concur in the Senate amendment",
+        )
+        effective_date = self.sample("Evans, Fox").replace(
+            "Final Passage", "Effective Date Concur",
+        )
+        text = "[[JOURNAL_ANCHOR:2326]]\n" + concurrence + effective_date
+        result = parse_roll_call(text, "HB1", (2, 1, 1), "2326", "2326", True,
+                                 "(H) CONCUR AM OF (S) Y2 N1 E1")
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
     def test_explicit_procedural_motion_disambiguates_same_page_tallies(self):
         withdrawn = self.sample("Adams, Brown").replace(
             "Final Passage", "Amendment No. 51/Withdraw"
