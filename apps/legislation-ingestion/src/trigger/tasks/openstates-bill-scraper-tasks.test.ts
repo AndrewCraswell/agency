@@ -5,7 +5,8 @@ import {
   attemptId,
   billBatchConcurrencyKey,
   openStatesBillCloudPayload,
-  openStatesBillPlanPayload
+  openStatesBillPlanPayload,
+  selectAvailableBillBatches
 } from "./openstates-bill-scraper-tasks.js"
 
 describe("hosted Open States bill scraper task contract", () => {
@@ -19,7 +20,7 @@ describe("hosted Open States bill scraper task contract", () => {
     expect(source).toContain("executeScraperBillBatch")
     expect(source).toContain("inspectScraperBillCycle")
     expect(source).toContain("dispatchCloudScraperAttempt")
-    expect(source).toContain("after.available[0]?.id")
+    expect(source).toContain("refillBillScraper")
     expect(source).toContain("schedules.task")
     expect(source).toContain('"openstates-content-controller"')
     expect(source).not.toContain("OPENSTATES_API_KEY")
@@ -61,5 +62,12 @@ describe("hosted Open States bill scraper task contract", () => {
     expect(billBatchConcurrencyKey("nc", first)).toBe(`production:openstates-scraper:bills:nc:${first}`)
     expect(billBatchConcurrencyKey("nc", second)).not.toBe(billBatchConcurrencyKey("nc", first))
     expect(() => billBatchConcurrencyKey("nc", "not-a-digest")).toThrow()
+  })
+
+  it("refills only open fan-out slots from the authoritative active-lease view", () => {
+    const pending = ["active-a", "active-b", "next-a", "next-b"]
+    expect(selectAvailableBillBatches({ pending, available: ["next-a", "next-b"] })).toEqual([])
+    expect(selectAvailableBillBatches({ pending, available: ["next-a", "next-b", "next-c"] })).toEqual(["next-a"])
+    expect(selectAvailableBillBatches({ pending, available: pending })).toEqual(["active-a", "active-b"])
   })
 })

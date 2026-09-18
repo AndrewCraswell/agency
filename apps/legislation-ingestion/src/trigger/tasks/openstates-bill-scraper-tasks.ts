@@ -21,6 +21,14 @@ const planPathSchema = z
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/)
 const dispatchWidth = 2
 
+export function selectAvailableBillBatches<Batch>(
+  state: { available: readonly Batch[]; pending: readonly Batch[] },
+  width = dispatchWidth
+) {
+  const active = state.pending.length - state.available.length
+  return state.available.slice(0, Math.max(width - active, 0))
+}
+
 export const openStatesBillPlanPayload = z.strictObject({
   state: stateSchema,
   refreshDate: z
@@ -122,7 +130,7 @@ export const openStatesBillScraperDispatch = task({
     } finally {
       await pool.end()
     }
-    const selected = state.available.slice(0, dispatchWidth)
+    const selected = selectAvailableBillBatches(state)
     if (selected.length === 0) {
       return {
         status: state.promotionComplete ? ("cycle_promoted" as const) : ("awaiting_in_flight_batches" as const),
@@ -163,7 +171,6 @@ export const openStatesBillScraperCloud = task({
     const { database, pool } = createDatabase({ ...config.database, maxConnections: 2 })
     let result: Awaited<ReturnType<typeof executeScraperBillBatch>> | undefined
     let inventoryId: string
-    let nextBatchId: string | undefined
     try {
       const plan = await readScraperBillPlan(store, payload.planPath)
       if (plan.jurisdiction !== payload.state) throw new Error("Frozen bill plan state changed after admission")
@@ -202,33 +209,36 @@ export const openStatesBillScraperCloud = task({
         }
       })
       const after = await inspectScraperBillCycle(database, store, payload.planPath)
-      nextBatchId = after.available[0]?.id
-      if (!nextBatchId && !after.promotionComplete) {
-        return {
-          ...result,
-          status: "awaiting_in_flight_batches" as const,
-          inventoryId,
-          pending: after.pending.length
-        }
-      }
+      if (!after.promotionComplete) return await refillBillScraper(payload, inventoryId, after.promotedBatches, result)
     } finally {
       await pool.end()
     }
-    if (!nextBatchId) {
-      const plan = await readScraperBillPlan(store, payload.planPath)
-      return { ...result, ...(await dispatchStateContent(payload.state, plan.session, inventoryId)), pending: 0 }
-    }
-    const key = await idempotencyKeys.create(`${payload.state}-bills:${inventoryId}:${nextBatchId}`, {
-      scope: "global"
-    })
-    const continuation = await tasks.trigger(
-      "openstates-bill-scraper-cloud",
-      { ...payload, batchId: nextBatchId },
-      { concurrencyKey: billBatchConcurrencyKey(payload.state, nextBatchId), idempotencyKey: key }
-    )
-    return { ...result, inventoryId, nextBatchId, continuationRunId: continuation.id }
+    const plan = await readScraperBillPlan(store, payload.planPath)
+    return { ...result, ...(await dispatchStateContent(payload.state, plan.session, inventoryId)), pending: 0 }
   }
 })
+
+async function refillBillScraper(
+  payload: z.infer<typeof openStatesBillCloudPayload>,
+  inventoryId: string,
+  promotedBatches: number,
+  result: Awaited<ReturnType<typeof executeScraperBillBatch>>
+) {
+  const key = await idempotencyKeys.create(`${payload.state}-bills:${inventoryId}:refill:${promotedBatches}`, {
+    scope: "global"
+  })
+  const refill = await tasks.trigger(
+    "openstates-bill-scraper-dispatch",
+    { state: payload.state, planPath: payload.planPath },
+    { concurrencyKey: stateConcurrencyKey(payload.state), idempotencyKey: key }
+  )
+  return {
+    ...result,
+    status: "refill_dispatched" as const,
+    inventoryId,
+    refillRunId: refill.id
+  }
+}
 
 async function dispatchStateContent(state: "ak" | "nc", session: string, inventoryId: string, completed?: number) {
   const key = await idempotencyKeys.create(`${state}-bills:content:${inventoryId}`, { scope: "global" })
