@@ -220,10 +220,19 @@ export async function finalizeAnnualCfrDiscoveryPublication(pool: pg.Pool, value
        JOIN legislation.legal_import_generations generation
          ON generation.manifest_id=unit.manifest_id AND generation.unit_key=unit.unit_key
        JOIN legislation.legal_editions edition ON edition.generation_id=generation.id
-       WHERE unit.manifest_id=$1 AND generation.id=ANY($2::text[]) FOR UPDATE OF unit`,
+       WHERE unit.manifest_id=$1 AND generation.id=ANY($2::text[]) AND generation.state='published'
+       FOR UPDATE OF unit`,
       [input.manifestId, input.generationIds]
     )
     if (linked.rowCount === 0) {
+      const admitted = await client.query(
+        `SELECT count(*)::integer count FROM legislation.legal_discovery_units unit
+         JOIN legislation.legal_import_generations generation
+           ON generation.manifest_id=unit.manifest_id AND generation.unit_key=unit.unit_key
+         WHERE unit.manifest_id=$1 AND generation.id=ANY($2::text[])`,
+        [input.manifestId, input.generationIds]
+      )
+      invariant(admitted.rows[0]?.count === 0, "annual_cfr_discovery_generation_missing")
       await client.query("COMMIT")
       return { linked: 0, reused: true }
     }

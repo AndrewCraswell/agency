@@ -260,6 +260,9 @@ describe.skipIf(databaseUrl === undefined).sequential("historical manifest regis
       })
       expect(readiness).toMatchObject({ expectedVolumes: 1, materializedVolumes: 1, ready: true })
       if (readiness.payload === null) throw new Error("Missing annual publication payload")
+      await expect(finalizeAnnualCfrDiscoveryPublication(pool, readiness.payload)).rejects.toThrow(
+        "annual_cfr_discovery_generation_missing"
+      )
       await publishAnnualCfrEdition(pool, readiness.payload)
       await expect(finalizeAnnualCfrDiscoveryPublication(pool, readiness.payload)).resolves.toEqual({
         linked: 1,
