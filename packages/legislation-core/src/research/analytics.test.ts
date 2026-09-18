@@ -3,13 +3,30 @@ import type { Telemetry } from "@repo/legislation-core/observability/telemetry"
 import { analyzeLegislation, compileAnalytics } from "@repo/legislation-core/research/analytics"
 import { describeAnalytics } from "@repo/legislation-core/research/analytics-catalog"
 import { drizzle } from "drizzle-orm/node-postgres"
-import { PgDialect } from "drizzle-orm/pg-core"
+import { getTableConfig, PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
 import { describe, expect, it, vi } from "vitest"
 
 const render = (input: unknown) => new PgDialect().sqlToQuery(compileAnalytics(input).statement)
 
 describe("relationship analytics", () => {
+  it("indexes session-scoped vote rankings without scanning unrelated positions", () => {
+    const votes = getTableConfig(schema.votes).indexes.find((index) => index.config.name === "votes_session_idx")
+    const positions = getTableConfig(schema.votePositions).indexes.find(
+      (index) => index.config.name === "vote_positions_vote_option_person_idx"
+    )
+    expect(votes?.config.columns.map((column) => ("name" in column ? column.name : undefined))).toEqual([
+      "session_id",
+      "id"
+    ])
+    expect(positions?.config.columns.map((column) => ("name" in column ? column.name : undefined))).toEqual([
+      "vote_id",
+      "option",
+      "person_id"
+    ])
+    expect(positions?.config.unique).toBe(false)
+  })
+
   it("records execution stages and reports compiler failures without querying", async () => {
     const pool = new pg.Pool()
     const database = drizzle(pool, { schema })

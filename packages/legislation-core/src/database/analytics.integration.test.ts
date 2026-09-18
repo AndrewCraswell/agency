@@ -67,6 +67,37 @@ afterAll(async () => {
 })
 
 suite("analytics SQL against isolated read-only fixtures", () => {
+  it("ranks recorded yes votes by session without dropping zero-count or unresolved groups", async () => {
+    const query = {
+      dataset: "positions",
+      select: ["person.id", "person.name", "person.party"],
+      filters: [{ field: "vote.sessionId", op: "eq", values: ["session:us:119"] }],
+      metrics: [
+        {
+          name: "yesVotes",
+          operation: "countDistinct",
+          field: "voteId",
+          filters: [{ field: "option", op: "eq", values: ["yes"] }]
+        }
+      ],
+      orderBy: [{ field: "yesVotes", direction: "desc" }],
+      limit: 20
+    }
+    expect(await execute(query)).toEqual([
+      { "person.id": "person:one", "person.name": "One", "person.party": "A", yesVotes: 1 },
+      { "person.id": "person:two", "person.name": "Two", "person.party": null, yesVotes: 0 },
+      { "person.id": null, "person.name": null, "person.party": null, yesVotes: 0 }
+    ])
+    expect(
+      await execute({
+        ...query,
+        filters: [...query.filters, { field: "option", op: "eq", values: ["yes"] }],
+        metrics: [{ name: "yesVotes", operation: "countDistinct", field: "voteId" }],
+        limit: 10
+      })
+    ).toEqual([{ "person.id": "person:one", "person.name": "One", "person.party": "A", yesVotes: 1 }])
+  })
+
   it("preserves the published sponsorship label separately from the canonical person name", async () => {
     expect(
       await execute({
