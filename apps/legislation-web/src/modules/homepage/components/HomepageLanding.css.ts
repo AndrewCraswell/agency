@@ -1,23 +1,23 @@
 import { createVar, keyframes, style } from "@vanilla-extract/css"
 
 export const entrancePose = createVar()
-export const entranceRange = createVar()
-export const entranceEasing = createVar()
+const entranceRange = createVar()
+const entranceEasing = createVar()
 const cardEntrance = keyframes({
   from: { opacity: 0, transform: entrancePose },
   to: { opacity: 1, transform: "none" }
 })
 export const scrollEntrance = style({
   vars: {
-    [entrancePose]: "translate3d(0, 96px, 0) scale(0.96)",
-    [entranceRange]: "entry 0% contain 28%",
-    [entranceEasing]: "cubic-bezier(0.22, 0.1, 0.64, 1)"
+    [entrancePose]: "translate3d(0, 120px, 0) scale(0.96)",
+    [entranceRange]: "entry 15vh entry 60vh",
+    [entranceEasing]: "cubic-bezier(0.4, 0, 0.6, 1)"
   },
   transformOrigin: "center bottom",
   "@media": {
     "screen and (prefers-reduced-motion: no-preference)": {
       "@supports": {
-        "(animation-timeline: view()) and (animation-range: entry 0% contain 100%)": {
+        "(animation-timeline: view()) and (animation-range: entry 15vh entry 60vh)": {
           animationName: cardEntrance,
           animationDuration: "1ms",
           animationTimingFunction: entranceEasing,
@@ -29,7 +29,7 @@ export const scrollEntrance = style({
       }
     },
     "(max-width: 48rem)": {
-      vars: { [entrancePose]: "translate3d(0, 44px, 0) scale(0.985)" }
+      vars: { [entrancePose]: "translate3d(0, 72px, 0) scale(0.985)" }
     }
   }
 })
@@ -236,8 +236,8 @@ export const answer = style([
   scrollEntrance,
   {
     vars: {
-      [entranceRange]: "entry 0% entry 120%",
-      [entranceEasing]: "cubic-bezier(0.3, 0.08, 0.72, 0.72)"
+      [entranceRange]: "entry 20vh entry 60vh",
+      [entranceEasing]: "linear"
     },
     display: "grid",
     gap: 32,
@@ -248,9 +248,9 @@ export const rail = style([
   scrollEntrance,
   {
     vars: {
-      [entrancePose]: "translate3d(52px, 120px, 0) rotate(2deg) scale(0.96)",
-      [entranceRange]: "entry 8% entry 200%",
-      [entranceEasing]: "cubic-bezier(0.28, 0.16, 0.68, 1)"
+      [entrancePose]: "translate3d(72px, 144px, 0) rotate(2deg) scale(0.96)",
+      [entranceRange]: "entry 20vh entry 60vh",
+      [entranceEasing]: "linear"
     },
     display: "grid",
     alignContent: "start",
@@ -260,7 +260,7 @@ export const rail = style([
     minWidth: 0,
     "@media": {
       "(max-width: 48rem)": {
-        vars: { [entrancePose]: "translate3d(0, 44px, 0) scale(0.985)" },
+        vars: { [entrancePose]: "translate3d(0, 72px, 0) scale(0.985)" },
         paddingLeft: 0,
         borderLeft: 0
       }

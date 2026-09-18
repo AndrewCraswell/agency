@@ -13,13 +13,6 @@ search and preserve exact session-owned record references with the message. Stor
 Langfuse-managed prompt for each request, without caching, and remain editable before sending. The canonical
 homepage at `/` includes the composer, worked answer, workflow examples, mentions, MCP connection and coverage sections.
 
-[Record rendering and failure states](engineering/frontend-styling.md#inline-records-and-evidence) cover grouped cards,
-source-owned hearing publications and specific meetings, plus distinct presentation, record-resolution and interruption messages.
-
-[Inline records and evidence](engineering/frontend-styling.md#inline-records-and-evidence) covers AI-selected compact
-cards, quotes, passage cards, progress, timelines, result lists, roll calls and source-backed missing-record states,
-with links to their stories. Version pins remain excluded.
-
 [Storybook review](engineering/storybook.md) provides one gallery of real entity cards and simulated research-activity
 states, with reproducible read-only data capture and individual component stories.
 
@@ -113,7 +106,7 @@ availability.
 | How do I develop or operate it?                         | [Development and runtime](operations/development.md), including conversation telemetry sessions; [API contract](engineering/api/README.md)                                                                            |
 | How do I run focused or full tests?                     | [Test ownership and execution](operations/testing.md): project ownership, behavioral assertion quality, database requirements and full verification |
 | How do I run agent evaluations?                        | [Agent evaluations](operations/agent-evaluations.md): Langfuse-managed online evaluation, complete conversation traces, frozen fixtures, and diagnostic limits |
-| How do we style the frontend?                          | [Frontend styling](engineering/frontend-styling.md): scoped vanilla-extract styles, theme tokens, primitive integration, and verification |
+| Which styling libraries and infrastructure do we use?  | [Frontend styling](engineering/frontend-styling.md): component libraries, shared theme infrastructure, and build/test integration |
 | How will we add regulations?                            | [Regulatory plan](../../legislation-ingestion/docs/regulations/README.md)                                                                                                                                   |
 | How do we implement regulatory ingestion and retrieval? | [Implementation specification](../../legislation-ingestion/docs/regulations/implementation.md), [remaining production tasks](../../legislation-ingestion/docs/regulations/production-backlog.md)                                             |
 
