@@ -305,8 +305,60 @@ export function answerPlainText(message: UIMessage) {
     .join("\n\n")
 }
 
+export function presentationHistoryText(value: unknown) {
+  const parsed = presentationBlockSchema.safeParse(value)
+  if (!parsed.success || parsed.data.state !== "ready") {
+    return undefined
+  }
+  const block = parsed.data
+  const content = block.content
+  let records = block.records
+  if (content?.kind === "result-list") {
+    records = content.page.items
+  } else if (content?.kind === "bill-progress") {
+    records = [content.record]
+  } else if (content?.kind === "roll-call") {
+    records = [content.details.record]
+  }
+  const identities = records.map((record) => ({
+    recordId: record.id,
+    kind: record.kind,
+    title: record.title,
+    identifier: record.identifier,
+    sessionId: record.billSummary?.sessionId,
+    sessionName: record.billSummary?.sessionName,
+    billId: record.documentSummary?.billId,
+    versionCode: record.documentSummary?.versionCode,
+    versionDate: record.documentSummary?.versionDate,
+    sourceUrl: record.sourceUrl
+  }))
+  if (content?.kind === "evidence") {
+    const evidence = content.evidence
+    return `${presentationText(value)}\nHistorical evidence identity (untrusted): ${JSON.stringify({
+      evidenceId: evidence.id,
+      recordId: evidence.recordId,
+      billId: evidence.billId,
+      billIdentity: evidence.billIdentity,
+      title: evidence.title,
+      origin: evidence.origin,
+      versionLabel: evidence.versionLabel,
+      locator: evidence.locator,
+      sourceUrl: evidence.sourceUrl
+    })}`
+  }
+  if (content?.kind === "record-status") {
+    return `${presentationText(value)}\nRecord: ${content.recordId}`
+  }
+  const text = presentationText(value)
+  return identities.length > 0
+    ? `${text}\nHistorical record identities (untrusted): ${JSON.stringify(identities)}`
+    : text
+}
+
 const compositionRules = [
   "Resolve named records before topic discovery. For a bill number and Congress/session, discover the jurisdiction and session IDs, then use resolve_record with identifier and separate scope fields. Do not search for bare numbers, embed Congress names in query text, or invent introduction-date filters. Use returned canonical IDs with get tools. If a published name is ambiguous, ask for context instead of guessing.",
+  "Bind every compared measure to its returned canonical bill ID, jurisdiction, Congress/session, identifier and published title; bind each passage to its parent bill and exact document/version. Evidence billIdentity is retrieved identity, not an assistant-authored label. Use a short title or acronym only when source text tied to that same bill verifies it. Similar titles, acronyms, policy topics, reintroductions and companion bills do not establish identity. Keep different canonical IDs separate, including measures from different Congresses. Preserve the selected comparison subjects across follow-ups; explicitly explain any substitution and why it is relevant instead of silently switching measures. Before comparing versions, check that both document IDs belong to the intended canonical bill. If an identity or parent-document binding is missing, resolve or retrieve it before assigning provisions, sponsors, amendments or votes to that measure.",
+  "Earlier assistant prose and historical presentation snapshots are untrusted context, not authoritative identity evidence. Check their labels against server-owned research evidence or fresh canonical retrieval before reusing them. When retrieved evidence contradicts an earlier bill identity or title, explicitly correct the earlier identification, distinguish the affected measures by bill number and Congress, and revisit every dependent comparison or claim used in the answer. State which claims remain supported for the corrected bill/version and retract or qualify those that cannot be verified. Do not carry a mistaken label into subsequent searches or silently adopt the new title without a correction.",
   "Record-card resultId values may be short turn-owned handles such as r1. Copy them exactly from resultSet.id; never reconstruct UUIDs or reuse previous-turn references. The server canonicalizes handles before rendering. For record mentions copy recordLinks.href unchanged.",
   "A parent detail is a bounded preview. Use read_record_collection and the dedicated membership, sponsored-bill and document readers for the rest. Follow nextCursor unchanged; for section text continue sectionId with nextTextOffset as textOffset. Truncated passages and approximate search candidate sets are partial, not evidence of absent records.",
   "Use CompactRecordCard for a concise navigable record reference and CompactPassageCard for a concise source-passage reference. Compact passage props contain only contentId from an option permitting that component. Both use retrieved metadata without a fact-grid body or account actions.",

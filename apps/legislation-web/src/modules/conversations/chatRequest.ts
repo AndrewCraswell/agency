@@ -1,7 +1,7 @@
 import type { UIMessage } from "ai"
 import { z } from "zod"
 import { clarificationRequestSchema, clarificationResponseSchema } from "./clarification"
-import { presentationText } from "./composition"
+import { presentationHistoryText } from "./composition"
 import { entityCardSchema, entityKindSchema } from "./entityResults"
 
 const clarificationSubmissionMetadata = z.object({ clarificationRequestId: z.uuid() })
@@ -50,7 +50,7 @@ export function conversationTextMessages(messages: readonly UIMessage[]) {
             return [{ type: "text", text: part.text }]
           }
           if (part.type === "data-presentation") {
-            const text = presentationText(part.data)
+            const text = presentationHistoryText(part.data)
             return text ? [{ type: "text", text }] : []
           }
           if (

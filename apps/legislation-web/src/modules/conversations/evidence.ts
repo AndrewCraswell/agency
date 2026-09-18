@@ -1,5 +1,12 @@
 import { z } from "zod"
 
+const billIdentitySchema = z.strictObject({
+  id: z.string().regex(/^bill:[a-z0-9-]+:[^:]+:[a-z0-9-]+:[a-z0-9-]+$/),
+  sessionId: z.string().min(1),
+  identifier: z.string().min(1).optional(),
+  title: z.string().trim().min(1).max(1000)
+})
+
 export const sourceUrlSchema = z.url({ protocol: /^https?$/ }).pipe(
   z.string().refine((value) => {
     const url = new URL(value)
@@ -14,6 +21,7 @@ export const evidenceSnapshotSchema = z.strictObject({
   id: z.string().min(1).max(256),
   recordId: z.string().min(1).max(512).optional(),
   billId: z.string().min(1).max(512).optional(),
+  billIdentity: billIdentitySchema.optional(),
   citationRef: z
     .string()
     .regex(/^e[1-9][0-9]{0,30}$/)
@@ -88,6 +96,7 @@ const sourceRecordSchema = z.object({
   ordinal: z.number().int().nullish(),
   sourceLocator: z.string().nullish(),
   billId: z.string().nullish(),
+  identifier: z.string().nullish(),
   classification: z
     .union([z.string(), z.array(z.string())])
     .nullish()
@@ -121,6 +130,26 @@ const sourceRecordSchema = z.object({
 })
 
 export type EvidenceSourceContext = z.infer<typeof sourceRecordSchema>
+
+function billIdentity(source: EvidenceSourceContext) {
+  if (
+    source.origin === "web" ||
+    source.documentId ||
+    source.materialId ||
+    !source.id ||
+    !source.title ||
+    !billIdentitySchema.shape.id.safeParse(source.id).success
+  ) {
+    return undefined
+  }
+  const [, jurisdiction, session] = source.id.split(":")
+  return billIdentitySchema.parse({
+    id: source.id,
+    sessionId: `session:${jurisdiction}:${session}`,
+    identifier: source.identifier ?? undefined,
+    title: source.title
+  })
+}
 
 const actionRecordSchema = z.object({
   id: z.string().min(1),
@@ -227,7 +256,7 @@ function evidenceIdentity(source: EvidenceSourceContext, sourceUrl: string | nul
   if (!passageId && source.id && source.id !== recordId) {
     passageId = source.id
   }
-  return JSON.stringify([
+  const identity = [
     recordType,
     recordId,
     source.billId ?? null,
@@ -241,7 +270,9 @@ function evidenceIdentity(source: EvidenceSourceContext, sourceUrl: string | nul
     passageId ? null : (source.sourceLocator ?? source.sectionIdentifier ?? source.heading ?? null),
     source.text ?? source.contentHash ?? null,
     source.textOffset ?? 0
-  ])
+  ]
+  const bill = billIdentity(source)
+  return JSON.stringify(bill ? [...identity, bill] : identity)
 }
 
 export function projectResearchEvidence(
@@ -297,7 +328,8 @@ export function projectResearchEvidence(
           id: createId(key),
           recordId:
             source.recordId ?? source.documentId ?? source.materialId ?? source.provisionId ?? source.id ?? undefined,
-          billId: source.billId ?? undefined,
+          billId: source.billId ?? billIdentity(source)?.id,
+          billIdentity: billIdentity(source),
           title: title ?? (url.success ? new URL(url.data).hostname : undefined),
           origin: source.origin ?? "canonical",
           sourceUrl,

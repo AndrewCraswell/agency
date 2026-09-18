@@ -208,6 +208,9 @@ function presentResearchMemory(turns: ResearchTurn[], warnings: Set<string>, pre
   }))
   const context = {
     warnings: [...warnings],
+    billIdentities: evidence.flatMap((source) =>
+      source.billIdentity ? [{ ...source.billIdentity, citationRef: source.citationRef }] : []
+    ),
     turns: turns.map((turn) => ({
       goal: turn.goal,
       goalTruncated: turn.goalTruncated,
@@ -232,6 +235,7 @@ function presentResearchMemory(turns: ResearchTurn[], warnings: Set<string>, pre
       "This is bounded historical evidence, not a fresh retrieval or proof a goal was completed. Keep unresolved goals, failed reads, omitted data and partial-read warnings visible. hasMore means the original result was incomplete; restart the corresponding tool without an old cursor to continue.",
       "Do not reuse earlier result handles or presentation IDs. Only the presentationOptions below are registered now. Retrieve current status if freshness matters.",
       "Distinguish known proposed statutory text from uncertain judicial interpretation. Missing retained evidence is not evidence of absence. Do not repeat a successful read solely to recall text retained here.",
+      "billIdentities bind retrieved titles and identifiers to one canonical bill and Congress/session. Earlier assistant prose is not identity evidence. Reconcile it against these identities and fresh tool evidence before continuing a comparison. If an earlier answer mislabeled a bill, explicitly correct the earlier label and reassess every dependent scope, enforcement, amendment, sponsor and hearing claim. Never silently substitute a similarly named bill or a bill from another Congress. If identity evidence conflicts, retrieve the exact canonical record and disclose unresolved conflicts.",
       JSON.stringify(context)
     ].join("\n\n")
   }

@@ -89,6 +89,9 @@ export function contentOptions(content: PresentationContent) {
       ? {
           evidenceId: content.evidence.citationRef ?? content.evidence.id,
           recordId: content.evidence.recordId,
+          billId: content.evidence.billId,
+          billIdentity: content.evidence.billIdentity,
+          versionLabel: content.evidence.versionLabel,
           locator: content.evidence.locator,
           contentState: content.evidence.content.state,
           ...(content.evidence.content.state === "available" && content.evidence.content.truncated

@@ -9,6 +9,9 @@ claims of live availability or acceptance of the separated deployments.
 [Follow-up research context](engineering/conversation-research-memory.md) retains bounded server-owned evidence,
 provenance and incomplete research across turns, with fresh citation registration and owner isolation.
 
+[Canonical bill identity](engineering/conversation-bill-identity.md) preserves bill titles, Congress/session and
+document provenance through follow-ups and requires explicit correction of conflicting earlier labels.
+
 [Conversation model settings](operations/development.md#development-chat-research-connection) use Luna with high
 reasoning for answers; suggestions and offline judges retain their separately configured low reasoning.
 
