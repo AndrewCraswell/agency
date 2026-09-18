@@ -107,6 +107,7 @@ describe("runResearchAgent", () => {
       stopWhen: [expect.any(Function), expect.any(Function)],
       maxOutputTokens: researchAgentLimits.outputTokens,
       maxRetries: 0,
+      telemetry: { recordInputs: false, recordOutputs: false },
       onChunk,
       prepareStep: undefined,
       abortSignal: signal

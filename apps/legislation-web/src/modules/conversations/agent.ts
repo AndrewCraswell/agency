@@ -51,6 +51,7 @@ export function runResearchAgent(options: {
         stopWhen: [isStepCount(researchAgentLimits.steps), hasToolCall("ask_clarification")],
         maxOutputTokens: researchAgentLimits.outputTokens,
         maxRetries: 0,
+        telemetry: { recordInputs: false, recordOutputs: false },
         onChunk: options.onChunk,
         prepareStep: options.prepareStep,
         abortSignal: options.signal
