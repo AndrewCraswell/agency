@@ -17,6 +17,11 @@
   bills and 36,187 sections. Neither state has a missing routed bill/section embedding, unresolved OCR requirement or
   processed document without sections. Input-hash freshness separately reports zero missing and zero stale vectors
   for both products in both sessions. Both HNSW indexes are valid and ready.
+- [x] Historical embedding freshness is clean across every retained state-session archive. Repeatable-read production
+  audits recomputed the current bill and document-section input hashes, model contracts and dimensions for Alaska
+  sessions 30-34 and North Carolina sessions 2017, 2017E1, 2017E2, 2017E3, 2019, 2021, 2023 and 2025. All 14,352
+  bills and all 411,073 extracted sections were present and fresh, with zero missing or stale vectors. This proves
+  vector readiness for the retained archive boundary; it does not extend the publishers' historical source coverage.
 - [x] Passage synchronization is caught up with pending zero, failed zero and a valid/ready BM25 index. All 256
   checksum buckets match for both full historical corpora: Alaska 61,391 documents and 259,076 sections; North
   Carolina 30,315 documents and 151,997 sections. Authenticated scoped-bill API smoke passed for both states. Fresh
@@ -25,15 +30,13 @@
   `statement_timeout` as a startup parameter rejected by the proxy; each bounded read/apply sets it transaction-locally.
   Focused formatting, lint and ingestion type-check pass, and the content, person and vote tools completed against
   production through the proxy.
-- [ ] Positive MCP re-acceptance is blocked by WorkOS resource registration, not legislation data. Production MCP is
-  now `https://legislation-mcp-production.up.railway.app/mcp`, while WorkOS recognizes only the retired web-service
-  resource. A fresh OAuth request for the deployed target returns `invalid_target`; the retained user-consent token is
-  correctly audience-bound to the old URL and the new service rejects a machine token with 401. In WorkOS, open
-  **Connect -> Configuration -> Resource Indicators**, add that exact production MCP URL, and set it as the default.
-  This follows WorkOS's MCP resource-indicator contract: the configured URL must equal the protected-resource
-  metadata `resource`, and the resulting token `aud` must equal that URL. Then repeat browser consent and
-  `pnpm --filter legislation-mcp smoke:deployment`. Do not weaken audience validation, reuse the retired audience, or
-  substitute the API machine credential.
+- [x] Positive MCP re-acceptance passed after registering
+  `https://legislation-mcp-production.up.railway.app/mcp` as the default WorkOS resource indicator and completing fresh
+  user consent for that exact audience. The production protected-resource metadata, anonymous 401 challenge and
+  audience validation remain intact. Authenticated deployment smoke discovered all 35 exposed tools and completed
+  `search_bills`, `get_bill`, `get_bill_timeline` and `search_events` round trips independently with canonical Alaska
+  `bill:ak:34:hb:1` and North Carolina `bill:nc:2025:hb:1191` records. Each run returned
+  `{status:"ok",tools:35,calls:4}`; no retired resource or API machine credential was reused.
 
 ## September 18 Alaska and North Carolina serving acceptance
 
