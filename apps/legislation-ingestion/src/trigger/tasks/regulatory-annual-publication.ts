@@ -2,6 +2,7 @@ import { task } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
 import { publishAnnualCfrEdition } from "../../ingestion/regulations/annual-cfr-publication.js"
+import { finalizeAnnualCfrDiscoveryPublication } from "../../ingestion/regulations/annual-discovery-publication.js"
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
 export const regulatoryAnnualPublicationPayloadSchema = z.strictObject({
@@ -41,7 +42,9 @@ export async function runRegulatoryAnnualPublication(value: unknown) {
     if (typeof database.rows[0]?.name !== "string" || database.rows[0].name === "legislation_passage_search") {
       throw new Error("Annual CFR publication requires a canonical PostgreSQL database")
     }
-    return await publishAnnualCfrEdition(pool, payload)
+    const published = await publishAnnualCfrEdition(pool, payload)
+    const discovery = await finalizeAnnualCfrDiscoveryPublication(pool, payload)
+    return { ...published, discovery }
   } finally {
     await pool.end()
   }

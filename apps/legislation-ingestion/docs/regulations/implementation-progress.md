@@ -13,6 +13,25 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Connected historical annual-CFR volumes to an aggregate publication barrier. A parsed `govinfo-cfr` unit now
+materializes through the same durable source and normalized stores, while its discovery row remains `parsed` and cannot
+claim customer-visible publication. Its publication dispatch completes only after the exact import generation is
+durably `materialized` or already `published`; the bounded controller excludes that completed stage from redispatch.
+Readiness derives the complete year/title volume denominator from the frozen publisher inventory and produces an exact
+generation list only when every volume is materialized. The last volume submits `regulatory-annual-publication` with a
+global content-derived key. That existing atomic publisher revalidates all volume leases, memberships, dates and rights;
+after it commits, the finalizer links every durable discovery row to its generation and edition and changes all volumes
+to `published` in one serializable transaction. A retry can safely recover either side of the publish/finalize boundary.
+
+The destructive PostgreSQL lifecycle passed with a retained annual XML fixture: admission, one source request, cached
+acquisition replay, normalized parsing, a publication intent, durable materialization, suppression of redispatch, exact
+one-volume readiness, atomic annual edition publication and final discovery-row publication. Current acquisition and
+publication regressions also pass; 14 focused Trigger tests cover the annual worker and exact aggregate submission.
+Formatting, scoped lint and ingestion type-check pass. This advances ORCH-05 and ING-13. A deployed Trigger run, full
+historical inventory admission, provider-backed storage smoke and downstream passage/index work remain open. Recurring
+source schedules remain disabled. The complete ingestion/parsing/tools suite also passes: 232 files and 1,866 tests in
+80.63 seconds.
+
 Extended the durable source workers across the historical/current contract instead of adding a second annual-CFR worker
 stack. Acquisition now loads either immutable manifest shape, resolves the registered row by manifest and unit identity,
 streams the official XML through the shared size/root/checksum path, retains the content-addressed artifact and commits

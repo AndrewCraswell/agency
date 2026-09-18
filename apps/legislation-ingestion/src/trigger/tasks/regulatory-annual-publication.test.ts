@@ -6,7 +6,11 @@ const mocks = vi.hoisted(() => ({
   pool: vi.fn<(options: unknown) => void>(),
   query: vi.fn<() => Promise<{ rows: { name: string }[] }>>(),
   end: vi.fn<() => Promise<void>>(),
-  publish: vi.fn<typeof import("../../ingestion/regulations/annual-cfr-publication.js").publishAnnualCfrEdition>()
+  publish: vi.fn<typeof import("../../ingestion/regulations/annual-cfr-publication.js").publishAnnualCfrEdition>(),
+  finalize:
+    vi.fn<
+      typeof import("../../ingestion/regulations/annual-discovery-publication.js").finalizeAnnualCfrDiscoveryPublication
+    >()
 }))
 
 vi.mock("pg", () => ({
@@ -23,6 +27,9 @@ vi.mock("pg", () => ({
 vi.mock("@trigger.dev/sdk", () => ({ task: (value: unknown) => value }))
 vi.mock("../../ingestion/regulations/annual-cfr-publication.js", () => ({
   publishAnnualCfrEdition: mocks.publish
+}))
+vi.mock("../../ingestion/regulations/annual-discovery-publication.js", () => ({
+  finalizeAnnualCfrDiscoveryPublication: mocks.finalize
 }))
 
 const payload = {
@@ -43,6 +50,7 @@ beforeEach(() => {
     reused: false,
     state: "published"
   })
+  mocks.finalize.mockResolvedValue({ linked: 2, reused: false })
 })
 afterEach(() => vi.unstubAllEnvs())
 
@@ -55,6 +63,7 @@ it("publishes one exact bounded annual title through the shared publication queu
     statement_timeout: 60_000
   })
   expect(mocks.publish).toHaveBeenCalledExactlyOnceWith(expect.anything(), payload)
+  expect(mocks.finalize).toHaveBeenCalledExactlyOnceWith(expect.anything(), payload)
   expect(mocks.end).toHaveBeenCalledOnce()
 })
 

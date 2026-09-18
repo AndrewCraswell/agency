@@ -1,10 +1,17 @@
 import { digest } from "@repo/legislation-core/legal-text/contracts"
-import { idempotencyKeys, task } from "@trigger.dev/sdk"
+import { idempotencyKeys, task, tasks } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
 import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
-import { completeLegalDiscoveryDispatch } from "../../ingestion/regulations/discovery-dispatch.js"
+import {
+  inspectAnnualCfrDiscoveryPublication,
+  materializeAnnualCfrDiscoveryUnit
+} from "../../ingestion/regulations/annual-discovery-publication.js"
+import {
+  completeAnnualCfrMaterializationDispatch,
+  completeLegalDiscoveryDispatch
+} from "../../ingestion/regulations/discovery-dispatch.js"
 import {
   legalDiscoveryPublicationSource,
   publishLegalDiscoveryUnit
@@ -29,7 +36,9 @@ export const regulatoryDiscoveryPublication = task({
 
 export async function continueRegulatoryDiscoveryPublication(value: unknown) {
   const result = await runRegulatoryDiscoveryPublication(value)
-  if (result.state === "renditions_pending") return { ...result, continuationRunId: null }
+  if (result.state === "renditions_pending" || result.state === "annual_publication_pending") {
+    return { ...result, continuationRunId: null }
+  }
   const next = await continueRegulatoryDiscoveryStage("publication", result.payload, result.controllerScope)
   return { ...result, continuationRunId: next.id }
 }
@@ -88,6 +97,38 @@ export async function runRegulatoryDiscoveryPublication(value: unknown) {
         state: "renditions_pending" as const,
         payload,
         renditionBatchId: z.object({ batchId: z.string().min(1).max(256) }).parse(runs).batchId
+      }
+    }
+    if (sourceId === "govinfo-cfr") {
+      const scratchRoot = z.string().trim().min(1).parse(process.env.REGULATORY_NORMALIZED_DIRECTORY)
+      const materialized = await materializeAnnualCfrDiscoveryUnit(pool, payload, {
+        sourceStore,
+        normalizedStore,
+        scratchRoot
+      })
+      const controllerScope = await completeAnnualCfrMaterializationDispatch(pool, payload, materialized.generationId)
+      const readiness = await inspectAnnualCfrDiscoveryPublication(pool, {
+        manifestId: payload.manifestId,
+        year: materialized.year,
+        title: materialized.title
+      })
+      let annualPublicationRunId: string | null = null
+      if (readiness.payload !== null) {
+        const handle = await tasks.trigger("regulatory-annual-publication", readiness.payload, {
+          idempotencyKey: await idempotencyKeys.create(
+            `regulatory-annual-publication:${digest(JSON.stringify(readiness.payload))}`,
+            { scope: "global" }
+          )
+        })
+        annualPublicationRunId = z.object({ id: z.string().min(1).max(256) }).parse(handle).id
+      }
+      return {
+        ...materialized,
+        state: "annual_publication_pending" as const,
+        payload,
+        controllerScope,
+        readiness,
+        annualPublicationRunId
       }
     }
     if (sourceId !== "ecfr") throw new Error("unsupported_legal_discovery_publication_source")

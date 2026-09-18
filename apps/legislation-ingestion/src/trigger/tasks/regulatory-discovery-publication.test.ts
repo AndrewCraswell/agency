@@ -5,8 +5,17 @@ const mocks = vi.hoisted(() => ({
   publish: vi.fn(),
   source: vi.fn(),
   complete: vi.fn(),
+  completeAnnual: vi.fn(),
+  materializeAnnual: vi.fn(),
+  inspectAnnual: vi.fn(),
+  trigger: vi.fn(),
   continue: vi.fn(),
   end: vi.fn()
+}))
+vi.mock("@trigger.dev/sdk", () => ({
+  task: (value: unknown) => value,
+  tasks: { trigger: mocks.trigger },
+  idempotencyKeys: { create: async (value: string) => value }
 }))
 vi.mock("pg", () => ({
   default: {
@@ -21,7 +30,12 @@ vi.mock("../../ingestion/regulations/discovery-publication.js", () => ({
 }))
 vi.mock("../../ingestion/regulations/discovery-dispatch.js", async (original) => ({
   ...(await original<typeof import("../../ingestion/regulations/discovery-dispatch.js")>()),
-  completeLegalDiscoveryDispatch: mocks.complete
+  completeLegalDiscoveryDispatch: mocks.complete,
+  completeAnnualCfrMaterializationDispatch: mocks.completeAnnual
+}))
+vi.mock("../../ingestion/regulations/annual-discovery-publication.js", () => ({
+  materializeAnnualCfrDiscoveryUnit: mocks.materializeAnnual,
+  inspectAnnualCfrDiscoveryPublication: mocks.inspectAnnual
 }))
 vi.mock("./regulatory-discovery-continuation.js", () => ({
   continueRegulatoryDiscoveryStage: mocks.continue
@@ -38,6 +52,7 @@ beforeEach(() => {
   vi.stubEnv("AZURE_STORAGE_ACCOUNT", "regulatorytest")
   vi.stubEnv("REGULATORY_NORMALIZED_DIRECTORY", "D:\\regulatory-normalized")
   mocks.complete.mockResolvedValue({ sourceId: "ecfr", scopeKey: "d".repeat(64) })
+  mocks.completeAnnual.mockResolvedValue({ sourceId: "govinfo-cfr", scopeKey: "d".repeat(64) })
   mocks.continue.mockResolvedValue({ id: "controller-run" })
   mocks.source.mockResolvedValue("ecfr")
 })
@@ -67,6 +82,39 @@ it("closes the worker pool before replenishing the bounded controller", async ()
     sourceId: "ecfr",
     scopeKey: "d".repeat(64)
   })
+})
+
+it("materializes an annual volume and submits the exact complete-title barrier", async () => {
+  const payload = { manifestId: "a".repeat(64), unitKey: "b".repeat(64) }
+  const annualPayload = {
+    manifestId: payload.manifestId,
+    year: 2023,
+    title: 1,
+    generationIds: ["c".repeat(64)]
+  }
+  mocks.source.mockResolvedValue("govinfo-cfr")
+  mocks.materializeAnnual.mockResolvedValue({
+    generationId: "c".repeat(64),
+    editionId: randomUUID(),
+    state: "materialized",
+    year: 2023,
+    title: 1,
+    volume: 1
+  })
+  mocks.inspectAnnual.mockResolvedValue({ ready: true, payload: annualPayload })
+  mocks.trigger.mockResolvedValue({ id: "annual-publication-run" })
+  await expect(continueRegulatoryDiscoveryPublication(payload)).resolves.toMatchObject({
+    state: "annual_publication_pending",
+    annualPublicationRunId: "annual-publication-run",
+    continuationRunId: null
+  })
+  expect(mocks.completeAnnual).toHaveBeenCalledWith(expect.anything(), payload, "c".repeat(64))
+  expect(mocks.trigger).toHaveBeenCalledWith(
+    "regulatory-annual-publication",
+    annualPayload,
+    expect.objectContaining({ idempotencyKey: expect.stringMatching(/^regulatory-annual-publication:/) })
+  )
+  expect(mocks.continue).not.toHaveBeenCalled()
 })
 
 it.each([

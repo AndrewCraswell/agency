@@ -55,8 +55,11 @@ foreign or stale cursor fails. Admission downloads nothing, submits no Trigger t
 
 After admission, the existing discovery controller can see the registered rows and create bounded stage intents. The
 shared acquisition and parsing workers now accept both historical and current manifest/receipt contracts and retain the
-same artifact and normalized checkpoints. Historical publication dispatch must remain off until the annual coordinator
-materializes every volume, proves the full title inventory and promotes all volumes atomically.
+same artifact and normalized checkpoints. Annual publication materializes each volume behind a completed durable intent,
+suppresses redispatch of that stage, and submits the atomic title publisher only when the frozen inventory has a matching
+materialized generation for every volume. Discovery rows remain unpublished until that transaction succeeds and its
+serializable finalizer links every volume to the canonical generation and edition. This path is implemented and locally
+verified; live historical dispatch remains gated on full-manifest admission and deployed storage/Trigger acceptance.
 
 `inspect:regulatory-canonical --manifest <frozen.json> --replay <complete-replay.json> --report <new-report.json>`
 checks the retained local eCFR database selected by `REGULATORY_TEST_DATABASE_URL`. It requires the exact complete

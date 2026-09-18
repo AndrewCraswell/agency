@@ -184,6 +184,11 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   deployed verification and downstream dispatch remain open. The FR branch now also materializes durable source XML and
   normalized shards for issue staging, verifies every retained metadata/PDF object again in the finalizer and retains
   durable attachment locators in canonical publication storage. A full deployed FR issue run remains open.
+  Annual-CFR publication now has the missing shared-controller bridge. Each parsed volume materializes independently and
+  completes its durable publication intent without changing the discovery row to published. The last complete title
+  inventory submits the existing atomic annual publisher; only its successful commit lets one serializable finalizer
+  link every volume generation/edition and publish all associated discovery rows. A destructive one-volume lifecycle and
+  exact retry behavior pass. Full-manifest and deployed multi-volume evidence remain open.
 - [ ] **ORCH-06 Connect preparation, copying and acknowledgement.** Dispatch existing workers from publication state;
   route copy exhaustion to resumable INDEX-03 validation before acknowledgement. **Done:** copied-but-unacknowledged
   data remains unavailable, completed stage replay is safe, and no preparation task automatically creates vectors.

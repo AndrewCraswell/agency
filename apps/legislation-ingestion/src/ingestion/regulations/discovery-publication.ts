@@ -12,6 +12,7 @@ import { validateLegalDiscoveryManifest } from "./discovery-registration.js"
 import { materializeRegulatoryArtifact } from "./durable-artifact.js"
 import { materializeRegulatoryNormalizedBundle } from "./durable-normalized-bundle.js"
 import { importNormalizedRegulatoryUnit } from "./import-normalized.js"
+import { parseRegulatoryImportManifest } from "./regulatory-import-contract.js"
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
 const publicationInputSchema = z.strictObject({
@@ -44,12 +45,10 @@ export async function legalDiscoveryPublicationSource(pool: pg.Pool, value: unkn
     [input.manifestId]
   )
   invariant(manifestResult.rowCount === 1, "legal_discovery_manifest_missing")
-  const manifest = validateLegalDiscoveryManifest(manifestResult.rows[0]?.body)
-  invariant(
-    manifest.units.some((unit) => unit.key === input.unitKey),
-    "legal_discovery_manifest_unit_missing"
-  )
-  return manifest.sourceId
+  const manifest = parseRegulatoryImportManifest(manifestResult.rows[0]?.body)
+  const unit = manifest.units.find((candidate) => candidate.key === input.unitKey)
+  invariant(unit, "legal_discovery_manifest_unit_missing")
+  return unit.sourceId
 }
 
 /** Publishes one fully parsed current eCFR unit and records the canonical identities on its durable discovery row. */

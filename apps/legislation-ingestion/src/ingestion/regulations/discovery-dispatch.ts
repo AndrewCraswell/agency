@@ -61,6 +61,17 @@ export async function planLegalDiscoveryDispatchPage(pool: pg.Pool, value: unkno
        FROM legislation.legal_discovery_units
        WHERE source_id=$1 AND scope_key=$2 AND unit_key>COALESCE($3,'')
          AND state IN ('registered','acquired','parsed')
+         AND NOT EXISTS (
+           SELECT 1 FROM legislation.legal_discovery_dispatches completed
+           WHERE completed.source_id=legal_discovery_units.source_id
+             AND completed.scope_key=legal_discovery_units.scope_key
+             AND completed.unit_key=legal_discovery_units.unit_key
+             AND completed.stage=CASE legal_discovery_units.state
+               WHEN 'registered' THEN 'acquisition'
+               WHEN 'acquired' THEN 'parsing'
+               WHEN 'parsed' THEN 'publication'
+             END
+             AND completed.completed_at IS NOT NULL)
        ORDER BY unit_key LIMIT $4 FOR UPDATE SKIP LOCKED`,
       [input.sourceId, input.scopeKey, input.afterUnitKey, input.limit]
     )
@@ -113,6 +124,39 @@ export async function planLegalDiscoveryDispatchPage(pool: pg.Pool, value: unkno
   } finally {
     client.release()
   }
+}
+
+/** Completes annual volume work at durable materialization without claiming that the title is published. */
+export async function completeAnnualCfrMaterializationDispatch(
+  pool: pg.Pool,
+  payloadValue: unknown,
+  generationIdValue: unknown
+) {
+  const payload = legalDiscoveryDispatchPayloadSchema.parse(payloadValue)
+  const generationId = z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .parse(generationIdValue)
+  const id = dispatchIdentity("publication", payload)
+  const completed = await pool.query(
+    `UPDATE legislation.legal_discovery_dispatches dispatch
+     SET completed_at=COALESCE(completed_at,clock_timestamp()),last_observed_status='CANONICAL_MATERIALIZED',
+       last_observed_at=clock_timestamp(),last_error=NULL,lease_token=NULL,lease_expires_at=NULL
+     FROM legislation.legal_discovery_units unit,legislation.legal_import_generations generation
+     WHERE dispatch.id=$1 AND dispatch.stage='publication' AND dispatch.manifest_id=$2 AND dispatch.unit_key=$3
+       AND unit.source_id=dispatch.source_id AND unit.scope_key=dispatch.scope_key AND unit.unit_key=dispatch.unit_key
+       AND unit.state='parsed' AND unit.manifest_id=dispatch.manifest_id
+       AND generation.id=$4 AND generation.manifest_id=dispatch.manifest_id
+       AND generation.unit_key=dispatch.unit_key AND generation.source_id='govinfo-cfr'
+       AND generation.state IN ('materialized','published')
+     RETURNING dispatch.source_id,dispatch.scope_key`,
+    [id, payload.manifestId, payload.unitKey, generationId]
+  )
+  invariant(completed.rowCount === 1, "annual_cfr_materialization_dispatch_missing")
+  return z
+    .object({ source_id: z.literal("govinfo-cfr"), scope_key: hashSchema })
+    .transform((row) => ({ sourceId: row.source_id, scopeKey: row.scope_key }))
+    .parse(completed.rows[0])
 }
 
 /** Records canonical stage advancement before a worker admits its bounded controller continuation. */
