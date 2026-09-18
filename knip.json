@@ -1,10 +1,26 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignoreExportsUsedInFile": true,
-  "ignore": ["beachball.config.js"],
-  "ignoreBinaries": ["artifacts-npm-credprovider"],
+  "ignore": ["beachball.config.js", "turbo/generators/templates/**"],
   "tags": ["-vendored"],
   "workspaces": {
+    ".": {
+      "entry": ["turbo/generators/config.ts"],
+      "ignoreDependencies": ["@vitest/expect"],
+      "ignoreBinaries": ["ado-npm-auth"]
+    },
+    "packages/fc-theme": {
+      "entry": ["assets/*.js"],
+      "ignore": ["assets/vendor-scripts-v11.js"]
+    },
+    "packages/fc-theme-base": {
+      "entry": [
+        "assets/*.js",
+        "content/capture-migration.mjs",
+        "tests/component-library/{library,privacy-fixture,workflows}.js",
+        "tests/preview-size-charts.mjs"
+      ]
+    },
     "apps/scoring": {
       "entry": ["simulator/src/**/*.test.{ts,tsx}"],
       "ignoreDependencies": ["@repo/oxlint-config"]

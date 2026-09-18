@@ -6,6 +6,7 @@ node_modules
 dist
 dist-ssr
 coverage
+!apps/legislation-web/src/app/api/legal/coverage/
 !apps/legislation-web/src/modules/legislation/coverage/
 !apps/legislation-ingestion/src/coverage/
 /apps/scoring/firmware/out/

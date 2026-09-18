@@ -24,7 +24,7 @@
     "test:coverage": "run-s test:coverage:workspaces legislation:test:python legislation:test:database legislation:test:acceptance",
     "test:coverage:workspaces": "turbo run test:coverage",
     "legislation:check:types": "pnpm --filter ./packages/legislation-core --filter ./apps/legislation-web --filter ./apps/legislation-ingestion --filter ./apps/legislation-mcp -r check:types",
-    "legislation:check:lint": "pnpm --filter ./packages/legislation-core --filter ./apps/legislation-web --filter ./apps/legislation-ingestion --filter ./apps/legislation-mcp -r lint",
+    "legislation:check:lint": "pnpm --filter ./packages/legislation-core --filter ./apps/legislation-web --filter ./apps/legislation-ingestion --filter ./apps/legislation-mcp -r run lint",
     "legislation:check:unused": "knip --workspace packages/legislation-core --workspace apps/legislation-web --workspace apps/legislation-ingestion --workspace apps/legislation-mcp",
     "legislation:test:coverage": "pnpm --filter ./packages/legislation-core --filter ./apps/legislation-web --filter ./apps/legislation-ingestion --filter ./apps/legislation-mcp -r test:coverage",
     "legislation:test:python": "pnpm --filter ./apps/legislation-ingestion test:python",
