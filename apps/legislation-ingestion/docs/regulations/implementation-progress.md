@@ -4043,9 +4043,11 @@ editions and 49 results: 21 computed and 28 reused. `audit-2026-09-17.json` repo
 `openai/text-embedding-3-small` with pinned `tiktoken:1.0.22:cl100k_base` and `voyageai/voyage-4` with pinned
 `huggingface-tokenizers:0.2.0:voyage-4:44f3b2ae4ddf33403ed4dd66bec3fa48ff7dbbf9`. Both prepared every record with
 zero invalid, oversized, empty or blocked preparations. Terminal integrity and tokenizer qualification are true.
-Table-shape qualification remains false in that terminal audit because 148 table blocks required source review; newer
-review artifacts are retained and must be reconciled separately before closing the table gate. No embedding provider
-requests or vector writes occurred.
+That older audit's `tableShapeQualified: false` is not the live recovered-corpus gate. Its 148 diagnostics were retained
+for traceability, but the later 275,138-record recovery qualification supersedes this baseline. The recovery audit
+accounts for its sole remaining blocked table as the source-reviewed 33 CFR 110.214 publisher omission, reports zero
+unaccounted table blocks and closes structural accounting while keeping `tableShapeQualified: false` to describe the
+quarantined source defect honestly. No embedding provider requests or vector writes occurred in this older run.
 
 HTTP-07 now has a strict `CitationResolution` request/result contract, authenticated
 `POST /api/legal/provisions/resolve` route and typed client. It accepts canonical CFR identities and deterministic full
