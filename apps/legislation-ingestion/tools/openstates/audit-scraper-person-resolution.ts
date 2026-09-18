@@ -25,6 +25,12 @@ const databaseUrl = z.string().url().parse(process.env[options.databaseEnv])
 const jurisdictionId = `jurisdiction:${state}`
 const sessionId = `session:${state}:${session}`
 
+function sponsorSamplePriority(sample: { name: string; reason: string }) {
+  if (sample.reason === "ambiguous") return 0
+  if (!/^(?:House|Senate)\s/.test(sample.name)) return 1
+  return 2
+}
+
 const { pool } = createDatabase(
   { connectionTimeoutMs: 10_000, idleTimeoutMs: 10_000, maxConnections: 1, url: databaseUrl },
   { statementTimeoutMs: 30_000 }
@@ -104,7 +110,7 @@ try {
       sponsors.total += row.uses
       if (row.chamber !== "lower" && row.chamber !== "upper" && row.chamber !== "unicameral") {
         sponsors.notFound += row.uses
-        if (unresolvedSponsorSamples.length < sampleLimit) {
+        if (sampleLimit > 0) {
           unresolvedSponsorSamples.push({
             chamber: row.chamber,
             name: row.name,
@@ -126,12 +132,12 @@ try {
       if (result.status === "resolved") sponsors.resolved += row.uses
       else if (result.status === "ambiguous") {
         sponsors.ambiguous += row.uses
-        if (unresolvedSponsorSamples.length < sampleLimit) {
+        if (sampleLimit > 0) {
           unresolvedSponsorSamples.push({ chamber: row.chamber, name: row.name, reason: "ambiguous", uses: row.uses })
         }
       } else {
         sponsors.notFound += row.uses
-        if (unresolvedSponsorSamples.length < sampleLimit) {
+        if (sampleLimit > 0) {
           unresolvedSponsorSamples.push({ chamber: row.chamber, name: row.name, reason: "not_found", uses: row.uses })
         }
       }
@@ -217,7 +223,17 @@ try {
       productionWrites: false,
       sessionId,
       sponsors,
-      ...(sampleLimit === 0 ? {} : { unresolvedPositionSamples, unresolvedSponsorSamples })
+      ...(sampleLimit === 0
+        ? {}
+        : {
+            unresolvedPositionSamples,
+            unresolvedSponsorSamples: unresolvedSponsorSamples
+              .toSorted(
+                (left, right) =>
+                  sponsorSamplePriority(left) - sponsorSamplePriority(right) || left.name.localeCompare(right.name)
+              )
+              .slice(0, sampleLimit)
+          })
     }
   })
   process.stdout.write(`${JSON.stringify(report)}\n`)
