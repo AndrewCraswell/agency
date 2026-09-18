@@ -37,8 +37,9 @@ acquired and validated states, leases and bounded errors; the new manual recover
 unclaimed PDF work plus ready issue finalizers. It resubmits each child under a global identity derived from the durable
 row revision and self-continues only after a full page. Failed finalizers now record a bounded diagnostic and advance the
 preparation revision before retry, while successful publication clears it. Six focused planner/orchestration tests,
-ingestion type-check and scoped lint pass. A clean migration-chain install in local PostgreSQL verified the new recovery
-diagnostic column. No recovery or source schedule was registered.
+ingestion type-check and scoped lint pass. The complete ingestion, parsing and tools suite also passed: 227 files and
+1,831 tests in 77.50 seconds. A clean migration-chain install in local PostgreSQL verified the new recovery diagnostic
+column. No recovery or source schedule was registered.
 
 Implemented the bounded Federal Register modification-discovery ingress without enabling a schedule. The new GovInfo
 client reads the official `FR` collection by `lastModified` with its API key only in the request header. The durable
