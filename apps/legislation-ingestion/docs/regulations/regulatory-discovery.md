@@ -67,6 +67,12 @@ finalizer replays the frozen metadata, reloads exactly the validated rendition s
 not invent a code-edition ID. Publication emits the existing publication lexical outbox items but does not submit passage
 copying or embeddings. The workers are manual and bounded; no recurring schedule is registered.
 
+`regulatory-fr-publication-recovery` is a manual single-controller recovery path. It keyset-pages at most 25 expired or
+unclaimed PDF rows and ready issue finalizers, submits each under an identity that includes the row's durable update time,
+and self-continues only when a full page was selected. PDF and finalizer failures update bounded diagnostics and the row
+timestamp, giving repaired work a new stable submission identity while leaving canonical state unchanged. It does not
+register a schedule.
+
 `regulatory-discovery-controller` is the manual bounded fan-out entry point. It first registers at most 100 pending
 units, then selects a keyset page of at most 100 units whose committed state is `registered`, `acquired` or `parsed`.
 Those states map respectively to acquisition, parsing and publication. The controller persists every stage intent before

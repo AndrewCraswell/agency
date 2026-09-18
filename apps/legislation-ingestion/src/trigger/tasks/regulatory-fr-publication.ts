@@ -4,6 +4,7 @@ import pg from "pg"
 import { z } from "zod"
 import { completeLegalDiscoveryDispatch } from "../../ingestion/regulations/discovery-dispatch.js"
 import { finalizeFrIssuePublication } from "../../ingestion/regulations/fr-publication-finalization.js"
+import { recordFrFinalizationFailure } from "../../ingestion/regulations/fr-publication-recovery.js"
 import { processFrRendition } from "../../ingestion/regulations/fr-rendition-processing.js"
 import { continueRegulatoryDiscoveryStage } from "./regulatory-discovery-continuation.js"
 
@@ -86,7 +87,13 @@ export async function runRegulatoryFrPublicationFinalization(value: unknown) {
   const payload = regulatoryFrFinalizationPayloadSchema.parse(value)
   const database = pool()
   try {
-    const result = await finalizeFrIssuePublication(database, payload)
+    let result
+    try {
+      result = await finalizeFrIssuePublication(database, payload)
+    } catch (error) {
+      await recordFrFinalizationFailure(database, payload, error)
+      throw error
+    }
     const controllerScope = await completeLegalDiscoveryDispatch(database, "publication", payload)
     return { ...result, payload, controllerScope }
   } finally {

@@ -53,11 +53,13 @@ describe.skipIf(databaseUrl === undefined).sequential("regulatory schema converg
     journal.entries = journal.entries.filter(
       (entry) =>
         entry.tag !== "0049_regulatory-schema-convergence" &&
-        entry.tag !== "0050_federal-register-publication-preparation"
+        entry.tag !== "0050_federal-register-publication-preparation" &&
+        entry.tag !== "0051_federal-register-publication-recovery"
     )
     await writeFile(journalPath, `${JSON.stringify(journal, null, 2)}\n`)
     await rm(join(originalMigrationsFolder, "0049_regulatory-schema-convergence.sql"))
     await rm(join(originalMigrationsFolder, "0050_federal-register-publication-preparation.sql"))
+    await rm(join(originalMigrationsFolder, "0051_federal-register-publication-recovery.sql"))
     await rm(join(originalMigrationsFolder, "meta", "0049_snapshot.json"))
   })
 

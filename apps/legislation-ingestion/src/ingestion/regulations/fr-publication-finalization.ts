@@ -77,7 +77,7 @@ export async function finalizeFrIssuePublication(pool: pg.Pool, value: unknown) 
     invariant(marked.rowCount === 1, "fr_discovery_publication_conflict")
     const completed = await client.query(
       `UPDATE legislation.legal_fr_issue_preparations
-       SET state='published',updated_at=clock_timestamp()
+       SET state='published',last_error=NULL,updated_at=clock_timestamp()
        WHERE source_id='govinfo-fr' AND scope_key=$1 AND unit_key=$2
          AND generation_id=$3 AND state IN ('ready','published')
        RETURNING unit_key`,

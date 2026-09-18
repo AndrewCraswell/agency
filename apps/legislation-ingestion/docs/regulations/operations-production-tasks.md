@@ -48,7 +48,9 @@ normalization or direct-to-index update path. Workstream prerequisites: ORCH-01 
   publisher. The discovery row records the published import generation without inventing a code edition. Local fixture,
   orchestration and migration checks pass. Manifest completion now evaluates Federal Register generation rights and the
   exact observation-to-publication-outbox count without requiring a code edition. A provider-backed manual canary,
-  deployed durable-volume verification and recurring activation remain open. No recurring schedule is registered.
+  deployed durable-volume verification and recurring activation remain open. A bounded manual recovery controller can
+  now resubmit expired PDF work and ready finalizers using durable row revisions; it has no schedule. No recurring source
+  schedule is registered.
 - [ ] **SYNC-04 Discover annual edition inventory changes.** Refresh available year/title/volume manifests and package
   observations without assuming a new directory year means new text. **Done:** new/missing/replaced volumes trigger
   all-volume revalidation; repeated Title 1 bytes preserve honest currency. Depends on SYNC-01, ING-04/12.
