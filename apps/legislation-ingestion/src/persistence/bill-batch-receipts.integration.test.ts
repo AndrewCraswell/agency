@@ -333,6 +333,50 @@ describePostgres.sequential("atomic bill batch receipts", () => {
       await database.select().from(schema.billSponsors).where(eq(schema.billSponsors.billId, input.bill.id))
     ).toHaveLength(0)
   })
+  it("coalesces changed sponsor observation ids by resolved relationship", async () => {
+    const input = aggregate("changed-sponsor-observation")
+    const personId = "person:receipt-test:changed-sponsor-observation"
+    await database.insert(schema.people).values({
+      id: personId,
+      jurisdictionId,
+      name: "Stable sponsor",
+      sourceId: "stable-sponsor",
+      sourceUrl: "https://example.test/stable-sponsor"
+    })
+    const sponsor = {
+      billId: input.bill.id,
+      classification: "cosponsor",
+      isPrimary: false,
+      name: "Stable sponsor",
+      personId,
+      sourceUrl: input.bill.sourceUrl
+    }
+    await upsertBillAggregates(database, [{ ...input, sponsors: [{ ...sponsor, id: `${input.bill.id}:sponsor:old` }] }])
+    const first = await database.query.billSponsors.findFirst({
+      where: eq(schema.billSponsors.billId, input.bill.id)
+    })
+    if (first?.firstObservedAt === null || first?.latestObservedAt === null || first === undefined) {
+      throw new Error("Expected the initial sponsor observation bounds")
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 5))
+    await upsertBillAggregates(database, [
+      {
+        ...input,
+        sponsors: [
+          { ...sponsor, id: `${input.bill.id}:sponsor:new` },
+          { ...sponsor, id: `${input.bill.id}:sponsor:duplicate` }
+        ]
+      }
+    ])
+    const refreshed = await database
+      .select()
+      .from(schema.billSponsors)
+      .where(eq(schema.billSponsors.billId, input.bill.id))
+    expect(refreshed).toHaveLength(1)
+    expect(refreshed[0]).toMatchObject({ id: first?.id, personId })
+    expect(refreshed[0]?.firstObservedAt).toEqual(first.firstObservedAt)
+    expect(refreshed[0]?.latestObservedAt?.getTime()).toBeGreaterThan(first.latestObservedAt.getTime())
+  })
   it("retains exact resolved observations without name matching and rejects changed voter evidence atomically", async () => {
     const input = aggregate("resolved")
     const organizationId = "organization:receipt-test:resolved"

@@ -254,6 +254,48 @@ async function upsertSponsorObservations(
 }
 
 /**
+ * A scraper observation id can change even when the resolved sponsorship does
+ * not. Keep the already-persisted row as the canonical observation so the
+ * relationship's first-seen bound and the database's resolved-person
+ * uniqueness invariant both survive repeat imports.
+ */
+async function normalizeSponsorObservations(
+  database: Omit<LegislationDatabase, "$client">,
+  sponsors: readonly (typeof billSponsors.$inferInsert)[]
+): Promise<(typeof billSponsors.$inferInsert)[]> {
+  if (sponsors.length === 0) {
+    return []
+  }
+  const billIds = [...new Set(sponsors.map((sponsor) => sponsor.billId))]
+  const existingSponsors = await database
+    .select({
+      billId: billSponsors.billId,
+      classification: billSponsors.classification,
+      id: billSponsors.id,
+      personId: billSponsors.personId
+    })
+    .from(billSponsors)
+    .where(inArray(billSponsors.billId, billIds))
+  const relationshipKey = (sponsor: { billId: string; classification: string; id: string; personId?: null | string }) =>
+    sponsor.personId === undefined || sponsor.personId === null
+      ? `observation\u001f${sponsor.id}`
+      : `person\u001f${sponsor.billId}\u001f${sponsor.personId}\u001f${sponsor.classification}`
+  const existingIdByRelationship = new Map(existingSponsors.map((sponsor) => [relationshipKey(sponsor), sponsor.id]))
+  const normalizedByRelationship = new Map<string, typeof billSponsors.$inferInsert>()
+  for (const sponsor of [...sponsors].sort((left, right) => left.id.localeCompare(right.id))) {
+    const key = relationshipKey(sponsor)
+    if (normalizedByRelationship.has(key)) {
+      continue
+    }
+    normalizedByRelationship.set(key, {
+      ...sponsor,
+      id: existingIdByRelationship.get(key) ?? sponsor.id
+    })
+  }
+  return [...normalizedByRelationship.values()]
+}
+
+/**
  * An explicitly supplied sponsor collection is authoritative for its bill.
  * Retain current rows so their observation bounds can advance, but remove
  * relationships the source no longer reports rather than leaving them active.
@@ -380,8 +422,9 @@ export async function upsertBillAggregate(
     }
 
     if (aggregate.sponsors !== undefined) {
-      await deleteAbsentSponsorObservations(transaction, aggregate.bill.id, aggregate.sponsors)
-      await upsertSponsorObservations(transaction, aggregate.sponsors, new Date())
+      const normalizedSponsors = await normalizeSponsorObservations(transaction, aggregate.sponsors)
+      await deleteAbsentSponsorObservations(transaction, aggregate.bill.id, normalizedSponsors)
+      await upsertSponsorObservations(transaction, normalizedSponsors, new Date())
     }
 
     if (aggregate.votes !== undefined) {
@@ -701,9 +744,18 @@ export async function upsertBillAggregates(
       await transaction.delete(billRelations).where(inArray(billRelations.billId, relationBillIds))
     }
 
+    const normalizedSponsors = await normalizeSponsorObservations(
+      transaction,
+      aggregates.flatMap((aggregate) => aggregate.sponsors ?? [])
+    )
+    const normalizedSponsorsByBill = Map.groupBy(normalizedSponsors, (sponsor) => sponsor.billId)
     for (const aggregate of aggregates) {
       if (aggregate.sponsors !== undefined) {
-        await deleteAbsentSponsorObservations(transaction, aggregate.bill.id, aggregate.sponsors)
+        await deleteAbsentSponsorObservations(
+          transaction,
+          aggregate.bill.id,
+          normalizedSponsorsByBill.get(aggregate.bill.id) ?? []
+        )
       }
     }
 
@@ -718,7 +770,7 @@ export async function upsertBillAggregates(
             : undefined
       }))
     )
-    const sponsorValues = aggregates.flatMap((aggregate) => aggregate.sponsors ?? [])
+    const sponsorValues = normalizedSponsors
     const billOrganizationValues = aggregates
       .flatMap((aggregate) => aggregate.organizations ?? [])
       .filter((organization) => validOrganizationIds.has(organization.organizationId))
