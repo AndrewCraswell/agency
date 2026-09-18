@@ -9,6 +9,45 @@ beforeAll(async () => {
   fixture = JSON.parse(
     await readFile(new URL("../../../tests/fixtures/openstates/wa-hb-1234.json", import.meta.url), "utf8")
   )
+
+  it("derives canonical non-voting counts from a complete named roll call", () => {
+    const { aggregate } = normalizeOpenStatesBill(
+      {
+        identifier: "HB 2",
+        legislative_session: "2025",
+        title: "Test bill",
+        sources: [{ url: "https://example.org/bill/2" }],
+        votes: [
+          {
+            start_date: "2025-03-01",
+            motion_text: "Motion to concur",
+            sources: [{ url: "https://example.org/vote/2" }],
+            counts: [
+              { option: "yes", value: 1 },
+              { option: "no", value: 0 },
+              { option: "other", value: 1 }
+            ],
+            votes: [
+              { option: "yes", voter_name: "One", voter_id: "person/one" },
+              { option: "absent", voter_name: "Two", voter_id: "person/two" },
+              { option: "not voting", voter_name: "Three", voter_id: "person/three" }
+            ]
+          }
+        ]
+      },
+      { jurisdictionCode: "nc", jurisdictionName: "North Carolina", retrievedAt: new Date("2025-03-02T00:00:00Z") }
+    )
+
+    expect(aggregate.votes?.[0]?.vote).toMatchObject({
+      absentCount: 1,
+      noCount: 0,
+      notVotingCount: 1,
+      otherCount: 0,
+      result: "other",
+      timelineComplete: true,
+      yesCount: 1
+    })
+  })
   sparseFixture = JSON.parse(
     await readFile(new URL("../../../tests/fixtures/openstates/ca-ab-7-sparse.json", import.meta.url), "utf8")
   )

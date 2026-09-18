@@ -441,20 +441,30 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     for (const position of positions) {
       positionCounts.set(position.option, (positionCounts.get(position.option) ?? 0) + 1)
     }
+    const sourceSpecificCountOptions = [...counts.keys()].filter(
+      (option) => option !== "yes" && option !== "no" && option !== "other"
+    )
     const countsReconciled =
       vote.counts.length > 0 &&
       positions.length > 0 &&
       positions.length === vote.votes.length &&
-      [...new Set([...counts.keys(), ...positionCounts.keys()])].every(
+      ["yes", "no", ...sourceSpecificCountOptions].every(
         (option) => (counts.get(option) ?? 0) === (positionCounts.get(option) ?? 0)
       )
-    const countFor = (option: string) => counts.get(option) ?? (countsReconciled ? 0 : undefined)
+    const countFor = (option: string) => (countsReconciled ? (positionCounts.get(option) ?? 0) : counts.get(option))
     const occurrence = parseVoteDate(vote.start_date)
     let result = vote.result
     if (result === "pass") {
       result = "passed"
     } else if (result === "fail") {
       result = "failed"
+    } else if (countsReconciled) {
+      // The scraper libraries use `other` as a lossy aggregate placeholder,
+      // while their complete named-position list preserves the actual
+      // absent/not-voting categories. A fully reconciled roll call therefore
+      // has a known recorded outcome even when the provider did not classify
+      // it as binary passage or failure.
+      result = "other"
     }
     const voteSourceUrl = vote.sources[0]?.url
     return {
