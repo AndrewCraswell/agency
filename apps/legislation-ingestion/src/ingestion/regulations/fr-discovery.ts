@@ -84,7 +84,10 @@ export class GovInfoFrDiscoveryClient implements GovInfoFrDiscoveryPageClient {
   }
 
   async fetchPage(value: z.infer<typeof windowSchema>, offsetMark: string): Promise<GovInfoFrPage> {
-    const window = windowSchema.parse(value)
+    // Discovery passes the active cursor, which also carries its offset mark. Project the
+    // provider request window explicitly so our strict window schema does not reject that
+    // internal cursor field before the first GovInfo request.
+    const window = windowSchema.parse({ start: value.start, end: value.end })
     const cursor = z.string().trim().min(1).max(2_048).parse(offsetMark)
     const url = this.#collectionUrl(window, cursor)
     const response = await this.#http.get(url, {
