@@ -3391,7 +3391,15 @@ export class LegislationQueryService {
       embedding: queryEmbedding.embedding,
       limit: candidateLimit
     })
-    const lexical = await lexicalPassageSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit })
+    const lexical =
+      this.#rankedPassageSearch === undefined
+        ? await lexicalPassageSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit })
+        : await this.#rankedPassageSearch.search({
+            ...input,
+            cursor: undefined,
+            limit: candidateLimit,
+            rankingGeneration: this.#rankedPassageSearch.generation
+          })
     const lexicalById = new Map(lexical.items.map((item) => [item.section.id, item]))
     const semanticById = new Map(semantic.items.map((item) => [item.section.id, item]))
     const lexicalCandidates = lexical.items.map((item) => ({ ...item, id: item.section.id }))

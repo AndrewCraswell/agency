@@ -420,6 +420,40 @@ describe("ranked passage search routing", () => {
     await expect(service.searchBillText({ mode: "hybrid", query: "health" })).rejects.toThrow(LegislationError)
     expect(search).toHaveBeenCalledTimes(1)
   })
+
+  it("uses the ranked passage store for the lexical half of hybrid search", async () => {
+    const search = vi.fn<RankedPassageSearch["search"]>(async () => ({
+      items: [],
+      search: { isReranked: false, models: [] },
+      truncated: false
+    }))
+    const query = vi
+      .spyOn(pool, "query")
+      .mockImplementationOnce(async () => ({ command: "SELECT", fields: [], oid: 0, rowCount: 0, rows: [] }))
+    const service = new LegislationQueryService(
+      database,
+      {
+        embed: async () => ({
+          embeddings: [Array.from({ length: 1536 }, () => 0)],
+          model: "openai/text-embedding-3-small"
+        }),
+        rerank: async () => []
+      },
+      { generation: "generation-a", search }
+    )
+    try {
+      await expect(service.searchBillText({ mode: "hybrid", query: "health" })).resolves.toMatchObject({ items: [] })
+      expect(search).toHaveBeenCalledWith({
+        cursor: undefined,
+        limit: 25,
+        mode: "hybrid",
+        query: "health",
+        rankingGeneration: "generation-a"
+      })
+    } finally {
+      query.mockRestore()
+    }
+  })
 })
 
 describe("bill browse query", () => {
