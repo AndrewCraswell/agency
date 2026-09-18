@@ -69,6 +69,12 @@ describe("Federal Register PDF acquisition", () => {
     expect(result.results[0]).toMatchObject({ status: "failed", reason: expect.stringContaining("byte_limit") })
     expect((await acquireFrPdfs(input)).acquisitionComplete).toBe(true)
   })
+  it("accepts an explicit production bound large enough for long official rules", async () => {
+    const { input } = await setup()
+    const result = await acquireFrPdfs({ ...input, maximumBytes: 128 * 1024 * 1024 })
+    expect(result.acquisitionComplete).toBe(true)
+    expect(result.results[0]).toMatchObject({ receipt: { bytes: Buffer.byteLength(pdf) } })
+  })
   it("detects cached byte corruption without silently replacing retained evidence", async () => {
     const { input, fetcher } = await setup()
     await acquireFrPdfs(input)

@@ -12,21 +12,24 @@ type SourceId = AcquisitionUnit["sourceId"]
 /** Local acquisition client. Cross-worker budgets must be supplied before Trigger use. */
 export class RegulatorySourceClient {
   readonly #http: RetryingHttpClient
+  readonly #requestTimeoutMs: number
   constructor(
     options: {
       afterAttemptComplete?: (telemetry: HttpRequestTelemetry) => Promise<void>
       fetch?: typeof fetch
       beforeAttempt?: () => Promise<void>
       minimumIntervalMs?: number
+      requestTimeoutMs?: number
     } = {}
   ) {
+    this.#requestTimeoutMs = options.requestTimeoutMs ?? 10 * 60_000
     this.#http = new RetryingHttpClient({
       afterAttemptComplete: options.afterAttemptComplete,
       fetch: options.fetch,
       beforeAttempt: options.beforeAttempt,
       minimumIntervalMs: options.minimumIntervalMs ?? 500,
       maxAttempts: 1,
-      requestTimeoutMs: 60_000
+      requestTimeoutMs: this.#requestTimeoutMs
     })
   }
 
@@ -38,7 +41,7 @@ export class RegulatorySourceClient {
       {
         redirect: "error",
         headers: { accept },
-        signal: AbortSignal.timeout(120_000)
+        signal: AbortSignal.timeout(this.#requestTimeoutMs)
       },
       { streamBody: true }
     )

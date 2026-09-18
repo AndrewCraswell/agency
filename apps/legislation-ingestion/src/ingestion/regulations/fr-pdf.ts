@@ -1,5 +1,6 @@
-import { randomUUID } from "node:crypto"
-import { link, mkdir, open, readFile, rm, writeFile } from "node:fs/promises"
+import { createHash, randomUUID } from "node:crypto"
+import { createReadStream } from "node:fs"
+import { link, mkdir, open, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import invariant from "tiny-invariant"
@@ -29,12 +30,33 @@ export const pdfReceiptSchema = z.strictObject({
 function hasCode(error: unknown, code: string) {
   return error instanceof Error && "code" in error && error.code === code
 }
-function validatePdf(bytes: Uint8Array) {
-  const body = Buffer.from(bytes)
-  invariant(/^%PDF-\d\.\d/.test(body.subarray(0, 8).toString("ascii")), "fr_pdf_signature_missing")
-  invariant(/%%EOF\s*$/.test(body.subarray(-1024).toString("ascii")), "fr_pdf_end_marker_missing")
+function validatePdfFraming(prefix: Uint8Array, suffix: Uint8Array) {
+  invariant(/^%PDF-\d\.\d/.test(Buffer.from(prefix).subarray(0, 8).toString("ascii")), "fr_pdf_signature_missing")
+  invariant(/%%EOF\s*$/.test(Buffer.from(suffix).subarray(-1024).toString("ascii")), "fr_pdf_end_marker_missing")
 }
-async function retain(directory: string, target: string, bytes: Uint8Array) {
+function appendSuffix(current: Buffer, chunk: Uint8Array) {
+  const combined = Buffer.concat([current, Buffer.from(chunk)])
+  return combined.subarray(Math.max(0, combined.length - 1024))
+}
+async function inspectPdfFile(path: string, maximumBytes: number) {
+  const metadata = await stat(path)
+  invariant(metadata.size > 0 && metadata.size <= maximumBytes, "fr_pdf_byte_limit")
+  const hash = createHash("sha256")
+  let prefix = Buffer.alloc(0)
+  let suffix = Buffer.alloc(0)
+  let bytes = 0
+  for await (const chunk of createReadStream(path)) {
+    const data = Buffer.from(chunk)
+    bytes += data.length
+    invariant(bytes <= maximumBytes, "fr_pdf_byte_limit")
+    hash.update(data)
+    if (prefix.length < 8) prefix = Buffer.concat([prefix, data]).subarray(0, 8)
+    suffix = appendSuffix(suffix, data)
+  }
+  invariant(bytes === metadata.size, "fr_pdf_length_mismatch")
+  return { bytes, sha256: hash.digest("hex"), prefix, suffix }
+}
+async function retainBytes(directory: string, target: string, bytes: Uint8Array) {
   const temporary = join(directory, "temporary", randomUUID())
   try {
     await writeFile(temporary, bytes, { flag: "wx", flush: true })
@@ -48,6 +70,16 @@ async function retain(directory: string, target: string, bytes: Uint8Array) {
     }
   } finally {
     await rm(temporary, { force: true })
+  }
+}
+async function retainFile(temporary: string, target: string, expectedHash: string, maximumBytes: number) {
+  try {
+    await link(temporary, target)
+  } catch (error) {
+    if (!hasCode(error, "EEXIST")) throw error
+    const inspected = await inspectPdfFile(target, maximumBytes)
+    invariant(inspected.sha256 === expectedHash, "fr_pdf_immutable_conflict")
+    validatePdfFraming(inspected.prefix, inspected.suffix)
   }
 }
 async function acquirePdf(
@@ -68,52 +100,65 @@ async function acquirePdf(
   if (cached !== null) {
     const receipt = pdfReceiptSchema.parse(JSON.parse(cached))
     invariant(JSON.stringify(receipt.unit) === JSON.stringify(unit), "fr_pdf_receipt_scope_mismatch")
-    const bytes = await readFile(join(directory, "blobs", `${receipt.sha256}.pdf`))
-    invariant(bytes.length <= maximumBytes, "fr_pdf_byte_limit")
-    invariant(bytes.length === receipt.bytes && digest(bytes) === receipt.sha256, "fr_pdf_cache_corrupt")
-    validatePdf(bytes)
+    const inspected = await inspectPdfFile(join(directory, "blobs", `${receipt.sha256}.pdf`), maximumBytes)
+    invariant(inspected.bytes === receipt.bytes && inspected.sha256 === receipt.sha256, "fr_pdf_cache_corrupt")
+    validatePdfFraming(inspected.prefix, inspected.suffix)
     return { ...receipt, reused: true }
   }
   const response = await client.response("govinfo-fr", unit.sourceUrl, "application/pdf")
   const reader = response.body?.getReader()
   invariant(reader, "fr_pdf_body_missing")
-  let bytes: Buffer
+  const temporary = join(directory, "temporary", randomUUID())
+  let count = 0
+  let sha256 = ""
   const contentType = response.headers.get("content-type") ?? ""
   try {
-    invariant(/^application\/pdf(?:;|$)/i.test(contentType), "fr_pdf_content_type")
-    const length = response.headers.get("content-length")
-    invariant(length === null || Number(length) <= maximumBytes, "fr_pdf_byte_limit")
-    const chunks: Uint8Array[] = []
-    let count = 0
-    while (true) {
-      const chunk = await reader.read()
-      if (chunk.done) {
-        break
+    try {
+      invariant(/^application\/pdf(?:;|$)/i.test(contentType), "fr_pdf_content_type")
+      const length = response.headers.get("content-length")
+      invariant(length === null || Number(length) <= maximumBytes, "fr_pdf_byte_limit")
+      const file = await open(temporary, "wx")
+      const hash = createHash("sha256")
+      let prefix = Buffer.alloc(0)
+      let suffix = Buffer.alloc(0)
+      try {
+        while (true) {
+          const chunk = await reader.read()
+          if (chunk.done) break
+          count += chunk.value.byteLength
+          invariant(count <= maximumBytes, "fr_pdf_byte_limit")
+          hash.update(chunk.value)
+          if (prefix.length < 8) prefix = Buffer.concat([prefix, Buffer.from(chunk.value)]).subarray(0, 8)
+          suffix = appendSuffix(suffix, chunk.value)
+          await file.write(chunk.value)
+        }
+        invariant(length === null || Number(length) === count, "fr_pdf_length_mismatch")
+        validatePdfFraming(prefix, suffix)
+        sha256 = hash.digest("hex")
+        await file.sync()
+      } finally {
+        await file.close()
       }
-      count += chunk.value.byteLength
-      invariant(count <= maximumBytes, "fr_pdf_byte_limit")
-      chunks.push(chunk.value)
+    } finally {
+      await reader.cancel().catch(() => undefined)
     }
-    invariant(length === null || Number(length) === count, "fr_pdf_length_mismatch")
-    bytes = Buffer.concat(chunks, count)
-    validatePdf(bytes)
+    const receipt = pdfReceiptSchema.parse({
+      unit,
+      sha256,
+      bytes: count,
+      acquiredAt: new Date().toISOString(),
+      contentType,
+      etag: response.headers.get("etag"),
+      lastModified: response.headers.get("last-modified"),
+      status: "acquired",
+      structuralValidation: "pending"
+    })
+    await retainFile(temporary, join(directory, "blobs", `${receipt.sha256}.pdf`), receipt.sha256, maximumBytes)
+    await retainBytes(directory, receiptPath, Buffer.from(JSON.stringify(receipt, null, 2)))
+    return { ...receipt, reused: false }
   } finally {
-    await reader.cancel().catch(() => undefined)
+    await rm(temporary, { force: true })
   }
-  const receipt = pdfReceiptSchema.parse({
-    unit,
-    sha256: digest(bytes),
-    bytes: bytes.length,
-    acquiredAt: new Date().toISOString(),
-    contentType,
-    etag: response.headers.get("etag"),
-    lastModified: response.headers.get("last-modified"),
-    status: "acquired",
-    structuralValidation: "pending"
-  })
-  await retain(directory, join(directory, "blobs", `${receipt.sha256}.pdf`), bytes)
-  await retain(directory, receiptPath, Buffer.from(JSON.stringify(receipt, null, 2)))
-  return { ...receipt, reused: false }
 }
 
 /** Bounded local acquisition from a replay-validated metadata manifest. No PDF rendering or text substitution. */
@@ -137,8 +182,8 @@ export async function acquireFrPdfs(input: {
   const maximumBytes = z
     .int()
     .min(1)
-    .max(64 * 1024 * 1024)
-    .parse(input.maximumBytes ?? 32 * 1024 * 1024)
+    .max(256 * 1024 * 1024)
+    .parse(input.maximumBytes ?? 256 * 1024 * 1024)
   const numbers = records.map((record) => normalizeFrDocumentNumber(record.document_number))
   invariant(new Set(numbers).size === records.length, "fr_pdf_duplicate_identity")
   for (const child of ["receipts", "blobs", "temporary"]) {

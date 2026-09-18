@@ -91,7 +91,10 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   substitution or the remaining historical inventory.
   A restartable release-range operator now derives every supported issue date from all retained monthly manifests and
   commits only complete per-date acquisition checkpoints. Its first no-network checkpoint audit recovered the exact
-  73-publication January 2 result. Release-wide acquisition and structural validation remain open.
+  73-publication January 2 result. The initial range run retained 9,067 PDFs through 83 issue dates before a legitimate
+  111,796,173-byte, 1,105-page rule exceeded the old buffer/timeout limits. PDF acquisition now streams and hashes to
+  disk under a 256 MiB ceiling and ten-minute timeout; the repaired April 30 date completed all 111 publications.
+  Release-wide acquisition and structural validation remain open.
 - [ ] **ING-07 Freeze current eCFR currency.** Reconcile the retained title inventory with an explicit publisher cutoff,
   reserved title 35, import-in-progress titles and per-title issue dates. Plan only genuinely missing/corrected versions.
   **Done:** every requested title is validated, delayed or excluded with evidence; collection time never substitutes

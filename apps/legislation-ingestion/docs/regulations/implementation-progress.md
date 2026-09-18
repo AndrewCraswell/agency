@@ -4544,3 +4544,18 @@ The first checkpoint audit replayed all 60 metadata manifests, admitted only Jan
 no canonical writes and recurring ingestion disabled. Evidence is
 `artifacts/regulatory-backfills/fr-pdf-backfill-checkpoint-smoke.json`. Structural PDF validation and publication remain
 separate stages; a complete acquisition checkpoint does not claim either.
+
+The first release-wide run then completed 83 issue dates and retained 9,067 PDFs before exposing a real size boundary:
+document `2020-06967` is a 1,105-page final rule whose official GovInfo PDF is 111,796,173 bytes. The prior downloader
+buffered each response, defaulted to 32 MiB, rejected anything above 64 MiB and timed out streamed response bodies after
+60 seconds. It now streams network and cached files through incremental SHA-256, keeps only the eight-byte header and
+1,024-byte trailer needed for framing checks, flushes the temporary file before immutable linking, removes partial files
+on every failure and permits an explicit 256 MiB ceiling. The source client uses a ten-minute bounded stream timeout.
+
+The repaired acquisition retained the large PDF with SHA-256
+`1e5c0911a5ea2f5abb08ae7b09d4c24cd1ea98642a19fa2660cdd1dac914945f`, then completed all 111 April 30 publications.
+The complete date report SHA-256 is `24b4fe231e87e1830df6409ed3170de213d471b465dfcc4e43af411c2b9bc788`.
+The range operator now also persists the exact incomplete report and failed document identities before exiting instead
+of surfacing only a terminal schema error. Focused acquisition tests pass the raised production bound, corruption,
+framing, retry, URL, subset and writer-lock cases. Release-wide acquisition remains in progress; structural validation
+and canonical publication remain later gates.

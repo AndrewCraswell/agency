@@ -122,6 +122,18 @@ for (const unit of units) {
       `${JSON.stringify({ date: unit.date, status: "retrying", attempt, failures: report.results.filter((item) => item.status === "failed").length })}\n`
     )
   }
+  if (report?.acquisitionComplete !== true) {
+    const failures = report?.results.filter((item) => item.status === "failed") ?? []
+    const failedPath = join(
+      reportsDirectory,
+      `${unit.date}.failed-${new Date().toISOString().replaceAll(":", "-")}.json`
+    )
+    await writeFile(failedPath, `${JSON.stringify(report, null, 2)}\n`, { flag: "wx", flush: true })
+    process.stdout.write(`${JSON.stringify({ date: unit.date, status: "failed", failures, report: failedPath })}\n`)
+    throw new Error(
+      `fr_pdf_backfill_date_incomplete:${unit.date}:${failures.map((item) => item.documentNumber).join(",")}`
+    )
+  }
   const complete = completeReportSchema.parse(report)
   invariant(
     complete.expected === unit.expected && complete.results.length === unit.expected,
