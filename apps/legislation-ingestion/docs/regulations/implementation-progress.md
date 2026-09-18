@@ -13,6 +13,23 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Implemented the bounded Federal Register modification-discovery ingress without enabling a schedule. The new GovInfo
+client reads the official `FR` collection by `lastModified` with its API key only in the request header. The durable
+cursor fixes the active time window and opaque offset, begins completed cycles with a 24-hour overlap and bisects a
+window before traversal when the reported result count exceeds GovInfo's 10,000-result ceiling. Each request admits at
+most 100 exact `FR-YYYY-MM-DD` issue units, preserving the historical publication date separately from the correction's
+modification time, and commits the units plus cursor in the existing serializable checkpoint transaction.
+
+The single-worker `regulatory-fr-discovery` Trigger task self-continues with a replay-stable global key. It does not start
+the existing discovery controller yet: that controller's publisher accepts eCFR editions, while Federal Register
+publication must also reconcile per-document metadata and retained renditions. Units remain visibly pending instead of
+being sent to a known publication failure. Ten focused tests cover old-issue corrections, pagination, saturation splits,
+overlap, duplicate/out-of-window rejection, credential non-retention, pagination-host/window validation and task
+continuation; ingestion type-check and scoped lint pass. A direct official GovInfo probe returned the current FR packages
+for a two-day modification window; a later public `DEMO_KEY` request hit its shared 429 limit, so no canonical database
+write or provider-backed end-to-end canary was claimed. The FR publication adapter, deployed provider admission and
+recurring activation remain open under SYNC-03/SYNC-11.
+
 Made the human-review dependency measurable without weakening it. The new bounded
 `audit-regulatory-judgment-progress` command validates the immutable packet, hashes the reviewed revision and reports
 query/candidate totals, automated and human coverage, conflicting human grades, human adjudications, completion and the

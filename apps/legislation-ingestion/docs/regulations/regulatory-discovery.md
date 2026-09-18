@@ -22,6 +22,22 @@ Trigger task `regulatory-ecfr-discovery` is a bounded manual entry point with a 
 selection is unique and limited to titles 1–50. It points only at the canonical database. No Trigger schedule is
 registered here; hourly activation remains blocked until G4 and SYNC-11.
 
+The Federal Register adapter reads the official GovInfo `FR` collection by package modification time rather than by
+publication date. This allows a corrected old issue to re-enter discovery. Each request is limited to 100 packages and
+one durable checkpoint commit. The cursor retains the exact fixed window, opaque `offsetMark`, pending split windows and
+latest completed boundary. A completed cycle begins the next window with a 24-hour overlap. When GovInfo reports more
+than its 10,000-result traversal ceiling, the adapter commits no packages and bisects the time window before continuing;
+one-second saturated windows fail explicitly. Package modification time becomes the immutable acquisition revision, while
+the `FR-YYYY-MM-DD` identity continues to supply the issue/publication date. API credentials are sent only in the request
+header and are absent from retained evidence and cursor state.
+
+Trigger task `regulatory-fr-discovery` is also manual and single-worker. It self-continues one page or split decision at
+a time with global idempotency keys. Discovered units intentionally remain pending: the shared downstream discovery
+publisher currently accepts eCFR editions, while Federal Register publication additionally requires the existing
+document metadata and rendition reconciliation. Starting the eCFR controller for these units would acquire and parse
+them only to fail at publication. Connecting that reviewed FR publication adapter is the next SYNC-03 step. No recurring
+schedule is registered.
+
 `regulatory-discovery-registration` moves at most 100 pending units into one immutable current-acquisition manifest.
 Selection, manifest insertion and the pending-to-registered transition share one serializable transaction. Controllers
 use row locks with `SKIP LOCKED`, so competing bounded runs cannot claim the same unit. An empty pending set produces no
