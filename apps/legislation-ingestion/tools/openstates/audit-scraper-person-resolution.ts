@@ -116,6 +116,7 @@ try {
       }
       const result = resolvePerson({
         allowChamberHistoryFallback: true,
+        allowUniqueCrossChamberFallback: true,
         chamber: row.chamber,
         name: row.name,
         observedDate: row.observed_date ?? undefined,

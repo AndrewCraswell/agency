@@ -154,6 +154,48 @@ describe("standalone scraper person resolution", () => {
     ).toEqual({ status: "ambiguous" })
   })
 
+  it("resolves a uniquely named cross-chamber sponsor only within a source-backed tenure", () => {
+    const upperSponsor = candidate("upper-dunbar", "Dunbar", "upper")
+    const context = {
+      allowUniqueCrossChamberFallback: true,
+      chamber: "lower" as const,
+      name: "Dunbar",
+      observedDate: "2026-05-01",
+      sessionStartDate: "2025-01-01",
+      sessionEndDate: "2026-12-31"
+    }
+    expect(resolveScraperPersonReference(context, [upperSponsor])).toMatchObject({
+      personId: "upper-dunbar",
+      status: "resolved"
+    })
+    expect(
+      resolveScraperPersonReference({ ...context, allowUniqueCrossChamberFallback: false }, [upperSponsor])
+    ).toEqual({ status: "not_found" })
+    expect(resolveScraperPersonReference({ ...context, observedDate: "2027-05-01" }, [upperSponsor])).toEqual({
+      status: "not_found"
+    })
+  })
+
+  it("fails closed when a cross-chamber sponsor name remains ambiguous", () => {
+    const context = {
+      allowUniqueCrossChamberFallback: true,
+      chamber: "lower" as const,
+      name: "Fields",
+      observedDate: "2026-05-01"
+    }
+    expect(
+      resolveScraperPersonReference(context, [
+        candidate("upper-fields-one", "Fields", "upper"),
+        candidate("upper-fields-two", "Fields", "upper")
+      ])
+    ).toEqual({ status: "ambiguous" })
+    expect(
+      resolveScraperPersonReference({ ...context, name: "Senate Rules" }, [
+        candidate("upper-fields-one", "Fields", "upper")
+      ])
+    ).toEqual({ status: "not_found" })
+  })
+
   it("links an exact unique source identity whose contradictory tenure was quarantined", () => {
     const quarantined = candidate("hughes", "Hughes", "upper", { terms: [] })
     expect(

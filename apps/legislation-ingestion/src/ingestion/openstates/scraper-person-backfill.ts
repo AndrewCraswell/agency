@@ -182,6 +182,7 @@ export async function buildScraperPersonBackfillPlan(
     }
     const result = resolvePerson({
       ...context,
+      allowUniqueCrossChamberFallback: true,
       chamber: rowChamber,
       name: row.name,
       observedDate: row.observed_date ?? undefined

@@ -20,6 +20,7 @@ export interface ScraperPersonCandidate {
 
 export interface ScraperPersonResolutionContext {
   allowChamberHistoryFallback?: boolean
+  allowUniqueCrossChamberFallback?: boolean
   chamber: Chamber
   name: string
   observedDate?: string
@@ -71,6 +72,10 @@ function chamberMatches(termChamber: string | null, chamber: Chamber) {
 
 function termMatches(term: ScraperPersonCandidate["terms"][number], context: ScraperPersonResolutionContext) {
   if (!chamberMatches(term.chamber, context.chamber)) return false
+  return termDateMatches(term, context)
+}
+
+function termDateMatches(term: ScraperPersonCandidate["terms"][number], context: ScraperPersonResolutionContext) {
   const start = term.startDate ?? "0000-01-01"
   const end = term.endDate ?? "9999-12-31"
   if (isIsoDate(context.observedDate)) {
@@ -119,6 +124,13 @@ export function createScraperPersonResolver(candidates: readonly ScraperPersonCa
       match =
         chamberHistoryMatches[0] ??
         (namedCandidates.length === 1 && namedCandidates[0]!.terms.length === 0 ? namedCandidates[0] : undefined)
+    }
+    if (match === undefined && context.allowUniqueCrossChamberFallback === true) {
+      const tenureMatches = namedCandidates.filter((candidate) =>
+        candidate.terms.some((term) => termDateMatches(term, context))
+      )
+      if (tenureMatches.length > 1) return { status: "ambiguous" }
+      match = tenureMatches[0]
     }
     if (match === undefined) return { status: "not_found" }
     return { status: "resolved", personId: match.personId, sourcePersonId: match.sourcePersonId }
@@ -238,7 +250,12 @@ export async function resolveScraperAggregatePeople(
       ...aggregate,
       sponsors: aggregate.sponsors?.map((sponsor) => {
         if (sponsor.personId !== undefined && sponsor.personId !== null) return sponsor
-        const match = resolvePerson({ ...context, name: sponsor.name, observedDate: billDate })
+        const match = resolvePerson({
+          ...context,
+          allowUniqueCrossChamberFallback: true,
+          name: sponsor.name,
+          observedDate: billDate
+        })
         return match.status === "resolved" ? { ...sponsor, personId: match.personId } : sponsor
       }),
       votes: aggregate.votes?.map((vote) => ({
