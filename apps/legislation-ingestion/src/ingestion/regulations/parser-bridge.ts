@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
-import { createReadStream } from "node:fs"
+import { createReadStream, existsSync } from "node:fs"
 import { lstat, mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import { createInterface } from "node:readline"
@@ -15,7 +15,22 @@ import {
 import { z } from "zod"
 import { legalDiscoveryUnitSchema, type LegalDiscoveryUnit } from "./discovery-checkpoint.js"
 
-const parserPath = fileURLToPath(new URL("../../../python/regulations/parse_xml.py", import.meta.url))
+const parserRelativePath = "python/regulations/parse_xml.py"
+
+export function resolveRegulatoryParserPath(options?: {
+  workingDirectory?: string
+  moduleUrl?: string
+  exists?: (path: string) => boolean
+}) {
+  const exists = options?.exists ?? existsSync
+  const packagedPath = resolve(options?.workingDirectory ?? process.cwd(), parserRelativePath)
+  if (exists(packagedPath)) return packagedPath
+  const sourcePath = fileURLToPath(new URL(`../../../${parserRelativePath}`, options?.moduleUrl ?? import.meta.url))
+  if (exists(sourcePath)) return sourcePath
+  throw new Error("Regulatory parser script is unavailable")
+}
+
+const parserPath = resolveRegulatoryParserPath()
 const regulatoryParserUnitSchema = z.union([acquisitionUnitSchema, legalDiscoveryUnitSchema])
 type RegulatoryParserUnit = AcquisitionUnit | LegalDiscoveryUnit
 

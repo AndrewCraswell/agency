@@ -1,13 +1,13 @@
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { gunzipSync } from "node:zlib"
 import { acquisitionUnitSchema, digest } from "@repo/legislation-core/legal-text/contracts"
 import { regulatoryRecordSchema } from "@repo/legislation-core/legal-text/parser-contract"
 import { afterEach, describe, expect, it } from "vitest"
 import { z } from "zod"
-import { parseRegulatoryArtifact, validateRegulatoryOutput } from "./parser-bridge.js"
+import { parseRegulatoryArtifact, resolveRegulatoryParserPath, validateRegulatoryOutput } from "./parser-bridge.js"
 
 const fixtures = fileURLToPath(new URL("./fixtures/", import.meta.url))
 const provenance = z
@@ -55,6 +55,22 @@ async function syntheticInput(xml: string) {
   await writeFile(path, xml)
   return { ...input, path, artifactHash: digest(xml) }
 }
+
+it("resolves the parser from the packaged runtime root before the bundled module location", () => {
+  const packagedPath = resolve("/app", "python/regulations/parse_xml.py")
+  const checked: string[] = []
+  expect(
+    resolveRegulatoryParserPath({
+      workingDirectory: "/app",
+      moduleUrl: "file:///app/chunk-regulatory-discovery-parsing.mjs",
+      exists: (path) => {
+        checked.push(path)
+        return path === packagedPath
+      }
+    })
+  ).toBe(packagedPath)
+  expect(checked).toEqual([packagedPath])
+})
 
 // Each case starts real Python processes; coverage and concurrent qualification add startup overhead.
 describe("federal streaming parser and bridge", { timeout: 30_000 }, () => {
