@@ -69,12 +69,12 @@
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "@shopify/dev-mcp@latest"]
+    },
+    "linear": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.linear.app/mcp"]
     }
-    // "linear": {
-    //   "type": "stdio",
-    //   "command": "npx",
-    //   "args": ["-y", "mcp-remote", "https://mcp.linear.app/mcp"]
-    // },
     // "trigger": {
     //   "type": "stdio",
     //   "command": "npx",
