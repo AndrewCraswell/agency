@@ -45,6 +45,19 @@ function attemptId(triggerRunId: string) {
 const concurrencyKey = "production:openstates-scraper:events:ak"
 const northCarolinaConcurrencyKey = "production:openstates-scraper:events:nc"
 
+async function dispatchAlaskaEventReconciliation(
+  planPath: z.infer<typeof payloadSchema>["planPath"],
+  approvedBuildInputsSha256: z.infer<typeof payloadSchema>["approvedBuildInputsSha256"],
+  inventoryId: string
+) {
+  const key = await idempotencyKeys.create(`ak-events:reconcile:${inventoryId}:0`, { scope: "global" })
+  return await tasks.trigger(
+    "openstates-alaska-events-reconcile",
+    { planPath, approvedBuildInputsSha256, batchIndex: 0 },
+    { concurrencyKey, idempotencyKey: key }
+  )
+}
+
 export const openStatesAlaskaEventsReconcile = task({
   id: "openstates-alaska-events-reconcile",
   maxDuration: 600,
@@ -187,7 +200,18 @@ export const openStatesAlaskaEventsCloud = task({
       inventoryId = before.plan.source_sha256
       const selected = payload.batchId ?? before.pending[0]?.id
       if (!selected) {
-        return { status: "cycle_promoted" as const, inventoryId, completed: before.completed.length, pending: 0 }
+        const reconciliation = await dispatchAlaskaEventReconciliation(
+          payload.planPath,
+          payload.approvedBuildInputsSha256,
+          inventoryId
+        )
+        return {
+          status: "cycle_promoted" as const,
+          inventoryId,
+          completed: before.completed.length,
+          pending: 0,
+          reconciliationRunId: reconciliation.id
+        }
       }
       result = await executeAlaskaEventCloudBatch(database, {
         store,
@@ -204,7 +228,18 @@ export const openStatesAlaskaEventsCloud = task({
       await pool.end()
     }
     if (!nextBatchId) {
-      return { ...result, status: "cycle_promoted" as const, inventoryId, pending: 0 }
+      const reconciliation = await dispatchAlaskaEventReconciliation(
+        payload.planPath,
+        payload.approvedBuildInputsSha256,
+        inventoryId
+      )
+      return {
+        ...result,
+        status: "cycle_promoted" as const,
+        inventoryId,
+        pending: 0,
+        reconciliationRunId: reconciliation.id
+      }
     }
     const key = await idempotencyKeys.create(`ak-events:${inventoryId}:${nextBatchId}`, { scope: "global" })
     const continuation = await tasks.trigger(
@@ -233,7 +268,18 @@ export const openStatesAlaskaEventsDispatch = task({
       await pool.end()
     }
     const first = state.pending[0]
-    if (!first) return { status: "cycle_promoted" as const, inventoryId: state.plan.source_sha256 }
+    if (!first) {
+      const reconciliation = await dispatchAlaskaEventReconciliation(
+        payload.planPath,
+        payload.approvedBuildInputsSha256,
+        state.plan.source_sha256
+      )
+      return {
+        status: "cycle_promoted" as const,
+        inventoryId: state.plan.source_sha256,
+        reconciliationRunId: reconciliation.id
+      }
+    }
     const key = await idempotencyKeys.create(`ak-events:${state.plan.source_sha256}:${first.id}`, { scope: "global" })
     const handle = await tasks.trigger(
       "openstates-alaska-events-cloud",
