@@ -121,6 +121,15 @@ describe("composition contracts", () => {
     )
     expect(compositionInstructions).toContain("remove redundant prose instead")
     expect(compositionInstructions).toContain("compact cards do not replace substantive facts they hide")
+    expect(compositionInstructions).toContain("verify which provisions survived at that point in the amendment chain")
+    expect(compositionInstructions).toContain(
+      "if an adopted amendment removes a provision, do not assign that provision to a later vote"
+    )
+    expect(compositionInstructions).toContain(
+      "Passage of a package establishes support for the package, not every included clause"
+    )
+    expect(compositionInstructions).toContain("a voice vote establishes no individual member position")
+    expect(compositionInstructions).toContain("label the attribution partial or unknown instead of inferring it")
     expect(compositionInstructions).not.toContain("Answer in cited prose plus the chosen view")
     expect(compositionInstructions).toContain("do not claim follow, add-to-issue")
     expect(compositionInstructions).toContain("an explicit prose-only request")
