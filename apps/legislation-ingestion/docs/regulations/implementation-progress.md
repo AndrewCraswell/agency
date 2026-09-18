@@ -4569,3 +4569,18 @@ gate: SHA-256 `1e5c0911a5ea2f5abb08ae7b09d4c24cd1ea98642a19fa2660cdd1dac914945f`
 SHA-256 is `85110f225baf80d29262faa44f1dcc39a299622d0623c221feb321493da4e51e`. This proves the
 previously blocking large-file path, not release-wide structural validation. The resumed acquisition had reached 88
 complete date checkpoints and 9,604 receipts at this observation.
+
+A separate structural-validation backfill operator now consumes only immutable complete acquisition checkpoints. It
+binds each PDF inspection to the metadata manifest, acquisition-report hash, validator-code hash, expected page count,
+PDF hash and byte count. One through four isolated workers may run concurrently; the default is two because each worker
+retains its own heap ceiling. Successful per-document receipts are atomically retained before the date finishes, so a
+retry after a worker failure reuses completed inspections. A complete date checkpoint is written only when every
+supported publication passes. Checkpoint replay revalidates all scope hashes without starting PDF.js workers.
+
+The January 2, 2020 smoke validated all 73 PDFs and 264 publisher pages with two workers, then exact audit replay reused
+all 73 validation receipts. No canonical writes occurred and publication readiness remained false. The initial summary
+SHA-256 is `ceb60759923a8681e83e986051237b0f4ed302246bdb6691f28c4d0485e750b4`, the date checkpoint
+SHA-256 is `a56bfe092aa745cf8f23cd5a56e3a33be1b844c2457a14d017f6fd5a2fc9253f`, and the replay summary
+SHA-256 is `a1488a3cf0203586bc785b74c4d24ebd656db65f387cb0c8b10486530aaf9d69`. Evidence is under
+`artifacts/regulatory-backfills/fr-pdf-validation-*`. Release-wide validation remains open; acquisition had reached 100
+complete dates and 10,927 receipts at this observation.

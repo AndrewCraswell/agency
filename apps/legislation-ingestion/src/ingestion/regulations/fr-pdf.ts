@@ -10,7 +10,7 @@ import { frPdfLocation } from "./fr-reconciliation.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
-const pdfUnitSchema = z.strictObject({
+export const pdfUnitSchema = z.strictObject({
   metadataManifestId: hash,
   documentNumber: z.string().min(1),
   publicationDate: z.iso.date(),
@@ -26,6 +26,21 @@ export const pdfReceiptSchema = z.strictObject({
   lastModified: z.string().nullable(),
   status: z.literal("acquired"),
   structuralValidation: z.literal("pending")
+})
+export const frPdfAcquiredResultSchema = z.strictObject({
+  documentNumber: z.string().min(1),
+  status: z.literal("acquired"),
+  receipt: pdfReceiptSchema.extend({ reused: z.boolean() })
+})
+export const frPdfAcquisitionCheckpointSchema = z.strictObject({
+  metadataManifestId: hash,
+  date: z.iso.date(),
+  expected: z.int().positive(),
+  results: z.array(frPdfAcquiredResultSchema).min(1),
+  acquisitionComplete: z.literal(true),
+  structuralValidation: z.literal("pending"),
+  publicationReady: z.literal(false),
+  canonicalWrites: z.literal(false)
 })
 function hasCode(error: unknown, code: string) {
   return error instanceof Error && "code" in error && error.code === code

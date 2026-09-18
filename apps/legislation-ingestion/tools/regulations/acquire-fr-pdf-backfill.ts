@@ -5,24 +5,7 @@ import invariant from "tiny-invariant"
 import { z } from "zod"
 import { isSupportedFrMetadataType } from "../../src/ingestion/regulations/fr-metadata-contract.js"
 import { replayFrMetadata } from "../../src/ingestion/regulations/fr-metadata.js"
-import { acquireFrPdfs, pdfReceiptSchema } from "../../src/ingestion/regulations/fr-pdf.js"
-
-const hash = z.string().regex(/^[a-f0-9]{64}$/)
-const acquiredResultSchema = z.object({
-  documentNumber: z.string().min(1),
-  status: z.literal("acquired"),
-  receipt: pdfReceiptSchema.extend({ reused: z.boolean() })
-})
-const completeReportSchema = z.object({
-  metadataManifestId: hash,
-  date: z.iso.date(),
-  expected: z.int().positive(),
-  results: z.array(acquiredResultSchema).min(1),
-  acquisitionComplete: z.literal(true),
-  structuralValidation: z.literal("pending"),
-  publicationReady: z.literal(false),
-  canonicalWrites: z.literal(false)
-})
+import { acquireFrPdfs, frPdfAcquisitionCheckpointSchema } from "../../src/ingestion/regulations/fr-pdf.js"
 const { values } = parseArgs({
   options: {
     metadataRoot: { type: "string" },
@@ -86,9 +69,9 @@ let acquiredPublications = 0
 for (const unit of units) {
   supportedPublications += unit.expected
   const checkpointPath = join(reportsDirectory, `${unit.date}.json`)
-  let checkpoint: z.infer<typeof completeReportSchema> | undefined
+  let checkpoint: z.infer<typeof frPdfAcquisitionCheckpointSchema> | undefined
   try {
-    checkpoint = completeReportSchema.parse(JSON.parse(await readFile(checkpointPath, "utf8")))
+    checkpoint = frPdfAcquisitionCheckpointSchema.parse(JSON.parse(await readFile(checkpointPath, "utf8")))
     invariant(
       checkpoint.metadataManifestId === unit.manifest.id &&
         checkpoint.date === unit.date &&
@@ -134,7 +117,7 @@ for (const unit of units) {
       `fr_pdf_backfill_date_incomplete:${unit.date}:${failures.map((item) => item.documentNumber).join(",")}`
     )
   }
-  const complete = completeReportSchema.parse(report)
+  const complete = frPdfAcquisitionCheckpointSchema.parse(report)
   invariant(
     complete.expected === unit.expected && complete.results.length === unit.expected,
     "fr_pdf_backfill_count_mismatch"

@@ -98,6 +98,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   1.5 GiB worker and avoids a second full-file allocation. The exact 111,796,173-byte artifact passed all 1,105 page
   text/operator checks with no empty pages and confirmed its document identity. This closes the observed large-file
   failure mode; it does not replace release-wide validation.
+  A restartable validation operator now consumes complete acquisition checkpoints with one to four bounded workers,
+  persists successful per-document evidence before completing a date and binds replay to the metadata, acquisition and
+  validator hashes. The 73-document January 2 smoke passed; replay reused all 73 receipts without starting PDF workers.
   Release-wide acquisition and structural validation remain open.
 - [ ] **ING-07 Freeze current eCFR currency.** Reconcile the retained title inventory with an explicit publisher cutoff,
   reserved title 35, import-in-progress titles and per-title issue dates. Plan only genuinely missing/corrected versions.
