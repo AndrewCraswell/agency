@@ -52,6 +52,14 @@ administration connection: it accepted a startup `statement_timeout`, connected 
 recovery mode. This is distinct from the PgBouncer URL used by Trigger tasks, so the release no longer depends on an
 unverified administration path.
 
+Generated and executed the exact fail-closed release payload against a production-shaped PostgreSQL 18 clone. The clone
+contained the frozen 48-row production ledger, all 62 pre-regulation tables, the retained amendment HNSW index, the same
+16 unvalidated constraints and 4,226 representative legacy event rows. The single transaction verified its preflight,
+applied migrations 48 through 51 and the tracked reconciliation, checked all expected catalog totals, and replaced the
+ledger only after those checks passed. It finished with 102 tables, two canonical ledger rows, zero unvalidated
+constraints and zero invalid event classifications or statuses. The retained SQL SHA-256 is
+`e9ebe0032754aaa2bfc2eab131e5181d96c0b7856dfa47b2c1fbe3641efee54f`; it has not been run against production.
+
 The two independent Federal Register artifact jobs remained live during this work. Acquisition advanced to 180 of
 1,248 frozen 2020-through-2024 publication days through September 16, 2020. Structural PDF validation advanced to 55
 of the first 100 days through March 20, 2020. Neither job was restarted or duplicated.

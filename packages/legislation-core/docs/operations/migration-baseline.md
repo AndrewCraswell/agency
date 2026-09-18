@@ -64,6 +64,14 @@ hashes are `3cf5d1f0b7a331700a8426695a65b4e9ed07b4c0ca12dff1b985b45a05457ff7` at
 `1789725600000` and `cbe63b9c7528993c84daaad15355086ecbfdb79e0cdc0ef197468da5db81ada1` at
 `1789761185934`.
 
+The exact production-shaped release payload is retained outside tracked source at
+`apps/legislation-ingestion/artifacts/regulatory-backfills/production-migration-release-20260918/production-regulatory-baseline-release.sql`
+with SHA-256 `e9ebe0032754aaa2bfc2eab131e5181d96c0b7856dfa47b2c1fbe3641efee54f`. It takes one advisory
+lock and one transaction, verifies the frozen 48-row ledger and live catalog, locks event writes, applies the five exact
+SQL inputs, asserts the complete post-release catalog, and only then replaces the migration ledger. A production-shaped
+rehearsal included the 4,226 legacy rows, 16 unvalidated constraints, 48 historical ledger rows and retained amendment
+HNSW index. It completed with 102 tables, two canonical ledger rows and zero unvalidated constraints or legacy values.
+
 Railway refused a fresh named snapshot because its per-volume backup limit was exceeded. No existing backups were
 deleted. A September 18 read-only Railway API audit returned 17 recovery points for the canonical volume. The latest is
 the September 17, 2026 20:42 UTC daily snapshot and expires September 23 at 20:42 UTC. Before rollout, authorize removal
