@@ -4,10 +4,14 @@ import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import type { FileArtifactStore } from "../documents/artifact-store.js"
-import { acquireCurrentRegulatoryArtifact, currentReceiptSchema } from "./artifact-backfill.js"
-import { legalDiscoveryPayloadHash, legalDiscoveryUnitSchema } from "./discovery-checkpoint.js"
-import { legalDiscoveryManifestSchema } from "./discovery-registration.js"
+import {
+  acquireRegulatoryArtifact,
+  regulatoryArtifactReceiptSchema,
+  regulatoryArtifactUnitSchema
+} from "./artifact-backfill.js"
+import { legalDiscoveryPayloadHash } from "./discovery-checkpoint.js"
 import { retainRegulatoryArtifact } from "./durable-artifact.js"
+import { parseRegulatoryImportManifest, sameRegulatoryImportUnit } from "./regulatory-import-contract.js"
 import type { RegulatorySourceClient } from "./source-client.js"
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
@@ -17,7 +21,20 @@ const inputSchema = z.strictObject({
   artifactDirectory: z.string().min(1)
 })
 
-/** Acquires one registered current unit and commits its immutable artifact reference to the discovery checkpoint. */
+const registeredUnitSchema = z.object({
+  source_id: z.enum(["ecfr", "govinfo-fr", "govinfo-cfr"]),
+  scope_key: hashSchema,
+  manifest_id: hashSchema,
+  payload_hash: hashSchema,
+  unit: regulatoryArtifactUnitSchema,
+  state: z.enum(["registered", "acquired"]),
+  artifact_hash: hashSchema.nullable(),
+  artifact_bytes: z.string().nullable(),
+  storage_locator: z.string().nullable(),
+  acquisition_receipt: z.unknown().nullable()
+})
+
+/** Acquires one registered current or historical unit and commits its immutable artifact reference. */
 export async function acquireLegalDiscoveryArtifact(
   pool: pg.Pool,
   value: unknown,
@@ -29,12 +46,27 @@ export async function acquireLegalDiscoveryArtifact(
     input.manifestId
   ])
   invariant(manifestRow.rowCount === 1, "legal_discovery_manifest_missing")
-  const manifest = legalDiscoveryManifestSchema.parse(manifestRow.rows[0]?.body)
+  const manifest = parseRegulatoryImportManifest(manifestRow.rows[0]?.body)
   const unit = manifest.units.find((candidate) => candidate.key === input.unitKey)
   invariant(unit, "legal_discovery_manifest_unit_missing")
-  const acquired = await acquireCurrentRegulatoryArtifact(input.artifactDirectory, unit, options)
+  const beforeResult = await pool.query(
+    `SELECT source_id,scope_key,manifest_id,payload_hash,unit,state,artifact_hash,artifact_bytes::text,
+     storage_locator,acquisition_receipt FROM legislation.legal_discovery_units
+     WHERE manifest_id=$1 AND unit_key=$2`,
+    [manifest.id, unit.key]
+  )
+  invariant(beforeResult.rowCount === 1, "legal_discovery_unit_missing")
+  const before = registeredUnitSchema.parse(beforeResult.rows[0])
+  invariant(
+    before.source_id === unit.sourceId &&
+      before.manifest_id === manifest.id &&
+      sameRegulatoryImportUnit(before.unit, unit) &&
+      before.payload_hash === legalDiscoveryPayloadHash(unit),
+    "legal_discovery_acquisition_unit_changed"
+  )
+  const acquired = await acquireRegulatoryArtifact(input.artifactDirectory, unit, options)
   const { reused, ...receiptValue } = acquired
-  const receipt = currentReceiptSchema.parse(receiptValue)
+  const receipt = regulatoryArtifactReceiptSchema.parse(receiptValue)
   const localPath = join(input.artifactDirectory, "blobs", `${receipt.sha256}.xml`)
   const storageLocator =
     options.sourceStore === undefined
@@ -57,24 +89,17 @@ export async function acquireLegalDiscoveryArtifact(
       `SELECT manifest_id,payload_hash,unit,state,artifact_hash,artifact_bytes::text,storage_locator,acquisition_receipt
        FROM legislation.legal_discovery_units
        WHERE source_id=$1 AND scope_key=$2 AND unit_key=$3 FOR UPDATE`,
-      [manifest.sourceId, manifest.scopeKey, unit.key]
+      [before.source_id, before.scope_key, unit.key]
     )
     invariant(selected.rowCount === 1, "legal_discovery_unit_missing")
-    const row = z
-      .object({
-        manifest_id: hashSchema,
-        payload_hash: hashSchema,
-        unit: legalDiscoveryUnitSchema,
-        state: z.enum(["registered", "acquired"]),
-        artifact_hash: hashSchema.nullable(),
-        artifact_bytes: z.string().nullable(),
-        storage_locator: z.string().nullable(),
-        acquisition_receipt: z.unknown().nullable()
-      })
-      .parse(selected.rows[0])
+    const row = registeredUnitSchema.parse({
+      ...selected.rows[0],
+      source_id: before.source_id,
+      scope_key: before.scope_key
+    })
     invariant(
       row.manifest_id === manifest.id &&
-        isDeepStrictEqual(row.unit, unit) &&
+        sameRegulatoryImportUnit(row.unit, unit) &&
         row.payload_hash === legalDiscoveryPayloadHash(unit),
       "legal_discovery_acquisition_unit_changed"
     )
@@ -98,7 +123,7 @@ export async function acquireLegalDiscoveryArtifact(
         row.artifact_hash === receipt.sha256 &&
           row.artifact_bytes === String(receipt.bytes) &&
           row.storage_locator === storageLocator &&
-          isDeepStrictEqual(currentReceiptSchema.parse(row.acquisition_receipt), receipt),
+          isDeepStrictEqual(regulatoryArtifactReceiptSchema.parse(row.acquisition_receipt), receipt),
         "legal_discovery_acquisition_replay_conflict"
       )
     } else {
@@ -107,8 +132,8 @@ export async function acquireLegalDiscoveryArtifact(
          storage_locator=$6,acquisition_receipt=$7::jsonb,acquired_at=$8
          WHERE source_id=$1 AND scope_key=$2 AND unit_key=$3 AND state='registered'`,
         [
-          manifest.sourceId,
-          manifest.scopeKey,
+          before.source_id,
+          before.scope_key,
           unit.key,
           receipt.sha256,
           receipt.bytes,

@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import {
   acquisitionUnitSchema,
@@ -11,7 +14,10 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { acquireLegalDiscoveryArtifact } from "./discovery-acquisition.js"
+import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
 import { registerHistoricalManifestPage } from "./historical-manifest-registration.js"
+import { RegulatorySourceClient } from "./source-client.js"
 
 const databaseUrl = process.env.REGULATORY_DESTRUCTIVE_TEST_DATABASE_URL
 if (databaseUrl !== undefined) {
@@ -154,5 +160,63 @@ describe.skipIf(databaseUrl === undefined).sequential("historical manifest regis
     ).rejects.toThrow("identity")
     const counts = await pool.query("SELECT count(*)::integer count FROM legislation.legal_discovery_checkpoints")
     expect(counts.rows[0]?.count).toBe(0)
+  })
+
+  it("acquires and reuses an admitted historical unit through the shared worker", async () => {
+    const manifest = manifestFixture()
+    const registered = await registerHistoricalManifestPage(pool, {
+      manifest,
+      sourceId: "govinfo-cfr",
+      afterUnitKey: null,
+      limit: 1
+    })
+    const unit = manifest.units.find((candidate) => candidate.key === registered.nextUnitKey)
+    if (unit === undefined) throw new Error("Missing registered historical unit")
+    const body = await readFile(new URL("./fixtures/cfr-2024-title1-excerpt.xml", import.meta.url), "utf8")
+    let requests = 0
+    const client = new RegulatorySourceClient({
+      fetch: async () => {
+        requests++
+        return new Response(body, { headers: { "content-type": "application/xml" } })
+      },
+      minimumIntervalMs: 0
+    })
+    const directory = await mkdtemp(join(tmpdir(), "tabra-historical-acquisition-"))
+    const normalized = await mkdtemp(join(tmpdir(), "tabra-historical-normalized-"))
+    try {
+      const input = { manifestId: manifest.id, unitKey: unit.key, artifactDirectory: directory }
+      const first = await acquireLegalDiscoveryArtifact(pool, input, { client })
+      const replay = await acquireLegalDiscoveryArtifact(pool, input, { client })
+      expect(first).toMatchObject({ bytes: Buffer.byteLength(body), reused: false })
+      expect(replay).toEqual({ ...first, reused: true })
+      expect(requests).toBe(1)
+      const state = await pool.query(
+        "SELECT state,manifest_id,artifact_hash,artifact_bytes::integer FROM legislation.legal_discovery_units WHERE unit_key=$1",
+        [unit.key]
+      )
+      expect(state.rows[0]).toMatchObject({
+        state: "acquired",
+        manifest_id: manifest.id,
+        artifact_hash: first.artifactHash,
+        artifact_bytes: Buffer.byteLength(body)
+      })
+      const parsed = await parseLegalDiscoveryArtifact(pool, {
+        manifestId: manifest.id,
+        unitKey: unit.key,
+        outputRoot: normalized
+      })
+      expect(parsed).toMatchObject({ manifestId: manifest.id, unitKey: unit.key })
+      expect(parsed.records).toBeGreaterThan(0)
+      await expect(
+        pool.query("SELECT state,normalized_generation FROM legislation.legal_discovery_units WHERE unit_key=$1", [
+          unit.key
+        ])
+      ).resolves.toMatchObject({ rows: [{ state: "parsed", normalized_generation: parsed.generation }] })
+    } finally {
+      await Promise.all([
+        rm(directory, { recursive: true, force: true }),
+        rm(normalized, { recursive: true, force: true })
+      ])
+    }
   })
 })

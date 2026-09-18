@@ -156,6 +156,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   Federal Register exact-day metadata manifests and required publication PDFs now use the same immutable federal artifact
   store. Metadata retries prefer the already-committed manifest locator; PDF retries materialize the committed hash rather
   than relying on the acquisition worker's directory.
+  The same worker now accepts a validated full historical manifest and historical receipt, resolving its source/scope
+  from the registered row and retaining the exact artifact through the same checksum and replay boundary. A destructive
+  annual-CFR fixture acquired once and reused its cached bytes on retry. Provider-backed deployment remains open.
 - [ ] **ORCH-04 Add the parser and validation worker adapters.** Invoke the existing Python bridge with bounded
   manifests/shards, resource limits and safe failure summaries. **Done:** process exit, timeout, missing shard and
   invalid envelope leave the unit unpublished; retry preserves deterministic normalized hashes. Depends on ORCH-03.
@@ -165,6 +168,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   another worker can recreate and revalidate the exact generation after both producer scratch trees are removed. Parser
   state commits only after the durable bundle exists. Deployed runtime/resource smoke and submission/lease recovery remain
   open.
+  Historical annual-CFR units now use that same parser worker and durable normalized-bundle checkpoint. A real retained
+  annual XML fixture produced records and advanced its admitted work row to `parsed`; aggregate annual publication remains
+  separate.
 - [ ] **ORCH-05 Add publication worker adapters.** Invoke existing eCFR/FR/annual writers only after full required-unit
   validation; persist stage completion with the canonical publication transaction. **Done:** missing annual volume or
   failed outbox write cannot partially promote a title. Depends on ORCH-04, ING-11.

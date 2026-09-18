@@ -13,6 +13,20 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Extended the durable source workers across the historical/current contract instead of adding a second annual-CFR worker
+stack. Acquisition now loads either immutable manifest shape, resolves the registered row by manifest and unit identity,
+streams the official XML through the shared size/root/checksum path, retains the content-addressed artifact and commits
+the same fenced acquired state. Parsing similarly reloads either manifest and receipt shape, verifies exact unit,
+artifact and payload identity, runs the existing bounded Python/TypeScript validation bridge and commits the durable
+normalized bundle. Current-discovery behavior remains on the same entry points.
+
+The historical PostgreSQL smoke admitted one annual-CFR unit, acquired a retained publisher fixture once, reused its
+cached bytes without a second request, parsed the real annual XML into records and committed `acquired` then `parsed`
+state with the exact normalized generation. Together with the current regression, six focused database tests pass;
+formatting, scoped lint and ingestion type-check pass. This advances ORCH-03/04. Annual volumes still need the aggregate
+materialization/publication coordinator before historical publication dispatch can be enabled; no live source, Trigger,
+canonical edition, indexing, embedding or schedule work ran.
+
 Added the historical-manifest admission boundary that was missing between frozen GovInfo inventory and the durable
 source-stage controller. One complete validated backfill manifest is stored unchanged, while source-specific units are
 registered into the shared discovery work table in keyset pages capped at 100. The page identity binds the manifest,

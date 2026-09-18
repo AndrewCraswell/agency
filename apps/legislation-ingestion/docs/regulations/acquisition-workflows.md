@@ -53,10 +53,10 @@ units, stores that full manifest once, and registers only the selected source pa
 table. Pages use an exact prior-unit cursor and immutable payload hashes; retrying the same page is a no-op, while a
 foreign or stale cursor fails. Admission downloads nothing, submits no Trigger task and does not enable a schedule.
 
-After admission, the existing discovery controller can see the registered rows and create bounded stage intents. Its
-acquisition, parsing and publication services currently accept current-discovery manifests, so historical dispatch must
-remain off until those adapters use the shared historical/current import contract and annual publication coordinates all
-volumes of a title.
+After admission, the existing discovery controller can see the registered rows and create bounded stage intents. The
+shared acquisition and parsing workers now accept both historical and current manifest/receipt contracts and retain the
+same artifact and normalized checkpoints. Historical publication dispatch must remain off until the annual coordinator
+materializes every volume, proves the full title inventory and promotes all volumes atomically.
 
 `inspect:regulatory-canonical --manifest <frozen.json> --replay <complete-replay.json> --report <new-report.json>`
 checks the retained local eCFR database selected by `REGULATORY_TEST_DATABASE_URL`. It requires the exact complete

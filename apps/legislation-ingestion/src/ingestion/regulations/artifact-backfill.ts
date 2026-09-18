@@ -24,6 +24,8 @@ export const receiptSchema = z.strictObject({
   parseValidated: z.literal(false)
 })
 export const currentReceiptSchema = receiptSchema.extend({ unit: legalDiscoveryUnitSchema })
+export const regulatoryArtifactUnitSchema = z.union([acquisitionUnitSchema, legalDiscoveryUnitSchema])
+export const regulatoryArtifactReceiptSchema = z.union([receiptSchema, currentReceiptSchema])
 type RegulatoryArtifactUnit = AcquisitionUnit | LegalDiscoveryUnit
 type RegulatoryArtifactReceipt = z.infer<typeof receiptSchema> | z.infer<typeof currentReceiptSchema>
 type ReceiptSchema = typeof receiptSchema | typeof currentReceiptSchema
@@ -190,7 +192,18 @@ export async function acquireCurrentRegulatoryArtifact(
   value: unknown,
   options: { maximumBytes?: number; client?: RegulatorySourceClient } = {}
 ) {
-  const unit = legalDiscoveryUnitSchema.parse(value)
+  return currentReceiptSchema
+    .extend({ reused: z.boolean() })
+    .parse(await acquireRegulatoryArtifact(directory, legalDiscoveryUnitSchema.parse(value), options))
+}
+
+/** Acquires either a frozen historical unit or a current-discovery unit through one immutable-byte path. */
+export async function acquireRegulatoryArtifact(
+  directory: string,
+  value: unknown,
+  options: { maximumBytes?: number; client?: RegulatorySourceClient } = {}
+) {
+  const unit = regulatoryArtifactUnitSchema.parse(value)
   const maximumBytes = z
     .int()
     .positive()
@@ -203,7 +216,13 @@ export async function acquireCurrentRegulatoryArtifact(
   let receipt
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      receipt = await acquireUnit(directory, unit, client, maximumBytes, currentReceiptSchema)
+      receipt = await acquireUnit(
+        directory,
+        unit,
+        client,
+        maximumBytes,
+        unit.historical ? receiptSchema : currentReceiptSchema
+      )
       break
     } catch (error) {
       if (!(error instanceof ProviderHttpError) || !error.retryable || attempt === 2) {
@@ -215,7 +234,9 @@ export async function acquireCurrentRegulatoryArtifact(
   if (receipt === undefined) {
     throw new Error("Acquisition did not produce a receipt")
   }
-  return currentReceiptSchema.extend({ reused: z.boolean() }).parse(receipt)
+  return z
+    .union([receiptSchema.extend({ reused: z.boolean() }), currentReceiptSchema.extend({ reused: z.boolean() })])
+    .parse(receipt)
 }
 
 /** One local writer per artifact directory. No database, Azure, Trigger or source-schedule mutations. */
