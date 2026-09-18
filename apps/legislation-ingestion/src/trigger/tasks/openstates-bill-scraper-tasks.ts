@@ -35,6 +35,10 @@ function stateConcurrencyKey(state: "ak" | "nc") {
   return `production:openstates-scraper:bills:${state}`
 }
 
+export function billBatchConcurrencyKey(state: "ak" | "nc", batchId: string) {
+  return `${stateConcurrencyKey(state)}:${digestSchema.parse(batchId)}`
+}
+
 export function attemptId(state: "ak" | "nc", triggerRunId: string, attemptNumber: number) {
   const attempt = z.number().int().positive().parse(attemptNumber)
   return `${state}-bill-${createHash("sha256").update(`${triggerRunId}:${attempt}`).digest("hex").slice(0, 32)}`
@@ -133,7 +137,7 @@ export const openStatesBillScraperDispatch = task({
         const handle = await tasks.trigger(
           "openstates-bill-scraper-cloud",
           { ...payload, batchId: batch.id },
-          { concurrencyKey: stateConcurrencyKey(payload.state), idempotencyKey: key }
+          { concurrencyKey: billBatchConcurrencyKey(payload.state, batch.id), idempotencyKey: key }
         )
         return { batchId: batch.id, runId: handle.id }
       })
@@ -220,7 +224,7 @@ export const openStatesBillScraperCloud = task({
     const continuation = await tasks.trigger(
       "openstates-bill-scraper-cloud",
       { ...payload, batchId: nextBatchId },
-      { concurrencyKey: stateConcurrencyKey(payload.state), idempotencyKey: key }
+      { concurrencyKey: billBatchConcurrencyKey(payload.state, nextBatchId), idempotencyKey: key }
     )
     return { ...result, inventoryId, nextBatchId, continuationRunId: continuation.id }
   }

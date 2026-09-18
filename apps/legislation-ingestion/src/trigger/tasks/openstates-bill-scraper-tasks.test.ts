@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   assertBillPlanState,
   attemptId,
+  billBatchConcurrencyKey,
   openStatesBillCloudPayload,
   openStatesBillPlanPayload
 } from "./openstates-bill-scraper-tasks.js"
@@ -52,5 +53,13 @@ describe("hosted Open States bill scraper task contract", () => {
     expect(retry).not.toBe(first)
     expect(attemptId("ak", "run_06gb21pbhgpg8jqjlcjqmirb01", 1)).toBe(first)
     expect(() => attemptId("ak", "run_06gb21pbhgpg8jqjlcjqmirb01", 0)).toThrow()
+  })
+
+  it("isolates parallel cloud work by immutable batch identity", () => {
+    const first = "a".repeat(64)
+    const second = "b".repeat(64)
+    expect(billBatchConcurrencyKey("nc", first)).toBe(`production:openstates-scraper:bills:nc:${first}`)
+    expect(billBatchConcurrencyKey("nc", second)).not.toBe(billBatchConcurrencyKey("nc", first))
+    expect(() => billBatchConcurrencyKey("nc", "not-a-digest")).toThrow()
   })
 })
