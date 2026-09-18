@@ -90,6 +90,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
 - [ ] **ING-08 Qualify the recent FR window.** Build complete day/document inventories for the frozen 90-day window,
   including rules, proposals and notices; exhaust metadata pagination and split saturated windows. **Done:** independently
   sourced expected IDs and text/metadata/rendition outcomes reconcile for every day. Depends on ING-01, ING-05–06.
+  Local progress: GovInfo's complete 2020–2024 monthly bulk inventory is frozen and replay-verified at 1,248 daily XML
+  issues and 4,016,059,961 listed bytes. All 60 months still require independent FederalRegister.gov document metadata;
+  bulk issue presence alone does not close this task.
 - [ ] **ING-09 Finish source-agency mapping.** Persist publisher agency IDs/names and reviewed mappings to existing
   organization identities; preserve unresolved aliases and multiple issuing agencies. **Done:** unknown aliases remain
   searchable as source references without creating fictitious organizations or dropping documents.
@@ -118,6 +121,8 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   reused the exact published annual edition. The complete 2020–2024 and available-title 2025 manifests are now admitted
   to the retained canonical recovery database: 1,390 registered units across 15 replay-bound pages. Volume
   acquisition/import fan-out and a deployed Trigger run remain open.
+  The separate Federal Register 2020–2024 manifest is also admitted locally: 1,248 registered daily issue units across
+  13 pages, with an apply-ready controller preview. Independent document metadata and deployed fan-out remain open.
 - [ ] **ING-14 Qualify extended history.** Sample each source-format era, then freeze FR 2000–2019/CFR 1996–2019 units
   with missing XML and alternate-rendition policies. **Done:** representative years and known defect fixtures pass;
   no pre-2000 FR XML assumption leaks into the supported manifest. Depends on ING-06, ING-12.

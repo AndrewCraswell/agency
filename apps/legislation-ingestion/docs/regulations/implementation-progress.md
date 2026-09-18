@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Froze, replayed and admitted the complete GovInfo Federal Register bulk-XML issue inventory for January 2020 through
+December 2024. Manifest `ac666b7b72bcc6f54389853affdea47ddeb89244b1a03dcf5fc7c74d9af11705` binds all 60 monthly
+listings, 1,248 daily issue units and 4,016,059,961 listed bytes with zero unknown sizes. Every month contains 18–23
+listed issues; annual counts are 251, 248, 250, 249 and 250 respectively. Exact offline replay reproduced the manifest
+identity and complete unit set without source requests.
+
+The local recovery database admitted all 1,248 issue units in 13 exact registration pages (twelve pages of 100 and one
+page of 48) under scope `edff68e225575f03e4678c2c82be49678aaa0ac71dd22aa9c446878ebe5d2442`. PostgreSQL
+reconciliation finds exactly 1,248 rows in `registered` state and a revision-13 terminal checkpoint. The read-only
+controller preview reconciles all 1,248 as manifested and runnable, with zero acquired, parsed, published, quarantined or
+existing dispatch rows; it is apply-ready as plan
+`29804528f92829699734f7559443ee0bc8759140cbf1c4716bba28b99aa37029`.
+
+All 60 delivery partitions intentionally remain `needs_independent_inventory`: a complete daily issue-file listing does
+not establish the document denominator inside each issue. FederalRegister.gov metadata collection/reconciliation and
+deployed Trigger/storage acceptance remain required before publication. No XML body was downloaded and no Trigger,
+canonical publication, index, embedding or schedule state changed.
+
 Admitted both replay-verified annual-CFR release manifests into the retained canonical recovery database through the
 bounded historical registration boundary. The 2020–2024 manifest registered all 1,219 volumes in 13 ordered pages
 (twelve pages of 100 and one page of 19) under scope
