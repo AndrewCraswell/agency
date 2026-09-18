@@ -28,6 +28,11 @@ const LEXICAL_BILL_CANDIDATE_LIMIT = 1_000
 const LEXICAL_BILL_VERSION_CANDIDATE_LIMIT = 1_000
 const MAXIMUM_LIMIT = 100
 const MAXIMUM_QUERY_LENGTH = 500
+// Selective passage filters cannot be applied inside the global HNSW graph.
+// Retrieve a bounded semantic window first, then filter it in bulk. Production
+// acceptance found 20,000 candidates sufficient for the currently onboarded
+// state corpora while remaining below the request deadline on a cold cache.
+const SEMANTIC_PASSAGE_FILTER_CANDIDATE_LIMIT = 20_000
 const {
   embedding: _billEmbedding,
   embeddingInputHash: _billEmbeddingInputHash,
@@ -1203,6 +1208,8 @@ export function buildSemanticPassageSearchQuery(
   const offset = decodePassageSearchCursor(input.cursor, { ...input, query: "semantic" })
   const distance = sql<number>`${documentSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const snippet = sql<string | null>`left(${documentSections.text}, 1200)`
+  const filters = passageFilters(input)
+  const nearestLimit = filters.length === 0 ? limit + offset + 1 : SEMANTIC_PASSAGE_FILTER_CANDIDATE_LIMIT
   // Keep the HNSW order expression as the only nearest-neighbor ordering in
   // the bounded CTE. Adding a stable ID tie-breaker to this scan disables the
   // vector index and turns passage search into a full embedding-table sort.
@@ -1210,35 +1217,41 @@ export function buildSemanticPassageSearchQuery(
     database
       .select({ distance: distance.as("distance"), sectionId: documentSectionEmbeddings.sectionId })
       .from(documentSectionEmbeddings)
-      .innerJoin(documentSections, eq(documentSectionEmbeddings.sectionId, documentSections.id))
-      .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
-      .innerJoin(bills, eq(billDocuments.billId, bills.id))
       .where(
         and(
           eq(documentSectionEmbeddings.model, route.model),
-          eq(documentSectionEmbeddings.inputContract, route.embeddingInputContract),
-          eq(billDocuments.processingStatus, "processed"),
-          ...passageFilters(input)
+          eq(documentSectionEmbeddings.inputContract, route.embeddingInputContract)
         )
       )
       .orderBy(asc(distance))
+      .limit(nearestLimit)
+  )
+  const candidates = database.$with("filtered_passage_embeddings").as(
+    database
+      .select({ distance: nearest.distance, sectionId: nearest.sectionId })
+      .from(nearest)
+      .innerJoin(documentSections, eq(nearest.sectionId, documentSections.id))
+      .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+      .innerJoin(bills, eq(billDocuments.billId, bills.id))
+      .where(and(eq(billDocuments.processingStatus, "processed"), ...filters))
+      .orderBy(asc(nearest.distance), asc(nearest.sectionId))
       .limit(limit + 1)
       .offset(offset)
   )
   return database
-    .with(nearest)
+    .with(nearest, candidates)
     .select(
       passageSelection(
-        semanticSimilarityScore(sql<number>`${nearest.distance}`),
+        semanticSimilarityScore(sql<number>`${candidates.distance}`),
         snippet,
-        sql<number>`${nearest.distance}`
+        sql<number>`${candidates.distance}`
       )
     )
-    .from(nearest)
-    .innerJoin(documentSections, eq(nearest.sectionId, documentSections.id))
+    .from(candidates)
+    .innerJoin(documentSections, eq(candidates.sectionId, documentSections.id))
     .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
     .innerJoin(bills, eq(billDocuments.billId, bills.id))
-    .orderBy(asc(nearest.distance), asc(documentSections.id))
+    .orderBy(asc(candidates.distance), asc(documentSections.id))
 }
 
 export async function semanticPassageSearch(
@@ -1250,13 +1263,13 @@ export async function semanticPassageSearch(
   // HNSW settings are read when PostgreSQL initializes the index scan. A CTE
   // in the same statement is too late and can leave a selective jurisdiction
   // query with no matches. Pin the settings and query to one transaction so
-  // iterative scanning can continue until the joined filters yield enough
-  // candidates.
+  // iterative scanning can fill the bounded global candidate window before
+  // the relational filters are applied in bulk.
   const rows = await database.transaction(async (transaction) => {
     await transaction.execute(sql`select
-      set_config('hnsw.ef_search', '1000', true),
-      set_config('hnsw.iterative_scan', 'strict_order', true),
-      set_config('hnsw.max_scan_tuples', '200000', true)`)
+      set_config('hnsw.ef_search', '100', true),
+      set_config('hnsw.iterative_scan', 'relaxed_order', true),
+      set_config('hnsw.max_scan_tuples', '50000', true)`)
     return await buildSemanticPassageSearchQuery(transaction, input)
   })
   return {

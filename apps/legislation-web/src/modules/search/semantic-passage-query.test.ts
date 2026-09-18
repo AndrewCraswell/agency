@@ -23,10 +23,12 @@ describe("semantic passage query", () => {
     const nearest = query.sql.slice(0, nearestEnd === -1 ? undefined : nearestEnd)
 
     expect(nearest).toContain('"nearest_passage_embeddings" as')
+    expect(nearest).toContain('"filtered_passage_embeddings" as')
     expect(nearest).toContain('order by "legislation"."document_section_embeddings"."embedding" <=>')
     expect(nearest).not.toContain('order by "legislation"."document_section_embeddings"."embedding" <=> $1::vector,')
     expect(nearest).toContain("limit")
+    expect(nearest).toContain('order by "distance" asc, "nearest_passage_embeddings"."section_id" asc')
     expect(query.sql).toContain('order by "distance" asc, "legislation"."document_sections"."id" asc')
-    expect(query.params).toEqual(expect.arrayContaining(["jurisdiction:ak", 26]))
+    expect(query.params).toEqual(expect.arrayContaining([20_000, "jurisdiction:ak", 26]))
   })
 })
