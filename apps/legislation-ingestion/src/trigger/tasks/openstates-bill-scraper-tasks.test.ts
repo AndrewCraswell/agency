@@ -22,7 +22,7 @@ describe("hosted Open States bill scraper task contract", () => {
     expect(source).toContain("dispatchCloudScraperAttempt")
     expect(source).toContain("refillBillScraper")
     expect(source).toContain("schedules.task")
-    expect(source).toContain('"openstates-content-controller"')
+    expect(source).toContain('"openstates-scraper-person-reconcile"')
     expect(source).not.toContain("OPENSTATES_API_KEY")
   })
 

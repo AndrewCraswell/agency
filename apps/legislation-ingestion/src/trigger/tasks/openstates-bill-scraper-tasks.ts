@@ -241,16 +241,16 @@ async function refillBillScraper(
 }
 
 async function dispatchStateContent(state: "ak" | "nc", session: string, inventoryId: string, completed?: number) {
-  const key = await idempotencyKeys.create(`${state}-bills:content:${inventoryId}`, { scope: "global" })
+  const key = await idempotencyKeys.create(`${state}-bills:people:${inventoryId}`, { scope: "global" })
   const handle = await tasks.trigger(
-    "openstates-content-controller",
-    { state, session, billConcurrency: 2, billLimit: 8, maxContinuations: 10 },
-    { concurrencyKey: `${state}:${session}`, idempotencyKey: key }
+    "openstates-scraper-person-reconcile",
+    { state, session, inventoryId },
+    { concurrencyKey: stateConcurrencyKey(state), idempotencyKey: key }
   )
   return {
     status: "cycle_promoted" as const,
     inventoryId,
     ...(completed === undefined ? {} : { completed }),
-    contentRunId: handle.id
+    reconciliationRunId: handle.id
   }
 }
