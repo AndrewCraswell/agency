@@ -180,7 +180,13 @@ export const openStatesBillScraperCloud = task({
       const selected = requested ? payload.batchId : before.pending[0]?.id
       if (!selected) {
         if (before.promotionComplete) {
-          return await dispatchStateContent(payload.state, plan.session, inventoryId, before.promotedBatches)
+          return await dispatchStateContent(
+            payload.state,
+            plan.session,
+            inventoryId,
+            payload.planPath,
+            before.promotedBatches
+          )
         }
         return {
           status: "awaiting_in_flight_batches" as const,
@@ -214,7 +220,11 @@ export const openStatesBillScraperCloud = task({
       await pool.end()
     }
     const plan = await readScraperBillPlan(store, payload.planPath)
-    return { ...result, ...(await dispatchStateContent(payload.state, plan.session, inventoryId)), pending: 0 }
+    return {
+      ...result,
+      ...(await dispatchStateContent(payload.state, plan.session, inventoryId, payload.planPath)),
+      pending: 0
+    }
   }
 })
 
@@ -240,11 +250,17 @@ async function refillBillScraper(
   }
 }
 
-async function dispatchStateContent(state: "ak" | "nc", session: string, inventoryId: string, completed?: number) {
+async function dispatchStateContent(
+  state: "ak" | "nc",
+  session: string,
+  inventoryId: string,
+  planPath: string,
+  completed?: number
+) {
   const key = await idempotencyKeys.create(`${state}-bills:people:${inventoryId}`, { scope: "global" })
   const handle = await tasks.trigger(
     "openstates-scraper-person-reconcile",
-    { state, session, inventoryId },
+    { state, session, inventoryId, planPath },
     { concurrencyKey: stateConcurrencyKey(state), idempotencyKey: key }
   )
   return {

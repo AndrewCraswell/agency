@@ -1,18 +1,74 @@
 import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
-import { openStatesPersonReconciliationPayload } from "./openstates-person-reconciliation.js"
+import {
+  assertCompletedPersonReconciliationCycle,
+  openStatesPersonReconciliationPayload
+} from "./openstates-person-reconciliation.js"
 
 describe("Open States person reconciliation task", () => {
   it("binds one exact state session to one immutable inventory", () => {
     expect(
-      openStatesPersonReconciliationPayload.parse({ state: "ak", session: "34", inventoryId: "a".repeat(64) })
-    ).toEqual({ state: "ak", session: "34", inventoryId: "a".repeat(64) })
+      openStatesPersonReconciliationPayload.parse({
+        state: "ak",
+        session: "34",
+        inventoryId: "a".repeat(64),
+        planPath: "openstates/scraper-plans/ak/34/ak-bills-cycle/plan.json"
+      })
+    ).toEqual({
+      state: "ak",
+      session: "34",
+      inventoryId: "a".repeat(64),
+      planPath: "openstates/scraper-plans/ak/34/ak-bills-cycle/plan.json"
+    })
     expect(() =>
-      openStatesPersonReconciliationPayload.parse({ state: "ak", session: "34", inventoryId: "not-a-digest" })
+      openStatesPersonReconciliationPayload.parse({
+        state: "ak",
+        session: "34",
+        inventoryId: "not-a-digest",
+        planPath: "openstates/scraper-plans/ak/34/ak-bills-cycle/plan.json"
+      })
     ).toThrow()
     expect(() =>
-      openStatesPersonReconciliationPayload.parse({ state: "ca", session: "2025", inventoryId: "a".repeat(64) })
+      openStatesPersonReconciliationPayload.parse({
+        state: "ca",
+        session: "2025",
+        inventoryId: "a".repeat(64),
+        planPath: "openstates/scraper-plans/nc/2025/nc-bills-cycle/plan.json"
+      })
     ).toThrow()
+  })
+
+  it("requires receipt-ledger completion for the exact frozen plan", () => {
+    const payload = openStatesPersonReconciliationPayload.parse({
+      state: "nc",
+      session: "2025",
+      inventoryId: "a".repeat(64),
+      planPath: "openstates/scraper-plans/nc/2025/nc-bills-cycle/plan.json"
+    })
+    expect(() =>
+      assertCompletedPersonReconciliationCycle(payload, {
+        inventoryId: payload.inventoryId,
+        promotionComplete: false
+      })
+    ).toThrow("fully promoted")
+    expect(() =>
+      assertCompletedPersonReconciliationCycle(payload, {
+        inventoryId: "b".repeat(64),
+        promotionComplete: true
+      })
+    ).toThrow("inventory")
+    expect(() =>
+      assertCompletedPersonReconciliationCycle(
+        { ...payload, state: "ak" },
+        { inventoryId: payload.inventoryId, promotionComplete: true }
+      )
+    ).toThrow("state and session")
+    expect(() =>
+      assertCompletedPersonReconciliationCycle(payload, {
+        inventoryId: payload.inventoryId,
+        promotionComplete: true
+      })
+    ).not.toThrow()
   })
 
   it("applies the deterministic null-only plan before dispatching content", async () => {
