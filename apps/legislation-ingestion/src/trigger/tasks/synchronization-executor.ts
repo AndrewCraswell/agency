@@ -6,6 +6,7 @@ import { DERIVED_DOCUMENT_BATCH_SIZE } from "../../ingestion/backfill/derived.js
 import { DOCUMENT_BACKFILL_SHARD_COUNT, documentBackfillJurisdictionLane } from "../../ingestion/documents/jobs.js"
 import { executeGovInfoCurrentSynchronization } from "../../ingestion/govinfo/sync.js"
 import { ingestionFailureSummary, JobAlreadyRunningError, type JobResult } from "../../ingestion/job.js"
+import { createGovInfoProviderRequestAdmission } from "../../ingestion/provider-request-admission.js"
 import { executeSynchronization } from "../../ingestion/synchronization/synchronize.js"
 import type { derivedShardBackfillController } from "./backfill-tasks.js"
 import type { SynchronizationWorkerDispatchIntent } from "./worker-contract.js"
@@ -52,13 +53,16 @@ export async function executeSynchronizationTask(
   try {
     const result =
       intent.identity.provider === "govinfo"
-        ? await executeGovInfoCurrentSynchronization({
-            config,
-            congress: intent.identity.scope,
-            correlationId: intent.correlationId ?? `trigger:${triggerRunId}`,
-            database,
-            workflowExecutionId: triggerRunId
-          })
+        ? await executeGovInfoCurrentSynchronization(
+            {
+              config,
+              congress: intent.identity.scope,
+              correlationId: intent.correlationId ?? `trigger:${triggerRunId}`,
+              database,
+              workflowExecutionId: triggerRunId
+            },
+            { providerAdmission: createGovInfoProviderRequestAdmission(pool) }
+          )
         : await executeSynchronization({
             config,
             correlationId: intent.correlationId ?? `trigger:${triggerRunId}`,

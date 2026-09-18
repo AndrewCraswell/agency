@@ -1,6 +1,6 @@
 import type pg from "pg"
 import { z } from "zod"
-import { DeferredHttpRequestError, type HttpRequestTelemetry } from "../http-client.js"
+import { DeferredHttpRequestError, type HttpRequestTelemetry } from "./http-client.js"
 
 const providerSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
 const intervalSchema = z.number().int().min(1).max(60_000)
@@ -162,6 +162,14 @@ export class PostgresProviderRequestAdmissionStore implements ProviderRequestAdm
       client.release()
     }
   }
+}
+
+/** One shared key covers GovInfo API, bulk and rendition traffic in Trigger workers. */
+export function createGovInfoProviderRequestAdmission(pool: pg.Pool) {
+  return new ProviderRequestAdmission(new PostgresProviderRequestAdmissionStore(pool), {
+    provider: "govinfo",
+    minimumIntervalMs: 500
+  })
 }
 
 function delay(milliseconds: number): Promise<void> {

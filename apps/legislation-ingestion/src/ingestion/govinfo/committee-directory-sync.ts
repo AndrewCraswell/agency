@@ -15,6 +15,7 @@ import type { LegislationConfig } from "../../config/config.js"
 import { replaceEntitySnapshot } from "../../persistence/entities.js"
 import { RetryingHttpClient } from "../http-client.js"
 import { createJobCounts, runIngestionJob, type JobResult } from "../job.js"
+import type { ProviderRequestAdmission } from "../provider-request-admission.js"
 import { GovInfoCommitteeDirectoryClient } from "./committee-directory-client.js"
 import { normalizeGovInfoCommitteeDirectory, type GovInfoPersonCatalog } from "./committee-directory-normalize.js"
 import { committeeRosterFingerprint, directoryDetectionDate } from "./committee-directory-observation.js"
@@ -35,6 +36,7 @@ export interface GovInfoCommitteeSynchronizationDependencies {
   client?: CommitteeDirectoryClient
   loadCatalog?: (database: LegislationDatabase) => Promise<GovInfoPersonCatalog>
   now?: () => Date
+  providerAdmission?: ProviderRequestAdmission
 }
 
 /** Applies reviewed Congressional Directory editions with atomic coverage assessments and distinct observed tenures. */
@@ -46,7 +48,7 @@ export async function executeGovInfoCommitteeSynchronization(
     throw new Error("GovInfo committee Congress must be a positive integer")
   }
   const stream = `govinfo:committee-directory:${input.congress}`
-  const client = dependencies.client ?? createClient(input.config)
+  const client = dependencies.client ?? createClient(input.config, dependencies.providerAdmission)
   const loadCatalog = dependencies.loadCatalog ?? loadFederalPersonCatalog
   const jobInput = {
     checkpointStream: stream,
@@ -391,14 +393,16 @@ async function readCheckpoint(database: LegislationDatabase, stream: string) {
   }
 }
 
-function createClient(config: LegislationConfig): CommitteeDirectoryClient {
+function createClient(config: LegislationConfig, admission?: ProviderRequestAdmission): CommitteeDirectoryClient {
   const apiKey = config.ingestion.govInfoApiKey
   if (apiKey === undefined) {
     throw new Error("GOVINFO_API_KEY is required for GovInfo committee synchronization")
   }
   const http = new RetryingHttpClient({
+    afterAttemptComplete: admission === undefined ? undefined : (telemetry) => admission.afterAttempt(telemetry),
+    beforeAttempt: admission === undefined ? undefined : () => admission.beforeAttempt(),
     maxAttempts: config.ingestion.maxAttempts,
-    minimumIntervalMs: 100,
+    minimumIntervalMs: admission === undefined ? 100 : 0,
     requestTimeoutMs: config.ingestion.requestTimeoutMs
   })
   return new GovInfoCommitteeDirectoryClient({

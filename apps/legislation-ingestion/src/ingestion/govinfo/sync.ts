@@ -7,6 +7,7 @@ import { DEFAULT_GOVINFO_BILL_TYPES } from "../backfill/backfill.js"
 import { AzureBlobArtifactStore } from "../documents/artifact-store.js"
 import { RetryingHttpClient } from "../http-client.js"
 import { runIngestionJob, type JobResult } from "../job.js"
+import type { ProviderRequestAdmission } from "../provider-request-admission.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../source-store.js"
 import { GovInfoApiClient } from "./api-client.js"
 import { GovInfoClient } from "./client.js"
@@ -33,6 +34,7 @@ export type GovInfoCurrentSynchronizationDependencies = Readonly<{
   readObservedThrough?: (database: LegislationDatabase, stream: string) => Promise<Date | undefined>
   runIngestionJob?: typeof runIngestionJob
   sourceStore?: SourceStore
+  providerAdmission?: ProviderRequestAdmission
 }>
 
 /** Synchronizes new and revised BILLSTATUS packages for one current Congress. */
@@ -54,7 +56,7 @@ export async function executeGovInfoCurrentSynchronization(
   const observedThrough = new Date(Math.floor(now.getTime() / 1_000) * 1_000)
   const stream = `govinfo:bill-status:${input.congress}`
   const readCursor = dependencies.readObservedThrough ?? readObservedThroughCheckpoint
-  const client = dependencies.client ?? createClient(input.config)
+  const client = dependencies.client ?? createClient(input.config, dependencies.providerAdmission)
   const sourceStore = dependencies.sourceStore ?? createSourceStore(input.config)
   const importPackages = dependencies.importPackages ?? importGovInfoPackages
   const run = dependencies.runIngestionJob ?? runIngestionJob
@@ -116,14 +118,16 @@ async function readObservedThroughCheckpoint(database: LegislationDatabase, stre
   return Number.isNaN(observedThrough.getTime()) ? undefined : observedThrough
 }
 
-function createClient(config: LegislationConfig): GovInfoCurrentClient {
+function createClient(config: LegislationConfig, admission?: ProviderRequestAdmission): GovInfoCurrentClient {
   const apiKey = config.ingestion.govInfoApiKey
   if (apiKey === undefined) {
     throw new Error("GOVINFO_API_KEY is required for recurring GovInfo synchronization")
   }
   const http = new RetryingHttpClient({
+    afterAttemptComplete: admission === undefined ? undefined : (telemetry) => admission.afterAttempt(telemetry),
+    beforeAttempt: admission === undefined ? undefined : () => admission.beforeAttempt(),
     maxAttempts: config.ingestion.maxAttempts,
-    minimumIntervalMs: 100,
+    minimumIntervalMs: admission === undefined ? 100 : 0,
     requestTimeoutMs: config.ingestion.requestTimeoutMs
   })
   const api = new GovInfoApiClient({ apiKey, baseUrl: new URL(config.ingestion.govInfoApiUrl), http })

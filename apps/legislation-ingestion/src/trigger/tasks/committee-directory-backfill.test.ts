@@ -61,13 +61,16 @@ describe("manual committee directory backfill", () => {
     await expect(runCommitteeDirectoryBackfill({ congress: 118 }, "trigger-run")).resolves.toMatchObject({
       status: "succeeded"
     })
-    expect(executeGovInfoCommitteeSynchronization).toHaveBeenCalledWith({
-      config: expect.anything(),
-      database: connection.database,
-      congress: 118,
-      correlationId: "trigger:trigger-run",
-      workflowExecutionId: "trigger-run"
-    })
+    expect(executeGovInfoCommitteeSynchronization).toHaveBeenCalledWith(
+      {
+        config: expect.anything(),
+        database: connection.database,
+        congress: 118,
+        correlationId: "trigger:trigger-run",
+        workflowExecutionId: "trigger-run"
+      },
+      { providerAdmission: expect.anything() }
+    )
     expect(end).toHaveBeenCalledOnce()
   })
 

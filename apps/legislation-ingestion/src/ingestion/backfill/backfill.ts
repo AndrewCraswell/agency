@@ -11,6 +11,7 @@ import { runIngestionJob, type JobResult } from "../job.js"
 import { openStatesJurisdictionNames } from "../openstates/coverage.js"
 import { importOpenStatesRecords, type OpenStatesImportResult } from "../openstates/import.js"
 import { parseOpenStatesManifest, type OpenStatesManifest } from "../openstates/manifest.js"
+import type { ProviderRequestAdmission } from "../provider-request-admission.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../source-store.js"
 
 export const DEFAULT_GOVINFO_BILL_TYPES = ["hr", "s", "hjres", "sjres", "hconres", "sconres", "hres", "sres"] as const
@@ -70,6 +71,7 @@ export type GovInfoBackfillDependencies = Readonly<{
   govInfoClient?: GovInfoBackfillClient
   importGovInfoPackages?: typeof importGovInfoPackages
   onProgress?: (event: BackfillProgressEvent) => void
+  providerAdmission?: ProviderRequestAdmission
   runIngestionJob?: typeof runIngestionJob
   sourceStore?: SourceStore
 }>
@@ -138,7 +140,7 @@ export async function executeGovInfoHistoricalImport(
   dependencies: GovInfoBackfillDependencies = {}
 ): Promise<JobResult> {
   const scope = normalizeGovInfoScope(input)
-  const client = dependencies.govInfoClient ?? createGovInfoClient(input.config)
+  const client = dependencies.govInfoClient ?? createGovInfoClient(input.config, dependencies.providerAdmission)
   const sourceStore = dependencies.sourceStore ?? createSourceStore(input.config, "federal")
   const importPackages = dependencies.importGovInfoPackages ?? importGovInfoPackages
   const run = dependencies.runIngestionJob ?? runIngestionJob
@@ -300,9 +302,11 @@ function createOpenStatesArchiveClient(config: LegislationConfig): ArchiveDownlo
   })
 }
 
-function createGovInfoClient(config: LegislationConfig): GovInfoBackfillClient {
+function createGovInfoClient(config: LegislationConfig, admission?: ProviderRequestAdmission): GovInfoBackfillClient {
   return new GovInfoClient(
     new RetryingHttpClient({
+      afterAttemptComplete: admission === undefined ? undefined : (telemetry) => admission.afterAttempt(telemetry),
+      beforeAttempt: admission === undefined ? undefined : () => admission.beforeAttempt(),
       maxAttempts: config.ingestion.maxAttempts,
       requestTimeoutMs: config.ingestion.requestTimeoutMs
     })

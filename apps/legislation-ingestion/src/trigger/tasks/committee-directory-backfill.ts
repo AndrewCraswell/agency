@@ -3,6 +3,7 @@ import { schemaTask } from "@trigger.dev/sdk"
 import { z } from "zod"
 import { loadConfig } from "../../config/config.js"
 import { executeGovInfoCommitteeSynchronization } from "../../ingestion/govinfo/committee-directory-sync.js"
+import { createGovInfoProviderRequestAdmission } from "../../ingestion/provider-request-admission.js"
 import { requireSuccessfulSynchronizationResult } from "./synchronization-executor.js"
 
 export const committeeDirectoryBackfillPayload = z.strictObject({ congress: z.number().int().min(105).max(118) })
@@ -24,13 +25,16 @@ export async function runCommitteeDirectoryBackfill(payload: unknown, runId: str
   const { database, pool } = createDatabase(config.database)
   try {
     return requireSuccessfulSynchronizationResult(
-      await executeGovInfoCommitteeSynchronization({
-        config,
-        congress,
-        correlationId: `trigger:${runId}`,
-        database,
-        workflowExecutionId: runId
-      })
+      await executeGovInfoCommitteeSynchronization(
+        {
+          config,
+          congress,
+          correlationId: `trigger:${runId}`,
+          database,
+          workflowExecutionId: runId
+        },
+        { providerAdmission: createGovInfoProviderRequestAdmission(pool) }
+      )
     )
   } finally {
     await pool.end()

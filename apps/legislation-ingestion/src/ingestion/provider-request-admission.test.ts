@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { DeferredHttpRequestError, type HttpRequestTelemetry } from "../http-client.js"
+import { DeferredHttpRequestError, type HttpRequestTelemetry } from "./http-client.js"
 import { ProviderRequestAdmission, type ProviderRequestAdmissionStore } from "./provider-request-admission.js"
 
 class MemoryStore implements ProviderRequestAdmissionStore {

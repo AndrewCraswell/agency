@@ -5,11 +5,11 @@ import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import type { FileArtifactStore } from "../documents/artifact-store.js"
+import { createGovInfoProviderRequestAdmission } from "../provider-request-admission.js"
 import { materializeRegulatoryArtifact, retainRegulatoryArtifact } from "./durable-artifact.js"
 import { frMetadataRecordSchema, normalizeFrDocumentNumber } from "./fr-metadata-contract.js"
 import { validateFrPdfEvidence, validateFrPdfInWorker } from "./fr-pdf-validation.js"
 import { acquireFrPdfs, pdfReceiptSchema } from "./fr-pdf.js"
-import { PostgresProviderRequestAdmissionStore, ProviderRequestAdmission } from "./provider-request-admission.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
@@ -93,10 +93,7 @@ export async function processFrRendition(
   const directory = join(input.pdfRoot, input.unitKey)
   try {
     if (claimed.state === "pending") {
-      const admission = new ProviderRequestAdmission(new PostgresProviderRequestAdmissionStore(pool), {
-        provider: "govinfo",
-        minimumIntervalMs: 500
-      })
+      const admission = createGovInfoProviderRequestAdmission(pool)
       const sourceClient =
         options.sourceClient ??
         new RegulatorySourceClient({

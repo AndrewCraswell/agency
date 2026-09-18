@@ -3,6 +3,7 @@ import { schedules } from "@trigger.dev/sdk"
 import { loadConfig } from "../../config/config.js"
 import { executeGovInfoCommitteeSynchronization } from "../../ingestion/govinfo/committee-directory-sync.js"
 import { JobAlreadyRunningError } from "../../ingestion/job.js"
+import { createGovInfoProviderRequestAdmission } from "../../ingestion/provider-request-admission.js"
 import { requireSuccessfulSynchronizationResult } from "./synchronization-executor.js"
 
 /** New directory editions are infrequent; poll daily without replaying historical Congresses. */
@@ -16,13 +17,16 @@ export const committeeDirectorySync = schedules.task({
     const { database, pool } = createDatabase(config.database)
     try {
       return requireSuccessfulSynchronizationResult(
-        await executeGovInfoCommitteeSynchronization({
-          config,
-          congress: config.ingestion.federalEndCongress,
-          correlationId: `trigger:${ctx.run.id}`,
-          database,
-          workflowExecutionId: ctx.run.id
-        })
+        await executeGovInfoCommitteeSynchronization(
+          {
+            config,
+            congress: config.ingestion.federalEndCongress,
+            correlationId: `trigger:${ctx.run.id}`,
+            database,
+            workflowExecutionId: ctx.run.id
+          },
+          { providerAdmission: createGovInfoProviderRequestAdmission(pool) }
+        )
       )
     } catch (error) {
       if (error instanceof JobAlreadyRunningError) {

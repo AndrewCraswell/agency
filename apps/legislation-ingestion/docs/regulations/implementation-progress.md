@@ -4446,13 +4446,17 @@ parents and rendition workers therefore share the same `govinfo` start budget.
 HTTP telemetry now reaches the regulatory source client. A 429 atomically extends both `cooldownUntil` and
 `nextRequestAt` by the bounded `Retry-After` interval before the request yields to the existing randomized Trigger retry.
 Other provider keys use independent locks and checkpoints. Response bodies are cancelled if an after-attempt observer
-defers the request, preventing a streamed error response from leaking its connection.
+defers the request, preventing a streamed error response from leaking its connection. The shared implementation now sits
+at the ingestion root rather than inside the regulatory adapter. Federal Register renditions, current GovInfo bill-status
+synchronization, current and historical committee-directory tasks, and historical BILLSTATUS backfills all construct the
+same `govinfo` admission key from their task database pool. Local CLI operations keep their existing process-local pacing.
 
 Focused verification passed 27 HTTP/client/admission/PDF tests and one real PostgreSQL concurrency test against the
 dedicated `regulations_destructive_test` database. That database test uses two store instances to prove shared pacing,
-durable cooldown and continued admission for an unrelated provider. The app type-check and scoped oxlint pass. This is
-local evidence: legislative GovInfo clients still need the shared key, and a deployed multi-parent PDF run remains open.
-Recurring ingestion and bulk regulatory embeddings remain disabled.
+durable cooldown and continued admission for an unrelated provider. Sixty-six focused ingestion and Trigger workflow
+tests pass after the shared legislative wiring, along with the app type-check and scoped oxlint. This is local evidence;
+a deployed multi-parent PDF and legislative-source run remains open. Recurring ingestion and bulk regulatory embeddings
+remain disabled.
 
 ## Complete January 2, 2020 Federal Register rendition and publication canary
 

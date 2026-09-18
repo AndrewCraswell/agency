@@ -31,6 +31,7 @@ import {
   recoverRetriedIngestionJob,
   type JobResult
 } from "../../ingestion/job.js"
+import { createGovInfoProviderRequestAdmission } from "../../ingestion/provider-request-admission.js"
 import { executeSynchronization } from "../../ingestion/synchronization/synchronize.js"
 import { acquireIndexMaintenanceLock, releaseIndexMaintenanceLock } from "../../persistence/index-maintenance.js"
 import { validateCorpus } from "../../validation/corpus.js"
@@ -339,17 +340,20 @@ export const govInfoHistoryBackfill = task({
   queue: federalHistoryQueue,
   run: async (unparsedPayload: unknown, { ctx }) => {
     const payload = govInfoHistoryPayloadSchema.parse(unparsedPayload)
-    return withDatabase(async (database) =>
+    return withDatabase(async (database, pool) =>
       requireSuccessfulJobResult(
-        await executeGovInfoHistoricalImport({
-          billTypes: payload.billTypes,
-          config: loadConfig(),
-          correlationId: payload.correlationId,
-          database,
-          endCongress: payload.endCongress,
-          startCongress: payload.startCongress,
-          workflowExecutionId: ctx.run.id
-        })
+        await executeGovInfoHistoricalImport(
+          {
+            billTypes: payload.billTypes,
+            config: loadConfig(),
+            correlationId: payload.correlationId,
+            database,
+            endCongress: payload.endCongress,
+            startCongress: payload.startCongress,
+            workflowExecutionId: ctx.run.id
+          },
+          { providerAdmission: createGovInfoProviderRequestAdmission(pool) }
+        )
       )
     )
   }
@@ -1324,11 +1328,13 @@ function requireSuccessfulJobResult(result: JobResult): JobResult {
   return result
 }
 
-async function withDatabase<Result>(execute: (database: LegislationDatabase) => Promise<Result>): Promise<Result> {
+async function withDatabase<Result>(
+  execute: (database: LegislationDatabase, pool: ReturnType<typeof createDatabase>["pool"]) => Promise<Result>
+): Promise<Result> {
   const config = loadConfig()
   const { database, pool } = createDatabase(config.database)
   try {
-    return await execute(database)
+    return await execute(database, pool)
   } finally {
     await pool.end()
   }

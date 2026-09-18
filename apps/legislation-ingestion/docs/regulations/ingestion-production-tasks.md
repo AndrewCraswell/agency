@@ -195,8 +195,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   uploads the verified file to the configured immutable federal source store and atomically records its content-addressed
   locator and receipt on the registered discovery row. Retry revalidates retained bytes, including an existing remote
   object. Federal Register rendition workers now reserve GovInfo request starts through one database-backed provider
-  checkpoint and persist provider cooldown before yielding a 429 to Trigger retry. Persisted worker leases, wiring the
-  same admission into non-regulatory GovInfo callers and deployed storage verification remain open.
+  checkpoint and persist provider cooldown before yielding a 429 to Trigger retry. GovInfo bill-status synchronization,
+  committee synchronization and historical backfills now use that same checkpoint. Persisted worker leases and deployed
+  storage verification remain open.
   Federal Register exact-day metadata manifests and required publication PDFs now use the same immutable federal artifact
   store. Metadata retries prefer the already-committed manifest locator; PDF retries materialize the committed hash rather
   than relying on the acquisition worker's directory.
@@ -286,8 +287,10 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   the transaction, sleep and recheck durable state before starting. HTTP 429 telemetry extends both the provider cooldown
   and next-start boundary using bounded `Retry-After`; the task's existing randomized Trigger retry handles deferred
   attempts. A real two-client PostgreSQL test proves pacing, shared cooldown and independent progress for another
-  provider. Remaining: route legislative GovInfo API/bulk clients through the same provider key and verify deployed
-  multi-parent behavior.
+  provider. The production Trigger entry points for current bill status, committee directories, committee backfills and
+  historical BILLSTATUS backfills now construct the same `govinfo` admission object from their shared database pool;
+  local CLI calls retain their single-process limiter. Sixty-six focused workflow tests and the real two-client database
+  check pass. Remaining: verify deployed multi-parent pacing and 429 recovery telemetry.
 - [ ] **ORCH-10 Enforce aggregate database admission.** Budget the actual pools for parser/publication/copy/vector work,
   existing legislative jobs and repair capacity; reserve the specified freshness/repair share. **Done:** measured
   peak connections remain below OPS-01's verified limit at configured fan-out. Depends on OPS-01, ORCH-02.
