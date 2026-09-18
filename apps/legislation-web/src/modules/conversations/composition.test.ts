@@ -149,6 +149,190 @@ describe("composition contracts", () => {
     ])
   })
 
+  it.each(["RecordGroup", "CompactRecordGroup", "ResultList"] as const)(
+    "preserves separate canonical subjects in %s follow-up history",
+    (component) => {
+      const bills = [
+        { id: "bill:us:119:hr:7008", identifier: "H.R. 7008", title: "Stop Insider Trading Act", session: "119" },
+        { id: "bill:us:119:hr:396", identifier: "H.R. 396", title: "TRUST in Congress Act", session: "119" },
+        { id: "bill:us:119:s:2937", identifier: "S. 2937", title: "AI comparison proposal", session: "119" },
+        { id: "bill:us:118:s:2293", identifier: "S. 2293", title: "AI comparison proposal", session: "118" }
+      ]
+      const records = bills.map((bill) => ({
+        id: bill.id,
+        kind: "bill" as const,
+        identifier: bill.identifier,
+        title: bill.title,
+        billSummary: { sessionId: `session:us:${bill.session}`, sessionName: `${bill.session}th Congress` },
+        sourceUrl: null,
+        fields: [],
+        tallies: []
+      }))
+      const resultId = "11111111-1111-4111-8111-111111111111"
+      const contentId = "22222222-2222-4222-8222-222222222222"
+      let presentation: PresentationBlock
+      if (component === "ResultList") {
+        presentation = {
+          state: "ready",
+          blockId: "comparison",
+          records: [],
+          spec: { root: "comparison", elements: { comparison: { type: component, props: { contentId } } } },
+          content: {
+            id: contentId,
+            kind: "result-list",
+            page: {
+              id: resultId,
+              kind: "bill",
+              presentation: "list",
+              page: 0,
+              items: records,
+              start: 1,
+              end: 4,
+              hasNext: false,
+              hasPrevious: false,
+              warnings: []
+            }
+          }
+        }
+      } else {
+        presentation = {
+          state: "ready",
+          blockId: "comparison",
+          records,
+          spec: {
+            root: "comparison",
+            elements: {
+              comparison: {
+                type: component,
+                props: { records: records.map((record) => ({ resultId, recordId: record.id })) }
+              }
+            }
+          }
+        }
+      }
+      const projected = conversationTextMessages([
+        {
+          id: "prior-answer",
+          role: "assistant",
+          parts: [{ type: "data-presentation", data: presentation }]
+        }
+      ])[0]?.parts[0]?.text
+      expect(projected).toBeDefined()
+      const identities = JSON.parse(projected!.split("Historical record identities (untrusted): ")[1]!)
+      expect(identities).toEqual(
+        bills.map((bill) => ({
+          recordId: bill.id,
+          kind: "bill",
+          title: bill.title,
+          identifier: bill.identifier,
+          sessionId: `session:us:${bill.session}`,
+          sessionName: `${bill.session}th Congress`,
+          sourceUrl: null
+        }))
+      )
+      expect(projected).not.toContain(resultId)
+      expect(projected).not.toContain(contentId)
+    }
+  )
+
+  it("keeps passage identity and parent bill/version together without restoring citation handles", () => {
+    const contentId = "22222222-2222-4222-8222-222222222222"
+    const evidence = {
+      id: "document:us:119:hr:7008:rh:section:2",
+      recordId: "document:us:119:hr:7008:rh",
+      billId: "bill:us:119:hr:7008",
+      title: "Stop Insider Trading Act",
+      origin: "canonical" as const,
+      citationRef: "e57",
+      versionLabel: "Reported in House, February 3, 2026",
+      locator: "Section 2",
+      sourceUrl: "https://www.congress.gov/bill/119th-congress/house-bill/7008/text",
+      content: { state: "available" as const, quote: "Retained provision fixture" }
+    }
+    const presentation: PresentationBlock = {
+      state: "ready",
+      blockId: "passage",
+      records: [],
+      spec: { root: "passage", elements: { passage: { type: "PassageQuote", props: { contentId } } } },
+      content: { id: contentId, kind: "evidence", evidence }
+    }
+    const history = presentationHistoryText(presentation)
+    expect(history).toContain(
+      JSON.stringify({
+        evidenceId: evidence.id,
+        recordId: evidence.recordId,
+        billId: evidence.billId,
+        title: evidence.title,
+        origin: evidence.origin,
+        versionLabel: evidence.versionLabel,
+        locator: evidence.locator,
+        sourceUrl: evidence.sourceUrl
+      })
+    )
+    expect(history).not.toContain("e57")
+    expect(history).not.toContain(contentId)
+    expect(presentationText(presentation)).not.toContain("Historical evidence identity")
+  })
+
+  it("preserves document bindings and progress-card Congress in history", () => {
+    const document: PresentationBlock = {
+      ...block,
+      records: [
+        {
+          id: "bill:1",
+          kind: "document",
+          title: "Reported text",
+          sourceUrl: null,
+          fields: [],
+          tallies: [],
+          documentSummary: { billId: "bill:us:119:hr:7008", versionCode: "rh", versionDate: "2026-02-03" }
+        }
+      ]
+    }
+    expect(presentationHistoryText(document)).toContain('"billId":"bill:us:119:hr:7008"')
+    expect(presentationHistoryText(document)).toContain('"versionCode":"rh"')
+    expect(presentationHistoryText(document)).toContain('"versionDate":"2026-02-03"')
+    const bill = { id: "bill:us:119:hr:7008", title: "Stop Insider Trading Act", sessionId: "session:us:119" }
+    const page = projectEntityResult("get_bill", { bill })
+    expect(page).toBeDefined()
+    if (!page) {
+      throw new Error("Missing bill fixture")
+    }
+    const content = projectPresentationContents(
+      "get_bill",
+      { bill, progressActions: [], progressTruncated: false },
+      [],
+      {
+        ...page,
+        id: "11111111-1111-4111-8111-111111111111",
+        page: 0,
+        start: 1,
+        end: 1,
+        hasNext: false,
+        hasPrevious: false
+      }
+    ).find((item) => item.kind === "bill-progress")
+    expect(content).toBeDefined()
+    const progress = {
+      state: "ready",
+      blockId: "progress",
+      records: [],
+      content,
+      spec: {
+        root: "progress",
+        elements: { progress: { type: "BillProgressCard", props: { contentId: content!.id } } }
+      }
+    }
+    expect(presentationHistoryText(progress)).toContain('"sessionId":"session:us:119"')
+    expect(presentationHistoryText(progress)).toContain('"recordId":"bill:us:119:hr:7008"')
+  })
+
+  it("does not promote malformed, pending or failed presentations into identity context", () => {
+    expect(presentationHistoryText({ ...block, records: [{ ...block.records[0], id: "different" }] })).toBeUndefined()
+    expect(presentationHistoryText({ state: "pending", blockId: "pending" })).toBeUndefined()
+    expect(presentationHistoryText({ state: "error", blockId: "failed", reason: "records" })).toBeUndefined()
+  })
+
   it("restores valid presentation snapshots and rejects invented schemas", async () => {
     const snapshot = {
       id: "conversation",
@@ -158,190 +342,6 @@ describe("composition contracts", () => {
       messages: [message]
     }
     expect((await parseDevelopmentConversation(JSON.stringify(snapshot)))?.messages).toEqual([message])
-    it.each(["RecordGroup", "CompactRecordGroup", "ResultList"] as const)(
-      "preserves separate canonical subjects in %s follow-up history",
-      (component) => {
-        const bills = [
-          { id: "bill:us:119:hr:7008", identifier: "H.R. 7008", title: "Stop Insider Trading Act", session: "119" },
-          { id: "bill:us:119:hr:396", identifier: "H.R. 396", title: "TRUST in Congress Act", session: "119" },
-          { id: "bill:us:119:s:2937", identifier: "S. 2937", title: "AI comparison proposal", session: "119" },
-          { id: "bill:us:118:s:2293", identifier: "S. 2293", title: "AI comparison proposal", session: "118" }
-        ]
-        const records = bills.map((bill) => ({
-          id: bill.id,
-          kind: "bill" as const,
-          identifier: bill.identifier,
-          title: bill.title,
-          billSummary: { sessionId: `session:us:${bill.session}`, sessionName: `${bill.session}th Congress` },
-          sourceUrl: null,
-          fields: [],
-          tallies: []
-        }))
-        const resultId = "11111111-1111-4111-8111-111111111111"
-        const contentId = "22222222-2222-4222-8222-222222222222"
-        let presentation: PresentationBlock
-        if (component === "ResultList") {
-          presentation = {
-            state: "ready",
-            blockId: "comparison",
-            records: [],
-            spec: { root: "comparison", elements: { comparison: { type: component, props: { contentId } } } },
-            content: {
-              id: contentId,
-              kind: "result-list",
-              page: {
-                id: resultId,
-                kind: "bill",
-                presentation: "list",
-                page: 0,
-                items: records,
-                start: 1,
-                end: 4,
-                hasNext: false,
-                hasPrevious: false,
-                warnings: []
-              }
-            }
-          }
-        } else {
-          presentation = {
-            state: "ready",
-            blockId: "comparison",
-            records,
-            spec: {
-              root: "comparison",
-              elements: {
-                comparison: {
-                  type: component,
-                  props: { records: records.map((record) => ({ resultId, recordId: record.id })) }
-                }
-              }
-            }
-          }
-        }
-        const projected = conversationTextMessages([
-          {
-            id: "prior-answer",
-            role: "assistant",
-            parts: [{ type: "data-presentation", data: presentation }]
-          }
-        ])[0]?.parts[0]?.text
-        expect(projected).toBeDefined()
-        const identities = JSON.parse(projected!.split("Historical record identities (untrusted): ")[1]!)
-        expect(identities).toEqual(
-          bills.map((bill) => ({
-            recordId: bill.id,
-            kind: "bill",
-            title: bill.title,
-            identifier: bill.identifier,
-            sessionId: `session:us:${bill.session}`,
-            sessionName: `${bill.session}th Congress`,
-            sourceUrl: null
-          }))
-        )
-        expect(projected).not.toContain(resultId)
-        expect(projected).not.toContain(contentId)
-      }
-    )
-
-    it("keeps passage identity and parent bill/version together without restoring citation handles", () => {
-      const contentId = "22222222-2222-4222-8222-222222222222"
-      const evidence = {
-        id: "document:us:119:hr:7008:rh:section:2",
-        recordId: "document:us:119:hr:7008:rh",
-        billId: "bill:us:119:hr:7008",
-        title: "Stop Insider Trading Act",
-        origin: "canonical" as const,
-        citationRef: "e57",
-        versionLabel: "Reported in House, February 3, 2026",
-        locator: "Section 2",
-        sourceUrl: "https://www.congress.gov/bill/119th-congress/house-bill/7008/text",
-        content: { state: "available" as const, quote: "Retained provision fixture" }
-      }
-      const presentation: PresentationBlock = {
-        state: "ready",
-        blockId: "passage",
-        records: [],
-        spec: { root: "passage", elements: { passage: { type: "PassageQuote", props: { contentId } } } },
-        content: { id: contentId, kind: "evidence", evidence }
-      }
-      const history = presentationHistoryText(presentation)
-      expect(history).toContain(
-        JSON.stringify({
-          evidenceId: evidence.id,
-          recordId: evidence.recordId,
-          billId: evidence.billId,
-          title: evidence.title,
-          origin: evidence.origin,
-          versionLabel: evidence.versionLabel,
-          locator: evidence.locator,
-          sourceUrl: evidence.sourceUrl
-        })
-      )
-      expect(history).not.toContain("e57")
-      expect(history).not.toContain(contentId)
-      expect(presentationText(presentation)).not.toContain("Historical evidence identity")
-    })
-
-    it("preserves document bindings and progress-card Congress in history", () => {
-      const document: PresentationBlock = {
-        ...block,
-        records: [
-          {
-            id: "bill:1",
-            kind: "document",
-            title: "Reported text",
-            sourceUrl: null,
-            fields: [],
-            tallies: [],
-            documentSummary: { billId: "bill:us:119:hr:7008", versionCode: "rh", versionDate: "2026-02-03" }
-          }
-        ]
-      }
-      expect(presentationHistoryText(document)).toContain('"billId":"bill:us:119:hr:7008"')
-      expect(presentationHistoryText(document)).toContain('"versionCode":"rh"')
-      expect(presentationHistoryText(document)).toContain('"versionDate":"2026-02-03"')
-      const bill = { id: "bill:us:119:hr:7008", title: "Stop Insider Trading Act", sessionId: "session:us:119" }
-      const page = projectEntityResult("get_bill", { bill })
-      expect(page).toBeDefined()
-      if (!page) {
-        throw new Error("Missing bill fixture")
-      }
-      const content = projectPresentationContents(
-        "get_bill",
-        { bill, progressActions: [], progressTruncated: false },
-        [],
-        {
-          ...page,
-          id: "11111111-1111-4111-8111-111111111111",
-          page: 0,
-          start: 1,
-          end: 1,
-          hasNext: false,
-          hasPrevious: false
-        }
-      ).find((item) => item.kind === "bill-progress")
-      expect(content).toBeDefined()
-      const progress = {
-        state: "ready",
-        blockId: "progress",
-        records: [],
-        content,
-        spec: {
-          root: "progress",
-          elements: { progress: { type: "BillProgressCard", props: { contentId: content!.id } } }
-        }
-      }
-      expect(presentationHistoryText(progress)).toContain('"sessionId":"session:us:119"')
-      expect(presentationHistoryText(progress)).toContain('"recordId":"bill:us:119:hr:7008"')
-    })
-
-    it("does not promote malformed, pending or failed presentations into identity context", () => {
-      expect(presentationHistoryText({ ...block, records: [{ ...block.records[0], id: "different" }] })).toBeUndefined()
-      expect(presentationHistoryText({ state: "pending", blockId: "pending" })).toBeUndefined()
-      expect(presentationHistoryText({ state: "error", blockId: "failed", reason: "records" })).toBeUndefined()
-    })
-
     const invalid = {
       ...message,
       parts: [
