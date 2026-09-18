@@ -101,4 +101,28 @@ describe("Federal Register publication preparation", () => {
       "fr_required_rendition_not_listed"
     )
   })
+
+  it("plans a rendition when GovInfo XML resolves an uncategorized publisher record", () => {
+    const first = fixture.metadata.records[0]
+    invariant(first, "missing_metadata_fixture")
+    const metadata = {
+      ...fixture.metadata,
+      records: fixture.metadata.records.map((record) =>
+        record.document_number === first.document_number
+          ? { ...record, type: "Uncategorized Document" as const }
+          : record
+      )
+    }
+    const intents = planFrPublicationRenditions({
+      issueDate: "2024-01-02",
+      metadata,
+      reconciliation: fixture.reconciliation
+    })
+    expect(intents).toContainEqual(
+      expect.objectContaining({
+        documentNumber: first.document_number,
+        metadataRecord: expect.objectContaining({ type: "Uncategorized Document" })
+      })
+    )
+  })
 })

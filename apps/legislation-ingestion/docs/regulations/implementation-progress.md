@@ -13,6 +13,23 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Ran the first real 2020–2024 Federal Register issue canary through acquisition, parser validation and complete retained
+metadata reconciliation. The August 19, 2020 GovInfo issue was acquired as 3,714,501 bytes with SHA-256
+`b4ecc07a7493677edc8def6c39a6fbc778e8ceaa4602269a3b2b51f2030b0837`, then parsed into 132 publications with no
+warnings: 16 rules, five proposed rules and 111 notices. All 132 exact document-number joins now reconcile with zero
+gaps; the two presidential documents remain counted initial-scope exclusions. The final reconciliation report is
+`8dc5360e0d6815f9c05549d74d5e362b75203749e04d0ca3b50f1b0f6330c84b`.
+
+This canary supplied the missing evidence for publisher-uncategorized document `2020-16416`. GovInfo's issue XML places
+that exact document number in a rule record and the parser classifies it as `final_rule`; FederalRegister.gov supplies
+the dates, official JSON URL and exact GovInfo PDF URL while retaining its original `Uncategorized Document` label.
+Reconciliation now records `metadataType: Uncategorized Document` and `classificationBasis: govinfo_xml`, rather than
+using the publisher's action or title as a guess. Metadata-only collection still does not treat uncategorized records as
+supported. Publication preparation can schedule the reconciled official rendition, while an uncategorized record without
+a matching parsed GovInfo publication remains outside scope. The focused reconciliation and preparation suite passes 11
+tests, and the complete ingestion/parsing/tools suite passes 234 files and 1,876 tests. No canonical publication, index,
+embedding, Trigger submission or schedule state changed.
+
 Completed the independent FederalRegister.gov document inventory for every month in the frozen 2020–2024 GovInfo
 issue scope. Sixty replay-validated monthly manifests retain 181 API pages and 143,200 unique document records with zero
 cross-month duplicate document numbers: 16,043 rules, 10,158 proposed rules, 115,378 notices, 1,620 presidential
@@ -22,11 +39,11 @@ saturation threshold. The corresponding 60 cross-source audits replayed both sou
 records.
 
 The live crawl exposed FederalRegister.gov document `2020-16416`, whose metadata type is `Uncategorized Document` while
-its action says `Final rule.` The metadata contract now retains that real publisher value instead of rejecting the whole
-page. It is excluded from automatic supported-type acquisition and creates an `unsupported_metadata_type` gap when
-source XML supplies a regulation publication, requiring evidence-based review. Presidential and uncategorized exclusions
-are counted separately. Saturated untyped partitions now require the four typed child inventories to reproduce the
-parent count exactly, so an uncategorized record cannot silently disappear during fan-out.
+its action says `Final rule.` The metadata contract retains that real publisher value instead of rejecting the whole
+page. Metadata-only selection excludes it from supported-type acquisition; the later XML canary above resolved it from
+the independently parsed GovInfo issue. Presidential and uncategorized exclusions are counted separately. Saturated
+untyped partitions require the four typed child inventories to reproduce the parent count exactly, so an uncategorized
+record cannot silently disappear during fan-out.
 
 The inventory auditor can now verify one 31-day metadata manifest against its exact slice of a broader authenticated
 GovInfo manifest. It reconstructs the slice from the parent evidence, compares the exact retained issue units and emits
@@ -36,8 +53,8 @@ checks pass 38 tests after the slice change. All 60 live audits then passed agai
 manifest before deriving their monthly slice. The complete ingestion/parsing/tools suite passed 234 files and 1,875
 tests in 83.49 seconds before the final full-parent replay strengthening; ingestion type-check and all eight focused
 inventory-audit tests passed afterward. No issue XML, PDF or HTML was downloaded in this slice, and no database, Trigger,
-canonical publication, index, embedding or schedule state changed. Document-level XML joins, required renditions and the
-one classification review remain open.
+canonical publication, index, embedding or schedule state changed. The first complete issue join is now proven by the
+newer canary; broad document-level joins and required renditions remain open.
 
 Froze, replayed and admitted the complete GovInfo Federal Register bulk-XML issue inventory for January 2020 through
 December 2024. Manifest `ac666b7b72bcc6f54389853affdea47ddeb89244b1a03dcf5fc7c74d9af11705` binds all 60 monthly

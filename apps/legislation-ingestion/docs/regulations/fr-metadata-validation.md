@@ -36,11 +36,12 @@ format and page sequence. It preserves the opaque cursor. It never substitutes a
 | Scope integrity | Reject out-of-window dates, changed filters, unknown document types, unsafe links and unexpected pages |
 
 The publisher may return `Uncategorized Document` even though the documented type filters expose only rules, proposed
-rules, notices and presidential documents. Retain that exact source value as an explicit unsupported classification.
-Do not infer a supported type from `action`, title, CFR references or semantic similarity. Downstream acquisition and
-publication select only the three supported regulatory types; a matching XML publication remains blocked for source
-review. When an untyped parent partition is saturated, the sum of all typed child partitions must equal the parent
-count. A difference fails the inventory instead of dropping documents that no typed filter can retrieve.
+rules, notices and presidential documents. Retain that exact source value. Do not infer a supported type from `action`,
+title, CFR references or semantic similarity. Metadata-only acquisition selects only the three supported regulatory
+types. Reconciliation may resolve an uncategorized record only when a parsed GovInfo issue contains the exact document
+number in a supported XML publication structure; the result retains the publisher type and records GovInfo XML as the
+classification basis. When an untyped parent partition is saturated, the sum of all typed child partitions must equal
+the parent count. A difference fails the inventory instead of dropping documents that no typed filter can retrieve.
 
 The saturation threshold is a conservative collection rule, not a claim that the live API cannot paginate past 10,000.
 Saturated parent pages remain evidence but do not contribute duplicate records to the completed child inventories.
@@ -71,6 +72,8 @@ Whitespace/case normalization preserves meaningful prefixes and leading zeroes: 
 stay distinct identifiers. The join never uses document titles as identity.
 
 - Missing metadata, missing text, ambiguous matches and publication-kind conflicts are separate gap dispositions.
+- Publisher-uncategorized metadata is supported only when the exact document number joins to a parsed GovInfo rule,
+  proposed-rule or notice record. The match records both the original metadata type and the classification basis.
 - Presidential documents are explicit initial-scope exclusions. Their metadata count is checked against the parser's
   `PRESDOCU` source element count; their raw XML document identities are not parsed by this slice.
 - Publication, effective and comment-close dates remain separate date-only values; source date wording is retained.

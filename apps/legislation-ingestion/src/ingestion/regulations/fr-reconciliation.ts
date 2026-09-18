@@ -106,10 +106,11 @@ export function reconcileFrIssue(input: {
     }
     const record = candidates[0]
     invariant(record, "metadata_record_missing")
+    let classificationBasis: "publisher_metadata" | "govinfo_xml" = "publisher_metadata"
     if (!isSupportedFrMetadataType(record.type)) {
-      if (text) {
-        gaps.push({ documentNumber, reason: "unsupported_metadata_type" })
-      } else {
+      if (record.type === "Uncategorized Document" && text) {
+        classificationBasis = "govinfo_xml"
+      } else if (!text) {
         outsideScope.push({
           documentNumber,
           reason:
@@ -117,14 +118,17 @@ export function reconcileFrIssue(input: {
               ? "presidential_document_outside_initial_scope"
               : "uncategorized_document_outside_initial_scope"
         })
+        continue
+      } else {
+        gaps.push({ documentNumber, reason: "unsupported_metadata_type" })
+        continue
       }
-      continue
     }
     if (!text) {
       gaps.push({ documentNumber, reason: "missing_text" })
       continue
     }
-    if (text.publicationKind !== expectedKind[record.type]) {
+    if (isSupportedFrMetadataType(record.type) && text.publicationKind !== expectedKind[record.type]) {
       gaps.push({ documentNumber, reason: "publication_kind_mismatch" })
       continue
     }
@@ -142,6 +146,8 @@ export function reconcileFrIssue(input: {
       documentNumber,
       recordKey: text.recordKey,
       kind: text.publicationKind,
+      metadataType: record.type,
+      classificationBasis,
       metadataUrl: record.json_url,
       publicationDate: record.publication_date,
       effectiveOn: record.effective_on,

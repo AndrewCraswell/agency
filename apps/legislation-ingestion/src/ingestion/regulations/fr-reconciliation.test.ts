@@ -118,7 +118,7 @@ describe("Federal Register text/metadata union", () => {
       listedPdfsNotAcquired: 0
     })
   })
-  it("retains an uncategorized publisher classification as a review-blocking gap", () => {
+  it("resolves an uncategorized publisher classification from the corresponding GovInfo XML record", () => {
     const first = fixture.metadata[0]
     invariant(first, "missing_fixture")
     const report = reconcileFrIssue({
@@ -127,8 +127,14 @@ describe("Federal Register text/metadata union", () => {
         row.document_number === first.document_number ? { ...row, type: "Uncategorized Document" } : row
       )
     })
-    expect(report.gaps).toContainEqual({ documentNumber: first.document_number, reason: "unsupported_metadata_type" })
-    expect(report).toMatchObject({ metadataComplete: false, publicationReady: false })
+    expect(report.matches).toContainEqual(
+      expect.objectContaining({
+        documentNumber: first.document_number,
+        metadataType: "Uncategorized Document",
+        classificationBasis: "govinfo_xml"
+      })
+    )
+    expect(report).toMatchObject({ metadataComplete: true, publicationReady: false })
   })
   it("reports unavailable PDF listings without inventing an artifact or changing valid text matches", () => {
     const report = reconcileFrIssue({
