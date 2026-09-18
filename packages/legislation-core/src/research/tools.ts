@@ -486,7 +486,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
       "resolve_record",
       {
         description:
-          "Resolve an exact record identity before discovery or reading. For bills and amendments pass identifier (e.g. H.R. 1), canonical jurisdictionId and sessionId discovered with list_jurisdictions/list_sessions. Do not put Congress/year in identifier. For people/organizations use a published name with jurisdiction or a known source URL/ID. For votes use roll-call identifier with session/chamber/organization. A resolved match returns the canonical ID for get tools; ambiguous requires more context. Never substitute broad search results for an exact identity.",
+          "Resolve an exact record identity before discovery or reading. For bills and amendments pass identifier (e.g. H.R. 1), canonical jurisdictionId and sessionId discovered with list_jurisdictions/list_sessions. Do not put Congress/year in identifier. chamber and organizationId are vote-only filters: omit them for bills and amendments (use null if the model schema requires a value). For people/organizations use a published name with jurisdiction or a known source URL/ID. For votes use roll-call identifier with session/chamber/organization. A resolved match returns the canonical ID for get tools; ambiguous requires more context. Never substitute broad search results for an exact identity.",
         inputSchema: recordResolutionSchema,
         outputSchema
       },

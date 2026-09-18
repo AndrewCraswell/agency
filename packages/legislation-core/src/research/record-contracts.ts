@@ -5,13 +5,32 @@ export const recordResolutionSchema = z
   .strictObject({
     kind: z.enum(["bill", "amendment", "person", "organization", "meeting", "vote", "document", "material"]),
     id: text.optional(),
-    identifier: text.optional(),
+    identifier: text
+      .optional()
+      .describe(
+        "Bill, amendment or vote only. Use the type and number, such as H.R. 1, without Congress or year; select sessionId separately."
+      ),
     name: text.optional(),
     sourceUrl: z.url({ protocol: /^https?$/ }).optional(),
-    jurisdictionId: text.regex(/^jurisdiction:/).optional(),
-    sessionId: text.regex(/^session:/).optional(),
-    organizationId: text.regex(/^organization:/).optional(),
-    chamber: text.optional()
+    jurisdictionId: text
+      .regex(/^jurisdiction:/)
+      .optional()
+      .describe(
+        "Bill, amendment, person, organization, meeting or material only. Use a canonical jurisdiction ID. Omit for votes and documents."
+      ),
+    sessionId: text
+      .regex(/^session:/)
+      .optional()
+      .describe("Bill, amendment or vote only. Use the canonical session ID returned by list_sessions."),
+    organizationId: text
+      .regex(/^organization:/)
+      .optional()
+      .describe("Vote resolution only. Omit for bills, amendments and all other record kinds."),
+    chamber: text
+      .optional()
+      .describe(
+        "Vote resolution only. Omit for bills, amendments and all other record kinds; the bill type in identifier already distinguishes H.R. from S."
+      )
   })
   .superRefine((input, context) => {
     if (!input.id && !input.identifier && !input.name && !input.sourceUrl)

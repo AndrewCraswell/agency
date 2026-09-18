@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { afterAll, describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 import * as schema from "../database/schema/schema"
 import { readRecordCollection } from "./record-collections"
 import { recordResolutionSchema } from "./record-contracts"
@@ -53,6 +54,24 @@ describe("record identity resolution", () => {
       recordResolutionSchema.safeParse({ kind: "person", name: "Smith", sessionId: "session:us:116" }).success
     ).toBe(false)
     expect(recordResolutionSchema.safeParse({ kind: "bill" }).success).toBe(false)
+  })
+  it("exposes vote-only filter restrictions without accepting them for bills", () => {
+    const properties = z.toJSONSchema(recordResolutionSchema).properties
+    expect(properties?.chamber).toMatchObject({ description: expect.stringContaining("Vote resolution only") })
+    expect(properties?.organizationId).toMatchObject({
+      description: expect.stringContaining("Omit for bills, amendments")
+    })
+    const bill = { kind: "bill", identifier: "H.R. 1", jurisdictionId: "jurisdiction:us", sessionId: "session:us:119" }
+    expect(recordResolutionSchema.safeParse(bill).success).toBe(true)
+    expect(recordResolutionSchema.safeParse({ ...bill, chamber: "House" }).success).toBe(false)
+    expect(
+      recordResolutionSchema.safeParse({
+        kind: "vote",
+        identifier: "10",
+        sessionId: "session:us:119",
+        chamber: "House"
+      }).success
+    ).toBe(true)
   })
   it("binds normalized name tokens and checks only provenance-backed aliases", async () => {
     const query = vi
