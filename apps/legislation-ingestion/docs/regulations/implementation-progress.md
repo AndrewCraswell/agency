@@ -13,6 +13,20 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Admitted both replay-verified annual-CFR release manifests into the retained canonical recovery database through the
+bounded historical registration boundary. The 2020–2024 manifest registered all 1,219 volumes in 13 ordered pages
+(twelve pages of 100 and one page of 19) under scope
+`81ad78ac81057035fc5bacc952cd828ee161099dad1827b320c2a4648786f90a`. The available-title 2025 manifest registered all
+171 volumes in two pages (100 and 71) under scope
+`3c9508afb19a048d81759f873a3756c55785a873d631bfd655cf688da7d152cd`. PostgreSQL reconciliation on local canonical
+port 55457 finds exactly 1,219 and 171 rows respectively, all in `registered` state; the first scope checkpoint is at
+revision 13, the second is at revision 2, and both terminal registration receipts report `exhausted: true`.
+
+Each apply was bound to its exact preview page hash and `local-recovery` environment. This retained the full immutable
+manifest once per release scope and admitted only 100 units per transaction. Registration performed no provider I/O,
+source download, parser execution, Trigger submission, canonical publication, indexing, embedding or schedule change.
+The next gate is a read-only controller preview followed by deployed Trigger/storage acceptance before acquisition fan-out.
+
 Froze the first complete recent annual-CFR release inventories from the retained GovInfo listings and closed a
 completeness hole found during the live crawl. The planner now records absent annual Title 35 as a publisher-reserved
 partition for each requested year. Every other requested title must exist and its XML volume ordinals must be unique and

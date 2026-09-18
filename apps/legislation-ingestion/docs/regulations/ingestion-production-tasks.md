@@ -115,8 +115,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   Depends on G1, ING-11–12.
   Local progress: the `regulatory-annual-publication` Trigger task now exposes the existing atomic annual-title publisher
   through the shared two-worker publication queue. A retained replay revalidated all three 2025 Title 5 volumes and
-  reused the exact published annual edition. Historical inventory registration, volume acquisition/import fan-out and a
-  deployed Trigger run remain open.
+  reused the exact published annual edition. The complete 2020–2024 and available-title 2025 manifests are now admitted
+  to the retained canonical recovery database: 1,390 registered units across 15 replay-bound pages. Volume
+  acquisition/import fan-out and a deployed Trigger run remain open.
 - [ ] **ING-14 Qualify extended history.** Sample each source-format era, then freeze FR 2000–2019/CFR 1996–2019 units
   with missing XML and alternate-rendition policies. **Done:** representative years and known defect fixtures pass;
   no pre-2000 FR XML assumption leaks into the supported manifest. Depends on ING-06, ING-12.
