@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Connected modified Federal Register issues to a bounded current-publication pipeline without enabling recurring sync.
+The shared discovery controller now carries `govinfo-fr` units through existing immutable XML acquisition and parsing.
+At publication it freezes an exact-day FederalRegister.gov metadata snapshot, stages and reconciles the parsed issue, and
+registers one durable PDF intent for each matched non-presidential publication. Migration 0050 adds issue and rendition
+checkpoints with immutable metadata/generation identities, per-document leases, retry diagnostics, exact completion
+counts and a ready gate.
+
+Four-worker Trigger fan-out acquires one official GovInfo PDF per intent, verifies its retained hash and runs the existing
+bounded all-page PDF parser. The final validated rendition opens the gate; an idempotent finalizer replays the metadata
+and exact rendition set, invokes `publishFrIssue`, records the canonical generation on the discovery unit and completes
+the original publication dispatch. Federal Register discovery rows now publish without a fictitious code-edition ID.
+Focused fixture and orchestration verification passed 16 tests, ingestion type-check and scoped lint passed, and a clean
+copy of the migration chain installed both new tables in local PostgreSQL. The repository's current migration integration
+test is separately blocked by uncommitted vote-index changes in migration 0000 that reference `votes.session_id` before
+that column exists; this slice did not alter those files. A provider-backed current-issue canary, deployed shared-volume
+verification and the Federal Register branch of manifest-completion/outbox accounting remain open. Recurring source
+schedules remain disabled.
+
 Implemented the bounded Federal Register modification-discovery ingress without enabling a schedule. The new GovInfo
 client reads the official `FR` collection by `lastModified` with its API key only in the request header. The durable
 cursor fixes the active time window and opaque offset, begins completed cycles with a 24-hour overlap and bisects a
@@ -20,15 +38,14 @@ window before traversal when the reported result count exceeds GovInfo's 10,000-
 most 100 exact `FR-YYYY-MM-DD` issue units, preserving the historical publication date separately from the correction's
 modification time, and commits the units plus cursor in the existing serializable checkpoint transaction.
 
-The single-worker `regulatory-fr-discovery` Trigger task self-continues with a replay-stable global key. It does not start
-the existing discovery controller yet: that controller's publisher accepts eCFR editions, while Federal Register
-publication must also reconcile per-document metadata and retained renditions. Units remain visibly pending instead of
-being sent to a known publication failure. Ten focused tests cover old-issue corrections, pagination, saturation splits,
+The single-worker `regulatory-fr-discovery` Trigger task self-continues with a replay-stable global key. At that point it
+did not start the existing discovery controller because publication still lacked per-document metadata and rendition
+reconciliation; the newer entry above supersedes that limitation. Ten focused tests cover old-issue corrections, pagination, saturation splits,
 overlap, duplicate/out-of-window rejection, credential non-retention, pagination-host/window validation and task
 continuation; ingestion type-check and scoped lint pass. A direct official GovInfo probe returned the current FR packages
 for a two-day modification window; a later public `DEMO_KEY` request hit its shared 429 limit, so no canonical database
-write or provider-backed end-to-end canary was claimed. The FR publication adapter, deployed provider admission and
-recurring activation remain open under SYNC-03/SYNC-11.
+write or provider-backed end-to-end canary was claimed. Deployed provider admission and recurring activation remain open
+under SYNC-03/SYNC-11.
 
 Made the human-review dependency measurable without weakening it. The new bounded
 `audit-regulatory-judgment-progress` command validates the immutable packet, hashes the reviewed revision and reports

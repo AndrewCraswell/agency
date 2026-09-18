@@ -41,9 +41,13 @@ normalization or direct-to-index update path. Workstream prerequisites: ORCH-01 
   Local progress: the manual single-worker `regulatory-fr-discovery` task uses GovInfo's `FR` collection modification
   window, a 24-hour overlap, 100-package pages, opaque cursor validation and deterministic time-window bisection above
   the 10,000-result ceiling. Each page or split decision commits through the durable discovery checkpoint before a
-  replay-stable self-continuation. Old issue dates remain distinct from modification time. Discovered units stay pending
-  until the existing reviewed Federal Register metadata/rendition publisher is adapted to current discovery; the eCFR-
-  only publication controller is deliberately not started. No recurring schedule is registered.
+  replay-stable self-continuation. Old issue dates remain distinct from modification time. Pages with new units now start
+  the bounded shared controller. Parsed issues use a source-specific adapter that freezes exact-day publisher metadata,
+  reconciles every XML publication, persists resumable per-document PDF intents, fans out bounded PDF acquisition and
+  validation workers, gates finalization on the exact validated count and invokes the existing canonical Federal Register
+  publisher. The discovery row records the published import generation without inventing a code edition. Local fixture,
+  orchestration and migration checks pass. The Federal Register branch of manifest completion, a provider-backed manual
+  canary, deployed durable-volume verification and recurring activation remain open. No recurring schedule is registered.
 - [ ] **SYNC-04 Discover annual edition inventory changes.** Refresh available year/title/volume manifests and package
   observations without assuming a new directory year means new text. **Done:** new/missing/replaced volumes trigger
   all-volume revalidation; repeated Title 1 bytes preserve honest currency. Depends on SYNC-01, ING-04/12.

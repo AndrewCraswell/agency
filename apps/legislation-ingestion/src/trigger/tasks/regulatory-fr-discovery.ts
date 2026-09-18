@@ -31,9 +31,22 @@ export async function continueRegulatoryFrDiscovery(value: unknown) {
     })
     continuationRunId = z.object({ id: z.string().trim().min(1).max(256) }).parse(triggered).id
   }
-  // The shared downstream publisher currently accepts eCFR editions only. Keep discovered FR units pending until the
-  // reviewed FR rendition/publication adapter is connected; dispatching them now would fail after parsing.
-  return { ...result, controllerRunId: null, continuationRunId }
+  let controllerRunId: string | null = null
+  if (result.newUnits > 0) {
+    const scope = { sourceId: "govinfo-fr" as const, scopeKey: result.checkpoint.scopeKey }
+    const key = digest(
+      JSON.stringify(["regulatory-fr-discovery-controller-2026-09-18", scope, result.checkpoint.lastPageId])
+    )
+    const triggered = await tasks.trigger(
+      "regulatory-discovery-controller",
+      { ...scope, afterUnitKey: null, limit: 25 },
+      {
+        idempotencyKey: await idempotencyKeys.create(`regulatory-discovery-controller:${key}`, { scope: "global" })
+      }
+    )
+    controllerRunId = z.object({ id: z.string().trim().min(1).max(256) }).parse(triggered).id
+  }
+  return { ...result, controllerRunId, continuationRunId }
 }
 
 export async function runRegulatoryFrDiscovery(value: unknown) {

@@ -1,7 +1,13 @@
 import { randomUUID } from "node:crypto"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({ publish: vi.fn(), complete: vi.fn(), continue: vi.fn(), end: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  publish: vi.fn(),
+  source: vi.fn(),
+  complete: vi.fn(),
+  continue: vi.fn(),
+  end: vi.fn()
+}))
 vi.mock("pg", () => ({
   default: {
     Pool: class MockPool {
@@ -10,7 +16,8 @@ vi.mock("pg", () => ({
   }
 }))
 vi.mock("../../ingestion/regulations/discovery-publication.js", () => ({
-  publishLegalDiscoveryUnit: mocks.publish
+  publishLegalDiscoveryUnit: mocks.publish,
+  legalDiscoveryPublicationSource: mocks.source
 }))
 vi.mock("../../ingestion/regulations/discovery-dispatch.js", async (original) => ({
   ...(await original<typeof import("../../ingestion/regulations/discovery-dispatch.js")>()),
@@ -30,6 +37,7 @@ beforeEach(() => {
   vi.stubEnv("DATABASE_URL", "postgresql://localhost:5432/legislation")
   mocks.complete.mockResolvedValue({ sourceId: "ecfr", scopeKey: "d".repeat(64) })
   mocks.continue.mockResolvedValue({ id: "controller-run" })
+  mocks.source.mockResolvedValue("ecfr")
 })
 afterEach(() => vi.unstubAllEnvs())
 

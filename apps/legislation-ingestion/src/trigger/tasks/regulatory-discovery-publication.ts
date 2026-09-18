@@ -1,9 +1,15 @@
-import { task } from "@trigger.dev/sdk"
+import { digest } from "@repo/legislation-core/legal-text/contracts"
+import { idempotencyKeys, task } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
 import { completeLegalDiscoveryDispatch } from "../../ingestion/regulations/discovery-dispatch.js"
-import { publishLegalDiscoveryUnit } from "../../ingestion/regulations/discovery-publication.js"
+import {
+  legalDiscoveryPublicationSource,
+  publishLegalDiscoveryUnit
+} from "../../ingestion/regulations/discovery-publication.js"
+import { prepareFrIssuePublication } from "../../ingestion/regulations/fr-publication-preparation.js"
 import { continueRegulatoryDiscoveryStage } from "./regulatory-discovery-continuation.js"
+import { regulatoryFrRendition } from "./regulatory-fr-publication.js"
 
 export const regulatoryDiscoveryPublicationPayloadSchema = z.strictObject({
   manifestId: z.string().regex(/^[a-f0-9]{64}$/),
@@ -21,6 +27,7 @@ export const regulatoryDiscoveryPublication = task({
 
 export async function continueRegulatoryDiscoveryPublication(value: unknown) {
   const result = await runRegulatoryDiscoveryPublication(value)
+  if (result.state === "renditions_pending") return { ...result, continuationRunId: null }
   const next = await continueRegulatoryDiscoveryStage("publication", result.payload, result.controllerScope)
   return { ...result, continuationRunId: next.id }
 }
@@ -42,6 +49,38 @@ export async function runRegulatoryDiscoveryPublication(value: unknown) {
     statement_timeout: 60_000
   })
   try {
+    const sourceId = await legalDiscoveryPublicationSource(pool, payload)
+    if (sourceId === "govinfo-fr") {
+      const metadataRoot = z.string().trim().min(1).parse(process.env.REGULATORY_FR_METADATA_DIRECTORY)
+      const prepared = await prepareFrIssuePublication(pool, { ...payload, metadataRoot })
+      const renditionItems = await Promise.all(
+        prepared.renditions.map(async ({ documentNumber }) => {
+          const renditionPayload = {
+            manifestId: payload.manifestId,
+            scopeKey: prepared.scopeKey,
+            unitKey: payload.unitKey,
+            documentNumber
+          }
+          return {
+            payload: renditionPayload,
+            options: {
+              idempotencyKey: await idempotencyKeys.create(
+                `regulatory-fr-rendition:${digest(JSON.stringify(renditionPayload))}`,
+                { scope: "global" }
+              )
+            }
+          }
+        })
+      )
+      const runs = await regulatoryFrRendition.batchTrigger(renditionItems)
+      return {
+        ...prepared,
+        state: "renditions_pending" as const,
+        payload,
+        renditionBatchId: z.object({ batchId: z.string().min(1).max(256) }).parse(runs).batchId
+      }
+    }
+    if (sourceId !== "ecfr") throw new Error("unsupported_legal_discovery_publication_source")
     const result = await publishLegalDiscoveryUnit(pool, payload)
     const controllerScope = await completeLegalDiscoveryDispatch(pool, "publication", payload)
     return { ...result, payload, controllerScope }

@@ -31,6 +31,21 @@ const publicationResultSchema = z.object({
   reused: z.boolean()
 })
 
+export async function legalDiscoveryPublicationSource(pool: pg.Pool, value: unknown) {
+  const input = publicationInputSchema.parse(value)
+  const manifestResult = await pool.query<{ body: unknown }>(
+    "SELECT body FROM legislation.legal_import_manifests WHERE id=$1",
+    [input.manifestId]
+  )
+  invariant(manifestResult.rowCount === 1, "legal_discovery_manifest_missing")
+  const manifest = validateLegalDiscoveryManifest(manifestResult.rows[0]?.body)
+  invariant(
+    manifest.units.some((unit) => unit.key === input.unitKey),
+    "legal_discovery_manifest_unit_missing"
+  )
+  return manifest.sourceId
+}
+
 /** Publishes one fully parsed current eCFR unit and records the canonical identities on its durable discovery row. */
 export async function publishLegalDiscoveryUnit(pool: pg.Pool, value: unknown) {
   const input = publicationInputSchema.parse(value)

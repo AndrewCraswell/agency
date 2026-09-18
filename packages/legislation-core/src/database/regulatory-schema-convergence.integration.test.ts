@@ -23,6 +23,8 @@ const convergedTables = [
   "legal_discovery_dispatches",
   "legal_discovery_pages",
   "legal_discovery_units",
+  "legal_fr_issue_preparations",
+  "legal_fr_issue_renditions",
   "legal_passage_generations",
   "legal_passage_preparation_items",
   "legal_passage_preparations",
@@ -48,9 +50,14 @@ describe.skipIf(databaseUrl === undefined).sequential("regulatory schema converg
     const journal = JSON.parse(await readFile(journalPath, "utf8")) as {
       entries: { tag: string }[]
     }
-    journal.entries = journal.entries.filter((entry) => entry.tag !== "0049_regulatory-schema-convergence")
+    journal.entries = journal.entries.filter(
+      (entry) =>
+        entry.tag !== "0049_regulatory-schema-convergence" &&
+        entry.tag !== "0050_federal-register-publication-preparation"
+    )
     await writeFile(journalPath, `${JSON.stringify(journal, null, 2)}\n`)
     await rm(join(originalMigrationsFolder, "0049_regulatory-schema-convergence.sql"))
+    await rm(join(originalMigrationsFolder, "0050_federal-register-publication-preparation.sql"))
     await rm(join(originalMigrationsFolder, "meta", "0049_snapshot.json"))
   })
 

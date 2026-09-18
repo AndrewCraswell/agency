@@ -26,7 +26,11 @@ const payload = {
   through: "2026-09-18T00:00:00.000Z"
 }
 const result = {
-  checkpoint: { scopeKey: "a".repeat(64), committedCursor: { active: { offsetMark: "next" } } },
+  checkpoint: {
+    scopeKey: "a".repeat(64),
+    committedCursor: { active: { offsetMark: "next" } },
+    lastPageId: "b".repeat(64)
+  },
   cursor: { active: { offsetMark: "next" } },
   complete: false,
   newUnits: 2,
@@ -39,8 +43,8 @@ beforeEach(() => {
   vi.stubEnv("DATABASE_URL", "postgresql://localhost/legislation")
   vi.stubEnv("GOVINFO_API_KEY", "govinfo-key")
   mocks.discover.mockResolvedValue(result)
-  mocks.key.mockResolvedValueOnce("continuation-key")
-  mocks.trigger.mockResolvedValueOnce({ id: "continuation-run" })
+  mocks.key.mockResolvedValueOnce("continuation-key").mockResolvedValueOnce("controller-key")
+  mocks.trigger.mockResolvedValueOnce({ id: "continuation-run" }).mockResolvedValueOnce({ id: "controller-run" })
 })
 afterEach(() => vi.unstubAllEnvs())
 
@@ -66,15 +70,21 @@ it("rejects search databases and missing provider credentials before discovery",
   expect(mocks.discover).not.toHaveBeenCalled()
 })
 
-it("closes the database before continuing pagination and holds FR units from the eCFR-only publisher", async () => {
+it("closes the database before continuing pagination and dispatching newly durable FR units", async () => {
   await expect(continueRegulatoryFrDiscovery(payload)).resolves.toMatchObject({
-    controllerRunId: null,
+    controllerRunId: "controller-run",
     continuationRunId: "continuation-run"
   })
   expect(mocks.end.mock.invocationCallOrder[0]).toBeLessThan(mocks.trigger.mock.invocationCallOrder[0]!)
   expect(mocks.trigger).toHaveBeenNthCalledWith(1, "regulatory-fr-discovery", payload, {
     idempotencyKey: "continuation-key"
   })
+  expect(mocks.trigger).toHaveBeenNthCalledWith(
+    2,
+    "regulatory-discovery-controller",
+    { sourceId: "govinfo-fr", scopeKey: "a".repeat(64), afterUnitKey: null, limit: 25 },
+    { idempotencyKey: "controller-key" }
+  )
 })
 
 it("stops continuation and acquisition dispatch when a terminal page adds nothing", async () => {

@@ -32,11 +32,9 @@ the `FR-YYYY-MM-DD` identity continues to supply the issue/publication date. API
 header and are absent from retained evidence and cursor state.
 
 Trigger task `regulatory-fr-discovery` is also manual and single-worker. It self-continues one page or split decision at
-a time with global idempotency keys. Discovered units intentionally remain pending: the shared downstream discovery
-publisher currently accepts eCFR editions, while Federal Register publication additionally requires the existing
-document metadata and rendition reconciliation. Starting the eCFR controller for these units would acquire and parse
-them only to fail at publication. Connecting that reviewed FR publication adapter is the next SYNC-03 step. No recurring
-schedule is registered.
+a time with global idempotency keys. A page that commits new units starts one bounded shared discovery-controller window.
+The controller uses the existing XML acquisition and parsing stages, then selects the source-specific Federal Register
+publication adapter. No recurring schedule is registered.
 
 `regulatory-discovery-registration` moves at most 100 pending units into one immutable current-acquisition manifest.
 Selection, manifest insertion and the pending-to-registered transition share one serializable transaction. Controllers
@@ -54,13 +52,20 @@ same bounded Python parser used by historical backfills and commits the parser h
 summary only after every shard passes TypeScript validation. Retry revalidates and reuses the deterministic generation.
 The normalized root comes from `REGULATORY_NORMALIZED_DIRECTORY`.
 
-`regulatory-discovery-publication` accepts one parsed current eCFR identity. It revalidates the immutable current
+`regulatory-discovery-publication` selects its publisher from the immutable manifest. An eCFR unit revalidates the
 manifest, receipt, retained source artifact and normalized shards before using the same leased canonical staging,
-materialization and compare-and-swap publication transaction as historical imports. Only a published canonical
-generation and edition can advance the discovery row to `published`; the row retains both identities for completion
-accounting. Replay verifies the complete canonical edition and returns the same identities. Publication emits the
-existing lexical outbox item but does not submit preparation, copying or embeddings. The worker is manual, limited to
-two concurrent publications and has no recurring schedule.
+materialization and compare-and-swap publication transaction as historical imports. A Federal Register unit stages the
+same normalized XML records, freezes an exact-day FederalRegister.gov metadata manifest under
+`REGULATORY_FR_METADATA_DIRECTORY`, reconciles every parsed publication and registers one durable rendition intent per
+matched non-presidential document. It fails closed when metadata or an official GovInfo PDF is absent.
+
+`regulatory-fr-rendition` acquires one PDF under `REGULATORY_FR_PDF_DIRECTORY`, verifies retained bytes and validates all
+pages plus document identity in the bounded child process. Database leases make acquisition and validation independently
+resumable. The final validated rendition atomically opens the issue gate and submits one replay-stable finalizer. The
+finalizer replays the frozen metadata, reloads exactly the validated rendition set, invokes the existing leased
+`publishFrIssue` transaction and records the canonical import generation on the discovery row. Federal Register rows do
+not invent a code-edition ID. Publication emits the existing publication lexical outbox items but does not submit passage
+copying or embeddings. The workers are manual and bounded; no recurring schedule is registered.
 
 `regulatory-discovery-controller` is the manual bounded fan-out entry point. It first registers at most 100 pending
 units, then selects a keyset page of at most 100 units whose committed state is `registered`, `acquired` or `parsed`.
@@ -78,6 +83,10 @@ ID is retained for six days; a saved run missing from Trigger history is retaine
 windows, recovery appends the prior attempt, run ID and disposition to `run_history`, clears the current handle and
 submits the same immutable payload under the incremented attempt. Late original workers remain safe because stage
 workers can advance only their expected canonical state and all transitions are replay-safe.
+
+The shared manifest-completion audit still evaluates publication and lexical completion through eCFR edition IDs. It
+must branch to Federal Register observations and `regulatory_publication_outbox` before it can be used as the FR
+end-to-end readiness gate.
 
 A remote `COMPLETED` status is not accepted as stage completion by itself. Recovery marks the dispatch complete only
 when the discovery unit has reached or passed that stage, or records `completed_without_stage_advance` for operator
