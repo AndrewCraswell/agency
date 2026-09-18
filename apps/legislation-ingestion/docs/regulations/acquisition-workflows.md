@@ -120,12 +120,21 @@ ING-02; canonical editions/observations, exact memberships/content, intended dep
 separate work. Reports are point-in-time evidence and cannot authorize later reuse without revalidation. Exit status 1
 means an invalid unit was found; missing inputs are represented in the plan rather than treated as audit failures.
 
-The existing `tools/regulations/plan-regulatory-backfill.ts` now accepts optional `--delivery-output <path>` alongside `--output`.
-It emits a read-only partition plan from replay-verified source evidence: current eCFR titles, FR date windows split by
-month and the cutoff's 90-day baseline, and annual CFR year/title groups with listed volume numbers. Each partition
-records corpus, federal jurisdiction, wave, explicit inclusion/reserved exclusion, expected acquisition units and
-required evidence. Annual printed revision dates remain unresolved until parsing; they are not inferred from year labels.
-An FR window with no listed XML remains `needs_independent_inventory`, with unknown document count, never known empty.
+The existing `tools/regulations/plan-regulatory-backfill.ts` accepts optional `--delivery-output <path>` alongside
+`--output`. Network planning also requires `--inventory-directory <path>` and accepts `--maximum-requests <1-500>`,
+defaulting to 100. Each complete official inventory response is atomically retained by source and exact request URL.
+The retained response is accepted only when its source, URL, body hash and byte count still agree. A corrupt or swapped
+entry blocks the plan. Reaching the request budget writes `<output>.progress-<timestamp>.json` with
+`status: "request_limit_reached"` and `resumable: true`; rerunning the same frozen scope and inventory directory reuses
+the committed responses before issuing new requests. A real source failure instead writes a failure receipt and is
+re-thrown. `--replay` remains network-free and does not require an inventory directory.
+
+The command emits a read-only partition plan from replay-verified source evidence: current eCFR titles, FR date windows
+split by month and the cutoff's 90-day baseline, and annual CFR year/title groups with listed volume numbers. Each
+partition records corpus, federal jurisdiction, wave, explicit inclusion/reserved exclusion, expected acquisition units
+and required evidence. Annual printed revision dates remain unresolved until parsing; they are not inferred from year
+labels. An FR window with no listed XML remains `needs_independent_inventory`, with unknown document count, never known
+empty.
 
 Replay reconstructs the complete manifest from retained inventories and compares its units/exclusions; rehashing an
 omitted unit does not make it valid. Validation also binds inventory hashes to their source, rejects duplicate inventory

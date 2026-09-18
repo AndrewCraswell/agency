@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Made historical source inventory planning durable and bounded before attempting the nationwide release inventory. Every
+official inventory response is now retained atomically by source and exact request URL, with its body hash and byte count
+revalidated on every read. A planner invocation may make at most `--maximum-requests` new source requests; reaching that
+budget writes a resumable progress receipt and exits without a manifest. The next invocation reuses every committed
+listing and spends its budget only on the next missing request. Damaged or identity-mismatched retained evidence fails
+closed instead of being silently replaced. Network planning now requires an explicit `--inventory-directory`; replay of
+a complete frozen manifest remains network-free.
+
+The bounded-resume test stops a two-request annual-CFR plan after the year listing, then reuses that listing and fetches
+only the title listing on the second invocation. Four cache tests plus the existing 20 planner tests pass. Two live
+GovInfo smokes independently exercised that boundary. The 2025 Title 1 plan completed on its second one-request wave with
+one reused request and one new request, producing manifest
+`a4476c7b6b905d2bbe4e86afe883457e23faf18c94e16e5b680a176adc4c2e19`, one volume and 814,725 listed bytes. The 2024
+Title 1 plan also stopped cleanly after its first request and completed on its second wave as manifest
+`f959004a707378d7a7201e4773c73c94fbf258fc02ebc87be698320c8f20c20c`. No source XML was downloaded and no database,
+Trigger, schedule, canonical, index or embedding state changed. This advances ING-01 and ING-12; the complete 2020-forward
+release inventory is not yet frozen.
+
 Connected historical annual-CFR volumes to an aggregate publication barrier. A parsed `govinfo-cfr` unit now
 materializes through the same durable source and normalized stores, while its discovery row remains `parsed` and cannot
 claim customer-visible publication. Its publication dispatch completes only after the exact import generation is

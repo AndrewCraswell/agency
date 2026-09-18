@@ -14,6 +14,12 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   unit IDs and denominators; unsupported periods cannot become successful empty partitions.
   Partial implementation: replay-verified delivery partitions and required-evidence lists now exist through planner
   `--delivery-output`; selecting/freezing the actual full release manifest and documenting non-reserved exclusions remain.
+  Network planning now retains every official inventory response atomically under its source and exact request URL,
+  verifies its content hash and byte count on reuse, and admits at most 500 new requests per invocation. The operator
+  supplies `--inventory-directory` and a smaller `--maximum-requests` when needed; a budget stop writes a resumable
+  progress receipt, and a later invocation reuses committed listings before fetching the next missing page. A damaged
+  cache blocks instead of refetching. Two live one-title annual-CFR plans completed in two one-request waves. A complete
+  nationwide release manifest and all-source reconciliation remain open.
 - [ ] **ING-02 Reconcile retained inputs before dispatch.** Inventory existing raw artifacts, normalized shards,
   canonical editions/observations and their hashes across the retained pilots and intended deployment. Produce a
   reuse/missing/invalid plan. **Done:** all 49 current eCFR titles and 275,149 recorded memberships are accounted for;
@@ -94,6 +100,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
 - [ ] **ING-12 Plan recent historical partitions.** Freeze FR 2020-to-cutoff and annual CFR 2020-to-latest inventories,
   all required volumes, format/rendition availability and byte estimates. **Done:** partition replay is deterministic;
   each annual title has a frozen complete volume denominator. Depends on ING-01, ING-03–06.
+  Local progress: per-request evidence retention and bounded resume now prevent an interrupted GovInfo crawl from
+  repeating its completed year/title listings. The 2024 and 2025 Title 1 live smokes each produced a deterministic
+  one-volume manifest after two one-request waves. The full 2020-forward CFR and FR inventories remain open.
 - [ ] **ING-13 Execute recent historical backfills.** Dispatch the ING-12 partitions through the deployed controller;
   capture source/canonical count/hash reconciliation and duplicate-observation dispositions. **Done:** every requested
   partition is verified or explicitly blocked, no newer head is replaced, and replay writes no duplicate events.
