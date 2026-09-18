@@ -22,6 +22,11 @@ FR_KINDS = {"RULE": "final_rule", "PRORULE": "proposed_rule", "NOTICE": "notice"
 ANNUAL_KINDS = {"TITLE", "SUBTITLE", "CHAPTER", "SUBCHAP", "PART", "SUBPART", "SUBJGRP", "SECTION", "APPENDIX"}
 TOC_TAGS = {"TOC", "CFRTOC", "CONTENTS", "TITLENO", "FMTR", "BMTR"}
 BREAK_TAGS = {"P", "FP", "PSPACE", "HD", "HEAD", "HED", "ROW", "TR", "SECTNO", "SUBJECT", "FRDOC", "LI"}
+FR_DOCUMENT_NUMBER = re.compile(
+    r"\s*\[?FR\s+Doc\.?\s*([A-Za-z0-9]+(?:-[A-Za-z0-9]+)+)\s+(?:Filed\s*)?"
+    r"(?=\d{1,2}-\d{1,2}-\d{2,4}(?:\s*;\s*|\s+)\d{1,2}:\d{2})",
+    re.IGNORECASE,
+)
 
 # Reviewed against the official printed volume, pp. 39, 43 and 45, and its contents.
 # See docs/regulations/annual-title5-source-review.md. Never generalize this to
@@ -41,6 +46,40 @@ def reviewed_fr_identity(context: dict, path: str, number: str):
         "/FEDREG[1]/RULES[1]/RULE[5]": "fr:2000-01-18:65:2537:rule",
         "/FEDREG[1]/NOTICES[1]/NOTICE[62]": "fr:2000-01-18:65:2639:notice",
     }.get(path)
+
+
+def reviewed_fr_missing_identity(context: dict, path: str):
+    # This oversized Part II rule has no closing FRDOC element. The exact issue's
+    # own contents identify its title/page range as 2021-23972, independently
+    # matching the retained monthly FederalRegister.gov metadata manifest.
+    if (context["unit"]["nativeId"], context["artifactHash"], path) == (
+        "FR-2021-11-19",
+        "2b7290a3508d8d04859fb949a60323b58707f9c9429aeaa4fedd235da0abaa28",
+        "/FEDREG[1]/NEWPART[1]/RULES[1]/RULE[1]",
+    ):
+        return "2021-23972"
+    return None
+
+
+def reviewed_fr_duplicate_paths(context: dict) -> set[str]:
+    # These exact official issue artifacts repeat one publication as adjacent XML
+    # records. Retain one complete normalized publication and account for the
+    # reviewed duplicate node through its source tag count. Changed artifacts or
+    # different locators continue to fail the ordinary duplicate-identity gate.
+    return {
+        (
+            "FR-2020-07-24",
+            "d4decec3457dda3b235e7ddfe606422e58d184bb46732ee6ebab32bfe9d1e849",
+        ): {"/FEDREG[1]/NOTICES[1]/NOTICE[75]"},
+        (
+            "FR-2022-11-22",
+            "33cbc83a1e4f42f5deeb56b94560c3c256701e8344d0d41c6b9df1a175b794b6",
+        ): {"/FEDREG[1]/NOTICES[1]/NOTICE[51]"},
+        (
+            "FR-2023-01-09",
+            "be4bf01bd8e7b975c32cf75ff97cfe0730ec58197640ab6d8b61957f6414b922",
+        ): {"/FEDREG[1]/NOTICES[1]/NOTICE[12]"},
+    }.get((context["unit"]["nativeId"], context["artifactHash"]), set())
 
 
 def reviewed_parent_paths(context: dict) -> dict[str, str]:
@@ -103,6 +142,7 @@ class Frame:
     parent_key: str | None
     ordinal: int | None
     namespaces: dict
+    suppressed_source_duplicate: bool = False
     logical_parent: Frame | None = None
     children: Counter = field(default_factory=Counter)
     retained_bytes: int = 0
@@ -170,6 +210,8 @@ class FederalParser:
         self.quoted_structure_count = 0
         self.parent_corrections = reviewed_parent_paths(context)
         self.applied_parent_corrections = set()
+        self.suppressed_source_duplicates = reviewed_fr_duplicate_paths(context)
+        self.applied_suppressed_source_duplicates = set()
         title_match = re.search(r"title-?(\d+)", self.unit["nativeId"])
         self.title_number = title_match[1] if title_match else None
 
@@ -222,12 +264,16 @@ class FederalParser:
             ancestors.append(ancestor)
             ancestor = ancestor.logical_parent
         is_record = self.is_record(tag, attrs, ancestors)
+        suppressed_source_duplicate = is_record and path in self.suppressed_source_duplicates
+        if suppressed_source_duplicate:
+            is_record = False
         parent_key = next((frame.key for frame in ancestors if frame.is_record), None)
         ordinal = self.source_records if is_record else None
         key = sha(f"{self.unit['key']}\n{path}".encode()) if is_record else None
         if is_record:
             self.source_records += 1
         frame = Frame(ET.Element(tag, attrs), path, is_record, key, parent_key, ordinal, namespaces,
+                      suppressed_source_duplicate=suppressed_source_duplicate,
                       logical_parent=logical_parent,
                       retained_bytes=len(tag.encode()) + sum(len(k.encode()) + len(v.encode()) for k, v in attrs.items()))
         self.stack.append(frame)
@@ -256,7 +302,9 @@ class FederalParser:
             self.record_date("printed_revision", text_of(frame.element), frame.path)
         if tag == "DATE" and self.source == "govinfo-fr" and len(self.stack) == 1:
             self.record_date("publication", text_of(frame.element), frame.path)
-        if frame.is_record:
+        if frame.suppressed_source_duplicate:
+            self.applied_suppressed_source_duplicates.add(frame.path)
+        elif frame.is_record:
             self.emit(frame)
         elif self.stack:
             parent = self.stack[-1]
@@ -301,11 +349,16 @@ class FederalParser:
         if self.source == "govinfo-fr":
             publication_kind = FR_KINDS[node.tag]
             # Historical publisher XML varies bracket/case and omits space before the filing date.
-            identities = [re.match(r"\s*\[?FR Doc\.\s+([A-Za-z0-9]+(?:-[A-Za-z0-9]+)+)\s+Filed(?=\s|[0-9])", text_of(item), re.IGNORECASE) for item in node.findall("FRDOC")]
-            if len(identities) != 1 or identities[0] is None:
-                raise ValueError("Federal Register document lacks an unambiguous document number")
-            native_id = identities[0][1]
-            identity_basis = "document_number"
+            identities = [FR_DOCUMENT_NUMBER.match(text_of(item)) for item in node.findall("FRDOC")]
+            if len(identities) == 1 and identities[0] is not None:
+                native_id = identities[0][1]
+                identity_basis = "document_number"
+            else:
+                reviewed_identity = reviewed_fr_missing_identity(self.context, frame.path)
+                if reviewed_identity is None or len(identities) != 0:
+                    raise ValueError("Federal Register document lacks an unambiguous document number")
+                native_id = reviewed_identity
+                identity_basis = "citation"
             citation_identity = reviewed_fr_identity(self.context, frame.path, native_id)
             if citation_identity is not None:
                 native_id = citation_identity
@@ -377,6 +430,8 @@ def parse_file(input_path: Path, output: Path, context: dict):
             raise ValueError("XML artifact hash mismatch")
         if collector.applied_parent_corrections != set(collector.parent_corrections):
             raise ValueError("Reviewed source correction inventory mismatch")
+        if collector.applied_suppressed_source_duplicates != collector.suppressed_source_duplicates:
+            raise ValueError("Reviewed source duplicate inventory mismatch")
         if collector.source_records != shards.records or shards.records == 0:
             raise ValueError("XML record completeness mismatch or empty supported corpus")
         if collector.source != "govinfo-fr" and collector.title_roots != 1:

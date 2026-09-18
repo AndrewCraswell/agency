@@ -183,11 +183,23 @@ describe("federal streaming parser and bridge", { timeout: 30_000 }, () => {
   it("recognizes historical FRDOC formatting without guessing missing identities", { timeout: 30_000 }, async () => {
     const input = await fixtureInput("fr-2024-01-02-excerpt.xml")
     const xml =
-      "<FEDREG><NOTICE><FRDOC>[FR DOC. 00-1108 Filed1-14-00;8:45am]</FRDOC></NOTICE><NOTICE><FRDOC>FR Doc. 00-1098 Filed 1-14-00; 8:45am]</FRDOC></NOTICE></FEDREG>"
+      "<FEDREG>" +
+      "<NOTICE><FRDOC>[FR DOC. 00-1108 Filed1-14-00;8:45am]</FRDOC></NOTICE>" +
+      "<NOTICE><FRDOC>FR Doc. 00-1098 Filed 1-14-00; 8:45am]</FRDOC></NOTICE>" +
+      "<NOTICE><FRDOC>[FR Doc 2020-04168 Filed 2-28-20; 8:45 am]</FRDOC></NOTICE>" +
+      "<NOTICE><FRDOC>[FR Doc.2020-13968 Filed 6-26-20; 8:45 am]</FRDOC></NOTICE>" +
+      "<NOTICE><FRDOC>[FR Doc. 2020-02441 2-6-20; 8:45 am]</FRDOC></NOTICE>" +
+      "</FEDREG>"
     const path = join(await temporary(), "historical.xml")
     await writeFile(path, xml)
     const result = await parseRegulatoryArtifact({ ...input, path, artifactHash: digest(xml) })
-    expect((await records(result.directory)).map((row) => row.nativeId)).toEqual(["00-1108", "00-1098"])
+    expect((await records(result.directory)).map((row) => row.nativeId)).toEqual([
+      "00-1108",
+      "00-1098",
+      "2020-04168",
+      "2020-13968",
+      "2020-02441"
+    ])
     for (const fragment of [
       "<FRDOC>See FR Doc. 00-1108 Filed 1-14-00</FRDOC>",
       "<FRDOC>FR Doc. 00-1108 FiledWrong</FRDOC>",

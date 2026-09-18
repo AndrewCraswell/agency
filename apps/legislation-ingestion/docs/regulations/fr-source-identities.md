@@ -31,6 +31,36 @@ The API metadata for `00-113` mixes the Minnesota title/pages with type Rule; it
 body with the notice's page header. Neither record is permitted to inherit that mixed metadata as verified facts.
 Source inventory retains the conflicting candidate as evidence for both observations, explicitly marked `conflict`.
 
+## Reviewed 2020–2024 bulk-source defects
+
+The complete 2020–2024 GovInfo XML parse found eight issues that correctly failed the ordinary identity rules. Five
+contained an unambiguous document number in a malformed `FRDOC` footer: an omitted period after `Doc`, omitted spacing
+after the period, or an omitted `Filed` label followed directly by the filing date and time. The parser now accepts only
+those structural variants when the number is followed by a numeric filing date and time. Prefix text, malformed filing
+labels, multiple footers and footers without that boundary still fail.
+
+The November 19, 2021 Part II rule at `/FEDREG[1]/NEWPART[1]/RULES[1]/RULE[1]` has no closing `FRDOC` element. Its exact
+7,631,810-byte issue artifact, SHA-256 `2b7290a3508d8d04859fb949a60323b58707f9c9429aeaa4fedd235da0abaa28`,
+identifies the rule as `2021-23972` in the issue contents at pages 64996–66030. The retained November metadata manifest
+independently matches the complete title, docket `CMS-1751-F`, RIN `0938-AU42`, start page 64996 and document number.
+Only that artifact and locator receive the reviewed identity; changed bytes or another locator still fail.
+
+Three official issue artifacts repeat one publication as adjacent XML records. These are redundant source nodes rather
+than distinct publications sharing a printed number: their title, agency, action, filing footer and substantive text
+identify the same publication, one copy lacks printed-page markup, and FederalRegister.gov lists one document. The
+parser suppresses only the reviewed redundant locator while retaining the copy with printed-page evidence. Source tag
+counts continue to expose the extra publisher node.
+
+| Issue artifact | Printed number | Retained locator | Suppressed redundant locator |
+| --- | --- | --- | --- |
+| `FR-2020-07-24`, `d4decec3457dda3b235e7ddfe606422e58d184bb46732ee6ebab32bfe9d1e849` | `2020-16104` | `/FEDREG[1]/NOTICES[1]/NOTICE[76]` | `/FEDREG[1]/NOTICES[1]/NOTICE[75]` |
+| `FR-2022-11-22`, `33cbc83a1e4f42f5deeb56b94560c3c256701e8344d0d41c6b9df1a175b794b6` | `2022-25384` | `/FEDREG[1]/NOTICES[1]/NOTICE[50]` | `/FEDREG[1]/NOTICES[1]/NOTICE[51]` |
+| `FR-2023-01-09`, `be4bf01bd8e7b975c32cf75ff97cfe0730ec58197640ab6d8b61957f6414b922` | `2023-00285` | `/FEDREG[1]/NOTICES[1]/NOTICE[11]` | `/FEDREG[1]/NOTICES[1]/NOTICE[12]` |
+
+Every exception is bound to the exact issue hash and XML locator. The parser verifies that each configured suppression
+was encountered, and changed artifacts return to the general missing/duplicate identity gates. An eight-issue replay
+through the Python parser and TypeScript shard validator produced 938 publications with no warnings or failures.
+
 ## Persistent accounting and boundaries
 
 `register:fr-source-inventory` operates on an already staged XML generation under a fenced lease and active source
