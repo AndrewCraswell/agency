@@ -5,15 +5,23 @@ import {
   type InventoryEvidence,
   type AcquisitionUnit
 } from "@repo/legislation-core/legal-text/contracts"
-import { RetryingHttpClient, readBounded } from "../http-client.js"
+import { RetryingHttpClient, readBounded, type HttpRequestTelemetry } from "../http-client.js"
 
 type SourceId = AcquisitionUnit["sourceId"]
 
 /** Local acquisition client. Cross-worker budgets must be supplied before Trigger use. */
 export class RegulatorySourceClient {
   readonly #http: RetryingHttpClient
-  constructor(options: { fetch?: typeof fetch; beforeAttempt?: () => Promise<void>; minimumIntervalMs?: number } = {}) {
+  constructor(
+    options: {
+      afterAttemptComplete?: (telemetry: HttpRequestTelemetry) => Promise<void>
+      fetch?: typeof fetch
+      beforeAttempt?: () => Promise<void>
+      minimumIntervalMs?: number
+    } = {}
+  ) {
     this.#http = new RetryingHttpClient({
+      afterAttemptComplete: options.afterAttemptComplete,
       fetch: options.fetch,
       beforeAttempt: options.beforeAttempt,
       minimumIntervalMs: options.minimumIntervalMs ?? 500,

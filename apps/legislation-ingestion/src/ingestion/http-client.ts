@@ -301,7 +301,12 @@ export class RetryingHttpClient {
       url: url.origin + url.pathname
     }
     this.#emitAttemptComplete(telemetry)
-    await this.#afterAttemptComplete?.(telemetry)
+    try {
+      await this.#afterAttemptComplete?.(telemetry)
+    } catch (error) {
+      await response?.body?.cancel().catch(() => undefined)
+      throw error
+    }
     if ("error" in outcome) {
       throw outcome.error
     }

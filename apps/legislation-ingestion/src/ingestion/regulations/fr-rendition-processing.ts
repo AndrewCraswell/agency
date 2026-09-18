@@ -9,6 +9,8 @@ import { materializeRegulatoryArtifact, retainRegulatoryArtifact } from "./durab
 import { frMetadataRecordSchema, normalizeFrDocumentNumber } from "./fr-metadata-contract.js"
 import { validateFrPdfEvidence, validateFrPdfInWorker } from "./fr-pdf-validation.js"
 import { acquireFrPdfs, pdfReceiptSchema } from "./fr-pdf.js"
+import { PostgresProviderRequestAdmissionStore, ProviderRequestAdmission } from "./provider-request-admission.js"
+import { RegulatorySourceClient } from "./source-client.js"
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
 export const frRenditionProcessingInputSchema = z.strictObject({
@@ -39,6 +41,7 @@ export async function processFrRendition(
     acquire?: typeof acquireFrPdfs
     inspect?: typeof validateFrPdfInWorker
     pdfStore?: FileArtifactStore
+    sourceClient?: RegulatorySourceClient
   } = {}
 ) {
   const input = frRenditionProcessingInputSchema.parse(value)
@@ -90,12 +93,24 @@ export async function processFrRendition(
   const directory = join(input.pdfRoot, input.unitKey)
   try {
     if (claimed.state === "pending") {
+      const admission = new ProviderRequestAdmission(new PostgresProviderRequestAdmissionStore(pool), {
+        provider: "govinfo",
+        minimumIntervalMs: 500
+      })
+      const sourceClient =
+        options.sourceClient ??
+        new RegulatorySourceClient({
+          beforeAttempt: () => admission.beforeAttempt(),
+          afterAttemptComplete: (telemetry) => admission.afterAttempt(telemetry),
+          minimumIntervalMs: 0
+        })
       const acquired = await (options.acquire ?? acquireFrPdfs)({
         metadataManifestId: claimed.metadata_manifest_id,
         records: [claimed.metadata_record],
         date: claimed.metadata_record.publication_date,
         directory,
-        limit: 1
+        limit: 1,
+        client: sourceClient
       })
       invariant(acquired.acquisitionComplete && acquired.results.length === 1, "fr_rendition_acquisition_incomplete")
       const result = acquired.results[0]

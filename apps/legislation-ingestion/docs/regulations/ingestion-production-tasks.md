@@ -187,7 +187,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   Local progress: one current discovery unit now streams through the existing bounded XML/checksum implementation,
   uploads the verified file to the configured immutable federal source store and atomically records its content-addressed
   locator and receipt on the registered discovery row. Retry revalidates retained bytes, including an existing remote
-  object. Shared provider admission/cooldown, persisted worker leases and deployed storage verification remain open.
+  object. Federal Register rendition workers now reserve GovInfo request starts through one database-backed provider
+  checkpoint and persist provider cooldown before yielding a 429 to Trigger retry. Persisted worker leases, wiring the
+  same admission into non-regulatory GovInfo callers and deployed storage verification remain open.
   Federal Register exact-day metadata manifests and required publication PDFs now use the same immutable federal artifact
   store. Metadata retries prefer the already-committed manifest locator; PDF retries materialize the committed hash rather
   than relying on the acquisition worker's directory.
@@ -272,6 +274,13 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
 - [ ] **ORCH-09 Share provider admission and cooldown.** Reuse host/key budgets across GovInfo legislative and regulatory
   callers; persist Retry-After cooldown and bounded jittered retry. **Done:** two parents cannot multiply the provider
   allowance, a 429 pauses the affected budget, and unrelated providers can progress. Depends on ORCH-03.
+  Partial implementation September 17: all Federal Register rendition workers use a short PostgreSQL advisory-lock
+  reservation over `sync_checkpoints`, enforcing one GovInfo request start per 500 ms across processes. Waiters release
+  the transaction, sleep and recheck durable state before starting. HTTP 429 telemetry extends both the provider cooldown
+  and next-start boundary using bounded `Retry-After`; the task's existing randomized Trigger retry handles deferred
+  attempts. A real two-client PostgreSQL test proves pacing, shared cooldown and independent progress for another
+  provider. Remaining: route legislative GovInfo API/bulk clients through the same provider key and verify deployed
+  multi-parent behavior.
 - [ ] **ORCH-10 Enforce aggregate database admission.** Budget the actual pools for parser/publication/copy/vector work,
   existing legislative jobs and repair capacity; reserve the specified freshness/repair share. **Done:** measured
   peak connections remain below OPS-01's verified limit at configured fan-out. Depends on OPS-01, ORCH-02.

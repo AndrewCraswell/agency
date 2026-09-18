@@ -4434,3 +4434,23 @@ unique report IDs, dates, units and source artifact hashes, one parser hash, zer
 XML normalization and text/metadata reconciliation are complete for this frozen window, while rendition acquisition,
 canonical publication, passage preparation, indexing and embeddings remain open. Recurring ingestion and bulk
 regulatory embeddings remain disabled.
+
+## Durable GovInfo admission for Federal Register renditions
+
+Federal Register PDF workers now coordinate request starts through the existing PostgreSQL `sync_checkpoints` table
+instead of multiplying a process-local delay by Trigger concurrency. Each attempt takes a short provider-specific
+advisory transaction. It either reserves the current start and advances the shared boundary by 500 ms, or releases the
+transaction, waits outside PostgreSQL and rechecks the durable boundary before making a network request. Multiple issue
+parents and rendition workers therefore share the same `govinfo` start budget.
+
+HTTP telemetry now reaches the regulatory source client. A 429 atomically extends both `cooldownUntil` and
+`nextRequestAt` by the bounded `Retry-After` interval before the request yields to the existing randomized Trigger retry.
+Other provider keys use independent locks and checkpoints. Response bodies are cancelled if an after-attempt observer
+defers the request, preventing a streamed error response from leaking its connection.
+
+Focused verification passed 27 HTTP/client/admission/PDF tests and one real PostgreSQL concurrency test against the
+dedicated `regulations_destructive_test` database. That database test uses two store instances to prove shared pacing,
+durable cooldown and continued admission for an unrelated provider. The app type-check and scoped oxlint pass. This is
+local evidence: legislative GovInfo clients still need the shared key, and a deployed multi-parent PDF run remains open.
+The five-document live PDF canary remains the only source-network sample; the 141,580-document acquisition has not been
+started. Recurring ingestion and bulk regulatory embeddings remain disabled.
