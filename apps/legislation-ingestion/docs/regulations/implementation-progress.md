@@ -13,6 +13,22 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added the deployed-task boundary for atomic annual-CFR title publication. `regulatory-annual-publication` accepts one
+frozen historical manifest, package year, title and one to 200 exact volume-generation hashes. It shares the two-worker
+regulatory publication queue, opens only a canonical database and delegates to the existing fail-closed title publisher.
+That service reacquires every volume lease, revalidates manifest membership, parser/source hashes, printed revision-date
+agreement, rights, complete edition memberships and cross-volume provision uniqueness, then exposes every volume and its
+lexical outbox in one transaction. Malformed or incomplete payloads fail before publication and retry retains the same
+immutable input.
+
+The adapter replayed the retained three-volume 2025 Title 5 pilot on canonical port 55440. It returned annual edition
+`b5b59bdf919c9224dc2168b122b3e762528e4f64368ea7e3f4141cbffcab2f00`, three volumes, revision date `2025-01-01`,
+`state: published` and `reused: true`; no duplicate edition was created. Nine focused task tests pass strict bounds,
+canonical-database refusal, pool cleanup and failure propagation. The complete ingestion/parsing/tools suite also passed
+231 files and 1,853 tests after the preceding passage-operator slice. Evidence:
+`artifacts/regulatory-backfills/annual-title5-trigger-adapter-canary.json`. This advances ING-13's publication stage but
+does not yet supply the historical inventory controller, acquisition/import fan-out, or deployed Trigger run.
+
 Added the missing operator boundary for a full admitted passage-preparation wave. The new
 `run-regulatory-passage-backfill` command re-runs the complete frozen-catalog admission against the retained canonical
 database before it can construct a Trigger controller payload. Its preview binds the catalog hash, exact admitted owner

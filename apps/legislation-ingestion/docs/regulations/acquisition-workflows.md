@@ -158,6 +158,12 @@ Reuse/adapt Vaquill parsing logic from pinned commit `2f7aeb85a434a54a351ac44e3c
 scraping is not the default: prefer official metadata APIs, XML and package downloads. Do not copy browser/proxy state
 collectors into this federal feature.
 
+The explicit `regulatory-annual-publication` Trigger task is the final grouped publication boundary for a frozen annual
+CFR title. Its payload carries the historical manifest, year, title and exact materialized volume generations. The task
+shares the bounded regulatory publication queue; the underlying service revalidates the complete publisher-defined
+volume denominator and publishes all volumes atomically. It does not discover inventory, acquire or parse volumes, or
+select an incomplete title. The historical controller must supply those earlier durable stages before dispatching it.
+
 For XML parsing, first extract bounded pure parsers into `python/regulations/` using Python standard-library XML
 streaming where sufficient. A TypeScript parser bridge invokes them on downloaded files and receives validated NDJSON
 plus a summary manifest. No provider credentials or database writes in parser subprocesses. Package through the already
