@@ -1,6 +1,6 @@
 # Federal regulatory implementation progress
 
-Updated September 17, 2026. Implementation is underway. Backfill first: all recurring regulatory source schedules remain
+Updated September 18, 2026. Implementation is underway. Backfill first: all recurring regulatory source schedules remain
 disabled. This is a dated execution ledger, not a recurring-agent configuration or task queue. Older entries describe
 then-current blockers and counters; newer evidence and the production backlog supersede those operational directions.
 
@@ -12,6 +12,49 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 2m43s. Verification log: `C:/Users/andcra/AppData/Local/Temp/rostra-production-backlog-verify.log`.
 
 ## Implementation evidence, newest first
+
+Deployed the production Trigger bundle twice to exercise the first bounded current-eCFR canary. Deployment
+`20260918.11` reached PostgreSQL but exposed that `statement_timeout` in `pg.Pool` startup parameters is incompatible
+with Railway PgBouncer. Commit `d05f440` removed that startup option from all regulatory task pools while retaining the
+existing transaction-local timeouts; four focused files and 28 tests, formatting, lint, ingestion type-check and commit
+hooks passed. Deployment `20260918.12` then reached the canonical database and failed at the intended schema gate because
+`legislation.legal_sources` is not yet installed. Run `run_06gbbvtucg8fg8cg11pqhus401` is the production failure
+evidence. This proves the deployed task starts and connects through PgBouncer; it does not prove source acquisition or
+canonical publication.
+
+Completed a read-only production migration preflight and a clean PostgreSQL 18 rehearsal. Production records historical
+migrations 0 through 47 and has 62 legislation tables. The retained 48-through-51 migrations add the 40 missing
+regulatory tables. The live keyed catalog matches the retained pre-regulation schema for existing columns, functions
+and triggers; one amendment HNSW index is an intentional extra. Ten older constraints are already stronger because they
+were validated in production. Sixteen remain unvalidated: fourteen have zero violating rows, while two event-vocabulary
+checks contain 2,657 legacy classifications and 1,569 legacy statuses.
+
+Added `0001_reconcile_legacy_event_vocabulary.sql` to map those observed legacy forms with the current canonical event
+semantics and validate all 26 formerly deferred constraints. Its PostgreSQL integration test replays all ten observed
+classification forms and three observed status forms, verifies their canonical values and verifies both event
+constraints are validated. The retained 0-through-47 chain plus 48-through-51 and this reconciliation produced exact
+catalog parity with the consolidated baseline across relations, columns, constraints, indexes, functions and triggers:
+102 legislation tables on both sides. Focused migration tests pass five cases; core type-check, `db:check` and scoped
+lint pass. The complete core database project passes 16 tests with 11 environment-skipped cases. Root `pnpm verify`
+passed formatting, lint, type-check, electrical simulation and Beachball gates before the repository-wide Knip check
+stopped on 64 unused files, two unused root development dependencies, two unlisted binaries and two unused exports.
+Those findings were not changed in this migration slice, and coverage did not run. No production schema, data or ledger
+writes occurred.
+
+The Railway volume is ready and a read-only API audit found 17 recovery points. The latest daily snapshot is from
+September 17 at 20:42 UTC and expires September 23 at 20:42 UTC. A fresh named snapshot remains unavailable because the
+volume backup limit is full; no recovery point was deleted or created. Production rollout therefore still requires an
+explicit choice to accept the existing recovery window or free a slot for a new snapshot, followed by the direct-admin
+migration transaction and catalog verification. Recurring source schedules remain disabled.
+
+The Railway `pgvector` service's public database URL was separately verified read-only as a direct PostgreSQL 18.6
+administration connection: it accepted a startup `statement_timeout`, connected as the database owner and reported no
+recovery mode. This is distinct from the PgBouncer URL used by Trigger tasks, so the release no longer depends on an
+unverified administration path.
+
+The two independent Federal Register artifact jobs remained live during this work. Acquisition advanced to 180 of
+1,248 frozen 2020-through-2024 publication days through September 16, 2020. Structural PDF validation advanced to 55
+of the first 100 days through March 20, 2020. Neither job was restarted or duplicated.
 
 Connected retained monthly FederalRegister.gov evidence to the historical publication-preparation path. For an issue
 date, the worker now looks under the configured metadata root for

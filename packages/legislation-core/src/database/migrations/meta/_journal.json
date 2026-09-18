@@ -8,6 +8,13 @@
       "when": 1789725600000,
       "tag": "0000_melted_captain_america",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789761185934,
+      "tag": "0001_reconcile_legacy_event_vocabulary",
+      "breakpoints": true
     }
   ]
 }

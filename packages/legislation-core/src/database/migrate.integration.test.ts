@@ -71,7 +71,98 @@ describe.skipIf(!databaseUrl).sequential("canonical PostgreSQL baseline", () => 
     )
     expect(triggers.rows.map((row) => row.name)).toEqual(["legal_copy_passage_revision", "legal_copy_passage_truncate"])
     const journal = await pool.query("select hash from legislation_migrations.migrations")
-    expect(journal.rows).toHaveLength(1)
+    expect(journal.rows).toHaveLength(2)
+  })
+
+  it("reconciles legacy event vocabulary before validating old constraints", async () => {
+    await pool.query(
+      `alter table legislation.legislative_events
+       drop constraint legislative_events_classification_vocabulary_check,
+       drop constraint legislative_events_status_vocabulary_check`
+    )
+    await pool.query(
+      `insert into legislation.jurisdictions(id,name,classification,country_code)
+       values ('migration-event-vocabulary','Migration event vocabulary','state','US')
+       on conflict(id) do nothing`
+    )
+    const classifications = [
+      ["markup", "meeting"],
+      ["committee-meeting", "meeting"],
+      ["open hearing", "hearing"],
+      ["event", "other"],
+      ["open business meeting", "meeting"],
+      ["closed hearing", "hearing"],
+      ["closed markup session", "session"],
+      ["closed business meeting", "meeting"],
+      ["joint open hearing", "hearing"],
+      ["open markup session", "session"]
+    ] as const
+    const statuses = [
+      ["rescheduled", "postponed"],
+      ["confirmed", "scheduled"],
+      ["tentative", "scheduled"]
+    ] as const
+    await pool.query(
+      `insert into legislation.legislative_events
+         (id,jurisdiction_id,source_id,name,classification,status,start_at)
+       select 'migration-classification-' || ordinal,
+              'migration-event-vocabulary',
+              'migration-classification-' || ordinal,
+              'Legacy classification ' || ordinal,
+              classification,
+              'scheduled',
+              '2026-09-18T00:00:00Z'::timestamptz
+       from unnest($1::text[]) with ordinality as legacy(classification,ordinal)`,
+      [classifications.map(([source]) => source)]
+    )
+    await pool.query(
+      `insert into legislation.legislative_events
+         (id,jurisdiction_id,source_id,name,classification,status,start_at)
+       select 'migration-status-' || ordinal,
+              'migration-event-vocabulary',
+              'migration-status-' || ordinal,
+              'Legacy status ' || ordinal,
+              'meeting',
+              status,
+              '2026-09-18T00:00:00Z'::timestamptz
+       from unnest($1::text[]) with ordinality as legacy(status,ordinal)`,
+      [statuses.map(([source]) => source)]
+    )
+    await pool.query(
+      `alter table legislation.legislative_events
+       add constraint legislative_events_classification_vocabulary_check
+         check(classification is null or classification in ('meeting','hearing','session','other')) not valid,
+       add constraint legislative_events_status_vocabulary_check
+         check(status in ('scheduled','completed','cancelled','postponed','other')) not valid`
+    )
+    await pool.query("delete from legislation_migrations.migrations where created_at=$1", [1789761185934])
+
+    await migrateDatabase(database)
+
+    const actualClassifications = await pool.query<{ classification: string }>(
+      `select classification from legislation.legislative_events
+       where id like 'migration-classification-%'
+       order by right(id,length(id)-length('migration-classification-'))::integer`
+    )
+    expect(actualClassifications.rows.map(({ classification }) => classification)).toEqual(
+      classifications.map(([, expected]) => expected)
+    )
+    const actualStatuses = await pool.query<{ status: string }>(
+      `select status from legislation.legislative_events
+       where id like 'migration-status-%'
+       order by right(id,length(id)-length('migration-status-'))::integer`
+    )
+    expect(actualStatuses.rows.map(({ status }) => status)).toEqual(statuses.map(([, expected]) => expected))
+    const constraints = await pool.query<{ conname: string; convalidated: boolean }>(
+      `select conname,convalidated from pg_constraint
+       where conrelid='legislation.legislative_events'::regclass
+         and conname in ('legislative_events_classification_vocabulary_check','legislative_events_status_vocabulary_check')
+       order by conname`
+    )
+    expect(constraints.rows).toEqual([
+      { conname: "legislative_events_classification_vocabulary_check", convalidated: true },
+      { conname: "legislative_events_status_vocabulary_check", convalidated: true }
+    ])
   })
 
   it("preserves existing rows and the ledger on a repeated release", async () => {
