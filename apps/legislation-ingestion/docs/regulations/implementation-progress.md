@@ -4504,3 +4504,28 @@ wrote no vectors and selected no model.
 This closes local deterministic preparation for the complete-issue canary. Copying one candidate into the isolated
 lexical-search database, exact source/target reconciliation, authenticated API/MCP serving and held-out model selection
 remain open. Recurring ingestion and bulk regulatory embeddings remain disabled.
+
+## Complete January 2, 2020 Federal Register lexical/API/MCP canary
+
+The OpenAI-tokenized boundaries were selected for this local lexical canary only. A guarded operator command copied all
+73 prepared publication generations and all 683 passages from the disposable canonical database into the isolated
+`legislation_passage_search` database. Whole-scope verification acknowledged all 73 canonical lexical outbox rows and
+persisted 73 exact search-scope receipts. No old membership or generation needed removal. Immediate replay traversed
+and reverified every scope, retained the same 73-generation/683-passage inventory, began with zero pending outbox rows
+and removed nothing. Initial copy report SHA-256 is
+`af953728dd6c8c4ac5cb9d4d850a8f5e55e6a151028e57fb1f61cc31bd6f1e70`; replay report SHA-256 is
+`e40eb2a31e16f93514bd9f5ef4309ca05a584b6c56bae108e406cddd4fabfddc`.
+
+The authenticated HTTP handler and typed client then searched only January 2, 2020 final rules for `Hawaiian hawk
+endangered wildlife`. They returned the exact canonical version `bd7bd448-1c5a-41f0-a340-73e234b0e501`, passage
+`b24c05b500d57764ccadb04955e6772be28c97ce7e9f4dd440a89cacc917f1e0`, citation `85 FR 164` and official source URL;
+an invalid bearer received 401. The streamable HTTP MCP application discovered `search_regulations`, returned the same
+version, passage, citation, source and lexical generation through its independent API credential, and rejected a
+caller-supplied organization ID before an API request. HTTP report SHA-256 is
+`e7bff496f86bc879680771a541f37b55468ae8f520d9517ba71ba448b81efccc`; MCP report SHA-256 is
+`e594b480848103fa122629a7ad0ef7c8ff2c5aa1b4152bc1e77f702e15192a3f`.
+
+This proves the complete local issue through canonical publication, passage preparation, isolated lexical copy,
+authenticated HTTP and API-backed MCP. It does not select the embedding model, write vectors, exercise deployed
+Trigger/Azure/WorkOS infrastructure or complete the remaining 141,507 renditions. Recurring ingestion and bulk
+regulatory embeddings remain disabled.
