@@ -4592,3 +4592,11 @@ acquisition checkpoint replay loaded one manifest and completed in 6.709 seconds
 audit loaded one manifest, reused all 73 receipts and completed in 20.584 seconds; its summary SHA-256 is
 `ac169cd048065835e9e423e989e91c6f258a14c780412e49ae06ac295fcda387`. The release-wide workers already in
 flight retain the code loaded at their start and were not restarted.
+
+The acquisition operator now also avoids retaining every detailed manifest throughout a release-wide download. Its
+first pass replay-validates every selected manifest and retains only path, manifest identity, ordered issue dates and
+expected counts. Before processing a month, it replays that manifest again and rejects any identity change since
+preflight. Detailed records are therefore resident only for the active month, while the all-manifest validation and
+duplicate/date-order gates still run before acquisition. A two-month checkpoint-only audit covered 40 dates and 4,308
+PDFs in 2.748 seconds with no network or canonical writes. Its summary SHA-256 is
+`e5cbe9076e30ee5d5048fadbd60e8dde511bb9ab8debd228cd397e1ab57da778`.
