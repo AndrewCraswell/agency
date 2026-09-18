@@ -57,7 +57,8 @@ export function normalizeFrHtmlPublication(input: {
     Rule: "final_rule",
     "Proposed Rule": "proposed_rule",
     Notice: "notice",
-    "Presidential Document": null
+    "Presidential Document": null,
+    "Uncategorized Document": null
   }[metadata.type]
   invariant(publicationKind !== null, "fr_publication_kind_outside_scope")
   const versionKey = digest(JSON.stringify([contract, "html_preformatted", parsed.textHash]))

@@ -4,6 +4,7 @@ import { officialFederalRights, storageBatchBytes } from "@repo/legislation-core
 import type { RegulatoryLease } from "@repo/legislation-core/legal-text/storage-contract"
 import type pg from "pg"
 import invariant from "tiny-invariant"
+import { isSupportedFrMetadataType } from "./fr-metadata-contract.js"
 import type { loadFrHtmlPublications } from "./fr-publication-files.js"
 import { withImportLease } from "./storage.js"
 
@@ -92,7 +93,7 @@ export async function registerFrHtmlImport(
 
 export function frHtmlImportArtifact(data: Loaded) {
   const expected = data.metadata.records.filter(
-    (row) => row.publication_date === data.date && row.type !== "Presidential Document"
+    (row) => row.publication_date === data.date && isSupportedFrMetadataType(row.type)
   )
   const hashes = [
     ...data.publications.map((row) => row.metadataHash),

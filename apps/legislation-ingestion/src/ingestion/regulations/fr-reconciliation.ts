@@ -2,13 +2,19 @@ import { acquisitionUnitSchema, digest } from "@repo/legislation-core/legal-text
 import { regulatoryParseSummarySchema, regulatoryRecordSchema } from "@repo/legislation-core/legal-text/parser-contract"
 import invariant from "tiny-invariant"
 import { z } from "zod"
-import { frMetadataRecordSchema, normalizeFrDocumentNumber, type FrMetadataRecord } from "./fr-metadata-contract.js"
+import {
+  frMetadataRecordSchema,
+  isSupportedFrMetadataType,
+  normalizeFrDocumentNumber,
+  type FrMetadataRecord
+} from "./fr-metadata-contract.js"
 
 const expectedKind = {
   Rule: "final_rule",
   "Proposed Rule": "proposed_rule",
   Notice: "notice",
-  "Presidential Document": null
+  "Presidential Document": null,
+  "Uncategorized Document": null
 } as const
 
 export function frPdfLocation(value: string, documentNumber: string, date: string) {
@@ -100,8 +106,18 @@ export function reconcileFrIssue(input: {
     }
     const record = candidates[0]
     invariant(record, "metadata_record_missing")
-    if (!text && record.type === "Presidential Document") {
-      outsideScope.push({ documentNumber, reason: "presidential_document_outside_initial_scope" })
+    if (!isSupportedFrMetadataType(record.type)) {
+      if (text) {
+        gaps.push({ documentNumber, reason: "unsupported_metadata_type" })
+      } else {
+        outsideScope.push({
+          documentNumber,
+          reason:
+            record.type === "Presidential Document"
+              ? "presidential_document_outside_initial_scope"
+              : "uncategorized_document_outside_initial_scope"
+        })
+      }
       continue
     }
     if (!text) {
@@ -159,7 +175,10 @@ export function reconcileFrIssue(input: {
     }
   }
   const presidentialSourceCount = summary.sourceTagCounts.PRESDOCU ?? 0
-  if (presidentialSourceCount !== outsideScope.length) {
+  if (
+    presidentialSourceCount !==
+    outsideScope.filter((item) => item.reason === "presidential_document_outside_initial_scope").length
+  ) {
     gaps.push({ documentNumber: "", reason: "outside_scope_count_mismatch" })
   }
   const metadataComplete = gaps.length === 0 && matches.length === records.length

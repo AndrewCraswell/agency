@@ -10,6 +10,12 @@ export const frTypeNames = {
   NOTICE: "Notice",
   PRESDOCU: "Presidential Document"
 } as const
+export const frSupportedMetadataTypeSchema = z.enum(["Rule", "Proposed Rule", "Notice"])
+export const frMetadataTypeSchema = z.enum([
+  ...frSupportedMetadataTypeSchema.options,
+  "Presidential Document",
+  "Uncategorized Document"
+])
 export const frMetadataFields = [
   "document_number",
   "title",
@@ -60,7 +66,7 @@ export const frMetadataRecordSchema = z
   .object({
     document_number: z.string().min(1).max(128),
     title: z.string().min(1),
-    type: z.enum(["Rule", "Proposed Rule", "Notice", "Presidential Document"]),
+    type: frMetadataTypeSchema,
     publication_date: z.iso.date(),
     abstract: z.string().nullable(),
     action: z.string().nullable(),
@@ -101,6 +107,10 @@ export const frMetadataRecordSchema = z
     }
   })
 export type FrMetadataRecord = z.infer<typeof frMetadataRecordSchema>
+export type FrSupportedMetadataType = z.infer<typeof frSupportedMetadataTypeSchema>
+export function isSupportedFrMetadataType(value: FrMetadataRecord["type"]): value is FrSupportedMetadataType {
+  return frSupportedMetadataTypeSchema.safeParse(value).success
+}
 export const frMetadataPageSchema = z.object({
   count: z.int().nonnegative(),
   total_pages: z.int().nonnegative(),

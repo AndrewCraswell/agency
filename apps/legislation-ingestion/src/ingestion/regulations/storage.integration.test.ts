@@ -2715,7 +2715,8 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           Rule: "Rules and Regulations",
           Notice: "Notices",
           "Proposed Rule": "Proposed Rules",
-          "Presidential Document": "Presidential Documents"
+          "Presidential Document": "Presidential Documents",
+          "Uncategorized Document": "Uncategorized Documents"
         }[record.type]
         return normalizeFrHtmlPublication({
           metadataRecord: record,
@@ -2897,7 +2898,8 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         Rule: "Rules and Regulations",
         "Proposed Rule": "Proposed Rules",
         Notice: "Notices",
-        "Presidential Document": "Presidential Documents"
+        "Presidential Document": "Presidential Documents",
+        "Uncategorized Document": "Uncategorized Documents"
       }[record.type]
       const htmlBytes = Buffer.from(
         `<pre>[Federal Register Volume ${record.volume}, Number 1 (Tuesday, January 2, 2024)]\n[${kind}]\n[Pages ${record.start_page}-${record.end_page}]\n[FR Doc No: ${record.document_number}]\n${record.title}\nSynthetic publication text.\n[FR Doc. ${record.document_number} Filed 1-1-24]</pre>`

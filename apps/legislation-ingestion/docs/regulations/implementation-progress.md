@@ -13,6 +13,32 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Completed the independent FederalRegister.gov document inventory for every month in the frozen 2020–2024 GovInfo
+issue scope. Sixty replay-validated monthly manifests retain 181 API pages and 143,200 unique document records with zero
+cross-month duplicate document numbers: 16,043 rules, 10,158 proposed rules, 115,378 notices, 1,620 presidential
+documents and one publisher-labeled `Uncategorized Document`. All monthly partitions remained below the 10,000-record
+saturation threshold. The corresponding 60 cross-source audits replayed both sources and found zero issue/metadata gaps:
+1,248 publication days require document-level reconciliation and 579 calendar days have independently observed zero
+records.
+
+The live crawl exposed FederalRegister.gov document `2020-16416`, whose metadata type is `Uncategorized Document` while
+its action says `Final rule.` The metadata contract now retains that real publisher value instead of rejecting the whole
+page. It is excluded from automatic supported-type acquisition and creates an `unsupported_metadata_type` gap when
+source XML supplies a regulation publication, requiring evidence-based review. Presidential and uncategorized exclusions
+are counted separately. Saturated untyped partitions now require the four typed child inventories to reproduce the
+parent count exactly, so an uncategorized record cannot silently disappear during fan-out.
+
+The inventory auditor can now verify one 31-day metadata manifest against its exact slice of a broader authenticated
+GovInfo manifest. It reconstructs the slice from the parent evidence, compares the exact retained issue units and emits
+the derived slice manifest identity. This removes the prior contradiction between the metadata collector's 31-day bound
+and a multi-year bulk manifest. The focused Federal Register suite passes 56 tests, and metadata/reconciliation/audit
+checks pass 38 tests after the slice change. All 60 live audits then passed again while replaying the complete parent
+manifest before deriving their monthly slice. The complete ingestion/parsing/tools suite passed 234 files and 1,875
+tests in 83.49 seconds before the final full-parent replay strengthening; ingestion type-check and all eight focused
+inventory-audit tests passed afterward. No issue XML, PDF or HTML was downloaded in this slice, and no database, Trigger,
+canonical publication, index, embedding or schedule state changed. Document-level XML joins, required renditions and the
+one classification review remain open.
+
 Froze, replayed and admitted the complete GovInfo Federal Register bulk-XML issue inventory for January 2020 through
 December 2024. Manifest `ac666b7b72bcc6f54389853affdea47ddeb89244b1a03dcf5fc7c74d9af11705` binds all 60 monthly
 listings, 1,248 daily issue units and 4,016,059,961 listed bytes with zero unknown sizes. Every month contains 18–23

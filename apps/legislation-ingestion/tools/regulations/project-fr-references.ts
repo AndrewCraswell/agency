@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { parseArgs } from "node:util"
 import { z } from "zod"
+import { isSupportedFrMetadataType } from "../../src/ingestion/regulations/fr-metadata-contract.js"
 import { replayFrMetadata } from "../../src/ingestion/regulations/fr-metadata.js"
 import {
   frSourceReferenceContract,
@@ -12,7 +13,7 @@ const { values } = parseArgs({ options: { metadata: { type: "string" }, output: 
 const path = (value: unknown) => resolve(z.string().min(1).parse(value))
 const metadata = await replayFrMetadata(JSON.parse(await readFile(path(values.metadata), "utf8")))
 const records = metadata.records
-  .filter((record) => record.type !== "Presidential Document")
+  .filter((record) => isSupportedFrMetadataType(record.type))
   .map(projectFrSourceReferences)
 const agencies = records.flatMap((record) => record.agencies)
 const identifiers = records.flatMap((record) => [...record.rins, ...record.dockets])

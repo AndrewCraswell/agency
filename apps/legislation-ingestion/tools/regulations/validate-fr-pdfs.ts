@@ -4,7 +4,10 @@ import { parseArgs } from "node:util"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import invariant from "tiny-invariant"
 import { z } from "zod"
-import { normalizeFrDocumentNumber } from "../../src/ingestion/regulations/fr-metadata-contract.js"
+import {
+  isSupportedFrMetadataType,
+  normalizeFrDocumentNumber
+} from "../../src/ingestion/regulations/fr-metadata-contract.js"
 import { replayFrMetadata } from "../../src/ingestion/regulations/fr-metadata.js"
 import { validateFrPdfEvidence, validateFrPdfInWorker } from "../../src/ingestion/regulations/fr-pdf-validation.js"
 import { pdfReceiptSchema } from "../../src/ingestion/regulations/fr-pdf.js"
@@ -25,7 +28,7 @@ const metadata = await replayFrMetadata(JSON.parse(await readFile(path(values.me
 const date = z.iso.date().parse(values.date)
 invariant(date >= metadata.scope.start && date <= metadata.scope.end, "fr_pdf_date_outside_manifest")
 const selected = metadata.records.filter(
-  (record) => record.publication_date === date && record.type !== "Presidential Document"
+  (record) => record.publication_date === date && isSupportedFrMetadataType(record.type)
 )
 const results = []
 for (const record of selected) {

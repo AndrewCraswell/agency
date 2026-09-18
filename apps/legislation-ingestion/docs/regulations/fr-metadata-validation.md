@@ -35,10 +35,24 @@ format and page sequence. It preserves the opaque cursor. It never substitutes a
 | Completeness | Stable totals, no duplicate document numbers, all expected pages, exact total record count |
 | Scope integrity | Reject out-of-window dates, changed filters, unknown document types, unsafe links and unexpected pages |
 
+The publisher may return `Uncategorized Document` even though the documented type filters expose only rules, proposed
+rules, notices and presidential documents. Retain that exact source value as an explicit unsupported classification.
+Do not infer a supported type from `action`, title, CFR references or semantic similarity. Downstream acquisition and
+publication select only the three supported regulatory types; a matching XML publication remains blocked for source
+review. When an untyped parent partition is saturated, the sum of all typed child partitions must equal the parent
+count. A difference fails the inventory instead of dropping documents that no typed filter can retrieve.
+
 The saturation threshold is a conservative collection rule, not a claim that the live API cannot paginate past 10,000.
 Saturated parent pages remain evidence but do not contribute duplicate records to the completed child inventories.
 The day/type splitting paths are fault-fixture tested; the live pilot was not saturated. Wider history runs must enumerate
 separate frozen windows and validate their combined coverage rather than relaxing these bounds.
+
+The 2020–2024 backfill retains 60 monthly manifests containing 181 source pages and 143,200 documents. Exact type counts
+are 16,043 rules, 10,158 proposed rules, 115,378 notices, 1,620 presidential documents and one uncategorized document
+(`2020-16416`, published August 19, 2020). No document number repeats across the 60 manifests. Cross-source replay against
+the 1,248 GovInfo daily issue units reports zero inventory gaps: 1,248 issue days require document reconciliation and
+579 calendar days have zero metadata records. These results establish source inventory agreement, not text joins,
+rendition completeness or publication readiness.
 
 Each response retains its original body, URL, observation timestamp, content type, byte count and SHA-256. A directory
 writer lock protects collection. Completed pages are atomically cached under the full request URL hash; a retry can use

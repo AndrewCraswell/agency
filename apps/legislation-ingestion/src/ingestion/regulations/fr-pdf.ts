@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import invariant from "tiny-invariant"
 import { z } from "zod"
-import { frMetadataRecordSchema, normalizeFrDocumentNumber } from "./fr-metadata-contract.js"
+import { frMetadataRecordSchema, isSupportedFrMetadataType, normalizeFrDocumentNumber } from "./fr-metadata-contract.js"
 import { frPdfLocation } from "./fr-reconciliation.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
@@ -131,7 +131,7 @@ export async function acquireFrPdfs(input: {
   const metadataManifestId = hash.parse(input.metadataManifestId)
   const records = input.records
     .map((record) => frMetadataRecordSchema.parse(record))
-    .filter((record) => record.publication_date === date && record.type !== "Presidential Document")
+    .filter((record) => record.publication_date === date && isSupportedFrMetadataType(record.type))
     .sort((a, b) => a.document_number.localeCompare(b.document_number))
   const limit = z.int().min(1).max(10000).parse(input.limit)
   const maximumBytes = z

@@ -85,6 +85,18 @@ describe("Federal Register cross-source inventory audit", () => {
       days: [{ status: "requires_document_reconciliation" }]
     })
   })
+  it("audits one metadata window against a broader replay-validated bulk manifest", async () => {
+    const { manifest, metadata } = await inputs(true)
+    manifest.scope.federalRegister = { start: "2024-01-01", end: "2024-01-31" }
+    manifest.id = manifestIdentity(manifest)
+    const report = await auditFrInventory(manifest, metadata)
+    expect(report).toMatchObject({
+      manifestId: manifest.id,
+      scope: { start: "2024-01-02", end: "2024-01-02" },
+      inventoryGaps: 0
+    })
+    expect(report.issueSliceManifestId).not.toBe(manifest.id)
+  })
   it.each([
     [true, "none", "missing_metadata"],
     [false, "none", "no_records_observed"],
@@ -103,7 +115,7 @@ describe("Federal Register cross-source inventory audit", () => {
   })
   it("rejects uncovered dates and modified metadata evidence", async () => {
     const { manifest, metadata } = await inputs(true)
-    manifest.scope.federalRegister = { start: "2024-01-01", end: "2024-01-02" }
+    manifest.scope.federalRegister = { start: "2024-01-03", end: "2024-01-03" }
     manifest.id = manifestIdentity(manifest)
     await expect(auditFrInventory(manifest, metadata)).rejects.toThrow("fr_inventory_metadata_scope_mismatch")
     const valid = await inputs(true)

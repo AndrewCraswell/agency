@@ -48,7 +48,8 @@ export function parseFrHtml(body: string, recordValue: unknown) {
     Rule: "Rules and Regulations",
     "Proposed Rule": "Proposed Rules",
     Notice: "Notices",
-    "Presidential Document": null
+    "Presidential Document": null,
+    "Uncategorized Document": null
   }[record.type]
   invariant(
     kind !== null && text.split("\n").some((line) => line.trim() === `[${kind}]`),

@@ -5,7 +5,7 @@ import type { RegulatoryLease } from "@repo/legislation-core/legal-text/storage-
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
-import { frMetadataRecordSchema, normalizeFrDocumentNumber } from "./fr-metadata-contract.js"
+import { frMetadataRecordSchema, isSupportedFrMetadataType, normalizeFrDocumentNumber } from "./fr-metadata-contract.js"
 import { replayFrMetadata } from "./fr-metadata.js"
 import { frSubjectKey } from "./fr-subject.js"
 import { withLease } from "./storage.js"
@@ -41,7 +41,7 @@ export function buildFrSourceInventory(input: {
     .array(frMetadataRecordSchema)
     .max(50000)
     .parse(input.metadata)
-    .filter((row) => row.publication_date === unit.issueDate && row.type !== "Presidential Document")
+    .filter((row) => row.publication_date === unit.issueDate && isSupportedFrMetadataType(row.type))
   invariant(
     unit.sourceId === "govinfo-fr" && unit.issueDate !== null && summary.warnings.length === 0,
     "fr_source_inventory_scope_required"
@@ -115,9 +115,13 @@ export function buildFrSourceInventory(input: {
     const aliases = rows.filter((candidate) => candidate.publisherNumber === row.publisherNumber)
     const candidate = candidates[0]
     const expectedKind = candidate
-      ? { Rule: "final_rule", "Proposed Rule": "proposed_rule", Notice: "notice", "Presidential Document": null }[
-          candidate.type
-        ]
+      ? {
+          Rule: "final_rule",
+          "Proposed Rule": "proposed_rule",
+          Notice: "notice",
+          "Presidential Document": null,
+          "Uncategorized Document": null
+        }[candidate.type]
       : null
     let metadataStatus = "candidate"
     if (candidates.length === 0) {

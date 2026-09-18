@@ -4,7 +4,7 @@ import { digest } from "@repo/legislation-core/legal-text/contracts"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import { acquireFrHtmlEvidence, FrHtmlSubjectMismatch } from "./fr-html.js"
-import { normalizeFrDocumentNumber } from "./fr-metadata-contract.js"
+import { isSupportedFrMetadataType, normalizeFrDocumentNumber } from "./fr-metadata-contract.js"
 import { replayFrMetadata } from "./fr-metadata.js"
 import { frPdfInspectionSchema } from "./fr-pdf-validation.js"
 import { pdfReceiptSchema } from "./fr-pdf.js"
@@ -44,7 +44,7 @@ export async function loadFrHtmlPublications(input: {
     "fr_publication_pdf_validator_changed"
   )
   const selected = metadata.records.filter(
-    (record) => record.publication_date === date && record.type !== "Presidential Document"
+    (record) => record.publication_date === date && isSupportedFrMetadataType(record.type)
   )
   invariant(selected.length > 0 && selected.length <= 1000, "fr_publication_batch_size_limit")
   const byNumber = new Map(proof.results.map((result) => [result.documentNumber, result]))

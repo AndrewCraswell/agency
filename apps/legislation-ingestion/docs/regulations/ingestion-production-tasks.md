@@ -91,8 +91,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   including rules, proposals and notices; exhaust metadata pagination and split saturated windows. **Done:** independently
   sourced expected IDs and text/metadata/rendition outcomes reconcile for every day. Depends on ING-01, ING-05–06.
   Local progress: GovInfo's complete 2020–2024 monthly bulk inventory is frozen and replay-verified at 1,248 daily XML
-  issues and 4,016,059,961 listed bytes. All 60 months still require independent FederalRegister.gov document metadata;
-  bulk issue presence alone does not close this task.
+  issues and 4,016,059,961 listed bytes. Independent FederalRegister.gov inventory is now retained for all 60 months:
+  143,200 unique documents across 181 pages, with zero issue/metadata gaps and one explicit uncategorized classification.
+  Document-level XML joins, required rendition accounting and the uncategorized source review remain open.
 - [ ] **ING-09 Finish source-agency mapping.** Persist publisher agency IDs/names and reviewed mappings to existing
   organization identities; preserve unresolved aliases and multiple issuing agencies. **Done:** unknown aliases remain
   searchable as source references without creating fictitious organizations or dropping documents.

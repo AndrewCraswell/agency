@@ -191,6 +191,7 @@ export async function collectFrMetadata(
     const count = first.page.count
     if (count >= saturationLimit) {
       partitions.push({ ...partition, state: "split", reportedCount: count, records: 0, pageHashes })
+      const beforeSplit = records.length
       if (partition.start !== partition.end) {
         for (let time = Date.parse(partition.start); time <= Date.parse(partition.end); time += 86_400_000) {
           const day = new Date(time).toISOString().slice(0, 10)
@@ -203,6 +204,7 @@ export async function collectFrMetadata(
       } else {
         throw new Error("metadata_partition_saturated")
       }
+      invariant(records.length - beforeSplit === count, "metadata_split_count_mismatch")
       return
     }
     invariant(first.page.total_pages === Math.ceil(count / pageSize), "metadata_page_total_mismatch")

@@ -130,7 +130,7 @@ describe("Federal Register metadata inventories", () => {
       async (url) => {
         const type = new URL(url).searchParams.get("conditions[type][]")
         if (!type) {
-          return evidence(url, { count: 2, total_pages: 1, results: [base] })
+          return evidence(url, { count: 4, total_pages: 2, results: [base] })
         }
         const types = z.enum(["RULE", "PRORULE", "NOTICE", "PRESDOCU"]).parse(type)
         return evidence(url, {
@@ -143,6 +143,36 @@ describe("Federal Register metadata inventories", () => {
     )
     expect(result.records).toHaveLength(4)
     expect(result.partitions).toHaveLength(5)
+  })
+
+  it("retains an uncategorized publisher record explicitly and blocks lossy saturated splitting", async () => {
+    const base = fixture.results[0]
+    invariant(base, "missing_fixture")
+    const uncategorized = { ...base, document_number: "2020-16416", type: "Uncategorized Document" }
+    const complete = await collectFrMetadata(scope, async (url) =>
+      evidence(url, { count: 1, total_pages: 1, results: [uncategorized] })
+    )
+    expect(complete.records).toMatchObject([{ document_number: "2020-16416", type: "Uncategorized Document" }])
+    expect(await replayFrMetadata(complete)).toEqual(complete)
+
+    await expect(
+      collectFrMetadata(
+        scope,
+        async (url) => {
+          const type = new URL(url).searchParams.get("conditions[type][]")
+          if (!type) {
+            return evidence(url, { count: 5, total_pages: 3, results: [uncategorized] })
+          }
+          const selected = z.enum(["RULE", "PRORULE", "NOTICE", "PRESDOCU"]).parse(type)
+          return evidence(url, {
+            count: 1,
+            total_pages: 1,
+            results: [{ ...base, document_number: `2000-${selected}`, type: frTypeNames[selected] }]
+          })
+        },
+        { pageSize: 2, saturationLimit: 2 }
+      )
+    ).rejects.toThrow("metadata_split_count_mismatch")
   })
 
   it("fails rather than truncating an indivisible saturated day/type partition", async () => {

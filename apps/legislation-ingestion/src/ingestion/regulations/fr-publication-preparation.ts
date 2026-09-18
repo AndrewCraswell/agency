@@ -17,7 +17,12 @@ import {
   retainRegulatoryArtifact
 } from "./durable-artifact.js"
 import { materializeRegulatoryNormalizedBundle } from "./durable-normalized-bundle.js"
-import { frMetadataRecordSchema, normalizeFrDocumentNumber, type FrMetadataManifest } from "./fr-metadata-contract.js"
+import {
+  frMetadataRecordSchema,
+  isSupportedFrMetadataType,
+  normalizeFrDocumentNumber,
+  type FrMetadataManifest
+} from "./fr-metadata-contract.js"
 import { collectFrMetadataToDirectory, replayFrMetadata } from "./fr-metadata.js"
 import { frPdfLocation, reconcileFrIssue } from "./fr-reconciliation.js"
 import { importNormalizedRegulatoryUnit } from "./import-normalized.js"
@@ -61,7 +66,7 @@ export function planFrPublicationRenditions(input: {
   invariant(input.reconciliation.metadataComplete, "fr_metadata_incomplete")
   const byNumber = new Map(
     input.metadata.records
-      .filter((record) => record.publication_date === issueDate && record.type !== "Presidential Document")
+      .filter((record) => record.publication_date === issueDate && isSupportedFrMetadataType(record.type))
       .map((record) => [normalizeFrDocumentNumber(record.document_number), record])
   )
   const intents = input.reconciliation.matches.map((match) => {
