@@ -4485,3 +4485,22 @@ metadata identity, receipt identity and PDF document-number evidence. Evidence i
 This is local evidence and has no vectors. Deployed Trigger/Azure execution, passage preparation, copied lexical search,
 authenticated API/MCP serving and the remaining 141,507 PDFs remain open. Recurring ingestion and bulk regulatory
 embeddings remain disabled.
+
+## Complete January 2, 2020 Federal Register passage-preparation canary
+
+The same 73-publication generation now passes canonical passage preparation with both qualified candidate tokenizers in
+the disposable local regulatory database. `openai/text-embedding-3-small` produced 683 passages across 73 complete
+preparations; `voyageai/voyage-4` produced 737 passages across 73 complete preparations. Neither route had a blocked
+publication. The preparation runner requires the exact published `govinfo-fr` generation, enumerates every observation
+from that generation and rejects duplicate observations or a non-loopback database other than `regulations_test`.
+
+An immediate exact replay claimed all 146 model/publication preparations but processed zero new items. Preparation and
+passage totals remained unchanged. The initial report SHA-256 is
+`76f607865dfdc9000abfcef6a39a7226f4a696410064c3ba665443d0c1ad5721`; the replay report SHA-256 is
+`9edf58aa7fea47d7919d613dddcd5cafe125ed2c60bb570555cbbb70a6c7b2f7`. Evidence is
+`fr-passage-preparation-2020-01-02.json` and its replay under regulatory backfills. The runner made no provider requests,
+wrote no vectors and selected no model.
+
+This closes local deterministic preparation for the complete-issue canary. Copying one candidate into the isolated
+lexical-search database, exact source/target reconciliation, authenticated API/MCP serving and held-out model selection
+remain open. Recurring ingestion and bulk regulatory embeddings remain disabled.

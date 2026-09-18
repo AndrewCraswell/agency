@@ -110,6 +110,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   parser hash. One complete issue now has all 73 listed PDFs acquired, structurally validated, boundary-audited and
   published in a disposable local database. The other 141,507 listed PDFs remain unacquired, so release-wide rendition
   accounting, canonical publication and deployed monthly-evidence availability remain open.
+  Both qualified tokenizers now prepare that 73-publication generation without blockers: OpenAI Small produces 683
+  passages and Voyage 4 produces 737. Exact replay processes zero new items and preserves both inventories. This is a
+  local canonical preparation canary; lexical copy, search reconciliation, model selection and vectors remain open.
 - [ ] **ING-09 Finish source-agency mapping.** Persist publisher agency IDs/names and reviewed mappings to existing
   organization identities; preserve unresolved aliases and multiple issuing agencies. **Done:** unknown aliases remain
   searchable as source references without creating fictitious organizations or dropping documents.
