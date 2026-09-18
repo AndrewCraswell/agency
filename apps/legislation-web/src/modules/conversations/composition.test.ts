@@ -113,6 +113,13 @@ describe("composition contracts", () => {
     expect(compositionInstructions).toContain("include at least one useful supported visualization by default")
     expect(compositionInstructions).toContain("Cards are entry points into resources, not decoration")
     expect(compositionInstructions).toContain("even when its label repeats the prose")
+    expect(compositionInstructions).toContain("Present each piece of information once")
+    expect(compositionInstructions).toContain(
+      "replaces a bulleted list, numbered list or Markdown table of the same bills"
+    )
+    expect(compositionInstructions).toContain("remove redundant prose instead")
+    expect(compositionInstructions).toContain("compact cards do not replace substantive facts they hide")
+    expect(compositionInstructions).not.toContain("Answer in cited prose plus the chosen view")
     expect(compositionInstructions).toContain("do not claim follow, add-to-issue")
     expect(compositionInstructions).toContain("an explicit prose-only request")
     expect(compositionInstructions).toContain('"children":[]')
