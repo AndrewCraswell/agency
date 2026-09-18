@@ -24,12 +24,13 @@ Four-worker Trigger fan-out acquires one official GovInfo PDF per intent, verifi
 bounded all-page PDF parser. The final validated rendition opens the gate; an idempotent finalizer replays the metadata
 and exact rendition set, invokes `publishFrIssue`, records the canonical generation on the discovery unit and completes
 the original publication dispatch. Federal Register discovery rows now publish without a fictitious code-edition ID.
-Focused fixture and orchestration verification passed 16 tests, ingestion type-check and scoped lint passed, and a clean
+Focused fixture and orchestration verification passed 20 tests, ingestion type-check and scoped lint passed, and a clean
 copy of the migration chain installed both new tables in local PostgreSQL. The repository's current migration integration
 test is separately blocked by uncommitted vote-index changes in migration 0000 that reference `votes.session_id` before
-that column exists; this slice did not alter those files. A provider-backed current-issue canary, deployed shared-volume
-verification and the Federal Register branch of manifest-completion/outbox accounting remain open. Recurring source
-schedules remain disabled.
+that column exists; this slice did not alter those files. The manifest-completion audit now resolves Federal Register
+rights from the published generation and requires at least one observation, exact observation-to-outbox parity and the
+aggregate lexical state without requiring a code edition; two focused fail-closed tests pass. A provider-backed
+current-issue canary and deployed shared-volume verification remain open. Recurring source schedules remain disabled.
 
 Implemented the bounded Federal Register modification-discovery ingress without enabling a schedule. The new GovInfo
 client reads the official `FR` collection by `lastModified` with its API key only in the request header. The durable

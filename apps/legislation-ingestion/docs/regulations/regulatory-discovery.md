@@ -84,9 +84,11 @@ windows, recovery appends the prior attempt, run ID and disposition to `run_hist
 submits the same immutable payload under the incremented attempt. Late original workers remain safe because stage
 workers can advance only their expected canonical state and all transitions are replay-safe.
 
-The shared manifest-completion audit still evaluates publication and lexical completion through eCFR edition IDs. It
-must branch to Federal Register observations and `regulatory_publication_outbox` before it can be used as the FR
-end-to-end readiness gate.
+The shared manifest-completion audit branches by source. eCFR units require a canonical edition and its lexical outbox;
+Federal Register units require a canonical publication generation, at least one observation, an exact one-to-one lexical
+outbox count and the aggregate outbox state across every observation. Federal Register rows must have no code-edition ID.
+Rights are resolved from the published import generation. A missing observation or one missing publication outbox fails
+the canonical and lexical readiness gates.
 
 A remote `COMPLETED` status is not accepted as stage completion by itself. Recovery marks the dispatch complete only
 when the discovery unit has reached or passed that stage, or records `completed_without_stage_advance` for operator

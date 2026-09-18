@@ -10,6 +10,7 @@ const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
 export const legalDiscoveryManifestCompletionSchema = z.strictObject({ manifestId: hashSchema })
 const unitStateSchema = z.enum(["pending", "registered", "acquired", "parsed", "published", "quarantined"])
 const unitSchema = z.object({
+  source_id: z.enum(["ecfr", "govinfo-fr", "govinfo-cfr"]),
   unit_key: hashSchema,
   state: unitStateSchema,
   artifact_hash: hashSchema.nullable(),
@@ -18,7 +19,9 @@ const unitSchema = z.object({
   edition_id: z.uuid().nullable(),
   rights_profile_id: z.string().nullable(),
   lexical_state: z.enum(["pending", "acknowledged"]).nullable(),
-  lexical_delayed: z.boolean()
+  lexical_delayed: z.boolean(),
+  publication_count: z.int().nonnegative(),
+  publication_outbox_count: z.int().nonnegative()
 })
 const dispatchSchema = z.object({
   unit_key: hashSchema,
@@ -55,13 +58,33 @@ export async function inspectLegalDiscoveryManifestCompletion(pool: pg.Pool, val
       .parse(
         (
           await client.query(
-            `SELECT unit.unit_key,unit.state,unit.artifact_hash,unit.parser_hash,
-           unit.publication_generation_id,unit.edition_id,edition.rights_profile_id,outbox.state lexical_state,
-           COALESCE(outbox.state='pending' AND outbox.retry_at>transaction_timestamp(),false) lexical_delayed
+            `SELECT unit.source_id,unit.unit_key,unit.state,unit.artifact_hash,unit.parser_hash,
+           unit.publication_generation_id,unit.edition_id,
+           COALESCE(edition.rights_profile_id,generation.rights_profile_id) rights_profile_id,
+           CASE WHEN unit.source_id='govinfo-fr' THEN publication.lexical_state ELSE outbox.state END lexical_state,
+           CASE WHEN unit.source_id='govinfo-fr' THEN publication.lexical_delayed
+             ELSE COALESCE(outbox.state='pending' AND outbox.retry_at>transaction_timestamp(),false) END lexical_delayed,
+           publication.publication_count,publication.outbox_count publication_outbox_count
            FROM legislation.legal_discovery_units unit
            LEFT JOIN legislation.legal_editions edition ON edition.id=unit.edition_id
+           LEFT JOIN legislation.legal_import_generations generation ON generation.id=unit.publication_generation_id
            LEFT JOIN legislation.legal_derived_outbox outbox
              ON outbox.edition_id=unit.edition_id AND outbox.operation='lexical'
+           LEFT JOIN LATERAL (
+             SELECT count(observation.id)::integer publication_count,
+               count(publication_outbox.id)::integer outbox_count,
+               CASE
+                 WHEN count(observation.id)=0 OR count(publication_outbox.id)<>count(observation.id) THEN NULL
+                 WHEN bool_and(publication_outbox.state='acknowledged') THEN 'acknowledged'
+                 ELSE 'pending'
+               END lexical_state,
+               COALESCE(bool_or(publication_outbox.state='pending'
+                 AND publication_outbox.retry_at>transaction_timestamp()),false) lexical_delayed
+             FROM legislation.regulatory_document_observations observation
+             LEFT JOIN legislation.regulatory_publication_outbox publication_outbox
+               ON publication_outbox.observation_id=observation.id AND publication_outbox.operation='lexical'
+             WHERE observation.generation_id=unit.publication_generation_id
+           ) publication ON true
            WHERE unit.manifest_id=$1 ORDER BY unit.unit_key`,
             [input.manifestId]
           )
@@ -153,7 +176,11 @@ export async function inspectLegalDiscoveryManifestCompletion(pool: pg.Pool, val
         (unit.artifact_hash === null ||
           unit.parser_hash === null ||
           unit.publication_generation_id === null ||
-          unit.edition_id === null)
+          (unit.source_id === "govinfo-fr"
+            ? unit.edition_id !== null ||
+              unit.publication_count === 0 ||
+              unit.publication_outbox_count !== unit.publication_count
+            : unit.edition_id === null))
     ).length
     const lexicalMissing = units.filter((unit) => unit.state === "published" && unit.lexical_state === null).length
     const lexicalPending = units.filter((unit) => unit.lexical_state === "pending").length
