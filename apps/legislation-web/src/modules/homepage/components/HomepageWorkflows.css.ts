@@ -1,9 +1,11 @@
 import { style } from "@vanilla-extract/css"
+import { entranceEasing, entrancePose, entranceRange, scrollEntrance } from "./HomepageLanding.css"
 
 export const band = style({
   background: "var(--secondary)",
   borderBlock: "1px solid var(--border)",
   padding: "96px 24px 104px",
+  overflowX: "clip",
   "@media": { "(max-width: 48rem)": { padding: "56px 20px" } }
 })
 export const heading = style({ display: "grid", gap: 16, maxWidth: 760, marginBottom: 64 })
@@ -43,15 +45,54 @@ export const actTitle = style({
   textWrap: "pretty"
 })
 export const body = style({ fontSize: 15, lineHeight: 1.65, color: "var(--muted-foreground)", textWrap: "pretty" })
-export const preview = style({
-  direction: "ltr",
-  minWidth: 0,
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  background: "var(--card)",
-  overflow: "hidden",
-  boxShadow: "0 14px 36px -14px color-mix(in srgb, var(--foreground) 12%, transparent)"
-})
+export const preview = style([
+  scrollEntrance,
+  {
+    vars: {
+      [entrancePose]: "translate3d(64px, 120px, 0) rotate(2deg) scale(0.94)",
+      [entranceRange]: "entry 3% contain 22%",
+      [entranceEasing]: "cubic-bezier(0.28, 0.1, 0.62, 1)"
+    },
+    direction: "ltr",
+    minWidth: 0,
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    background: "var(--card)",
+    overflow: "hidden",
+    boxShadow: "0 14px 36px -14px color-mix(in srgb, var(--foreground) 12%, transparent)",
+    selectors: {
+      [`${reverseAct} &`]: {
+        vars: { [entrancePose]: "translate3d(-64px, 120px, 0) rotate(-2deg) scale(0.94)" }
+      },
+      [`${acts} > :nth-child(2) &`]: {
+        vars: {
+          [entranceRange]: "entry 9% contain 36%",
+          [entranceEasing]: "cubic-bezier(0.24, 0.12, 0.68, 1)"
+        }
+      },
+      [`${acts} > :nth-child(3) &`]: {
+        vars: {
+          [entranceRange]: "entry 0% contain 18%",
+          [entranceEasing]: "cubic-bezier(0.3, 0.08, 0.6, 1)"
+        }
+      },
+      [`${acts} > :nth-child(4) &`]: {
+        vars: {
+          [entranceRange]: "entry 6% contain 30%",
+          [entranceEasing]: "cubic-bezier(0.24, 0.18, 0.66, 1)"
+        }
+      }
+    },
+    "@media": {
+      "(max-width: 48rem)": {
+        vars: { [entrancePose]: "translate3d(0, 44px, 0) scale(0.985)" },
+        selectors: {
+          [`${reverseAct} &`]: { vars: { [entrancePose]: "translate3d(0, 44px, 0) scale(0.985)" } }
+        }
+      }
+    }
+  }
+])
 export const chrome = style({
   display: "flex",
   alignItems: "center",
