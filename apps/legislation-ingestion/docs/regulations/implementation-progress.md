@@ -13,6 +13,16 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Installed and independently verified the additive regulatory passage/vector schema on the isolated production search
+database. The fail-closed release first replayed the live one-table schema in a ParadeDB 0.25.9/PostgreSQL 18 clone and
+verified that the existing `document_sections` row and its primary, B-tree and ParadeDB indexes survived. Its first
+production-shaped attempt exposed a `name[]` versus `text[]` preflight comparison error and rolled the whole transaction
+back; the corrected payload then passed the same rehearsal. Production applied SHA-256
+`96dbb9f99c66a210a7363d5fbcd9ec1fbe32f821242c7b006b9a98f1120b767a` in one transaction. Independent postflight finds
+15 legislation tables, 110 columns, 192 constraints, 34 indexes, one function, six triggers and zero invalid indexes.
+All three pre-existing `document_sections` indexes remain present; the table retains an estimated 16,576,102 rows.
+No passage copy, vector generation, index promotion or recurring source ingestion was started.
+
 Completed the first bounded Federal Register PDF structural-validation backfill. The retained applied report covers all
 100 publication dates from January 2 through May 22, 2020 and accounts for 10,878 supported publications with 10,878
 validated official PDF renditions. Ninety-nine dates were validated during this run, one date resumed from its durable
