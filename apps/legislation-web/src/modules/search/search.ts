@@ -1191,10 +1191,10 @@ export async function semanticBillSearch(
   )
 }
 
-export async function semanticPassageSearch(
+export function buildSemanticPassageSearchQuery(
   database: LegislationDatabase,
   input: Omit<PassageSearchInput, "query"> & { embedding: number[] }
-): Promise<SearchPage<PassageSearchCandidate>> {
+) {
   const route = embeddingRouteFor("document-section")
   const limit = input.limit ?? DEFAULT_LIMIT
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAXIMUM_LIMIT) {
@@ -1203,23 +1203,54 @@ export async function semanticPassageSearch(
   const offset = decodePassageSearchCursor(input.cursor, { ...input, query: "semantic" })
   const distance = sql<number>`${documentSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const snippet = sql<string | null>`left(${documentSections.text}, 1200)`
-  const rows = await database
-    .select(passageSelection(semanticSimilarityScore(distance), snippet, distance))
-    .from(documentSections)
-    .innerJoin(documentSectionEmbeddings, eq(documentSectionEmbeddings.sectionId, documentSections.id))
-    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
-    .innerJoin(bills, eq(billDocuments.billId, bills.id))
-    .where(
-      and(
-        eq(documentSectionEmbeddings.model, route.model),
-        eq(documentSectionEmbeddings.inputContract, route.embeddingInputContract),
-        eq(billDocuments.processingStatus, "processed"),
-        ...passageFilters(input)
+  // Keep the HNSW order expression as the only nearest-neighbor ordering in
+  // the bounded CTE. Adding a stable ID tie-breaker to this scan disables the
+  // vector index and turns passage search into a full embedding-table sort.
+  const nearest = database.$with("nearest_passage_embeddings").as(
+    database
+      .select({ distance: distance.as("distance"), sectionId: documentSectionEmbeddings.sectionId })
+      .from(documentSectionEmbeddings)
+      .innerJoin(documentSections, eq(documentSectionEmbeddings.sectionId, documentSections.id))
+      .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+      .innerJoin(bills, eq(billDocuments.billId, bills.id))
+      .where(
+        and(
+          eq(documentSectionEmbeddings.model, route.model),
+          eq(documentSectionEmbeddings.inputContract, route.embeddingInputContract),
+          eq(billDocuments.processingStatus, "processed"),
+          ...passageFilters(input)
+        )
+      )
+      .orderBy(asc(distance))
+      .limit(limit + 1)
+      .offset(offset)
+  )
+  return database
+    .with(nearest)
+    .select(
+      passageSelection(
+        semanticSimilarityScore(sql<number>`${nearest.distance}`),
+        snippet,
+        sql<number>`${nearest.distance}`
       )
     )
-    .orderBy(asc(distance), asc(documentSections.id))
-    .limit(limit + 1)
-    .offset(offset)
+    .from(nearest)
+    .innerJoin(documentSections, eq(nearest.sectionId, documentSections.id))
+    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+    .innerJoin(bills, eq(billDocuments.billId, bills.id))
+    .orderBy(asc(nearest.distance), asc(documentSections.id))
+}
+
+export async function semanticPassageSearch(
+  database: LegislationDatabase,
+  input: Omit<PassageSearchInput, "query"> & { embedding: number[] }
+): Promise<SearchPage<PassageSearchCandidate>> {
+  const limit = input.limit ?? DEFAULT_LIMIT
+  const offset = decodePassageSearchCursor(input.cursor, { ...input, query: "semantic" })
+  await database.execute(
+    sql`select set_config('hnsw.ef_search', '1000', true), set_config('hnsw.iterative_scan', 'strict_order', true)`
+  )
+  const rows = await buildSemanticPassageSearchQuery(database, input)
   return {
     items: rows.slice(0, limit).map((row) => {
       if (row.distance === undefined) {
