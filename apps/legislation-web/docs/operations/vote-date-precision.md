@@ -17,6 +17,17 @@ therefore return a date-only vote from that day with `heldAt: null`: it is a pos
 Clients requiring exact-time results must exclude null `heldAt`. Bounds must not discard unknown-time votes based on
 the internal midnight ordering anchor.
 
+Date-bound validation and the range type live in core's `domain/vote-date-range`, shared by research tools, HTTP
+routes, vote readers and person-vote readers. Bounds remain ISO strings through tool execution and MCP forwarding;
+converting them to JavaScript Date objects would erase the distinction between a whole day and an exact midnight
+instant.
+
+Research `searchVotes` uses the same date bounds and UTC ordering anchor as the API vote reader. Mixed-precision
+results sort by occurrence, then vote ID, with unknown dates last. The internal sort value is selected only for
+PostgreSQL DISTINCT ordering and is not returned as a vote field. Multiple member positions do not duplicate votes
+or consume additional pagination slots. `query-service.integration.test.ts` verifies these contracts in UTC,
+America/Los_Angeles and Asia/Tokyo using the guarded local `legislation_test` database.
+
 ## Verification and rollout
 
 `vote-occurrence.integration.test.ts` verifies real PostgreSQL mixed-precision pagination in both directions and

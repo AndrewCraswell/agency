@@ -39,6 +39,7 @@ import {
   openStatesBillStatus,
   openStatesStatusClassifications
 } from "@repo/legislation-core/domain/openstates-bill-status"
+import { validateVoteDateRange, type VoteDateRange } from "@repo/legislation-core/domain/vote-date-range"
 import {
   embeddingQueryRouteFor,
   embeddingRouteFor,
@@ -108,6 +109,7 @@ import {
   listBillRelatedBills
 } from "./persistence/queries/bill-related-read"
 import { findChangeEvents, type CanonicalChangeType } from "./persistence/queries/changes"
+import { voteDateBound, voteSortTimestamp } from "./persistence/queries/vote-occurrence"
 
 const CHILD_LIMIT = 100
 const SECTION_LIMIT = 50
@@ -639,12 +641,10 @@ function canonicalCommitteeSource() {
   return sql`case when ${organizations.jurisdictionId} = 'jurisdiction:us' and ${organizations.classification} in ('committee', 'subcommittee') then ${organizations.sourceProvider} = 'govinfo' else true end`
 }
 
-export interface VoteSearchInput {
-  to?: Date
+export interface VoteSearchInput extends VoteDateRange {
   query?: string
   billId?: string
   cursor?: string
-  from?: Date
   limit?: number
   organizationId?: string
   personId?: string
@@ -2280,10 +2280,12 @@ export class LegislationQueryService {
   }
 
   async searchVotes(input: VoteSearchInput) {
+    validateVoteDateRange(input.from, input.to)
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
+    const sortTimestamp = voteSortTimestamp()
     const rows = await this.#database
-      .selectDistinct({ vote: votes })
+      .selectDistinct({ vote: votes, sortTimestamp })
       .from(votes)
       .leftJoin(votePositions, eq(votePositions.voteId, votes.id))
       .where(
@@ -2292,15 +2294,11 @@ export class LegislationQueryService {
           input.billId === undefined ? undefined : eq(votes.billId, input.billId),
           input.organizationId === undefined ? undefined : eq(votes.organizationId, input.organizationId),
           input.personId === undefined ? undefined : eq(votePositions.personId, input.personId),
-          input.from === undefined
-            ? undefined
-            : sql`coalesce(${votes.heldAt}, ${votes.heldDate}::timestamptz) >= ${input.from}`,
-          input.to === undefined
-            ? undefined
-            : sql`coalesce(${votes.heldAt}, ${votes.heldDate}::timestamptz) <= ${input.to}`
+          input.from === undefined ? undefined : voteDateBound(input.from, "from"),
+          input.to === undefined ? undefined : voteDateBound(input.to, "to")
         )
       )
-      .orderBy(asc(votes.heldAt), asc(votes.id))
+      .orderBy(asc(sortTimestamp), asc(votes.id))
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit

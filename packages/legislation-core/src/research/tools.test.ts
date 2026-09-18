@@ -327,7 +327,7 @@ describe("shared research definitions", () => {
       expect(await tool.execute(parsed)).not.toHaveProperty("isError", true)
     }
     expect(api.searchEvents).toHaveBeenCalledWith({ from: new Date(timestamp), to: new Date(timestamp) })
-    expect(api.searchVotes).toHaveBeenCalledWith({ from: new Date(timestamp) })
+    expect(api.searchVotes).toHaveBeenCalledWith({ from: timestamp })
     expect(api.searchChanges).toHaveBeenCalledWith({
       observedFrom: new Date(timestamp),
       observedTo: new Date(timestamp)

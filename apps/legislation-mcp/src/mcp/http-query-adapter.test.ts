@@ -792,10 +792,11 @@ describe("createMcpHttpQueryAdapter", () => {
     [
       "search_votes",
       pageResponse(),
-      (adapter: ReturnType<typeof createMcpHttpQueryAdapter>) => adapter.searchVotes({ personId: "person:1" }),
+      (adapter: ReturnType<typeof createMcpHttpQueryAdapter>) =>
+        adapter.searchVotes({ personId: "person:1", from: "2026-05-07T14:00:00+02:00", to: "2026-05-07" }),
       "/api/votes",
       "GET",
-      { personId: "person:1" },
+      { personId: "person:1", from: "2026-05-07T14:00:00+02:00", to: "2026-05-07" },
       undefined
     ]
   ])("maps %s to its documented HTTP operation", async (_name, response, invoke, path, method, parameters, body) => {

@@ -109,6 +109,7 @@ describe("legislation MCP tools", () => {
       for (const request of [
         { name: "search_events", arguments: { from: timestamp, to: timestamp } },
         { name: "search_votes", arguments: { from: timestamp } },
+        { name: "search_votes", arguments: { from: "2026-05-07", to: "2026-05-07" } },
         { name: "search_changes", arguments: { observedFrom: timestamp, observedTo: timestamp } }
       ]) {
         expect((await client.callTool(request)).isError).not.toBe(true)
@@ -116,7 +117,8 @@ describe("legislation MCP tools", () => {
       expect(service.searchEvents).toHaveBeenCalledWith(
         expect.objectContaining({ from: new Date(timestamp), to: new Date(timestamp) })
       )
-      expect(service.searchVotes).toHaveBeenCalledWith(expect.objectContaining({ from: new Date(timestamp) }))
+      expect(service.searchVotes).toHaveBeenCalledWith(expect.objectContaining({ from: timestamp }))
+      expect(service.searchVotes).toHaveBeenCalledWith({ from: "2026-05-07", to: "2026-05-07" })
       expect(service.searchChanges).toHaveBeenCalledWith(
         expect.objectContaining({ observedFrom: new Date(timestamp), observedTo: new Date(timestamp) })
       )

@@ -30,6 +30,7 @@ import { legalTextRequestSchema, type LegalTextRequest } from "../api-client/leg
 import { getRequestContext } from "../auth/request-context"
 import { mapConcurrent } from "../concurrency/map-concurrent"
 import { LegislationError, normalizeLegislationError } from "../domain/errors"
+import { voteDateRangeSchema, type VoteDateRange } from "../domain/vote-date-range"
 import { errorContext, type Logger } from "../observability/logger"
 import type { Telemetry } from "../observability/telemetry"
 import {
@@ -227,7 +228,7 @@ export type LegislationQueryApi = Readonly<{
       }>
   ) => Promise<unknown>
   searchVotes: (
-    input: PageInput & Readonly<{ billId?: string; from?: Date; to?: Date; organizationId?: string; personId?: string }>
+    input: PageInput & Readonly<VoteDateRange & { billId?: string; organizationId?: string; personId?: string }>
   ) => Promise<unknown>
 }>
 
@@ -1036,24 +1037,15 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
     "search_votes",
     {
       description: "Search roll calls by bill, member, organization, or observation window.",
-      inputSchema: z.object({
+      inputSchema: voteDateRangeSchema.safeExtend({
         ...pageSchema,
         billId: canonicalBillId.optional(),
-        from: optionalDateTime,
-        to: optionalDateTime,
         organizationId: canonicalId("organization").optional(),
         personId: canonicalId("person").optional()
       }),
       outputSchema
     },
-    (input) =>
-      tool(
-        "search_votes",
-        input,
-        () => service.searchVotes({ ...input, from: serviceDate(input.from), to: serviceDate(input.to) }),
-        logger,
-        telemetry
-      )
+    (input) => tool("search_votes", input, () => service.searchVotes(input), logger, telemetry)
   )
   server.registerTool(
     "get_bill_votes",

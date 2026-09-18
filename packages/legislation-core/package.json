@@ -37,6 +37,7 @@
     "./domain/membership": "./src/domain/membership.ts",
     "./domain/model": "./src/domain/model.ts",
     "./domain/openstates-bill-status": "./src/domain/openstates-bill-status.ts",
+    "./domain/vote-date-range": "./src/domain/vote-date-range.ts",
     "./embeddings/embedding-preparation": "./src/embeddings/embedding-preparation.ts",
     "./embeddings/embedding-routing": "./src/embeddings/embedding-routing.ts",
     "./embeddings/embedding-tokenizer": "./src/embeddings/embedding-tokenizer.ts",

@@ -1,5 +1,6 @@
 import { mapConcurrent } from "@repo/legislation-core/concurrency/map-concurrent"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
+import { validateVoteDateRange } from "@repo/legislation-core/domain/vote-date-range"
 import { voteOccurrence } from "../../legislation/persistence/queries/vote-occurrence"
 import type {
   Page,
@@ -14,8 +15,6 @@ import type {
   VoteSort
 } from "../../legislation/persistence/queries/vote-reads"
 import {
-  isIsoDate,
-  isRfc3339Timestamp,
   projectBillSummary,
   projectPersonSummary,
   projectVoteDetail,
@@ -188,7 +187,7 @@ function voteListInput(url: URL): VoteListInput {
   assertSingle(url, names)
   const from = bounded(url, "from", 64)
   const to = bounded(url, "to", 64)
-  dateRange(from, to)
+  validateVoteDateRange(from, to)
   return {
     billId: bounded(url, "billId", 256),
     classification: bounded(url, "classification", 256),
@@ -231,7 +230,7 @@ function personVotesInput(url: URL, personId: string): PersonVoteListInput {
   assertSingle(url, names)
   const from = bounded(url, "from", 64)
   const to = bounded(url, "to", 64)
-  dateRange(from, to)
+  validateVoteDateRange(from, to)
   return {
     cursor: bounded(url, "cursor", 4096),
     from,
@@ -476,23 +475,6 @@ function sort(value: string | undefined): VoteSort | undefined {
     return value
   }
   throw new LegislationError("invalid_request", "sort must be held-desc or held-asc")
-}
-function dateRange(from: string | undefined, to: string | undefined) {
-  for (const [name, value] of [
-    ["from", from],
-    ["to", to]
-  ] as const) {
-    if (value !== undefined && !isIsoDate(value) && !isRfc3339Timestamp(value)) {
-      throw new LegislationError("invalid_request", `${name} must be an ISO date or RFC3339 timestamp`)
-    }
-  }
-  if (
-    from !== undefined &&
-    to !== undefined &&
-    Date.parse(from) > Date.parse(to) + (isIsoDate(to) ? 86_400_000 - 1 : 0)
-  ) {
-    throw new LegislationError("invalid_request", "from must be less than or equal to to")
-  }
 }
 function requiredText(value: string | null, name: string): string {
   if (value === null || !value.trim()) {

@@ -9,7 +9,7 @@ const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 if (databaseUrl) {
   const target = new URL(databaseUrl)
   if (!["127.0.0.1", "localhost", "[::1]"].includes(target.hostname) || target.pathname !== "/legislation_test") {
-    throw new Error("Timeline integration requires an isolated local legislation_test database")
+    throw new Error("Query integration requires an isolated local legislation_test database")
   }
 }
 const pool = databaseUrl ? new pg.Pool({ connectionString: databaseUrl, max: 1 }) : undefined
@@ -18,7 +18,7 @@ afterAll(async () => {
   await pool?.end()
 })
 
-describe.skipIf(!pool)("bill timeline PostgreSQL query", () => {
+describe.skipIf(!pool)("legislation PostgreSQL queries", () => {
   beforeAll(async () => {
     if (!pool) {
       throw new Error("Missing isolated test database")
@@ -26,12 +26,101 @@ describe.skipIf(!pool)("bill timeline PostgreSQL query", () => {
     await pool.query("drop schema if exists legislation cascade")
     await pool.query("drop schema if exists legislation_migrations cascade")
     await migrateDatabase(drizzle(pool, { schema }))
-  })
+  }, 60_000)
 
   afterAll(async () => {
     await pool?.query("drop schema if exists legislation cascade")
     await pool?.query("drop schema if exists legislation_migrations cascade")
-  })
+  }, 60_000)
+
+  it.each(["UTC", "America/Los_Angeles", "Asia/Tokyo"])(
+    "filters and pages mixed-precision vote searches in %s",
+    async (timezone) => {
+      if (!pool) {
+        throw new Error("Missing isolated test database")
+      }
+      const client = await pool.connect()
+      try {
+        await client.query("begin")
+        await client.query("select set_config('TimeZone', $1, true)", [timezone])
+        await client.query(`
+          insert into legislation.votes (id, chamber, motion, held_at, held_date) values
+            ('search-vote:01-before', 'lower', 'Vote search fixture', '2026-05-06 23:59:59.999+00', null),
+            ('search-vote:02-day', 'lower', 'Vote search fixture', null, '2026-05-07'),
+            ('search-vote:03-midnight', 'lower', 'Vote search fixture', '2026-05-07 00:00:00+00', null),
+            ('search-vote:04-noon', 'lower', 'Vote search fixture', '2026-05-07 12:00:00+00', '2020-01-01'),
+            ('search-vote:05-noon', 'lower', 'Vote search fixture', '2026-05-07 12:00:00+00', null),
+            ('search-vote:06-end', 'lower', 'Vote search fixture', '2026-05-07 23:59:59.999+00', null),
+            ('search-vote:07-next', 'lower', 'Vote search fixture', null, '2026-05-08'),
+            ('search-vote:08-next', 'lower', 'Vote search fixture', '2026-05-08 00:00:00+00', null),
+            ('search-vote:09-unknown', 'lower', 'Vote search fixture', null, null);
+          insert into legislation.people (id, name) values ('person:vote-search', 'Vote search person');
+          insert into legislation.vote_positions (vote_id, source_identity, person_id, option) values
+            ('search-vote:02-day', 'search-person:1', 'person:vote-search', 'yes'),
+            ('search-vote:02-day', 'search-person:2', null, 'no');
+        `)
+        const service = new LegislationQueryService(drizzle(client, { schema }))
+        const query = "Vote search fixture"
+        const all = await service.searchVotes({ query, limit: 100 })
+        const expectedIds = [
+          "search-vote:01-before",
+          "search-vote:02-day",
+          "search-vote:03-midnight",
+          "search-vote:04-noon",
+          "search-vote:05-noon",
+          "search-vote:06-end",
+          "search-vote:07-next",
+          "search-vote:08-next",
+          "search-vote:09-unknown"
+        ]
+        expect(all.items.map((vote) => vote.id)).toEqual(expectedIds)
+        expect(all.items[1]).toMatchObject({ heldAt: null, heldDate: "2026-05-07" })
+        expect(all.items.every((vote) => !("sortTimestamp" in vote))).toBe(true)
+        expect(all.items[3]?.heldAt?.toISOString()).toBe("2026-05-07T12:00:00.000Z")
+
+        const day = await service.searchVotes({ query, from: "2026-05-07", to: "2026-05-07" })
+        expect(day.items.map((vote) => vote.id)).toEqual(expectedIds.slice(1, 6))
+        const throughDay = await service.searchVotes({ query, to: "2026-05-07" })
+        expect(throughDay.items.map((vote) => vote.id)).toEqual(expectedIds.slice(0, 6))
+        const fromDay = await service.searchVotes({ query, from: "2026-05-07" })
+        expect(fromDay.items.map((vote) => vote.id)).toEqual(expectedIds.slice(1, 8))
+        const noon = await service.searchVotes({
+          query,
+          from: "2026-05-07T14:00:00+02:00",
+          to: "2026-05-07T14:00:00+02:00"
+        })
+        expect(noon.items.map((vote) => vote.id)).toEqual([
+          "search-vote:02-day",
+          "search-vote:04-noon",
+          "search-vote:05-noon"
+        ])
+        const afterNoon = await service.searchVotes({
+          query,
+          from: "2026-05-07T12:00:00.001Z",
+          to: "2026-05-07T13:00:00Z"
+        })
+        expect(afterNoon.items.map((vote) => vote.id)).toEqual(["search-vote:02-day"])
+        const person = await service.searchVotes({ query, personId: "person:vote-search" })
+        expect(person.items.map((vote) => vote.id)).toEqual(["search-vote:02-day"])
+
+        const ids: string[] = []
+        let cursor: string | undefined
+        for (let page = 0; page < 5; page += 1) {
+          const result = await service.searchVotes({ query, limit: 2, cursor })
+          ids.push(...result.items.map((vote) => vote.id))
+          expect(result.truncated).toBe(page < 4)
+          cursor = result.nextCursor
+        }
+        expect(cursor).toBeUndefined()
+        expect(ids).toEqual(expectedIds)
+        const empty = await service.searchVotes({ query, from: "2026-05-09" })
+        expect(empty).toMatchObject({ items: [], truncated: false, nextCursor: undefined })
+      } finally {
+        await client.query("rollback")
+        client.release()
+      }
+    }
+  )
 
   it.each(["ISO, MDY", "SQL, DMY"])("preserves precision and pagination with DateStyle %s", async (dateStyle) => {
     if (!pool) {

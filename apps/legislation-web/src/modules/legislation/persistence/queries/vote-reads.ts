@@ -1,8 +1,9 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { bills, legislativeSessions, people, votePositions, votes } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
+import { validateVoteDateRange, type VoteDateRange } from "@repo/legislation-core/domain/vote-date-range"
 import { and, asc, desc, eq, exists, gt, inArray, isNull, lt, or, sql, type SQL } from "drizzle-orm"
-import { isIsoDate, isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection"
+import { isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection"
 import { voteDateBound, voteSortInstant, voteSortTimestamp } from "./vote-occurrence"
 
 const DEFAULT_LIMIT = 20
@@ -12,18 +13,16 @@ export type VoteOption = "absent" | "abstain" | "no" | "not-voting" | "other" | 
 export type VoteResult = "failed" | "other" | "passed"
 export type VoteSort = "held-asc" | "held-desc"
 
-export interface VoteListInput {
+export interface VoteListInput extends VoteDateRange {
   billId?: string
   classification?: string
   cursor?: string
-  from?: string
   jurisdictionId?: string
   limit?: number
   organizationId?: string
   personId?: string
   result?: VoteResult
   sort?: VoteSort
-  to?: string
 }
 
 export interface VotePositionListInput {
@@ -34,14 +33,12 @@ export interface VotePositionListInput {
   voteId: string
 }
 
-export interface PersonVoteListInput {
+export interface PersonVoteListInput extends VoteDateRange {
   cursor?: string
-  from?: string
   limit?: number
   option?: VoteOption
   organizationId?: string
   personId: string
-  to?: string
 }
 
 export type VoteRead = typeof votes.$inferSelect
@@ -96,7 +93,7 @@ type PersonVoteCursor = Readonly<{
 
 export async function listVoteReads(database: LegislationDatabase, input: VoteListInput): Promise<Page<VoteRead>> {
   const limit = limitOf(input.limit)
-  validateDateRange(input.from, input.to)
+  validateVoteDateRange(input.from, input.to)
   const scope = voteScope(input)
   const cursor = decodeVoteCursor(input.cursor, scope)
   const heldPredicate = cursor === undefined ? undefined : voteAfter(cursor, scope.sort)
@@ -224,7 +221,7 @@ export async function listPersonVotePositionReads(
   const personId = nonblank(input.personId, "personId")
   await assertPersonExists(database, personId)
   const limit = limitOf(input.limit)
-  validateDateRange(input.from, input.to)
+  validateVoteDateRange(input.from, input.to)
   const scope = personVoteScope(input)
   const cursor = decodePersonVoteCursor(input.cursor, scope)
   const rows = await database
@@ -314,24 +311,6 @@ function personVoteAfter(cursor: PersonVoteCursor): SQL {
       )
     ) ?? sql`false`
   )
-}
-function validateDateRange(from: string | undefined, to: string | undefined): void {
-  if (from !== undefined && !validBound(from)) {
-    throw new LegislationError("invalid_request", "from must be an ISO date or RFC3339 timestamp")
-  }
-  if (to !== undefined && !validBound(to)) {
-    throw new LegislationError("invalid_request", "to must be an ISO date or RFC3339 timestamp")
-  }
-  if (
-    from !== undefined &&
-    to !== undefined &&
-    Date.parse(from) > Date.parse(to) + (isIsoDate(to) ? 86_400_000 - 1 : 0)
-  ) {
-    throw new LegislationError("invalid_request", "from must be less than or equal to to")
-  }
-}
-function validBound(value: string) {
-  return isIsoDate(value) || isRfc3339Timestamp(value)
 }
 function limitOf(value: number | undefined) {
   const limit = value ?? DEFAULT_LIMIT
