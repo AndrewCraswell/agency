@@ -89,6 +89,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   renditions; all remain evidence attachments while canonical prose comes from matched XML. Atomic local publication and
   replay produced 73 exact observations with zero staged/canonical field mismatches. This does not qualify missing-XML
   substitution or the remaining historical inventory.
+  A restartable release-range operator now derives every supported issue date from all retained monthly manifests and
+  commits only complete per-date acquisition checkpoints. Its first no-network checkpoint audit recovered the exact
+  73-publication January 2 result. Release-wide acquisition and structural validation remain open.
 - [ ] **ING-07 Freeze current eCFR currency.** Reconcile the retained title inventory with an explicit publisher cutoff,
   reserved title 35, import-in-progress titles and per-title issue dates. Plan only genuinely missing/corrected versions.
   **Done:** every requested title is validated, delayed or excluded with evidence; collection time never substitutes

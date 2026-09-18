@@ -4529,3 +4529,18 @@ This proves the complete local issue through canonical publication, passage prep
 authenticated HTTP and API-backed MCP. It does not select the embedding model, write vectors, exercise deployed
 Trigger/Azure/WorkOS infrastructure or complete the remaining 141,507 renditions. Recurring ingestion and bulk
 regulatory embeddings remain disabled.
+
+## Restartable Federal Register PDF backfill operator
+
+Added a release-range operator for the long Federal Register rendition backfill. It replays every retained monthly
+metadata manifest before work, derives the exact supported publication dates and counts, rejects duplicate dates and
+uses one immutable complete checkpoint per issue date. A crash after retaining a PDF but before the date checkpoint is
+safe: the existing acquisition layer revalidates and reuses the content-addressed receipt and blob on retry. Incomplete
+dates never receive a successful checkpoint, and each invocation is bounded to one through five whole-date attempts.
+The underlying client retains the existing 500 ms GovInfo request-start interval and exclusive artifact-writer lock.
+
+The first checkpoint audit replayed all 60 metadata manifests, admitted only January 2, 2020 and recovered its exact
+73-publication complete report without a network request. It reported one checkpointed date, 73 expected/acquired PDFs,
+no canonical writes and recurring ingestion disabled. Evidence is
+`artifacts/regulatory-backfills/fr-pdf-backfill-checkpoint-smoke.json`. Structural PDF validation and publication remain
+separate stages; a complete acquisition checkpoint does not claim either.
