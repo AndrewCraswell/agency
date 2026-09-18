@@ -3,8 +3,8 @@ import { Command } from "commander"
 import { sql } from "drizzle-orm"
 import { z } from "zod"
 import {
-  loadScraperPersonCandidates,
-  resolveScraperPersonReference
+  createScraperPersonResolver,
+  loadScraperPersonCandidates
 } from "../../src/ingestion/openstates/scraper-person-resolution.js"
 
 const command = new Command()
@@ -30,6 +30,7 @@ const { pool } = createDatabase(
 try {
   const report = await withReadOnlyDatabase(pool, 30_000, async (transaction) => {
     const candidates = await loadScraperPersonCandidates(transaction, jurisdictionId)
+    const resolvePerson = createScraperPersonResolver(candidates)
     const sessionRows = await transaction.execute<{ end_date: string | null; start_date: string | null }>(sql`
       select end_date, start_date
       from legislation.legislative_sessions
@@ -80,16 +81,13 @@ try {
         sponsors.notFound += row.uses
         continue
       }
-      const result = resolveScraperPersonReference(
-        {
-          chamber: row.chamber,
-          name: row.name,
-          observedDate: row.observed_date ?? undefined,
-          sessionEndDate: sessionRow.end_date ?? undefined,
-          sessionStartDate: sessionRow.start_date ?? undefined
-        },
-        candidates
-      )
+      const result = resolvePerson({
+        chamber: row.chamber,
+        name: row.name,
+        observedDate: row.observed_date ?? undefined,
+        sessionEndDate: sessionRow.end_date ?? undefined,
+        sessionStartDate: sessionRow.start_date ?? undefined
+      })
       if (result.status === "resolved") sponsors.resolved += row.uses
       else if (result.status === "ambiguous") sponsors.ambiguous += row.uses
       else sponsors.notFound += row.uses
@@ -102,16 +100,13 @@ try {
         positions.notFound += row.uses
         continue
       }
-      const result = resolveScraperPersonReference(
-        {
-          chamber: row.chamber,
-          name: row.name,
-          observedDate: row.observed_date ?? undefined,
-          sessionEndDate: sessionRow.end_date ?? undefined,
-          sessionStartDate: sessionRow.start_date ?? undefined
-        },
-        candidates
-      )
+      const result = resolvePerson({
+        chamber: row.chamber,
+        name: row.name,
+        observedDate: row.observed_date ?? undefined,
+        sessionEndDate: sessionRow.end_date ?? undefined,
+        sessionStartDate: sessionRow.start_date ?? undefined
+      })
       if (result.status === "resolved") positions.resolved += row.uses
       else if (result.status === "ambiguous") positions.ambiguous += row.uses
       else positions.notFound += row.uses

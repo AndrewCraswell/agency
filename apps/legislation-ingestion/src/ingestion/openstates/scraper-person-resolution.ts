@@ -54,13 +54,30 @@ function termMatches(term: ScraperPersonCandidate["terms"][number], context: Scr
   return start <= context.sessionEndDate && end >= context.sessionStartDate
 }
 
-function nameMatches(candidate: ScraperPersonCandidate, sourceName: string) {
-  const source = normalizedName(sourceName)
-  if (source === "") return false
-  return (
-    (candidate.familyName !== null && normalizedName(candidate.familyName) === source) ||
-    candidate.names.some((name) => normalizedName(name) === source)
-  )
+/** Pre-index source-backed names once so bulk vote and sponsorship resolution is linear in relationship count. */
+export function createScraperPersonResolver(candidates: readonly ScraperPersonCandidate[]) {
+  const candidatesByName = new Map<string, ScraperPersonCandidate[]>()
+  for (const candidate of candidates) {
+    const names = new Set([
+      ...(candidate.familyName === null ? [] : [normalizedName(candidate.familyName)]),
+      ...candidate.names.map(normalizedName)
+    ])
+    names.delete("")
+    for (const name of names) {
+      const matching = candidatesByName.get(name) ?? []
+      matching.push(candidate)
+      candidatesByName.set(name, matching)
+    }
+  }
+  return (context: ScraperPersonResolutionContext): ScraperPersonResolution => {
+    const matches = (candidatesByName.get(normalizedName(context.name)) ?? []).filter((candidate) =>
+      candidate.terms.some((term) => termMatches(term, context))
+    )
+    if (matches.length === 0) return { status: "not_found" }
+    if (matches.length !== 1) return { status: "ambiguous" }
+    const match = matches[0]!
+    return { status: "resolved", personId: match.personId, sourcePersonId: match.sourcePersonId }
+  }
 }
 
 /** Resolve only a unique source-backed identity within the same chamber and source-supported tenure. */
@@ -68,13 +85,7 @@ export function resolveScraperPersonReference(
   context: ScraperPersonResolutionContext,
   candidates: readonly ScraperPersonCandidate[]
 ): ScraperPersonResolution {
-  const matches = candidates.filter(
-    (candidate) => nameMatches(candidate, context.name) && candidate.terms.some((term) => termMatches(term, context))
-  )
-  if (matches.length === 0) return { status: "not_found" }
-  if (matches.length !== 1) return { status: "ambiguous" }
-  const match = matches[0]!
-  return { status: "resolved", personId: match.personId, sourcePersonId: match.sourcePersonId }
+  return createScraperPersonResolver(candidates)(context)
 }
 
 function dateValue(value: unknown) {
@@ -88,26 +99,24 @@ function chamberValue(value: unknown): Chamber | undefined {
 }
 
 export async function loadScraperPersonCandidates(database: LegislationDatabase, jurisdictionId: string) {
-  const [personRows, termRows] = await Promise.all([
-    database
-      .select({
-        familyName: people.familyName,
-        id: people.id,
-        name: people.name,
-        sourceId: people.sourceId
-      })
-      .from(people)
-      .where(eq(people.jurisdictionId, jurisdictionId)),
-    database
-      .select({
-        chamber: legislativeTerms.chamber,
-        endDate: legislativeTerms.endDate,
-        personId: legislativeTerms.personId,
-        startDate: legislativeTerms.startDate
-      })
-      .from(legislativeTerms)
-      .where(eq(legislativeTerms.jurisdictionId, jurisdictionId))
-  ])
+  const personRows = await database
+    .select({
+      familyName: people.familyName,
+      id: people.id,
+      name: people.name,
+      sourceId: people.sourceId
+    })
+    .from(people)
+    .where(eq(people.jurisdictionId, jurisdictionId))
+  const termRows = await database
+    .select({
+      chamber: legislativeTerms.chamber,
+      endDate: legislativeTerms.endDate,
+      personId: legislativeTerms.personId,
+      startDate: legislativeTerms.startDate
+    })
+    .from(legislativeTerms)
+    .where(eq(legislativeTerms.jurisdictionId, jurisdictionId))
   const eligiblePeople = personRows.filter(
     (person): person is typeof person & { sourceId: string } =>
       typeof person.sourceId === "string" && person.sourceId.startsWith("ocd-person/")
@@ -151,6 +160,7 @@ export async function resolveScraperAggregatePeople(
   aggregates: readonly CanonicalBillAggregate[]
 ) {
   const catalogs = new Map<string, Awaited<ReturnType<typeof loadScraperPersonCandidates>>>()
+  const resolvers = new Map<string, ReturnType<typeof createScraperPersonResolver>>()
   const resolved = []
   for (const aggregate of aggregates) {
     const jurisdictionId = aggregate.bill.jurisdictionId
@@ -158,7 +168,9 @@ export async function resolveScraperAggregatePeople(
     if (candidates === undefined) {
       candidates = await loadScraperPersonCandidates(database, jurisdictionId)
       catalogs.set(jurisdictionId, candidates)
+      resolvers.set(jurisdictionId, createScraperPersonResolver(candidates))
     }
+    const resolvePerson = resolvers.get(jurisdictionId)!
     const chamber = chamberValue(aggregate.bill.chamber)
     const sessionStartDate = dateValue(aggregate.session.startDate)
     const sessionEndDate = dateValue(aggregate.session.endDate)
@@ -177,10 +189,7 @@ export async function resolveScraperAggregatePeople(
       ...aggregate,
       sponsors: aggregate.sponsors?.map((sponsor) => {
         if (sponsor.personId !== undefined && sponsor.personId !== null) return sponsor
-        const match = resolveScraperPersonReference(
-          { ...context, name: sponsor.name, observedDate: billDate },
-          candidates
-        )
+        const match = resolvePerson({ ...context, name: sponsor.name, observedDate: billDate })
         return match.status === "resolved" ? { ...sponsor, personId: match.personId } : sponsor
       }),
       votes: aggregate.votes?.map((vote) => ({
@@ -189,10 +198,11 @@ export async function resolveScraperAggregatePeople(
           if (position.personId !== undefined && position.personId !== null) return position
           const sourceName = position.sourceName
           if (typeof sourceName !== "string") return position
-          const match = resolveScraperPersonReference(
-            { ...context, name: sourceName, observedDate: dateValue(vote.vote.heldDate ?? vote.vote.heldAt) },
-            candidates
-          )
+          const match = resolvePerson({
+            ...context,
+            name: sourceName,
+            observedDate: dateValue(vote.vote.heldDate ?? vote.vote.heldAt)
+          })
           return match.status === "resolved" ? { ...position, personId: match.personId } : position
         })
       }))
