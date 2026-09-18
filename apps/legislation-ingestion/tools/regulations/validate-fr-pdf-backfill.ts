@@ -37,12 +37,16 @@ const start = z.iso.date().optional().parse(values.start)
 const end = z.iso.date().optional().parse(values.end)
 invariant(start === undefined || end === undefined || start <= end, "fr_pdf_validation_invalid_range")
 const concurrency = z.coerce.number().int().min(1).max(4).parse(values.concurrency)
+const startMonth = start?.slice(0, 7)
+const endMonth = end?.slice(0, 7)
 
 const manifests = []
 for (const item of (await readdir(metadataRoot, { withFileTypes: true })).sort((a, b) =>
   a.name.localeCompare(b.name)
 )) {
   if (!item.isDirectory() || !/^fr-metadata-\d{4}-\d{2}$/.test(item.name)) continue
+  const month = item.name.slice("fr-metadata-".length)
+  if ((startMonth !== undefined && month < startMonth) || (endMonth !== undefined && month > endMonth)) continue
   manifests.push(
     await replayFrMetadata(JSON.parse(await readFile(join(metadataRoot, item.name, "manifest.json"), "utf8")))
   )

@@ -4584,3 +4584,11 @@ SHA-256 is `a56bfe092aa745cf8f23cd5a56e3a33be1b844c2457a14d017f6fd5a2fc9253f`, a
 SHA-256 is `a1488a3cf0203586bc785b74c4d24ebd656db65f387cb0c8b10486530aaf9d69`. Evidence is under
 `artifacts/regulatory-backfills/fr-pdf-validation-*`. Release-wide validation remains open; acquisition had reached 100
 complete dates and 10,927 receipts at this observation.
+
+Bounded range restarts now replay only monthly metadata manifests that can intersect the requested start/end dates.
+This preserves full-range behavior while avoiding all 60 manifests and their records for a one-day audit. The January 2
+acquisition checkpoint replay loaded one manifest and completed in 6.709 seconds; its summary SHA-256 is
+`5e0436d83ac3a6c8471f3f9c43e8f0b26b4b4334941cfc185f97ac6d0f41b616`. The matching structural-validation
+audit loaded one manifest, reused all 73 receipts and completed in 20.584 seconds; its summary SHA-256 is
+`ac169cd048065835e9e423e989e91c6f258a14c780412e49ae06ac295fcda387`. The release-wide workers already in
+flight retain the code loaded at their start and were not restarted.
