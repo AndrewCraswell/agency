@@ -96,7 +96,10 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   A real August 19, 2020 issue canary joined all 132 parsed publications, resolved the uncategorized record from its exact
   GovInfo XML identity and retained two presidential exclusions. A separate eight-issue January 2020 trial acquired
   19,321,556 XML bytes, parsed 590 publications without warnings and reconciled every publication with zero gaps while
-  retaining one presidential exclusion. Broad document-level XML joins and required rendition accounting remain open.
+  retaining one presidential exclusion. Historical publication preparation now replays a retained monthly metadata
+  manifest from the configured metadata root, validates that it covers the issue and retains its immutable locator,
+  avoiding per-day source refetches. Broad document-level XML joins, deployed monthly-evidence availability and required
+  rendition accounting remain open.
 - [ ] **ING-09 Finish source-agency mapping.** Persist publisher agency IDs/names and reviewed mappings to existing
   organization identities; preserve unresolved aliases and multiple issuing agencies. **Done:** unknown aliases remain
   searchable as source references without creating fictitious organizations or dropping documents.

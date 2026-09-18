@@ -65,6 +65,14 @@ Offline replay reconstructs the request graph, partitions, normalized records an
 It requires no network, credentials, database or Trigger.dev. Observation times remain distinct from publication dates:
 historical publication metadata fetched today is not proof of exactly what the API returned on the publication date.
 
+Historical publication workers can reuse these monthly manifests directly. Place each replay-validated manifest at
+`<REGULATORY_FR_METADATA_DIRECTORY>/fr-metadata-YYYY-MM/manifest.json`. Preparation replays the complete manifest,
+requires its scope and cutoff to cover the issue date, and selects exact-date records only after reconciliation. When an
+immutable metadata store is configured, the monthly file is retained by content hash and the issue preparation records
+that durable locator. A present but invalid or out-of-scope monthly file aborts preparation; only a missing file falls
+back to the existing exact-day cache and bounded live collector. This keeps ongoing exact-day discovery unchanged while
+avoiding 1,248 redundant historical API snapshots.
+
 ## Text and metadata join
 
 `fr-reconciliation.ts` reconciles the union of normalized GovInfo XML document numbers and metadata for the issue day.

@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Connected retained monthly FederalRegister.gov evidence to the historical publication-preparation path. For an issue
+date, the worker now looks under the configured metadata root for
+`fr-metadata-YYYY-MM/manifest.json`, fully replays that manifest and requires its frozen scope and cutoff to cover the
+issue. A valid monthly manifest supplies only the exact date's records during reconciliation and rendition planning; it
+is retained through the configured immutable metadata store and its content-addressed locator is recorded on the issue
+preparation. An invalid, corrupt or out-of-scope retained manifest fails closed. A missing monthly manifest preserves the
+existing exact-day cache and bounded live-collection fallback used by ongoing discovery.
+
+Publication rendition planning now accepts a replay-validated 31-day manifest that covers the issue rather than
+requiring a separately fetched one-day manifest. Focused metadata, reconciliation and preparation coverage passes 34
+tests, including reuse without invoking the collector and rejection outside the retained month. Type-check and the
+complete 234-file, 1,880-test ingestion/parsing/tools suite pass. This removes redundant per-day metadata collection when
+the 60 historical manifests are available to the worker; deployment still must make those retained files available under
+the configured metadata root and verify immutable-store retention.
+
 Removed serial Trigger submission from the regulatory source-stage controller while preserving its persist-before-submit
 boundary. Each controller payload now binds a submission concurrency from one through 16, defaulting to four; the
 operator preview and plan hash include that value so a 2/4/8/16 trial cannot silently run at a different setting. A

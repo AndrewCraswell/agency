@@ -53,7 +53,9 @@ export function planFrPublicationRenditions(input: {
 }) {
   const issueDate = z.iso.date().parse(input.issueDate)
   invariant(
-    input.metadata.scope.start === issueDate && input.metadata.scope.end === issueDate,
+    input.metadata.scope.start <= issueDate &&
+      input.metadata.scope.end >= issueDate &&
+      input.metadata.scope.cutoff >= issueDate,
     "fr_metadata_scope_mismatch"
   )
   invariant(input.reconciliation.issueDate === issueDate, "fr_reconciliation_issue_mismatch")
@@ -79,11 +81,15 @@ export function planFrPublicationRenditions(input: {
   return intents.sort((left, right) => left.documentNumber.localeCompare(right.documentNumber))
 }
 
-async function loadOrCollectMetadata(
+function coversIssueDate(manifest: FrMetadataManifest, issueDate: string) {
+  return manifest.scope.start <= issueDate && manifest.scope.end >= issueDate && manifest.scope.cutoff >= issueDate
+}
+
+export async function loadOrCollectFrMetadata(
   directory: string,
   issueDate: string,
   collect: typeof collectFrMetadataToDirectory,
-  options: { store?: FileArtifactStore; retainedLocator?: string } = {}
+  options: { store?: FileArtifactStore; retainedLocator?: string; retainedManifestPath?: string } = {}
 ) {
   if (options.retainedLocator?.startsWith("regulatory-artifact://")) {
     invariant(options.store, "fr_metadata_store_required")
@@ -96,22 +102,26 @@ async function loadOrCollectMetadata(
         expectedKind: "metadata"
       })
       const manifest = await replayFrMetadata(JSON.parse(await readFile(localPath, "utf8")))
-      invariant(
-        manifest.scope.start === issueDate && manifest.scope.end === issueDate && manifest.scope.cutoff === issueDate,
-        "fr_metadata_scope_mismatch"
-      )
+      invariant(coversIssueDate(manifest, issueDate), "fr_metadata_scope_mismatch")
       return { manifest, manifestPath: options.retainedLocator, reused: true }
     } finally {
       await rm(localPath, { force: true })
     }
   }
+  if (options.retainedManifestPath !== undefined) {
+    try {
+      const manifest = await replayFrMetadata(JSON.parse(await readFile(options.retainedManifestPath, "utf8")))
+      invariant(coversIssueDate(manifest, issueDate), "fr_metadata_scope_mismatch")
+      const retained = await retainMetadata(options.store, options.retainedManifestPath)
+      return { manifest, manifestPath: retained ?? options.retainedManifestPath, reused: true }
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error
+    }
+  }
   const manifestPath = join(directory, "manifest.json")
   try {
     const manifest = await replayFrMetadata(JSON.parse(await readFile(manifestPath, "utf8")))
-    invariant(
-      manifest.scope.start === issueDate && manifest.scope.end === issueDate && manifest.scope.cutoff === issueDate,
-      "fr_metadata_scope_mismatch"
-    )
+    invariant(coversIssueDate(manifest, issueDate), "fr_metadata_scope_mismatch")
     const retained = await retainMetadata(options.store, manifestPath)
     return { manifest, manifestPath: retained ?? manifestPath, reused: true }
   } catch (error) {
@@ -176,11 +186,19 @@ export async function prepareFrIssuePublication(
     [manifest.scopeKey, manifestUnit.key]
   )
   const metadataDirectory = join(input.metadataRoot, manifestUnit.key)
-  const metadata = await loadOrCollectMetadata(
+  const metadata = await loadOrCollectFrMetadata(
     metadataDirectory,
     manifestUnit.issueDate,
     options.collectMetadata ?? collectFrMetadataToDirectory,
-    { store: options.metadataStore, retainedLocator: retainedPreparation.rows[0]?.metadata_locator }
+    {
+      store: options.metadataStore,
+      retainedLocator: retainedPreparation.rows[0]?.metadata_locator,
+      retainedManifestPath: join(
+        input.metadataRoot,
+        `fr-metadata-${manifestUnit.issueDate.slice(0, 7)}`,
+        "manifest.json"
+      )
+    }
   )
   const durableSource = row.storage_locator.startsWith("regulatory-artifact://")
   const durableNormalized = row.normalized_locator.startsWith("regulatory-artifact://")

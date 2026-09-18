@@ -1,15 +1,15 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { acquisitionUnitSchema, digest } from "@repo/legislation-core/legal-text/contracts"
 import { regulatoryRecordSchema } from "@repo/legislation-core/legal-text/parser-contract"
 import invariant from "tiny-invariant"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { frMetadataPageSchema, type FrPageEvidence } from "./fr-metadata-contract.js"
-import { collectFrMetadata } from "./fr-metadata.js"
-import { planFrPublicationRenditions } from "./fr-publication-preparation.js"
+import { collectFrMetadata, collectFrMetadataToDirectory } from "./fr-metadata.js"
+import { loadOrCollectFrMetadata, planFrPublicationRenditions } from "./fr-publication-preparation.js"
 import { reconcileFrIssue } from "./fr-reconciliation.js"
 import { parseRegulatoryArtifact } from "./parser-bridge.js"
 
@@ -38,6 +38,7 @@ function evidence(url: string, page: unknown): FrPageEvidence {
 
 let fixture: {
   metadata: Awaited<ReturnType<typeof collectFrMetadata>>
+  monthlyMetadata: Awaited<ReturnType<typeof collectFrMetadata>>
   reconciliation: ReturnType<typeof reconcileFrIssue>
 }
 
@@ -60,8 +61,14 @@ beforeAll(async () => {
     async (url) => evidence(url, { count: selected.length, total_pages: 1, next_page_url: null, results: selected }),
     { pageSize: 200 }
   )
+  const monthlyMetadata = await collectFrMetadata(
+    { start: "2024-01-01", end: "2024-01-31", cutoff: "2024-01-31" },
+    async (url) => evidence(url, { count: selected.length, total_pages: 1, next_page_url: null, results: selected }),
+    { pageSize: 200 }
+  )
   fixture = {
     metadata,
+    monthlyMetadata,
     reconciliation: reconcileFrIssue({
       unit: source.sourceUnit,
       summary: parsed.summary,
@@ -85,6 +92,32 @@ describe("Federal Register publication preparation", () => {
     })
     expect(intents.map((intent) => intent.documentNumber)).toEqual(["2023-28718", "2023-28797", "C1-2023-27742"])
     expect(intents.every((intent) => intent.sourceUrl.includes("/content/pkg/FR-2024-01-02/pdf/"))).toBe(true)
+  })
+
+  it("uses one replay-validated monthly manifest for a covered historical issue", async () => {
+    const retainedManifestPath = join(directory, "retained-monthly-metadata.json")
+    await writeFile(retainedManifestPath, JSON.stringify(fixture.monthlyMetadata), { flag: "wx" })
+    const collect = vi.fn<typeof collectFrMetadataToDirectory>()
+    const loaded = await loadOrCollectFrMetadata(join(directory, "daily-metadata"), "2024-01-02", collect, {
+      retainedManifestPath
+    })
+    expect(loaded).toMatchObject({
+      manifest: { id: fixture.monthlyMetadata.id, scope: { start: "2024-01-01", end: "2024-01-31" } },
+      manifestPath: retainedManifestPath,
+      reused: true
+    })
+    expect(collect).not.toHaveBeenCalled()
+    expect(
+      planFrPublicationRenditions({
+        issueDate: "2024-01-02",
+        metadata: loaded.manifest,
+        reconciliation: { ...fixture.reconciliation, metadataManifestId: loaded.manifest.id }
+      })
+    ).toHaveLength(3)
+    await expect(
+      loadOrCollectFrMetadata(join(directory, "outside-month"), "2024-02-01", collect, { retainedManifestPath })
+    ).rejects.toThrow("fr_metadata_scope_mismatch")
+    expect(collect).not.toHaveBeenCalled()
   })
 
   it("fails closed when a reconciled publication has no official PDF rendition", () => {
