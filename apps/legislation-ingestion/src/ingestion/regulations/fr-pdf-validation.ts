@@ -22,6 +22,13 @@ export const frPdfInspectionSchema = z.strictObject({
   renderingChecked: z.literal(false)
 })
 
+export function containsFrDocumentNumber(text: string, documentNumber: string) {
+  const normalizedText = text.replaceAll(/[\u2010-\u2015]/g, "-").toUpperCase()
+  const normalizedNumber = documentNumber.replaceAll(/[\u2010-\u2015]/g, "-").toUpperCase()
+  const pattern = normalizedNumber.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&").replaceAll("-", "\\s*-\\s*")
+  return new RegExp(`(?<![0-9A-Z-])${pattern}(?![0-9A-Z-])`).test(normalizedText)
+}
+
 /** Runs only in the bounded child process. PDF text is evidence, never a replacement for canonical XML. */
 export async function inspectFrPdf(path: string, documentNumber: string) {
   const file = await stat(path)
@@ -67,10 +74,6 @@ export async function inspectFrPdf(path: string, documentNumber: string) {
       page.cleanup()
     }
     const text = texts.join("\n")
-    const normalized = text
-      .replaceAll(/[\u2010-\u2015]/g, "-")
-      .replaceAll(/\s/g, "")
-      .toUpperCase()
     return frPdfInspectionSchema.parse({
       contract: frPdfValidationContract,
       artifactHash,
@@ -80,7 +83,7 @@ export async function inspectFrPdf(path: string, documentNumber: string) {
       textHash: digest(text),
       textCharacters: text.length,
       emptyTextPages,
-      documentNumberFound: new RegExp(`(?<![0-9-])${documentNumber.toUpperCase()}(?![0-9-])`).test(normalized),
+      documentNumberFound: containsFrDocumentNumber(text, documentNumber),
       parserChecks: "all_pages_text_and_operators",
       renderingChecked: false
     })

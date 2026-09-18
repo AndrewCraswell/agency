@@ -4600,3 +4600,24 @@ preflight. Detailed records are therefore resident only for the active month, wh
 duplicate/date-order gates still run before acquisition. A two-month checkpoint-only audit covered 40 dates and 4,308
 PDFs in 2.748 seconds with no network or canonical writes. Its summary SHA-256 is
 `e5cbe9076e30ee5d5048fadbd60e8dde511bb9ab8debd228cd397e1ab57da778`.
+
+Structural validation now uses the same two-pass, month-at-a-time manifest discipline for future full-range runs. A
+checkpoint-only audit replayed January 2, 3 and 6: one manifest, 248 PDFs and 248 reused validation receipts in 9.392
+seconds, with no PDF workers, canonical writes or publication-readiness claim. Its summary SHA-256 is
+`031a4573869f8140a9adfaeed9562ddb3703e145f4e2bc10054bdf5cee3dc844`. The original 100-date validation range
+stopped after 25 completed dates on Federal Register document `2020-02441`; no incomplete date checkpoint was promoted.
+
+That failure exposed an official publisher variant, `[FR Doc. 2020–02441 2–6–20; 8:45 am]`, which omits the usual
+`Filed` separator. The validator had removed all whitespace before its boundary check, joining the document number to
+the filing date and rejecting valid identity evidence. The matcher now preserves boundaries, normalizes publisher dash
+variants and permits spacing around identifier separators while still rejecting alphanumeric or hyphenated prefixes and
+suffixes. Focused tests pass 5/5. A live rerun validated all 107 February 7 publications, including `2020-02441`, with
+zero canonical writes; summary SHA-256 `293ffa6d431c2384310fc8e62b4fc868780ef941c60f1c69ea405ca643fc90a1`.
+
+Validator upgrades now preserve a superseded date checkpoint under its prior validator and acquisition hashes, rerun
+the source artifacts under the new code hash, and atomically publish the replacement only after every document passes.
+The January 2 upgrade preserved the prior checkpoint and revalidated all 73 PDFs; summary SHA-256
+`56665a8a1b2b48a72f6b67f64aa28e0e022a964f1a2a28e940dbfabcb7fd5f90`. An immediate read-only replay then reused
+all 73 new receipts and the completed date checkpoint; summary SHA-256
+`e35b2d5299a846e6e51e1f33b207cf8bea6ed21ddab6aa18dac4018d08006ca7`. All three results keep publication readiness,
+canonical writes and recurring ingestion disabled.

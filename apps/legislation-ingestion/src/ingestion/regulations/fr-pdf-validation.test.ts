@@ -5,6 +5,7 @@ import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { afterEach, describe, expect, it } from "vitest"
 import { frPdfFixture } from "./fixtures/pdf-fixture.js"
 import {
+  containsFrDocumentNumber,
   frPdfInspectionSchema,
   inspectFrPdf,
   validateFrPdfEvidence,
@@ -25,6 +26,11 @@ async function saved(bytes: Uint8Array) {
   return path
 }
 describe("FR PDF parser validation gate", () => {
+  it("recognizes an official document number followed directly by the filing date", () => {
+    expect(containsFrDocumentNumber("[FR Doc. 2020–02441 2–6–20; 8:45 am]", "2020-02441")).toBe(true)
+    expect(containsFrDocumentNumber("FR Doc. C1-2023 - 27742 Filed", "C1-2023-27742")).toBe(true)
+    expect(containsFrDocumentNumber("FR Doc. 2020-024410 Filed", "2020-02441")).toBe(false)
+  })
   it("parses all page text and operators in a child process and verifies publisher evidence", async () => {
     const bytes = frPdfFixture()
     const inspection = await validateFrPdfInWorker(await saved(bytes), "2023-12345")
