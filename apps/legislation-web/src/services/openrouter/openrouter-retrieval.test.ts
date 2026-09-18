@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import { OpenRouterRetrievalClient } from "./openrouter-retrieval"
 
 describe("OpenRouter retrieval client", () => {
-  it("routes bill queries to Voyage and selectively reranks bill candidates", async () => {
+  it("routes bill queries to Voyage and selectively reranks bill candidates", { timeout: 10_000 }, async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(

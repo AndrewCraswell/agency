@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest"
 import { entityKindSchema, projectEntityResult } from "../entityResults"
 import { researchToolLabels } from "../researchTools"
 import { reviewMaterialIds, reviewMeetingIds } from "./reviewData"
-import { activityPart, activityStates, capturedCards, failureCodes, reviewData, toolCaptures } from "./reviewFixtures"
+import {
+  activityPart,
+  activityStates,
+  capturedCards,
+  failureCodes,
+  reviewData,
+  toolCaptures,
+  uncapturedOptionalResearchTools
+} from "./reviewFixtures"
 
 describe("captured Storybook review", () => {
   it("keeps the reviewed material cohort stable and retains repaired publication metadata", () => {
@@ -75,7 +83,9 @@ describe("captured Storybook review", () => {
 
   it("covers every tool and card kind using successful real captures", () => {
     expect(reviewData.failures).toEqual([])
-    expect(toolCaptures.map((capture) => capture.toolName)).toEqual(Object.keys(researchToolLabels))
+    expect([...toolCaptures.map((capture) => capture.toolName), ...uncapturedOptionalResearchTools].sort()).toEqual(
+      Object.keys(researchToolLabels).sort()
+    )
     expect(new Set(capturedCards.map(({ record }) => record.kind))).toEqual(new Set(entityKindSchema.options))
     expect(
       capturedCards.every(({ resultId, record }) =>

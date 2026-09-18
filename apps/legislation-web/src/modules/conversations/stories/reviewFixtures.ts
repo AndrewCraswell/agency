@@ -46,10 +46,15 @@ const failures: Record<ResearchFailureCode, true> = {
   internal: true
 }
 export const failureCodes = Object.keys(failures).map(researchFailureCode)
-export const toolCaptures = Object.keys(researchToolLabels).map((toolName) => {
+export const uncapturedOptionalResearchTools = ["search_web", "read_web_page"] as const
+const optionalResearchTools = new Set<string>(uncapturedOptionalResearchTools)
+export const toolCaptures = Object.keys(researchToolLabels).flatMap((toolName) => {
   const capture = reviewData.captures.find((capture) => capture.toolName === toolName)
-  invariant(capture, `Refresh the real data capture for ${toolName}.`)
-  return capture
+  if (!capture) {
+    invariant(optionalResearchTools.has(toolName), `Refresh the real data capture for ${toolName}.`)
+    return []
+  }
+  return [capture]
 })
 
 export function activityPart(

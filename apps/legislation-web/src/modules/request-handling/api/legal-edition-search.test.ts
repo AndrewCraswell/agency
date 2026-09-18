@@ -191,7 +191,7 @@ function readyFixture(corrupt = false) {
   f.target.rows([{ scope_id: editionId, passages: 1 }])
   f.source.rows([{ kind: "edition", id: editionId, count: 1, source_hash: signature }])
   f.target.rows([{ kind: "edition", id: editionId, count: 1, source_hash: signature, target_hash: signature }])
-  f.target.rows([{ id, editionId, generationId, versionId, score: 0.1 }])
+  f.target.rows([{ id, scopeKind: "edition", scopeId: editionId, generationId, versionId, score: 0.1 }])
   f.target.rows([corrupt ? { ...candidate, body: "tampered" } : candidate])
   f.source.rows([original])
   f.target.rows()

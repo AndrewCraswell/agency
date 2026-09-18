@@ -51,6 +51,11 @@ const capturedTextFailure = {
   input: { id: "bill:tn:113:sb:1903", documentId: "document:4fcc42927bb7547a76a40a2c" },
   error: { category: "not_found", message: "No matching bill text document was found" }
 } satisfies EvalCase["fixtures"][number]
+const capturedBillFailure = {
+  method: "getBill",
+  input: { id: "bill:us:119:hr:9001" },
+  error: { category: "not_found", message: "No matching bill was found" }
+} satisfies EvalCase["fixtures"][number]
 
 function streamStep(
   options: {
@@ -358,15 +363,15 @@ describe("shared SDK execution", () => {
         doStream: [
           streamStep({
             tool: {
-              name: "get_bill_text",
-              input: { ...capturedTextFailure.input, cursor: null, versionCode: null }
+              name: "get_bill",
+              input: { ...capturedBillFailure.input, childLimit: null }
             }
           }),
           streamStep({ text: "The requested document ID was not found." })
         ]
       })
       const outcome = await executeCase({
-        item: caseSchema.parse({ ...sample(), fixtures: isCaptured ? [capturedTextFailure] : [] }),
+        item: caseSchema.parse({ ...sample(), fixtures: isCaptured ? [capturedBillFailure] : [] }),
         model,
         instructions: "Pinned",
         budget: createCallBudget(3, 180000),
@@ -374,7 +379,7 @@ describe("shared SDK execution", () => {
       })
       expect(outcome.status).toBe(isCaptured ? "completed" : "ungradable")
       expect(outcome.fixtureGaps).toEqual(
-        isCaptured ? [] : [{ method: capturedTextFailure.method, input: capturedTextFailure.input }]
+        isCaptured ? [] : [{ method: capturedBillFailure.method, input: capturedBillFailure.input }]
       )
       expect(caseResultSchema.safeParse(outcome).success).toBe(true)
     }

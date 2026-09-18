@@ -25,31 +25,32 @@ describe("shared research results", () => {
       sourceUrl: `https://example.com/bills/${index}`
     }))
     const result = prepareResultPage("search_bills", input, { items: records, nextCursor: "upstream" }, 0)
-    expect(result).toEqual({
-      items: records.map(({ summary: _summary, ...record }) => record),
-      nextCursor: "upstream"
-    })
+    expect(result).toMatchObject({ items: records.map(({ summary: _summary, ...record }) => record) })
+    const parsed = z.object({ nextCursor: z.string() }).parse(result)
+    expect(parsed.nextCursor).toMatch(/^research-cursor:/)
+    expect(readResultPage("search_bills", { ...input, cursor: parsed.nextCursor }).input.cursor).toBe("upstream")
     expect(Buffer.byteLength(JSON.stringify({ data: result }))).toBeLessThan(researchResultByteLimit)
     expect(records[0]?.summary.length).toBeGreaterThan(researchResultByteLimit)
   })
 
   it("pages complete records by UTF-8 bytes and restores the upstream cursor", () => {
     const source = { items, nextCursor: "database-next", truncated: true, warnings: ["Original warning"] }
-    let request = { ...input, cursor: "database-current" }
+    let request: Record<string, unknown> = { ...input }
     const collected: typeof items = []
-    for (let count = 0; count < 25; count++) {
+    for (let count = 0; count < 26; count++) {
       const selection = readResultPage("search_bills", request)
-      expect(selection.input.cursor).toBe("database-current")
+      if (selection.input.cursor === "database-next") {
+        break
+      }
       const result = prepareResultPage("search_bills", selection.input, source, selection.offset)
       const page = pageSchema.parse(result)
       expect(Buffer.byteLength(JSON.stringify({ data: result }))).toBeLessThanOrEqual(researchResultByteLimit)
       expect(page.warnings).toEqual(source.warnings)
       collected.push(...page.items)
-      if (page.nextCursor === "database-next") {
+      if (!page.nextCursor) {
         break
       }
-      expect(page.nextCursor).toBeDefined()
-      request = { ...input, cursor: page.nextCursor ?? "" }
+      request = { ...input, cursor: page.nextCursor }
     }
     expect(collected).toEqual(items)
   })
@@ -62,11 +63,13 @@ describe("shared research results", () => {
     const selection = readResultPage("get_bills", continuation)
     expect(selection.offset).toBe(first.items.length)
     expect(readResultPage("get_bills", continuation)).toEqual(selection)
-    expect(() => readResultPage("search_bills", continuation)).toThrow(/Invalid result cursor/)
-    expect(() => readResultPage("get_bills", { ...continuation, ids: ["other"] })).toThrow(/Invalid result cursor/)
-    expect(() => readResultPage("get_bills", { ...continuation, childLimit: 1 })).toThrow(/Invalid result cursor/)
+    expect(() => readResultPage("search_bills", continuation)).toThrow(/continuation does not match/)
+    expect(() => readResultPage("get_bills", { ...continuation, ids: ["other"] })).toThrow(
+      /continuation does not match/
+    )
+    expect(() => readResultPage("get_bills", { ...continuation, childLimit: 1 })).toThrow(/continuation does not match/)
     expect(() => readResultPage("get_bills", { ...batch, cursor: "research-page:invalid" })).toThrow(
-      /Invalid result cursor/
+      /continuation returned by this tool/
     )
     expect(() => prepareResultPage("get_bills", batch, { items: [] }, selection.offset)).toThrow(/changed/)
   })
@@ -103,12 +106,15 @@ describe("shared research results", () => {
     })
     const collected: unknown[] = []
     let request: Record<string, unknown> = { id: document.billId, documentId: document.id }
-    for (let count = 0; count < 25; count++) {
+    for (let count = 0; count < 26; count++) {
       const selection = readResultPage("get_bill_text", request)
+      if (selection.input.cursor === "sections-next") {
+        break
+      }
       const result = sectionsSchema.parse(prepareResultPage("get_bill_text", selection.input, source, selection.offset))
       expect(result.document).toEqual(metadata)
       collected.push(...result.sections)
-      if (result.nextCursor === "sections-next") {
+      if (!result.nextCursor) {
         break
       }
       request = { ...request, cursor: result.nextCursor }
@@ -118,7 +124,7 @@ describe("shared research results", () => {
 
   it("preserves ordinary pages and rejects an individually oversized record instead of clipping it", () => {
     const source = { items: [{ id: "bill:1", text: "source" }] }
-    expect(prepareResultPage("search_bill_text", input, source, 0)).toBe(source)
+    expect(prepareResultPage("search_bill_text", input, source, 0)).toEqual(source)
     expect(() =>
       prepareResultPage("search_bill_text", input, { items: [{ text: "x".repeat(researchResultByteLimit) }] }, 0)
     ).toThrow(/One result exceeds/)
