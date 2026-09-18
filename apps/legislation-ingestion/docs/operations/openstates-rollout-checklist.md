@@ -22,6 +22,12 @@
   sessions 30-34 and North Carolina sessions 2017, 2017E1, 2017E2, 2017E3, 2019, 2021, 2023 and 2025. All 14,352
   bills and all 411,073 extracted sections were present and fresh, with zero missing or stale vectors. This proves
   vector readiness for the retained archive boundary; it does not extend the publishers' historical source coverage.
+- [x] Historical document and OCR outcomes are reconciled across the same 13 retained session scopes. Alaska has
+  61,391 processed documents, 67 explicitly unsupported records and 59 OCR completions; North Carolina has 30,315
+  processed documents, one explicitly unsupported record and ten OCR completions. Every scope has zero unresolved OCR
+  requirements, zero processed documents without sections and zero routed bill or section embedding gaps. The
+  read-only `inspect-openstates-content` command now accepts an optional state and session so this check remains bounded
+  and repeatable for future onboarding and recovery audits.
 - [x] Passage synchronization is caught up with pending zero, failed zero and a valid/ready BM25 index. All 256
   checksum buckets match for both full historical corpora: Alaska 61,391 documents and 259,076 sections; North
   Carolina 30,315 documents and 151,997 sections. Authenticated scoped-bill API smoke passed for both states. Fresh

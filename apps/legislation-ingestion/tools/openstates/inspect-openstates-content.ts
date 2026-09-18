@@ -1,16 +1,28 @@
 import { createDatabase } from "@repo/legislation-core/database/database"
+import { jurisdictionId, legislativeSessionId } from "@repo/legislation-core/domain/identifiers"
 import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
 import { Command } from "commander"
 import { z } from "zod"
 import { loadConfig } from "../../src/config/config.js"
 
 const command = new Command()
+  .argument("[state]", "limit the report to one supported state")
+  .argument("[session]", "limit the report to one session in the selected state")
   .option(
     "--database-env <name>",
     "read the database URL from this environment variable instead of the local test database"
   )
   .parse()
 const options = command.opts<{ databaseEnv?: string }>()
+const selectedState = command.args[0] === undefined ? undefined : z.enum(["nc", "ak"]).parse(command.args[0])
+const selectedSession = z
+  .string()
+  .regex(/^[A-Za-z0-9-]+$/)
+  .optional()
+  .parse(command.args[1])
+if (selectedSession !== undefined && selectedState === undefined) {
+  throw new Error("A state is required when selecting a session")
+}
 
 // Deliberately read-only. This report does not activate hosted work or equate
 // vector existence with input-hash freshness/search acceptance.
@@ -28,16 +40,26 @@ try {
   const billRoute = embeddingRouteFor("bill")
   const sectionRoute = embeddingRouteFor("document-section")
   const states = []
-  for (const scope of [
-    { jurisdictionId: "jurisdiction:ak", sessionId: "session:ak:34", state: "ak" },
-    { jurisdictionId: "jurisdiction:nc", sessionId: "session:nc:2025", state: "nc" }
-  ] as const) {
+  const scopes = selectedState
+    ? [
+        {
+          jurisdictionId: jurisdictionId(selectedState),
+          sessionId: legislativeSessionId(selectedState, selectedSession ?? (selectedState === "nc" ? "2025" : "34")),
+          state: selectedState
+        }
+      ]
+    : [
+        { jurisdictionId: jurisdictionId("ak"), sessionId: legislativeSessionId("ak", "34"), state: "ak" },
+        { jurisdictionId: jurisdictionId("nc"), sessionId: legislativeSessionId("nc", "2025"), state: "nc" }
+      ]
+  for (const scope of scopes) {
     const billRows = await client.query<{ id: string }>(
       "select id from legislation.bills where jurisdiction_id=$1 and session_id=$2 order by id",
       [scope.jurisdictionId, scope.sessionId]
     )
     const report = {
       state: scope.state,
+      session: scope.sessionId,
       bills: billRows.rows.length,
       bills_missing_routed_embeddings: 0,
       document_statuses: {} as Record<string, number>,
