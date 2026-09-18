@@ -1203,6 +1203,15 @@ export function buildSemanticPassageSearchQuery(
   const offset = decodePassageSearchCursor(input.cursor, { ...input, query: "semantic" })
   const distance = sql<number>`${documentSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const snippet = sql<string | null>`left(${documentSections.text}, 1200)`
+  const settings = database.$with("semantic_passage_hnsw_settings").as(
+    database
+      .select({
+        configured: sql<boolean>`set_config('hnsw.ef_search', '1000', true) is not null
+          and set_config('hnsw.iterative_scan', 'strict_order', true) is not null`
+      })
+      .from(documentSectionEmbeddings)
+      .limit(1)
+  )
   // Keep the HNSW order expression as the only nearest-neighbor ordering in
   // the bounded CTE. Adding a stable ID tie-breaker to this scan disables the
   // vector index and turns passage search into a full embedding-table sort.
@@ -1210,6 +1219,7 @@ export function buildSemanticPassageSearchQuery(
     database
       .select({ distance: distance.as("distance"), sectionId: documentSectionEmbeddings.sectionId })
       .from(documentSectionEmbeddings)
+      .crossJoin(settings)
       .innerJoin(documentSections, eq(documentSectionEmbeddings.sectionId, documentSections.id))
       .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
       .innerJoin(bills, eq(billDocuments.billId, bills.id))
@@ -1226,7 +1236,7 @@ export function buildSemanticPassageSearchQuery(
       .offset(offset)
   )
   return database
-    .with(nearest)
+    .with(settings, nearest)
     .select(
       passageSelection(
         semanticSimilarityScore(sql<number>`${nearest.distance}`),
@@ -1247,9 +1257,6 @@ export async function semanticPassageSearch(
 ): Promise<SearchPage<PassageSearchCandidate>> {
   const limit = input.limit ?? DEFAULT_LIMIT
   const offset = decodePassageSearchCursor(input.cursor, { ...input, query: "semantic" })
-  await database.execute(
-    sql`select set_config('hnsw.ef_search', '1000', true), set_config('hnsw.iterative_scan', 'strict_order', true)`
-  )
   const rows = await buildSemanticPassageSearchQuery(database, input)
   return {
     items: rows.slice(0, limit).map((row) => {
