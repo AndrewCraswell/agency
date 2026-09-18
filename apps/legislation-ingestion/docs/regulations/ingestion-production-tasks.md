@@ -94,8 +94,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   issues and 4,016,059,961 listed bytes. Independent FederalRegister.gov inventory is now retained for all 60 months:
   143,200 unique documents across 181 pages, with zero issue/metadata gaps and one explicit uncategorized classification.
   A real August 19, 2020 issue canary joined all 132 parsed publications, resolved the uncategorized record from its exact
-  GovInfo XML identity and retained two presidential exclusions. Broad document-level XML joins and required rendition
-  accounting remain open.
+  GovInfo XML identity and retained two presidential exclusions. A separate eight-issue January 2020 trial acquired
+  19,321,556 XML bytes, parsed 590 publications without warnings and reconciled every publication with zero gaps while
+  retaining one presidential exclusion. Broad document-level XML joins and required rendition accounting remain open.
 - [ ] **ING-09 Finish source-agency mapping.** Persist publisher agency IDs/names and reviewed mappings to existing
   organization identities; preserve unresolved aliases and multiple issuing agencies. **Done:** unknown aliases remain
   searchable as source references without creating fictitious organizations or dropping documents.

@@ -13,6 +13,25 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Expanded the Federal Register artifact and reconciliation canary from one issue to an eight-issue bounded trial using the
+frozen 2020–2024 manifest. The January 2–13, 2020 units acquired 19,321,556 official GovInfo XML bytes with no failures.
+All eight parsed with no warnings into 590 publications in 3.026 aggregate parser seconds: 83 rules, 48 proposed rules
+and 459 notices. Exact document-number reconciliation against the replay-validated January metadata matched all 590
+publications with zero missing, duplicate, ambiguous or type gaps. One presidential document was independently counted
+as an initial-scope exclusion, and all 590 official PDF renditions remain explicitly `listed_not_acquired`.
+
+The eight reconciliation report IDs are
+`708664406c78782a4911787b1c13863c8c888d34cb989f9eea42b7ba33e78d0f`,
+`fc2c5d102a40a8a344bdccef12efb970b37f3d3d5ca45c93d90f18640a581f2e`,
+`1d7dca9dc346af9bf69087c21f49595edf1ed93989d22d05253c3d5811d5c0f0`,
+`3330bec2c3cd572c41c556eccde5b1c628cbcf5a1488bb9e9041e0c68b5b62fc`,
+`91990f5faffecb1ee25c60882a48807e9e7bcc52547190d60c48afc7eb223ae2`,
+`015485bbf04692dd24cae7662c2aad106db5235b1e886f548b6d90000b9120d5`,
+`8ba076ecef01bf56039a7d3f09faf8a8e27d977ca93faeaab5c61cc1a89028ae` and
+`227e90a3d6cb51e58b1d280b3f372bb7ad03927022a02196f40992ec797a8c04`. This is a local serial artifact trial, not
+evidence of deployed Trigger concurrency, provider-backed storage, PDF completion, canonical publication, indexing or
+embedding.
+
 Ran the first real 2020–2024 Federal Register issue canary through acquisition, parser validation and complete retained
 metadata reconciliation. The August 19, 2020 GovInfo issue was acquired as 3,714,501 bytes with SHA-256
 `b4ecc07a7493677edc8def6c39a6fbc778e8ceaa4602269a3b2b51f2030b0837`, then parsed into 132 publications with no
