@@ -85,6 +85,14 @@ the analytics acceptance harness remain explicitly at low reasoning; configured 
 selected effort (low when omitted). Hosted Langfuse evaluators are unchanged. There is no automatic model routing or
 Astra escalation in the application.
 
+Each accepted chat request appends trusted server time and the current UTC calendar date to the model instructions
+and records that date context in the research trace input. This context is refreshed per turn, including clarification
+resumes; managed prompt versions remain unchanged. Date-only cutoffs default to UTC unless the user specifies a
+timezone. The same context governs answer prose and clarification fields: past, today and future dates remain distinct,
+and source freshness, legal effective dates and incomplete same-day coverage are separate qualifications. Fixed-clock
+route tests verify the actual model input and unchanged user cutoffs across midnight and timezone offsets for prose and
+clarification streams. These deterministic fixtures establish context delivery, not live-model semantic accuracy.
+
 Current per-run bounds: 30-second registry tool calls, 120-second total run deadline, eight model
 steps, 24 tool calls, and 180,000 bytes of structured data per model-visible tool result. Research serialization omits
 internal embedding and search-index fields. The shared chat/MCP bill discovery contract returns snippets, identifiers, sources, and child

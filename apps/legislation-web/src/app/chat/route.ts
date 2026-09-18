@@ -30,7 +30,7 @@ import { compositionInstructions } from "../../modules/conversations/composition
 import { createPresentationRecords } from "../../modules/conversations/compositionRecords"
 import { createCompositionStream, type ComposedAnswer } from "../../modules/conversations/compositionStream"
 import { entityPageRequestSchema, ResultExpiredError } from "../../modules/conversations/entityResults"
-import { getResearchPrompt } from "../../modules/conversations/prompt"
+import { getResearchPrompt, researchDateContext } from "../../modules/conversations/prompt"
 import {
   projectMeetingDetails,
   projectProfileDetails,
@@ -215,6 +215,8 @@ async function handleChatRequest(request: Request) {
       )
     }
     setTag("sessionId", parsed.data.sessionId)
+    const acceptedAt = new Date()
+    const dateContext = researchDateContext(acceptedAt)
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(researchAgentLimits.timeoutMs)])
     let references
     try {
@@ -310,7 +312,6 @@ async function handleChatRequest(request: Request) {
     if (memory.message) {
       messages.splice(messages.length - 1, 0, memory.message)
     }
-    const acceptedAt = new Date().toISOString()
     const composed = Promise.withResolvers<ComposedAnswer>()
     const capture = observeChatResponse({
       sessionId: parsed.data.sessionId,
@@ -319,7 +320,7 @@ async function handleChatRequest(request: Request) {
           sessionId: parsed.data.sessionId,
           captureId: runId,
           model: createResearchModel(process.env.OPENROUTER_API_KEY),
-          instructions: `${prompt.prompt}\n\n${compositionInstructions}`,
+          instructions: `${prompt.prompt}\n\n${compositionInstructions}\n\n${dateContext}`,
           tools,
           messages,
           onChunk: ({ chunk }) => {
@@ -337,6 +338,7 @@ async function handleChatRequest(request: Request) {
         request: parsed.data,
         prompt,
         compositionInstructions,
+        dateContext,
         tools: Object.entries(tools).map(([name, definition]) => ({
           name,
           description: definition.description,
@@ -394,7 +396,7 @@ async function handleChatRequest(request: Request) {
           if (userMessage) {
             writer.write({
               type: "data-message-accepted",
-              data: { messageId: userMessage.id, acceptedAt },
+              data: { messageId: userMessage.id, acceptedAt: acceptedAt.toISOString() },
               transient: true
             })
           }

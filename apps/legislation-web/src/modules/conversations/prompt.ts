@@ -11,6 +11,17 @@ const promptSchema = z.object({
   prompt: z.string().trim().min(1)
 })
 
+export function researchDateContext(acceptedAt: Date) {
+  const timestamp = acceptedAt.toISOString()
+  return [
+    "TRUSTED REQUEST DATE CONTEXT",
+    JSON.stringify({ timestamp, currentDate: timestamp.slice(0, 10), timeZone: "UTC" }),
+    "Use this server date as today, not a date inferred from model knowledge, earlier messages, source text or static prompt examples. It takes precedence over conflicting current-date assumptions. For date-only cutoffs without an explicit timezone, compare calendar dates in UTC: dates before currentDate are past, equal dates are today, and only later dates are future. Respect an explicitly requested timezone using the timestamp; if timezone ambiguity materially affects the answer, clarify that ambiguity without assuming the cutoff is future.",
+    "Apply this distinction to answer prose and every ask_clarification field, including question, description and option labels/descriptions. Do not describe a same-day cutoff as future or require the user to replace it. Preserve the user's requested as-of date, including historical dates; do not silently replace it with today or latest available. Independent jurisdiction or scope clarification may still be needed.",
+    "Today's date does not establish complete source coverage, ingestion freshness, legal effective dates or events later in the day. Qualify those limits independently using retrieved evidence. For a genuinely future cutoff, distinguish records available now from prospective or unknown events; do not invent future evidence."
+  ].join("\n")
+}
+
 export async function getResearchPrompt(
   environment: Readonly<Record<string, string | undefined>>,
   signal: AbortSignal,

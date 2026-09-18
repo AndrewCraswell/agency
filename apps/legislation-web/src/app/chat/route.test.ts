@@ -37,7 +37,8 @@ vi.mock("@langfuse/tracing", () => ({
 }))
 vi.mock("next/server", () => ({ after: vi.fn<() => void>() }))
 vi.mock("../../modules/conversations/telemetry", () => ({ flushChatTelemetry: vi.fn<() => Promise<void>>() }))
-vi.mock("../../modules/conversations/prompt", () => ({
+vi.mock("../../modules/conversations/prompt", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../modules/conversations/prompt")>()),
   getResearchPrompt: async () => ({ prompt: "Answer from evidence.", version: 1, name: "fixture" })
 }))
 vi.mock("../../modules/conversations/snapshotPersistence.server", () => ({
@@ -69,6 +70,7 @@ vi.mock("../../modules/conversations/agent", async (importOriginal) => ({
 }))
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllEnvs()
   vi.clearAllMocks()
   stored.clear()
@@ -163,4 +165,98 @@ it("persists a turn and restores it through POST into the next model request and
   expect(stored.size).toBe(3)
   const captured = z.object({ messages: z.array(z.object({ content: z.string() })) }).parse(capturedInputs[1])
   expect(captured.messages.some((message) => message.content.includes("Server-retained research"))).toBe(true)
+})
+
+it.each([
+  { now: "2026-09-18T18:08:54.999Z", date: "2026-09-18", cutoff: "2026-09-17" },
+  { now: "2026-09-18T18:08:54.999Z", date: "2026-09-18", cutoff: "2026-09-18" },
+  { now: "2026-09-18T18:08:54.999Z", date: "2026-09-18", cutoff: "2026-09-19" },
+  { now: "2026-09-18T23:59:59.999Z", date: "2026-09-18", cutoff: "2026-09-18" },
+  { now: "2026-09-19T00:00:00.000Z", date: "2026-09-19", cutoff: "2026-09-18" },
+  { now: "2026-09-18T23:30:00-07:00", date: "2026-09-19", cutoff: "2026-09-18 in America/Los_Angeles" }
+])("supplies trusted UTC context at $now without rewriting cutoff $cutoff", async ({ now, date, cutoff }) => {
+  vi.useFakeTimers({ toFake: ["Date"] })
+  vi.setSystemTime(new Date(now))
+  vi.stubEnv("NODE_ENV", "development")
+  vi.stubEnv("OPENROUTER_API_KEY", "fixture")
+  const timestamp = new Date(now).toISOString()
+  const question = `Compare proposals as of ${cutoff}.`
+  const clarification = {
+    kind: "single",
+    question: "Which jurisdiction should the comparison cover?",
+    description: "The jurisdiction determines which proposals are relevant.",
+    allowSkip: false,
+    allowFreeText: true,
+    options: [
+      { id: "federal", label: "Federal proposals", description: null },
+      { id: "state", label: "State proposals", description: null }
+    ],
+    minSelections: null,
+    maxSelections: null
+  }
+  for (const responseKind of ["prose", "clarification"]) {
+    model = new MockLanguageModelV4({
+      doStream: async () => ({
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: "stream-start", warnings: [] })
+            if (responseKind === "clarification") {
+              controller.enqueue({
+                type: "tool-call",
+                toolCallId: "scope",
+                toolName: "ask_clarification",
+                input: JSON.stringify(clarification)
+              })
+            } else {
+              controller.enqueue({ type: "text-start", id: "answer" })
+              controller.enqueue({ type: "text-delta", id: "answer", delta: "Source coverage requires verification." })
+              controller.enqueue({ type: "text-end", id: "answer" })
+            }
+            controller.enqueue({
+              type: "finish",
+              finishReason: { unified: responseKind === "clarification" ? "tool-calls" : "stop", raw: "stop" },
+              usage: {
+                inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+                outputTokens: { total: 1, text: 1, reasoning: 0 }
+              }
+            })
+            controller.close()
+          }
+        })
+      })
+    })
+    const response = await POST(
+      new Request("http://localhost:3000/chat", {
+        method: "POST",
+        headers: { origin: "http://localhost:3000", "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionKey: crypto.randomUUID(),
+          sessionId: "date-context",
+          currentDate: "2099-01-01",
+          messages: [{ id: "question", role: "user", parts: [{ type: "text", text: question }] }]
+        })
+      })
+    )
+    expect(response.status).toBe(200)
+    const stream = await response.text()
+    expect(stream).not.toContain('"type":"error"')
+    expect(stream).toContain(`"acceptedAt":"${timestamp}"`)
+    const input = model.doStreamCalls[0]?.prompt
+    const system = input
+      ?.filter((message) => message.role === "system")
+      .map((message) => message.content)
+      .join("\n")
+    const captured = z.object({ dateContext: z.string() }).parse(capturedInputs.at(-1))
+    expect(captured.dateContext).toContain(JSON.stringify({ timestamp, currentDate: date, timeZone: "UTC" }))
+    expect(system).toContain(captured.dateContext)
+    expect(system).not.toContain("2099-01-01")
+    expect(input).toContainEqual({ role: "user", content: [{ type: "text", text: question }] })
+    const expectedText =
+      responseKind === "clarification"
+        ? [clarification.question, clarification.description, ...clarification.options.map((option) => option.label)]
+        : ["Source coverage requires verification."]
+    for (const text of expectedText) {
+      expect(stream).toContain(text)
+    }
+  }
 })
