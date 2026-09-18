@@ -6,6 +6,9 @@ claims of live availability or acceptance of the separated deployments.
 
 ## Conversation experience
 
+[Conversation model settings](operations/development.md#development-chat-research-connection) use Luna with high
+reasoning for answers; suggestions and offline judges retain their separately configured low reasoning.
+
 [Inline person and committee tags](operations/development.md#inline-person-and-committee-tags) use debounced published-name
 search and preserve exact session-owned record references with the message. Storybook renders the production composer.
 

@@ -313,7 +313,9 @@ async function main() {
                     metadata: { caseId: item.id, runId, corpusHash: digest(analyticsCases) }
                   })
                   const response = await generateText({
-                    model: createResearchModel(process.env.OPENROUTER_API_KEY),
+                    model: createResearchModel(process.env.OPENROUTER_API_KEY, researchModelId, {
+                      reasoning: { effort: "low" }
+                    }),
                     instructions,
                     prompt: item.question,
                     tools,

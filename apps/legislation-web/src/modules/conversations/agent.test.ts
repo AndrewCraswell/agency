@@ -21,16 +21,21 @@ vi.mock("ai", async (importOriginal) => ({
 }))
 
 describe("runResearchAgent", () => {
-  it("preserves production model and reasoning defaults", () => {
+  it("defaults conversation answers to Luna with high reasoning", () => {
     createResearchModel(undefined)
     expect(createOpenRouter).toHaveBeenLastCalledWith({ apiKey: undefined })
     expect(chat).toHaveBeenLastCalledWith(researchModelId, {
-      reasoning: { effort: "low" },
+      reasoning: { effort: "high" },
       provider: { allow_fallbacks: false, data_collection: "deny" }
     })
   })
 
   it("pins candidate providers and configures or omits reasoning without enabling fallbacks", () => {
+    createResearchModel(undefined, researchModelId, { reasoning: { effort: "low" } })
+    expect(chat).toHaveBeenLastCalledWith(researchModelId, {
+      reasoning: { effort: "low" },
+      provider: { allow_fallbacks: false, data_collection: "deny" }
+    })
     createResearchModel(undefined, "candidate/model", {
       provider: { only: ["provider-a"] },
       reasoning: { max_tokens: 512, exclude: true }

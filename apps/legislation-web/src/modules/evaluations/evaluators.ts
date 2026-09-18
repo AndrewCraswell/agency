@@ -54,7 +54,7 @@ export async function evaluateResult(options: {
   const { input, inputHash, inputCharacters } = buildEvaluationInput(options.item, options.result)
   assertSafeArtifact(input)
   const prompt = JSON.stringify(input)
-  const model = createResearchModel(options.apiKey, options.modelId)
+  const model = createResearchModel(options.apiKey, options.modelId, { reasoning: { effort: "low" } })
   const judgePrompt = options.prompts.judge.prompt
   const criticPrompt = options.prompts.critic.prompt
   const attempts: { stage: string; failures: ProviderAttempt[] }[] = []

@@ -396,7 +396,10 @@ async function main() {
                   executeCase({
                     item,
                     sessionId,
-                    model: createResearchModel(process.env.OPENROUTER_API_KEY, candidate.model, candidate),
+                    model: createResearchModel(process.env.OPENROUTER_API_KEY, candidate.model, {
+                      ...candidate,
+                      reasoning: candidate.reasoning === undefined ? { effort: "low" } : candidate.reasoning
+                    }),
                     instructions: prompt.prompt,
                     budget,
                     signal: controller.signal

@@ -4,6 +4,7 @@ import { createChatModel, type ChatModelOptions } from "../../services/openroute
 
 export const researchAgentLimits = { steps: 8, calls: 24, timeoutMs: 120000, outputTokens: 4096 }
 export const researchModelId = "openai/gpt-5.6-luna-20260709"
+export const researchReasoningEffort = "high"
 
 export type ResearchModelConfig = {
   provider?: { only: string[] }
@@ -15,7 +16,8 @@ export function createResearchModel(
   modelId = researchModelId,
   config: ResearchModelConfig = {}
 ): LanguageModel {
-  const reasoning = config.reasoning === undefined ? { effort: "low" as const } : config.reasoning
+  const reasoning: ChatModelOptions["reasoning"] =
+    config.reasoning === undefined ? { effort: researchReasoningEffort } : config.reasoning
   return createChatModel(apiKey, modelId, { ...config, reasoning })
 }
 

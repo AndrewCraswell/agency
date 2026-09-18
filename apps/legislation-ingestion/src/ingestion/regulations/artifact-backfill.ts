@@ -186,17 +186,6 @@ async function acquireUnit(
   }
 }
 
-/** Acquires one current discovery unit using the same verified immutable-byte path as historical backfills. */
-export async function acquireCurrentRegulatoryArtifact(
-  directory: string,
-  value: unknown,
-  options: { maximumBytes?: number; client?: RegulatorySourceClient } = {}
-) {
-  return currentReceiptSchema
-    .extend({ reused: z.boolean() })
-    .parse(await acquireRegulatoryArtifact(directory, legalDiscoveryUnitSchema.parse(value), options))
-}
-
 /** Acquires either a frozen historical unit or a current-discovery unit through one immutable-byte path. */
 export async function acquireRegulatoryArtifact(
   directory: string,

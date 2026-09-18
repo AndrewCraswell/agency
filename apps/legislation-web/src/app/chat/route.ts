@@ -6,6 +6,7 @@ import {
   createResearchModel,
   researchAgentLimits,
   researchModelId,
+  researchReasoningEffort,
   runResearchAgent
 } from "../../modules/conversations/agent"
 import { observeChatResponse } from "../../modules/conversations/capture"
@@ -314,7 +315,7 @@ export async function POST(request: Request) {
         promptHash: digest(prompt.prompt),
         compositionHash: digest(compositionInstructions),
         model: researchModelId,
-        reasoningEffort: "low",
+        reasoningEffort: researchReasoningEffort,
         referenceMode: "evidence-relative"
       }
     })

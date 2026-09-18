@@ -78,6 +78,13 @@ per data store. Each operation creates the existing query service against a clie
 Individual requests release their clients but must not close the shared pools. The optional ranked passage store uses
 the same transaction-local approach without enabling any unapproved search cutover.
 
+Conversation answers use `openai/gpt-5.6-luna-20260709` with **high** reasoning by default, selected by
+`researchReasoningEffort` in the conversation agent. Chat trace metadata uses the same setting. The September 18 upgrade
+does not change the answer prompt, model ID, retry policy or budgets. Homepage suggestions, offline quality judges and
+the analytics acceptance harness remain explicitly at low reasoning; configured evaluation candidates retain their
+selected effort (low when omitted). Hosted Langfuse evaluators are unchanged. There is no automatic model routing or
+Astra escalation in the application.
+
 Current per-run bounds: 30-second registry tool calls, 120-second total run deadline, eight model
 steps, 24 tool calls, and 180,000 bytes of structured data per model-visible tool result. Research serialization omits
 internal embedding and search-index fields. The shared chat/MCP bill discovery contract returns snippets, identifiers, sources, and child

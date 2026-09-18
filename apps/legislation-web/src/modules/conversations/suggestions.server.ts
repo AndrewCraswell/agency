@@ -41,7 +41,7 @@ async function generateSuggestions() {
         modelParameters: { maxOutputTokens: 2000, reasoning: "low" }
       })
       const result = await generateText({
-        model: createResearchModel(process.env.OPENROUTER_API_KEY),
+        model: createResearchModel(process.env.OPENROUTER_API_KEY, researchModelId, { reasoning: { effort: "low" } }),
         instructions,
         prompt: "Generate exactly six fresh, distinct research ideas covering all four research approaches.",
         output: Output.object({ schema: researchSuggestionsSchema }),
