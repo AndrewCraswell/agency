@@ -1350,6 +1350,7 @@ export const votes = legislationSchema.table(
       sql`not ${table.timelineComplete} or ((${table.heldAt} is not null or ${table.heldDate} is not null) and ${table.result} in ('passed', 'failed', 'other') and ${table.yesCount} is not null and ${table.noCount} is not null and ${table.absentCount} is not null and ${table.abstainCount} is not null and ${table.notVotingCount} is not null and ${table.presentCount} is not null and ${table.proxyCount} is not null and ${table.pairedCount} is not null and ${table.otherCount} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null and ${table.sourceSequence} is not null)`
     ),
     index("votes_bill_idx").on(table.billId, table.heldAt),
+    index("votes_session_idx").on(table.sessionId, table.id),
     index("votes_occurrence_asc_idx")
       .on(sql`coalesce(${table.heldAt}, ${table.heldDate}::timestamp at time zone 'UTC')`, table.id)
       .where(sql`${table.timelineComplete}`),
@@ -1391,6 +1392,7 @@ export const votePositions = legislationSchema.table(
       sql`${table.option} in ('yes', 'no', 'absent', 'abstain', 'not-voting', 'present', 'proxy', 'paired', 'other')`
     ),
     index("vote_positions_person_idx").on(table.personId, table.option),
+    index("vote_positions_vote_option_person_idx").on(table.voteId, table.option, table.personId),
     index("vote_positions_vote_sequence_idx").on(table.voteId, table.sourceSequence, table.sourceIdentity),
     index("vote_positions_source_person_idx").on(table.sourcePersonId, table.option)
   ]

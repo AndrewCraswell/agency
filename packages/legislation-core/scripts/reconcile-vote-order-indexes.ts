@@ -6,10 +6,10 @@ import { z } from "zod"
 // session locks or safely carry concurrent-index statement/lock timeouts.
 const operation = z.enum(["inspect", "apply"]).parse(process.argv[2] ?? "inspect")
 const baseline = await readFile(
-  new URL("../src/database/migrations/0034_timeline-canonical-facts.sql", import.meta.url),
+  new URL("../src/database/migrations/0000_melted_captain_america.sql", import.meta.url),
   "utf8"
 )
-const definitions = baseline.match(/CREATE INDEX IF NOT EXISTS "votes_occurrence_(?:asc|desc)_idx"[^;]+;/g)
+const definitions = baseline.match(/CREATE INDEX votes_occurrence_(?:asc|desc)_idx[^;]+;/g)
 if (definitions?.length !== 2) throw new Error("Expected exactly two canonical vote-order indexes")
 const client = new pg.Client({
   connectionString: z.url({ protocol: /^postgres(?:ql)?$/ }).parse(process.env.VOTE_INDEX_DATABASE_URL),
@@ -71,14 +71,14 @@ try {
     if (!lock.rows[0]?.acquired) throw new Error("Another vote-order reconciliation owns the session lock")
   }
   for (const definition of definitions) {
-    const name = /"(votes_occurrence_(?:asc|desc)_idx)"/.exec(definition)?.[1]
+    const name = /CREATE INDEX (votes_occurrence_(?:asc|desc)_idx) /.exec(definition)?.[1]
     if (!name) throw new Error("Missing canonical index name")
     let state = await inspect(name)
     if (!state && operation === "apply") {
       const progress = await client.query("select pid,phase from pg_stat_progress_create_index")
       if (progress.rowCount !== 0) throw new Error("An index build is active; refusing overlapping maintenance")
       console.log(JSON.stringify({ event: "building", name }))
-      await client.query(definition.replace("CREATE INDEX IF NOT EXISTS", "CREATE INDEX CONCURRENTLY"))
+      await client.query(definition.replace("CREATE INDEX", "CREATE INDEX CONCURRENTLY"))
       state = await inspect(name)
       if (!state) throw new Error(`Missing ${name} after successful build`)
     }

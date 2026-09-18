@@ -3306,7 +3306,7 @@ export class LegislationQueryService {
       .select({
         date: sql<
           string | null
-        >`coalesce(to_char(${billActions.actionAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), ${billActions.actionDate})`.as(
+        >`coalesce(to_char(${billActions.actionAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), to_char(${billActions.actionDate}, 'YYYY-MM-DD'))`.as(
           "date"
         ),
         description: billActions.description,
@@ -3321,7 +3321,7 @@ export class LegislationQueryService {
       .select({
         date: sql<
           string | null
-        >`coalesce(to_char(${votes.heldAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), ${votes.heldDate})`.as(
+        >`coalesce(to_char(${votes.heldAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), to_char(${votes.heldDate}, 'YYYY-MM-DD'))`.as(
           "date"
         ),
         description: votes.motion,

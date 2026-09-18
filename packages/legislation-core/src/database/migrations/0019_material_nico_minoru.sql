@@ -1,2 +1,0 @@
-ALTER TABLE "legislation"."supporting_materials" ADD COLUMN "last_attempt_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "legislation"."supporting_materials" ADD COLUMN "next_attempt_at" timestamp with time zone;

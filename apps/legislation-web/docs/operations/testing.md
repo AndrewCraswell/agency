@@ -8,6 +8,14 @@ do not import I or M source to seed a test. Use canonical seeds or a root-coordi
 
 For date-only and timestamp vote storage/reader acceptance, see [vote date precision](vote-date-precision.md).
 
+`src/modules/legislation/query-service.integration.test.ts` exercises the bill timeline SQL against the full canonical
+baseline in an explicitly local `legislation_test` database. It covers timestamp/date/null combinations for actions
+and votes, timestamp precedence, UTC and ISO formatting under non-default DateStyle/time zone settings, interleaved
+ordering, cross-type ties, nulls last and pagination. Its fixture setup resets only that guarded disposable schema.
+Run this alongside `query-service.test.ts`; mocked SQL capture cannot detect PostgreSQL type-resolution failures.
+See C's [baseline release procedure](../../../../packages/legislation-core/docs/operations/migration-baseline.md)
+before running migrations against an existing database.
+
 Run from W (`apps/legislation-web`), or use `pnpm --filter legislation-web <script>` from the repository root:
 
 | Command | Scope |

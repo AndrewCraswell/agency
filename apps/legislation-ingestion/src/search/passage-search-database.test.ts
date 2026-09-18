@@ -46,15 +46,17 @@ describe.skipIf(!hasDatabase)("passage search database synchronization", () => {
         create table legislation.document_sections(id text primary key,document_id text references legislation.bill_documents on delete cascade,
           heading text,text text,content_hash text,page_start integer,page_end integer);`)
       await source.query("begin")
-      await source.query(
-        await readFile(
-          new URL(
-            "./migrations/0047_passage_search_changes.sql",
-            import.meta.resolve("@repo/legislation-core/database/migrate")
-          ),
-          "utf8"
-        )
+      const baseline = await readFile(
+        new URL(import.meta.resolve("@repo/legislation-core/database/migrations/0000_melted_captain_america.sql")),
+        "utf8"
       )
+      const objects = baseline
+        .split(/(?=^--\n-- Name: )/m)
+        .filter((block) => /^--\n-- Name: [^\n]*(?:passage_search|capture_passage)/.test(block))
+      expect(objects.some((block) => block.includes("CREATE FUNCTION legislation.capture_passage_search_change"))).toBe(
+        true
+      )
+      await source.query(objects.join("\n"))
       await source.query("commit")
     }
     await source.query("delete from legislation.passage_search_backfill where name='documents'")

@@ -17,8 +17,12 @@ W lives at `apps/legislation-web`; its database scripts delegate to C. C's helpe
 environment, not an app-local `.env`. Follow [local credential setup](../../../../apps/legislation-web/docs/operations/development.md#local-environment-after-the-move)
 before invoking it. The existing ignored environment file was not moved from `apps/legislation`.
 
+The [canonical migration baseline](migration-baseline.md) replaces the historical chain. Existing databases must
+complete the documented schema/ledger reconciliation before using the normal release command; the runner rejects
+superseded or edited history rather than resetting data or silently skipping it.
+
 For C integration work, `LEGISLATION_CORE_TEST_DATABASE_URL` must name `legislation_core_test` on `127.0.0.1`,
-`localhost` or `[::1]`. All three core integration suites enforce both checks and skip when the variable is absent.
+`localhost` or `[::1]`. Core integration suites enforce both checks and skip when the variable is absent.
 The schema suite drops `legislation` and `legislation_migrations` before and after its migration checks. The Compose
 runtime database is not a substitute for this dedicated disposable test database.
 

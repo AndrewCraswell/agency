@@ -1,1 +1,0 @@
-ALTER TABLE "legislation"."bills" ADD COLUMN "committees" text[] DEFAULT '{}'::text[] NOT NULL;

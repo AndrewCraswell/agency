@@ -28,17 +28,17 @@ describe.skipIf(!connection)("mixed-precision vote reads in PostgreSQL", () => {
       throw new Error("Missing isolated test database")
     }
     const baseline = await readFile(
-      new URL(import.meta.resolve("@repo/legislation-core/database/migrations/0034_timeline-canonical-facts.sql")),
+      new URL(import.meta.resolve("@repo/legislation-core/database/migrations/0000_melted_captain_america.sql")),
       "utf8"
     )
-    const definitions = baseline.match(/CREATE INDEX IF NOT EXISTS "votes_occurrence_(?:asc|desc)_idx"[^;]+;/g)
+    const definitions = baseline.match(/CREATE INDEX votes_occurrence_(?:asc|desc)_idx[^;]+;/g)
     expect(definitions).toHaveLength(2)
     const rollback = new Error("verified rollback")
     await expect(
       connection.database.transaction(async (database) => {
         await database.execute(sql`set local statement_timeout='20s'`)
         for (const definition of definitions ?? []) {
-          await database.execute(sql.raw(definition))
+          await database.execute(sql.raw(definition.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS")))
         }
         const scope = randomUUID()
         await database.execute(sql`

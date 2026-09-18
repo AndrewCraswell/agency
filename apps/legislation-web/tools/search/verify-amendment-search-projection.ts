@@ -75,12 +75,17 @@ try {
       setweight(to_tsvector('english',new.text),'B'); return new; end $$;
     create trigger fixture_section_vector before insert or update of heading,text on legislation.document_sections
     for each row execute function legislation.fixture_section_vector()`)
-  await client.query(
-    await readFile(
-      new URL(import.meta.resolve("@repo/legislation-core/database/migrations/0046_amendment_section_search.sql")),
-      "utf8"
-    )
+  const baseline = await readFile(
+    new URL(import.meta.resolve("@repo/legislation-core/database/migrations/0000_melted_captain_america.sql")),
+    "utf8"
   )
+  const projectionObjects = baseline
+    .split(/(?=^--\n-- Name: )/m)
+    .filter((block) =>
+      /^--\n-- Name: [^\n]*(?:amendment_section_search|sync_amendment|amendment_search_trigger)/.test(block)
+    )
+  assert(projectionObjects.some((block) => block.includes("CREATE FUNCTION legislation.sync_amendment_section_search")))
+  await client.query(projectionObjects.join("\n"))
   await client.query(behaviorSql)
   process.stdout.write("Projection SQL behavior checks passed\n")
   await client.query(`insert into legislation.bills(id,jurisdiction_id,session_id) values ('bill-fixture','jurisdiction:us','session:119');
