@@ -28,9 +28,12 @@
 - [ ] Positive MCP re-acceptance is blocked by WorkOS resource registration, not legislation data. Production MCP is
   now `https://legislation-mcp-production.up.railway.app/mcp`, while WorkOS recognizes only the retired web-service
   resource. A fresh OAuth request for the deployed target returns `invalid_target`; the retained user-consent token is
-  correctly audience-bound to the old URL and the new service rejects a machine token with 401. Register the new MCP
-  resource in WorkOS, then repeat browser consent and `pnpm --filter legislation-mcp smoke:deployment`. Do not weaken
-  audience validation or substitute the API machine credential.
+  correctly audience-bound to the old URL and the new service rejects a machine token with 401. In WorkOS, open
+  **Connect -> Configuration -> Resource Indicators**, add that exact production MCP URL, and set it as the default.
+  This follows WorkOS's MCP resource-indicator contract: the configured URL must equal the protected-resource
+  metadata `resource`, and the resulting token `aud` must equal that URL. Then repeat browser consent and
+  `pnpm --filter legislation-mcp smoke:deployment`. Do not weaken audience validation, reuse the retired audience, or
+  substitute the API machine credential.
 
 ## September 18 Alaska and North Carolina serving acceptance
 
