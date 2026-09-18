@@ -56,8 +56,7 @@ export async function runRegulatoryDiscoveryPublication(value: unknown) {
   const pool = new pg.Pool({
     connectionString: databaseUrl.href,
     max: 2,
-    connectionTimeoutMillis: 10_000,
-    statement_timeout: 60_000
+    connectionTimeoutMillis: 10_000
   })
   const config = loadConfig()
   const storageAccount = z.string().trim().min(1).parse(config.azure.storageAccount)

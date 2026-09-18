@@ -89,8 +89,7 @@ export async function runRegulatoryPreparationDispatch(value: unknown): Promise<
   const pool = new pg.Pool({
     connectionString: url.href,
     max: 2,
-    connectionTimeoutMillis: 10_000,
-    statement_timeout: 15_000
+    connectionTimeoutMillis: 10_000
   })
   try {
     const name = (await pool.query("SELECT current_database() AS name")).rows[0]?.name

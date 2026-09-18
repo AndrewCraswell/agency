@@ -1,6 +1,6 @@
 # Federal regulatory implementation progress
 
-Updated September 17, 2026. Implementation is underway. Backfill first: all recurring regulatory source schedules remain
+Updated September 18, 2026. Implementation is underway. Backfill first: all recurring regulatory source schedules remain
 disabled. This is a dated execution ledger, not a recurring-agent configuration or task queue. Older entries describe
 then-current blockers and counters; newer evidence and the production backlog supersede those operational directions.
 
@@ -12,6 +12,99 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 2m43s. Verification log: `C:/Users/andcra/AppData/Local/Temp/rostra-production-backlog-verify.log`.
 
 ## Implementation evidence, newest first
+
+Installed and independently verified the canonical regulatory schema in the production Railway PostgreSQL 18.6
+database after the scheduled daily recovery point completed at September 18 20:42:05 UTC. The first checksum-pinned
+transaction exposed an ordering defect in the event-vocabulary reconciliation and rolled back completely: a row with
+both a legacy classification and status could not be rewritten one field at a time while the other `NOT VALID`
+constraint still enforced new row versions. The migration now normalizes both fields in one update. Its integration
+test includes an overlapping `markup`/`confirmed` row, and all five focused migration cases pass against disposable
+PostgreSQL.
+
+The corrected release was rebuilt from a fresh production schema-only snapshot and rehearsed with the exact 62-table,
+48-ledger-row, 16-unvalidated-constraint preflight plus 2,657 legacy classifications and 1,569 legacy statuses, all
+overlapping in the rehearsal where applicable. Exact payload SHA-256
+`32f6dc5c9da069740cf5d790db461c18433ac5f95b7ead5364761ed599ae9159` then committed in production. Independent
+postflight reports 102 legislation tables, 106 relations, 1,071 columns, 1,337 constraints, 305 indexes, eight
+functions, 17 triggers, two canonical ledger rows, zero unvalidated constraints and zero legacy event values. The
+normal `pnpm --filter legislation-web db:migrate` release command subsequently completed as a no-op. The tracked
+reconciliation migration hash is `d6997bd5bf1d519cbebcd7fca05e009a27aa582ac7e0503305adfa4754caa1e3`.
+
+Configured the four nonsecret production Trigger scratch roots used around Azure source, normalized, metadata and PDF
+artifact retention. Production eCFR canary `run_06gbcjcbjrukufukk4b5gisl01` reached the source adapter on deployment
+`20260918.12`; all three bounded attempts correctly deferred on the publisher's live `import_in_progress` inventory
+signal, and the run ended `FAILED` with that explicit source disposition rather than publishing stale or empty titles.
+This is source-gate evidence, not a completed acquisition/publication canary. Retry requires a fresh publisher inventory
+after the import window clears. Recurring source schedules remain disabled.
+
+Installed and independently verified the additive regulatory passage/vector schema on the isolated production search
+database. The fail-closed release first replayed the live one-table schema in a ParadeDB 0.25.9/PostgreSQL 18 clone and
+verified that the existing `document_sections` row and its primary, B-tree and ParadeDB indexes survived. Its first
+production-shaped attempt exposed a `name[]` versus `text[]` preflight comparison error and rolled the whole transaction
+back; the corrected payload then passed the same rehearsal. Production applied SHA-256
+`96dbb9f99c66a210a7363d5fbcd9ec1fbe32f821242c7b006b9a98f1120b767a` in one transaction. Independent postflight finds
+15 legislation tables, 110 columns, 192 constraints, 34 indexes, one function, six triggers and zero invalid indexes.
+All three pre-existing `document_sections` indexes remain present; the table retains an estimated 16,576,102 rows.
+No passage copy, vector generation, index promotion or recurring source ingestion was started.
+
+Completed the first bounded Federal Register PDF structural-validation backfill. The retained applied report covers all
+100 publication dates from January 2 through May 22, 2020 and accounts for 10,878 supported publications with 10,878
+validated official PDF renditions. Ninety-nine dates were validated during this run, one date resumed from its durable
+checkpoint and 73 publication receipts were safely reused. The report declares `validationComplete: true`; its SHA-256
+is `9b4c5fd0532b3390fd75baf030242424675dd6122a70520372a72774658a3cb2`. This closes the bounded structural sample only:
+the report correctly retains `publicationReady: false`, made no canonical writes and did not enable recurring ingestion.
+The independent 2020-through-2024 acquisition backfill remains live and was not restarted.
+
+Deployed the production Trigger bundle twice to exercise the first bounded current-eCFR canary. Deployment
+`20260918.11` reached PostgreSQL but exposed that `statement_timeout` in `pg.Pool` startup parameters is incompatible
+with Railway PgBouncer. Commit `d05f440` removed that startup option from all regulatory task pools while retaining the
+existing transaction-local timeouts; four focused files and 28 tests, formatting, lint, ingestion type-check and commit
+hooks passed. Deployment `20260918.12` then reached the canonical database and failed at the intended schema gate because
+`legislation.legal_sources` is not yet installed. Run `run_06gbbvtucg8fg8cg11pqhus401` is the production failure
+evidence. This proves the deployed task starts and connects through PgBouncer; it does not prove source acquisition or
+canonical publication.
+
+Completed a read-only production migration preflight and a clean PostgreSQL 18 rehearsal. Production records historical
+migrations 0 through 47 and has 62 legislation tables. The retained 48-through-51 migrations add the 40 missing
+regulatory tables. The live keyed catalog matches the retained pre-regulation schema for existing columns, functions
+and triggers; one amendment HNSW index is an intentional extra. Ten older constraints are already stronger because they
+were validated in production. Sixteen remain unvalidated: fourteen have zero violating rows, while two event-vocabulary
+checks contain 2,657 legacy classifications and 1,569 legacy statuses.
+
+Added `0001_reconcile_legacy_event_vocabulary.sql` to map those observed legacy forms with the current canonical event
+semantics and validate all 26 formerly deferred constraints. Its PostgreSQL integration test replays all ten observed
+classification forms and three observed status forms, verifies their canonical values and verifies both event
+constraints are validated. The retained 0-through-47 chain plus 48-through-51 and this reconciliation produced exact
+catalog parity with the consolidated baseline across relations, columns, constraints, indexes, functions and triggers:
+102 legislation tables on both sides. Focused migration tests pass five cases; core type-check, `db:check` and scoped
+lint pass. The complete core database project passes 16 tests with 11 environment-skipped cases. Root `pnpm verify`
+passed formatting, lint, type-check, electrical simulation and Beachball gates before the repository-wide Knip check
+stopped on 64 unused files, two unused root development dependencies, two unlisted binaries and two unused exports.
+Those findings were not changed in this migration slice, and coverage did not run. No production schema, data or ledger
+writes occurred.
+
+The Railway volume is ready and a read-only API audit found 17 recovery points. The latest daily snapshot is from
+September 17 at 20:42 UTC and expires September 23 at 20:42 UTC. A fresh named snapshot remains unavailable because the
+volume backup limit is full; no recovery point was deleted or created. Production rollout therefore still requires an
+explicit choice to accept the existing recovery window or free a slot for a new snapshot, followed by the direct-admin
+migration transaction and catalog verification. Recurring source schedules remain disabled.
+
+The Railway `pgvector` service's public database URL was separately verified read-only as a direct PostgreSQL 18.6
+administration connection: it accepted a startup `statement_timeout`, connected as the database owner and reported no
+recovery mode. This is distinct from the PgBouncer URL used by Trigger tasks, so the release no longer depends on an
+unverified administration path.
+
+Generated and executed the exact fail-closed release payload against a production-shaped PostgreSQL 18 clone. The clone
+contained the frozen 48-row production ledger, all 62 pre-regulation tables, the retained amendment HNSW index, the same
+16 unvalidated constraints and 4,226 representative legacy event rows. The single transaction verified its preflight,
+applied migrations 48 through 51 and the tracked reconciliation, checked all expected catalog totals, and replaced the
+ledger only after those checks passed. It finished with 102 tables, two canonical ledger rows, zero unvalidated
+constraints and zero invalid event classifications or statuses. The retained SQL SHA-256 is
+`e9ebe0032754aaa2bfc2eab131e5181d96c0b7856dfa47b2c1fbe3641efee54f`; it has not been run against production.
+
+The two independent Federal Register artifact jobs remained live during this work. Acquisition advanced to 180 of
+1,248 frozen 2020-through-2024 publication days through September 16, 2020. Structural PDF validation advanced to 55
+of the first 100 days through March 20, 2020. Neither job was restarted or duplicated.
 
 Connected retained monthly FederalRegister.gov evidence to the historical publication-preparation path. For an issue
 date, the worker now looks under the configured metadata root for

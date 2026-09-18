@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({ discover: vi.fn(), end: vi.fn(), key: vi.fn(), trigger: vi.fn() }))
+const mocks = vi.hoisted(() => ({ discover: vi.fn(), end: vi.fn(), key: vi.fn(), pool: vi.fn(), trigger: vi.fn() }))
 vi.mock("pg", () => ({
   default: {
     Pool: class MockPool {
+      constructor(options: unknown) {
+        mocks.pool(options)
+      }
       end = mocks.end
     }
   }
@@ -65,6 +68,8 @@ it("closes discovery before starting one bounded controller window", async () =>
     { sourceId: "ecfr", scopeKey: "a".repeat(64), afterUnitKey: null, limit: 25 },
     { idempotencyKey: "global-controller-key" }
   )
+  expect(mocks.pool).toHaveBeenCalledWith(expect.objectContaining({ max: 2 }))
+  expect(mocks.pool).not.toHaveBeenCalledWith(expect.objectContaining({ statement_timeout: expect.anything() }))
 })
 
 it("does not start a controller when discovery finds no changed title", async () => {

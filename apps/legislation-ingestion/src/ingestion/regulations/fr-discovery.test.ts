@@ -138,6 +138,27 @@ it("requests one authenticated GovInfo page without putting the credential in it
   expect(result.nextOffsetMark).toBe("opaque+cursor")
 })
 
+it("projects the fixed provider window from an active discovery cursor", async () => {
+  let requestedUrl: URL | undefined
+  const client = new GovInfoFrDiscoveryClient({
+    apiKey: "secret-key",
+    fetch: async (input) => {
+      requestedUrl = new URL(String(input))
+      return new Response(JSON.stringify({ count: 0, nextPage: null, packages: [] }), {
+        headers: { "content-type": "application/json" }
+      })
+    }
+  })
+
+  const activeCursor = initializeFrDiscoveryCursor({
+    committedCursor: null,
+    bootstrapStart: start,
+    through: end
+  }).active!
+  await expect(client.fetchPage(activeCursor, "provider-cursor")).resolves.toMatchObject({ nextOffsetMark: null })
+  expect(requestedUrl?.searchParams.get("offsetMark")).toBe("provider-cursor")
+})
+
 it("rejects a pagination link that escapes the fixed GovInfo collection window", async () => {
   const client = new GovInfoFrDiscoveryClient({
     apiKey: "secret-key",
