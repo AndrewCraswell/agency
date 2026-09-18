@@ -23,9 +23,13 @@
   match before acquisition is skipped. Local live-source replay read 853 supported files at current HEAD
   `677c6d0a566ad9bd62b6324e502af76acc3d22f3`: Alaska 93 current and 114 history files; North Carolina 263 current and
   383 history files. Both immutable lanes passed archive hash and read-back verification.
-- [ ] Deploy the foundation schedule, reconcile it into the production scraper manifest, and verify its current-revision
-  `no_change` result. The source revision still omits North Carolina Senate district 1 and contains four held Alaska
-  history timelines; automation must preserve those visible source limitations rather than inventing facts.
+- [x] Deployed the foundation schedule in Trigger `20260917.21` and reconciled it into the production scraper manifest.
+  Cutover run `run_06gb3d9ecn8l7v4jr9reg10501` verified and activated all seven managed schedules. Production refresh
+  runs `run_06gb3nce6cqofqjot0fm0urk01` (Alaska) and `run_06gb3nch00dorkospv50oing01` (North Carolina) both returned
+  `no_change` for immutable revision `677c6d0a566ad9bd62b6324e502af76acc3d22f3` in about half a second, proving the
+  schedule's idempotent current-revision path without rewriting observations. The source revision still omits North
+  Carolina Senate district 1 and contains four held Alaska history timelines; automation preserves those visible
+  source limitations rather than inventing facts.
 
 ## California AB 2652 action provenance
 
