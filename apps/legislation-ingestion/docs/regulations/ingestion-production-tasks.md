@@ -83,6 +83,12 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   The January 18 pilot now persists all 110 required-rendition outcomes and consumes them in atomic canonical
   publication. Remaining: apply the policy across the frozen release inventory and qualify missing-XML/OCR fallback;
   the reviewed PDF extracts are supporting evidence, not a replacement for canonical XML.
+  A complete modern issue canary now covers January 2, 2020: all 73 individual PDFs, 16,554,301 bytes and 264 publisher
+  pages passed receipt hash, content type, PDF framing, PDF.js text/operator, page-count and document-number checks.
+  Separate text evidence found the expected footer in every PDF and identified adjacent-publication text in 63 shared-page
+  renditions; all remain evidence attachments while canonical prose comes from matched XML. Atomic local publication and
+  replay produced 73 exact observations with zero staged/canonical field mismatches. This does not qualify missing-XML
+  substitution or the remaining historical inventory.
 - [ ] **ING-07 Freeze current eCFR currency.** Reconcile the retained title inventory with an explicit publisher cutoff,
   reserved title 35, import-in-progress titles and per-title issue dates. Plan only genuinely missing/corrected versions.
   **Done:** every requested title is validated, delayed or excluded with evidence; collection time never substitutes
@@ -101,8 +107,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   avoiding per-day source refetches. The complete 1,248-issue source backfill is now acquired, parsed and reconciled:
   141,580 supported publications match exact metadata with zero gaps, while 1,620 presidential documents account for
   the remainder of all 143,200 metadata records. Replay-stable per-issue reports were independently audited under one
-  parser hash. All 141,580 listed individual PDFs remain unacquired, so required rendition accounting, canonical
-  publication and deployed monthly-evidence availability remain open.
+  parser hash. One complete issue now has all 73 listed PDFs acquired, structurally validated, boundary-audited and
+  published in a disposable local database. The other 141,507 listed PDFs remain unacquired, so release-wide rendition
+  accounting, canonical publication and deployed monthly-evidence availability remain open.
 - [ ] **ING-09 Finish source-agency mapping.** Persist publisher agency IDs/names and reviewed mappings to existing
   organization identities; preserve unresolved aliases and multiple issuing agencies. **Done:** unknown aliases remain
   searchable as source references without creating fictitious organizations or dropping documents.

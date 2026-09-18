@@ -4429,11 +4429,11 @@ slice and remain `unresolved_target`, rather than being guessed.
 
 Evidence is under `artifacts/regulatory-backfills/fr-2020-2024-reconciliation/`. Its aggregate `summary.json` has
 SHA-256 `8375c2dc3693fc052a13d2a13bde37891551156567844474e29dfc3682807381`. Independent file-by-file audit found 1,248
-unique report IDs, dates, units and source artifact hashes, one parser hash, zero gaps and zero incomplete issues. All
-141,580 matched publications list an official individual PDF that has not yet been acquired. Therefore acquisition,
-XML normalization and text/metadata reconciliation are complete for this frozen window, while rendition acquisition,
-canonical publication, passage preparation, indexing and embeddings remain open. Recurring ingestion and bulk
-regulatory embeddings remain disabled.
+unique report IDs, dates, units and source artifact hashes, one parser hash, zero gaps and zero incomplete issues. Every
+matched publication lists an official individual PDF; the January 2, 2020 issue now accounts for 73 of them, leaving
+141,507 unacquired. Therefore XML acquisition, normalization and text/metadata reconciliation are complete for this
+frozen window, while release-wide rendition acquisition, canonical publication, passage preparation, indexing and
+embeddings remain open. Recurring ingestion and bulk regulatory embeddings remain disabled.
 
 ## Durable GovInfo admission for Federal Register renditions
 
@@ -4452,5 +4452,32 @@ Focused verification passed 27 HTTP/client/admission/PDF tests and one real Post
 dedicated `regulations_destructive_test` database. That database test uses two store instances to prove shared pacing,
 durable cooldown and continued admission for an unrelated provider. The app type-check and scoped oxlint pass. This is
 local evidence: legislative GovInfo clients still need the shared key, and a deployed multi-parent PDF run remains open.
-The five-document live PDF canary remains the only source-network sample; the 141,580-document acquisition has not been
-started. Recurring ingestion and bulk regulatory embeddings remain disabled.
+Recurring ingestion and bulk regulatory embeddings remain disabled.
+
+## Complete January 2, 2020 Federal Register rendition and publication canary
+
+The first complete modern issue has passed the entire local source-to-canonical boundary. All 73 supported publications
+from January 2, 2020 acquired their official individual GovInfo PDFs. Five prior canary receipts were reused and 68 new
+downloads completed; the 73 immutable blobs total 16,554,301 bytes. Immediate replay reused all 73 receipts without a
+network request. Acquisition report SHA-256 is
+`2e11541cde0fcd01caf3dd4bb54f7f75e7055bb898c459a84e2948a81f749411`; structural validation report SHA-256 is
+`50c8e745f20d49b6f48020ea60aab3258ef5b5e8c61cc722aca30ca957f68c35`.
+
+PDF.js inspected every page and operator list. All 73 artifacts matched their receipt hashes, exact publisher page spans
+and expected document numbers, with zero empty-text pages across 264 pages. A separate immutable text extraction produced
+73 unique generations. Every rendition contains its own footer; ten contain only that expected footer, while 63 expose
+one or more neighboring publication footers because the official page-range PDFs preserve shared printed pages. Those
+texts remain `publicationReady: false` and are not substituted for the clean, independently reconciled XML. The boundary
+report SHA-256 is `3253d254e8561d20bfd942916bb91ece8461ae05a219a0df17254a617c7c53c1`.
+
+The issue then published atomically into a clone of the dedicated local regulatory database. Generation
+`312dcb20ccd7c0d4f84536688148d39b2db8350bd9ba630885ac82357b1b1988` committed 73 publications, and exact replay
+returned `reused: true`. An independent SQL audit found one publication batch, 73 staged records, 73 unique canonical
+documents, versions and observations, 73 retained PDF artifacts, 73 lexical outbox rows, zero missing PDF hashes, zero
+duplicate native numbers and zero mismatches across number, heading, body, blocks, publication kind, source locator,
+metadata identity, receipt identity and PDF document-number evidence. Evidence is
+`fr-publication-2020-01-02.json`, its replay, and `fr-publication-2020-01-02-audit.json` under regulatory backfills.
+
+This is local evidence and has no vectors. Deployed Trigger/Azure execution, passage preparation, copied lexical search,
+authenticated API/MCP serving and the remaining 141,507 PDFs remain open. Recurring ingestion and bulk regulatory
+embeddings remain disabled.
