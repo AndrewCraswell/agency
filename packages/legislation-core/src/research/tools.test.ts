@@ -41,6 +41,22 @@ function definition(api: LegislationQueryApi, name: string) {
 }
 
 describe("shared research definitions", () => {
+  it("registers bounded legal passage tools only for an authorized legal service", async () => {
+    const versionId = "00000000-0000-4000-8000-000000000001"
+    const editionId = "00000000-0000-4000-8000-000000000002"
+    const passageId = "a".repeat(64)
+    const listLegalPassages = vi.fn<NonNullable<LegislationQueryApi["listLegalPassages"]>>(async () => ({ data: [] }))
+    const getLegalPassage = vi.fn<NonNullable<LegislationQueryApi["getLegalPassage"]>>(async () => ({ data: {} }))
+    const api = { ...service(), canReadLegalText: () => true, listLegalPassages, getLegalPassage }
+    await definition(api, "list_legal_passages").execute({ versionId, editionId })
+    await definition(api, "get_legal_passage").execute({ passageId, editionId })
+    expect(listLegalPassages).toHaveBeenCalledWith({ versionId, editionId, limit: 10 })
+    expect(getLegalPassage).toHaveBeenCalledWith({ passageId, editionId })
+    expect(createLegislationResearchTools({ ...api, canReadLegalText: () => false }, logger)).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "list_legal_passages" })])
+    )
+  })
+
   it("preserves supporting-material organization, session and date scope", async () => {
     const searchSupportingMaterials = vi.fn<LegislationQueryApi["searchSupportingMaterials"]>(async () => ({
       items: []

@@ -1,7 +1,7 @@
 # Regulatory HTTP API contract
 
 Contract recorded September 14, 2026. The [exact-version text operation](legal-text-serving.md) is implemented locally;
-the corresponding opt-in `get_legal_text` MCP tool is also implemented locally. The
+the corresponding opt-in `get_legal_text`, `list_legal_passages`, and `get_legal_passage` MCP tools are also implemented locally. The
 [published code list](legal-code-discovery.md), [edition/provision browser](legal-edition-browsing.md), and their
 `list_legal_codes`, `get_legal_code`, `list_legal_editions`, `get_legal_edition`, `list_legal_provisions` tools are implemented locally;
 `get_legal_provision` and its typed provision-detail route are also implemented locally with exact edition/version,

@@ -208,7 +208,11 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
               throw new LegislationError("forbidden", "Access denied")
             }
             return api.getLegalText(versionId, input, { ...requestOptions(), bearerToken })
-          }
+          },
+          listLegalPassages: async ({ versionId, ...input }) =>
+            api.listLegalPassages(versionId, input, await legalRequestOptions()),
+          getLegalPassage: async ({ passageId, ...input }) =>
+            api.getLegalPassage(passageId, input, await legalRequestOptions())
         }),
     compareBillVersions: async ({ billId, documentIds, cursor, limit }) => {
       const [leftDocumentId, rightDocumentId] = documentIds
@@ -306,6 +310,8 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
 
 function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
   const getLegalText = adapter.getLegalText
+  const listLegalPassages = adapter.listLegalPassages
+  const getLegalPassage = adapter.getLegalPassage
   const searchLegal = adapter.searchLegal
   const getRegulatoryCoverage = adapter.getRegulatoryCoverage
   const listLegalAgencies = adapter.listLegalAgencies
@@ -356,6 +362,12 @@ function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
           canReadLegalText: adapter.canReadLegalText,
           getLegalText: async (input) => await apiCall(() => getLegalText(input))
         }),
+    ...(listLegalPassages === undefined
+      ? {}
+      : { listLegalPassages: async (input) => await apiCall(() => listLegalPassages(input)) }),
+    ...(getLegalPassage === undefined
+      ? {}
+      : { getLegalPassage: async (input) => await apiCall(() => getLegalPassage(input)) }),
     compareBillVersions: async (input) => await apiCall(() => adapter.compareBillVersions(input)),
     findRelatedBills: async (input) => await apiCall(() => adapter.findRelatedBills(input)),
     getAmendment: async (input) => await apiCall(() => adapter.getAmendment(input)),

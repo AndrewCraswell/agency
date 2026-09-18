@@ -74,6 +74,59 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe("createMcpHttpQueryAdapter", () => {
+  it("uses the identity-bound credential for passage list and detail reads", async () => {
+    const versionId = "00000000-0000-4000-8000-000000000001"
+    const editionId = "00000000-0000-4000-8000-000000000002"
+    const passageId = "a".repeat(64)
+    const passage = {
+      id: passageId,
+      generationId: "b".repeat(64),
+      versionId,
+      ordinal: 0,
+      start: 0,
+      end: 4,
+      text: "Rule",
+      tokenCount: 1,
+      readerSpans: [{ blockId: "c".repeat(64), start: 0, end: 4 }],
+      contextSpans: [],
+      inputHash: "d".repeat(64),
+      rowContinuation: null,
+      selectedContext: {
+        kind: "provision",
+        editionId,
+        provisionId: "00000000-0000-4000-8000-000000000003",
+        versionId,
+        sourceObservationId: "e".repeat(64),
+        sourceId: "ecfr",
+        rightsPolicyHash: "f".repeat(64),
+        parentId: null,
+        sourceLocator: "/ECFR[1]",
+        sourceCurrencyDate: "2026-09-17",
+        selectedDate: null,
+        basis: "observed_snapshot",
+        legalStatus: "unknown"
+      },
+      textUrl: `/api/legal/versions/${versionId}/text?editionId=${editionId}`
+    }
+    const fetch = vi.fn<FetchLike>(async (request, init) => {
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer legal-api-token")
+      return new URL(String(request)).pathname.includes("/versions/")
+        ? pageResponse([passage])
+        : resourceResponse(passage)
+    })
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "general-token",
+      legalText: { allowedOrganizationIds: ["org"], getApiAccessToken: () => "legal-api-token" }
+    })
+    await runWithRequestContext({ correlationId, identity: { organizationId: "org", userId: "user" } }, async () => {
+      expect(await adapter.listLegalPassages?.({ versionId, editionId })).toMatchObject({ data: [passage] })
+      expect(await adapter.getLegalPassage?.({ passageId, editionId })).toMatchObject({ data: passage })
+    })
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
   it("uses a separate API credential for exact provision retrieval", async () => {
     const provisionId = "00000000-0000-4000-8000-000000000001"
     const versionId = "00000000-0000-4000-8000-000000000002"
