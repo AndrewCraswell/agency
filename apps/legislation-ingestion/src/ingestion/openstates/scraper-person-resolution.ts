@@ -109,6 +109,13 @@ export function createScraperPersonResolver(candidates: readonly ScraperPersonCa
     const matches = namedCandidates.filter((candidate) => candidate.terms.some((term) => termMatches(term, context)))
     if (matches.length > 1) return { status: "ambiguous" }
     let match = matches[0]
+    if (match === undefined && context.allowUniqueCrossChamberFallback === true) {
+      const tenureMatches = namedCandidates.filter((candidate) =>
+        candidate.terms.some((term) => termDateMatches(term, context))
+      )
+      if (tenureMatches.length > 1) return { status: "ambiguous" }
+      match = tenureMatches[0]
+    }
     if (
       match === undefined &&
       context.allowChamberHistoryFallback === true &&
@@ -124,13 +131,6 @@ export function createScraperPersonResolver(candidates: readonly ScraperPersonCa
       match =
         chamberHistoryMatches[0] ??
         (namedCandidates.length === 1 && namedCandidates[0]!.terms.length === 0 ? namedCandidates[0] : undefined)
-    }
-    if (match === undefined && context.allowUniqueCrossChamberFallback === true) {
-      const tenureMatches = namedCandidates.filter((candidate) =>
-        candidate.terms.some((term) => termDateMatches(term, context))
-      )
-      if (tenureMatches.length > 1) return { status: "ambiguous" }
-      match = tenureMatches[0]
     }
     if (match === undefined) return { status: "not_found" }
     return { status: "resolved", personId: match.personId, sourcePersonId: match.sourcePersonId }

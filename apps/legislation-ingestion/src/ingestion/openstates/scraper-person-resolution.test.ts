@@ -196,6 +196,28 @@ describe("standalone scraper person resolution", () => {
     ).toEqual({ status: "not_found" })
   })
 
+  it("prefers the only date-qualified cross-chamber namesake over expired history", () => {
+    const context = {
+      allowChamberHistoryFallback: true,
+      allowUniqueCrossChamberFallback: true,
+      chamber: "upper" as const,
+      name: "Fields",
+      observedDate: "2025-04-14",
+      sessionEndDate: "2026-12-31",
+      sessionStartDate: "2025-01-01"
+    }
+    expect(
+      resolveScraperPersonReference(context, [
+        candidate("william-fields", "Fields", "lower", {
+          terms: [{ chamber: "lower", endDate: "2020-12-31", startDate: null }]
+        }),
+        candidate("zack-fields", "Fields", "lower", {
+          terms: [{ chamber: "lower", endDate: null, startDate: "2023-01-17" }]
+        })
+      ])
+    ).toMatchObject({ personId: "zack-fields", status: "resolved" })
+  })
+
   it("links an exact unique source identity whose contradictory tenure was quarantined", () => {
     const quarantined = candidate("hughes", "Hughes", "upper", { terms: [] })
     expect(
