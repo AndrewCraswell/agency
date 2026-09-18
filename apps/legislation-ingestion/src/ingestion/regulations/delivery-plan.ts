@@ -92,6 +92,9 @@ export async function planRegulatoryDelivery(value: unknown) {
     for (const year of manifest.scope.annualCfr.years) {
       for (const title of manifest.scope.annualCfr.titles) {
         const prefix = `CFR-${year}-title${title}-vol`
+        const excluded = manifest.exclusions.find(
+          (item) => item.sourceId === "govinfo-cfr" && item.nativeId === `CFR-${year}-title${title}`
+        )
         const units = manifest.units.filter(
           (unit) => unit.sourceId === "govinfo-cfr" && unit.nativeId.startsWith(prefix)
         )
@@ -105,9 +108,11 @@ export async function planRegulatoryDelivery(value: unknown) {
           year,
           start: null,
           end: null,
-          disposition: "listed",
-          reason: "requested_annual_title",
-          requiredEvidence: ["all_listed_xml_volumes", "printed_revision_agreement", "complete_title_inventory"],
+          disposition: excluded ? "excluded" : "listed",
+          reason: excluded?.reason ?? "requested_annual_title",
+          requiredEvidence: excluded
+            ? ["publisher_reserved_title"]
+            : ["all_listed_xml_volumes", "printed_revision_agreement", "complete_title_inventory"],
           unitKeys: units.map((unit) => unit.key),
           expectedAcquisitionUnits: units.length,
           volumeNumbers: units.map((unit) => Number(unit.nativeId.slice(prefix.length))).sort((a, b) => a - b),

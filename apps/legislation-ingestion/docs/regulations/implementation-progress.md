@@ -13,6 +13,28 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Froze the first complete recent annual-CFR release inventories from the retained GovInfo listings and closed a
+completeness hole found during the live crawl. The planner now records absent annual Title 35 as a publisher-reserved
+partition for each requested year. Every other requested title must exist and its XML volume ordinals must be unique and
+contiguous from one; a partial listing can no longer become an apparently complete annual title merely because every
+listed file was retained. Delivery plans carry the annual reserved-title partitions as explicit exclusions.
+
+The replay-verified 2020–2024 manifest is
+`463a06d91e826666eb6c258f864e071d8bfff662a889b47dc3fdd37d505d7edd`: 1,219 XML volumes, 5,682,813,489 listed bytes,
+zero unknown sizes, 245 listed title/year partitions and five explicit Title 35 exclusions. The separately frozen 2025
+available-title manifest is `d7a3eecd55d975736a49df505ec863bf2e06bd9cc45c11042b90c97e9771543b`: 171 XML volumes,
+819,619,609 listed bytes and zero unknown sizes across 45 complete titles. Exact replay reproduced both identities.
+GovInfo's retained 2025 listings currently have four incomplete title sequences: Title 7 lacks volume 7, Title 29 lacks
+volume 6, Title 40 lacks volume 18, and Title 50 lacks volumes 3–5 and 7–8. Those titles are omitted from the complete
+2025 manifest and remain blocked on publisher inventory rather than being treated as empty or complete. The publisher
+does not yet list a 2026 annual edition in the observed inventory.
+
+The retained source crawl made 300 official year/title listing requests once; the final full replay reused all 300 and
+made zero source requests. The two accepted release manifests contain 1,390 volumes and 6,502,433,098 listed bytes. No
+source XML was downloaded and no database, Trigger, canonical, index, vector, embedding or schedule state changed. The
+focused planner/delivery suite passes 26 tests. This materially advances ING-01 and ING-12; the 2025 blocked-title
+dispositions, Federal Register 2020-forward inventory and deployed admission remain open.
+
 Made historical source inventory planning durable and bounded before attempting the nationwide release inventory. Every
 official inventory response is now retained atomically by source and exact request URL, with its body hash and byte count
 revalidated on every read. A planner invocation may make at most `--maximum-requests` new source requests; reaching that

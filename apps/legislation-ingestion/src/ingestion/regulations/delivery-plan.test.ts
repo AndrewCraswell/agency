@@ -75,7 +75,12 @@ describe("frozen regulatory delivery planning", () => {
   })
   it("groups annual volumes with a frozen denominator but no invented revision dates", async () => {
     const manifest = await planRegulatoryBackfill(
-      { cutoff: "2026-09-14", ecfrTitles: [], federalRegister: null, annualCfr: { years: [2019, 2025], titles: [5] } },
+      {
+        cutoff: "2026-09-14",
+        ecfrTitles: [],
+        federalRegister: null,
+        annualCfr: { years: [2019, 2025], titles: [5, 35] }
+      },
       async (source, url) => {
         const year = url.includes("2019") ? 2019 : 2025
         return evidence(source, url, {
@@ -95,13 +100,22 @@ describe("frozen regulatory delivery planning", () => {
       plan.partitions.map((item) => [item.year, item.wave, item.volumeNumbers, item.expectedAcquisitionUnits])
     ).toEqual([
       [2019, "extended_history", [1, 2, 3], 3],
-      [2025, "recent_history", [1, 2, 3], 3]
+      [2019, "extended_history", [], 0],
+      [2025, "recent_history", [1, 2, 3], 3],
+      [2025, "recent_history", [], 0]
+    ])
+    expect(plan.excludedPartitions).toBe(2)
+    expect(plan.partitions.filter((item) => item.disposition === "excluded")).toEqual([
+      expect.objectContaining({ key: "govinfo-cfr:2019:title-35", reason: "reserved_title" }),
+      expect.objectContaining({ key: "govinfo-cfr:2025:title-35", reason: "reserved_title" })
     ])
     expect(
-      plan.partitions.every(
-        (item) =>
-          item.start === null && item.end === null && item.requiredEvidence.includes("printed_revision_agreement")
-      )
+      plan.partitions
+        .filter((item) => item.disposition === "listed")
+        .every(
+          (item) =>
+            item.start === null && item.end === null && item.requiredEvidence.includes("printed_revision_agreement")
+        )
     ).toBe(true)
   })
   it("rejects rehashed manifests with omitted inventory units or falsified exclusions", async () => {

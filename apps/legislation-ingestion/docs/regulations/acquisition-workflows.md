@@ -136,6 +136,12 @@ and required evidence. Annual printed revision dates remain unresolved until par
 labels. An FR window with no listed XML remains `needs_independent_inventory`, with unknown document count, never known
 empty.
 
+For annual CFR, missing Title 35 is retained as an explicit publisher-reserved exclusion. Every other requested title
+must have a publisher folder, at least one XML volume and unique contiguous volume numbers beginning at one. A gap or
+duplicate blocks the whole title from a complete manifest; retaining the other listed volumes is not evidence that the
+title is complete. Freeze a separate manifest for fully listed title/year partitions while unresolved publisher gaps
+remain visible in the coverage ledger.
+
 Replay reconstructs the complete manifest from retained inventories and compares its units/exclusions; rehashing an
 omitted unit does not make it valid. Validation also binds inventory hashes to their source, rejects duplicate inventory
 requests and verifies size accounting. Planning makes no canonical writes, dispatches no tasks and enables neither

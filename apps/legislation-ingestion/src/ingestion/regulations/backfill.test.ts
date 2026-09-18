@@ -156,7 +156,7 @@ describe("regulatory backfill inventory", () => {
   })
 
   it("discovers all annual CFR volumes and does not fabricate January issue dates", async () => {
-    const scope = { ...ecfrScope, ecfrTitles: [], annualCfr: { years: [2023], titles: [1] } }
+    const scope = { ...ecfrScope, ecfrTitles: [], annualCfr: { years: [2023], titles: [1, 35] } }
     const manifest = await planRegulatoryBackfill(scope, async (source, url) =>
       evidence(source, url, {
         files: url.endsWith("/2023/")
@@ -171,9 +171,28 @@ describe("regulatory backfill inventory", () => {
     )
     expect(manifest.units).toHaveLength(2)
     expect(manifest.units.map((unit) => unit.issueDate)).toEqual([null, null])
+    expect(manifest.exclusions).toEqual([
+      { sourceId: "govinfo-cfr", nativeId: "CFR-2023-title35", reason: "reserved_title" }
+    ])
     await expect(
-      planRegulatoryBackfill(scope, async (source, url) => evidence(source, url, { files: [] }))
+      planRegulatoryBackfill({ ...scope, annualCfr: { years: [2023], titles: [1] } }, async (source, url) =>
+        evidence(source, url, { files: [] })
+      )
     ).rejects.toThrow("not listed")
+    await expect(
+      planRegulatoryBackfill({ ...scope, annualCfr: { years: [2023], titles: [1] } }, async (source, url) =>
+        evidence(source, url, {
+          files: url.endsWith("/2023/")
+            ? [{ name: "title-1", folder: true, link: "https://www.govinfo.gov/bulkdata/json/CFR/2023/title-1" }]
+            : [1, 3].map((volume) => ({
+                name: `CFR-2023-title1-vol${volume}.xml`,
+                folder: false,
+                link: `https://www.govinfo.gov/bulkdata/CFR/2023/title-1/CFR-2023-title1-vol${volume}.xml`,
+                size: 100
+              }))
+        })
+      )
+    ).rejects.toThrow("missing or duplicate XML volume")
   })
 
   it("rejects alternate hosts, credentials, and arbitrary source paths", () => {

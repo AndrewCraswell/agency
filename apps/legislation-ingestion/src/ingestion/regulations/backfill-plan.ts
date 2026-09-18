@@ -177,6 +177,14 @@ export async function planRegulatoryBackfill(
       for (const number of scope.annualCfr.titles) {
         const folder = yearListing.files.find((file) => file.folder && file.name === `title-${number}`)
         if (folder === undefined) {
+          if (number === 35) {
+            exclusions.push({
+              sourceId: "govinfo-cfr",
+              nativeId: `CFR-${year}-title${number}`,
+              reason: "reserved_title"
+            })
+            continue
+          }
           throw new Error(`Annual CFR ${year} title ${number} is not listed; not evidence of an empty title`)
         }
         const url = officialUrl(folder.link, "govinfo-cfr")
@@ -191,10 +199,18 @@ export async function planRegulatoryBackfill(
         if (files.length === 0) {
           throw new Error(`Annual CFR ${year} title ${number} has no XML volumes`)
         }
-        for (const file of files) {
-          if (!new RegExp(`^CFR-${year}-title${number}-vol[1-9][0-9]*\\.xml$`).test(file.name)) {
+        const volumeNumbers = files.map((file) => {
+          const match = new RegExp(`^CFR-${year}-title${number}-vol([1-9][0-9]*)\\.xml$`).exec(file.name)
+          if (match === null) {
             throw new Error("Unexpected annual CFR volume identity")
           }
+          return z.coerce.number().int().positive().parse(match[1])
+        })
+        const highestVolume = Math.max(...volumeNumbers)
+        if (new Set(volumeNumbers).size !== files.length || highestVolume !== files.length) {
+          throw new Error(`Annual CFR ${year} title ${number} has a missing or duplicate XML volume`)
+        }
+        for (const file of files) {
           const artifactUrl = officialUrl(file.link, "govinfo-cfr")
           if (artifactUrl.pathname !== `/bulkdata/CFR/${year}/title-${number}/${file.name}`) {
             throw new Error("Unexpected annual CFR artifact")

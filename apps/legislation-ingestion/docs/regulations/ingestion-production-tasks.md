@@ -18,8 +18,10 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   verifies its content hash and byte count on reuse, and admits at most 500 new requests per invocation. The operator
   supplies `--inventory-directory` and a smaller `--maximum-requests` when needed; a budget stop writes a resumable
   progress receipt, and a later invocation reuses committed listings before fetching the next missing page. A damaged
-  cache blocks instead of refetching. Two live one-title annual-CFR plans completed in two one-request waves. A complete
-  nationwide release manifest and all-source reconciliation remain open.
+  cache blocks instead of refetching. Two live one-title annual-CFR plans completed in two one-request waves. Annual
+  Title 35 is now an explicit publisher-reserved exclusion, while every other annual title requires unique contiguous
+  volume ordinals from one. Complete 2020–2024 and available 2025 release manifests are frozen and replay-verified. The
+  Federal Register release inventory and all-source reconciliation remain open.
 - [ ] **ING-02 Reconcile retained inputs before dispatch.** Inventory existing raw artifacts, normalized shards,
   canonical editions/observations and their hashes across the retained pilots and intended deployment. Produce a
   reuse/missing/invalid plan. **Done:** all 49 current eCFR titles and 275,149 recorded memberships are accounted for;
@@ -102,7 +104,11 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   each annual title has a frozen complete volume denominator. Depends on ING-01, ING-03–06.
   Local progress: per-request evidence retention and bounded resume now prevent an interrupted GovInfo crawl from
   repeating its completed year/title listings. The 2024 and 2025 Title 1 live smokes each produced a deterministic
-  one-volume manifest after two one-request waves. The full 2020-forward CFR and FR inventories remain open.
+  one-volume manifest after two one-request waves. The complete 2020–2024 annual inventory contains 1,219 volumes and
+  5,682,813,489 listed bytes. A separate 2025 manifest retains 171 volumes across 45 titles. Four 2025 titles remain
+  blocked by noncontiguous publisher listings: 7, 29, 40 and 50. Together the accepted manifests have 1,390 volumes and
+  6,502,433,098 listed bytes, with no unknown sizes. Federal Register 2020-forward inventory and the 2025 blocked-title
+  dispositions remain open.
 - [ ] **ING-13 Execute recent historical backfills.** Dispatch the ING-12 partitions through the deployed controller;
   capture source/canonical count/hash reconciliation and duplicate-observation dispositions. **Done:** every requested
   partition is verified or explicitly blocked, no newer head is replaced, and replay writes no duplicate events.
