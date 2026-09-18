@@ -1,12 +1,24 @@
 import { createDatabase } from "@repo/legislation-core/database/database"
 import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
+import { Command } from "commander"
+import { z } from "zod"
 import { loadConfig } from "../../src/config/config.js"
 
-// Deliberately local and read-only. This report does not activate hosted work or
-// equate vector existence with input-hash freshness/search acceptance.
+const command = new Command()
+  .option(
+    "--database-env <name>",
+    "read the database URL from this environment variable instead of the local test database"
+  )
+  .parse()
+const options = command.opts<{ databaseEnv?: string }>()
+
+// Deliberately read-only. This report does not activate hosted work or equate
+// vector existence with input-hash freshness/search acceptance.
 const config = loadConfig({
   NODE_ENV: "test",
-  DATABASE_URL: "postgresql://legislation:legislation@127.0.0.1:55432/legislation_test"
+  DATABASE_URL: options.databaseEnv
+    ? z.string().url().parse(process.env[options.databaseEnv])
+    : "postgresql://legislation:legislation@127.0.0.1:55432/legislation_test"
 })
 const { pool } = createDatabase(config.database, { statementTimeoutMs: 30_000 })
 const client = await pool.connect()
@@ -14,45 +26,81 @@ try {
   await client.query("begin transaction isolation level repeatable read read only")
   const billRoute = embeddingRouteFor("bill")
   const sectionRoute = embeddingRouteFor("document-section")
-  const report = await client.query(
-    `
-    with scope(state, prefix) as (values ('nc', 'bill:nc:2025:%'), ('ak', 'bill:ak:34:%'))
-    select scope.state,
-      (select count(*)::int from legislation.bills b where b.id like scope.prefix) as bills,
-      (select count(*)::int from legislation.bills b where b.id like scope.prefix and not exists (
-        select 1 from legislation.bill_embeddings e where e.bill_id=b.id
-          and e.model=$1 and e.input_contract=$2 and e.dimensions=$3
-      )) as bills_missing_routed_embeddings,
-      (select jsonb_object_agg(status, total) from (
-        select d.processing_status as status, count(*)::int as total
-        from legislation.bill_documents d where d.bill_id like scope.prefix group by d.processing_status
-      ) statuses) as document_statuses,
-      (select count(*)::int from legislation.bill_documents d where d.bill_id like scope.prefix
-        and d.ocr_status='processed') as ocr_processed,
-      (select count(*)::int from legislation.bill_documents d where d.bill_id like scope.prefix
-        and d.processing_error_category='ocr-required' and d.processing_status <> 'processed') as unresolved_ocr,
-      (select count(*)::int from legislation.bill_documents d where d.bill_id like scope.prefix
-        and d.processing_status='processed' and not exists (
-          select 1 from legislation.document_sections s where s.document_id=d.id
-        )) as processed_documents_without_sections,
-      (select count(*)::int from legislation.document_sections s join legislation.bill_documents d on d.id=s.document_id
-        where d.bill_id like scope.prefix) as sections,
-      (select count(*)::int from legislation.document_sections s join legislation.bill_documents d on d.id=s.document_id
-        where d.bill_id like scope.prefix and not exists (
-          select 1 from legislation.document_section_embeddings e where e.section_id=s.id
-            and e.model=$4 and e.input_contract=$5 and e.dimensions=$6
-        )) as sections_missing_routed_embeddings
-    from scope order by scope.state
-  `,
-    [
-      billRoute.model,
-      billRoute.embeddingInputContract,
-      billRoute.dimensions,
-      sectionRoute.model,
-      sectionRoute.embeddingInputContract,
-      sectionRoute.dimensions
-    ]
-  )
+  const states = []
+  for (const scope of [
+    { jurisdictionId: "jurisdiction:ak", sessionId: "session:ak:34", state: "ak" },
+    { jurisdictionId: "jurisdiction:nc", sessionId: "session:nc:2025", state: "nc" }
+  ] as const) {
+    const billRows = await client.query<{ id: string }>(
+      "select id from legislation.bills where jurisdiction_id=$1 and session_id=$2 order by id",
+      [scope.jurisdictionId, scope.sessionId]
+    )
+    const report = {
+      state: scope.state,
+      bills: billRows.rows.length,
+      bills_missing_routed_embeddings: 0,
+      document_statuses: {} as Record<string, number>,
+      ocr_processed: 0,
+      unresolved_ocr: 0,
+      processed_documents_without_sections: 0,
+      sections: 0,
+      sections_missing_routed_embeddings: 0
+    }
+    for (let offset = 0; offset < billRows.rows.length; offset += 25) {
+      const billIds = billRows.rows.slice(offset, offset + 25).map((row) => row.id)
+      const billEmbeddings = await client.query<{ missing: number }>(
+        `select count(*) filter (where e.bill_id is null)::int as missing
+           from unnest($1::text[]) as scoped(id)
+           left join legislation.bill_embeddings e on e.bill_id=scoped.id
+             and e.model=$2 and e.input_contract=$3 and e.dimensions=$4`,
+        [billIds, billRoute.model, billRoute.embeddingInputContract, billRoute.dimensions]
+      )
+      const documents = await client.query<{
+        ocr_processed: number
+        processed_documents_without_sections: number
+        statuses: Record<string, number> | null
+        unresolved_ocr: number
+      }>(
+        `select jsonb_object_agg(status, total) as statuses,
+             coalesce(sum(ocr_processed), 0)::int as ocr_processed,
+             coalesce(sum(unresolved_ocr), 0)::int as unresolved_ocr,
+             coalesce(sum(processed_without_sections), 0)::int as processed_documents_without_sections
+           from (
+             select d.processing_status as status, count(*)::int as total,
+               count(*) filter (where d.ocr_status='processed')::int as ocr_processed,
+               count(*) filter (where d.processing_error_category='ocr-required'
+                 and d.processing_status <> 'processed')::int as unresolved_ocr,
+               count(*) filter (where d.processing_status='processed' and not exists (
+                 select 1 from legislation.document_sections s where s.document_id=d.id
+               ))::int as processed_without_sections
+             from legislation.bill_documents d where d.bill_id=any($1::text[])
+             group by d.processing_status
+           ) status_counts`,
+        [billIds]
+      )
+      const sections = await client.query<{ missing: number; total: number }>(
+        `select count(*)::int as total,
+             count(*) filter (where e.section_id is null)::int as missing
+           from legislation.bill_documents d
+           join legislation.document_sections s on s.document_id=d.id
+           left join legislation.document_section_embeddings e on e.section_id=s.id
+             and e.model=$2 and e.input_contract=$3 and e.dimensions=$4
+           where d.bill_id=any($1::text[])`,
+        [billIds, sectionRoute.model, sectionRoute.embeddingInputContract, sectionRoute.dimensions]
+      )
+      report.bills_missing_routed_embeddings += billEmbeddings.rows[0]?.missing ?? 0
+      const documentBatch = documents.rows[0]
+      report.ocr_processed += documentBatch?.ocr_processed ?? 0
+      report.unresolved_ocr += documentBatch?.unresolved_ocr ?? 0
+      report.processed_documents_without_sections += documentBatch?.processed_documents_without_sections ?? 0
+      for (const [status, total] of Object.entries(documentBatch?.statuses ?? {})) {
+        report.document_statuses[status] = (report.document_statuses[status] ?? 0) + total
+      }
+      report.sections += sections.rows[0]?.total ?? 0
+      report.sections_missing_routed_embeddings += sections.rows[0]?.missing ?? 0
+    }
+    states.push(report)
+  }
   const indexes = await client.query(`
     select c.relname as name, i.indisvalid as valid, i.indisready as ready
     from pg_index i join pg_class c on c.oid=i.indexrelid join pg_namespace n on n.oid=c.relnamespace
@@ -64,9 +112,9 @@ try {
     `${JSON.stringify(
       {
         observedAt: new Date().toISOString(),
-        environment: "local",
+        databaseSelection: options.databaseEnv ? { environmentVariable: options.databaseEnv } : { localTest: true },
         productionWrites: false,
-        states: report.rows,
+        states,
         indexes: indexes.rows,
         unverifiedGates: [
           "embedding-input-freshness",
