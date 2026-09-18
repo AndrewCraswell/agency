@@ -59,8 +59,7 @@ it("publishes one exact bounded annual title through the shared publication queu
   expect(mocks.pool).toHaveBeenCalledWith({
     connectionString: "postgresql://source/canonical",
     max: 3,
-    connectionTimeoutMillis: 10_000,
-    statement_timeout: 60_000
+    connectionTimeoutMillis: 10_000
   })
   expect(mocks.publish).toHaveBeenCalledExactlyOnceWith(expect.anything(), payload)
   expect(mocks.finalize).toHaveBeenCalledExactlyOnceWith(expect.anything(), payload)

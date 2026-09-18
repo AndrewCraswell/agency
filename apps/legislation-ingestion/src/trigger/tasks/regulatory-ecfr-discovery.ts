@@ -56,8 +56,7 @@ export async function runRegulatoryEcfrDiscovery(value: unknown) {
   const pool = new pg.Pool({
     connectionString: databaseUrl.href,
     max: 2,
-    connectionTimeoutMillis: 10_000,
-    statement_timeout: 30_000
+    connectionTimeoutMillis: 10_000
   })
   try {
     return await discoverEcfrChanges(pool, payload)

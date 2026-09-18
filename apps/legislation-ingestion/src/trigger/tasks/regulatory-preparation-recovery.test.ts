@@ -86,7 +86,8 @@ it("reads remote disposition and submits a replacement with the persisted attemp
     expect.objectContaining({ retryBlocked: false }),
     { idempotencyKey: "global-key", idempotencyKeyTTL: "7d" }
   )
-  expect(mocks.pool).toHaveBeenCalledWith(expect.objectContaining({ max: 2, statement_timeout: 30_000 }))
+  expect(mocks.pool).toHaveBeenCalledWith(expect.objectContaining({ max: 2 }))
+  expect(mocks.pool).not.toHaveBeenCalledWith(expect.objectContaining({ statement_timeout: expect.anything() }))
   expect(mocks.end).toHaveBeenCalledOnce()
 })
 

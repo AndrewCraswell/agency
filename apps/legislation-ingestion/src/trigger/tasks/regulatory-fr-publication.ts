@@ -51,8 +51,7 @@ function pool() {
   return new pg.Pool({
     connectionString: databaseUrl().href,
     max: 2,
-    connectionTimeoutMillis: 10_000,
-    statement_timeout: 30_000
+    connectionTimeoutMillis: 10_000
   })
 }
 

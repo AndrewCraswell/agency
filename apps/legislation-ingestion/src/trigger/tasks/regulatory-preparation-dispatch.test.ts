@@ -222,7 +222,8 @@ it("submits using global idempotency across parent runs and a bounded pool", asy
     expect.objectContaining({ retryBlocked: false }),
     { idempotencyKey: "global-key", idempotencyKeyTTL: "7d" }
   )
-  expect(mocks.pool).toHaveBeenCalledWith(expect.objectContaining({ max: 2, statement_timeout: 15_000 }))
+  expect(mocks.pool).toHaveBeenCalledWith(expect.objectContaining({ max: 2 }))
+  expect(mocks.pool).not.toHaveBeenCalledWith(expect.objectContaining({ statement_timeout: expect.anything() }))
   expect(mocks.end).toHaveBeenCalledOnce()
 })
 it("stops the wave on uncertainty and preserves the original failure", async () => {

@@ -31,8 +31,7 @@ export async function runRegulatoryDiscoveryRegistration(value: unknown) {
   const pool = new pg.Pool({
     connectionString: databaseUrl.href,
     max: 2,
-    connectionTimeoutMillis: 10_000,
-    statement_timeout: 30_000
+    connectionTimeoutMillis: 10_000
   })
   try {
     const manifest = await registerLegalDiscoveryManifest(pool, payload)

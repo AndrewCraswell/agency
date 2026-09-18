@@ -34,8 +34,7 @@ export async function runRegulatoryAnnualPublication(value: unknown) {
   const pool = new pg.Pool({
     connectionString: databaseUrl.href,
     max: 3,
-    connectionTimeoutMillis: 10_000,
-    statement_timeout: 60_000
+    connectionTimeoutMillis: 10_000
   })
   try {
     const database = await pool.query("SELECT current_database() AS name")
