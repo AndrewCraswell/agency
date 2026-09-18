@@ -45,6 +45,14 @@ function fixture() {
   }
 }
 describe("NC raw scraper mapping", () => {
+  it("records the voting chamber from the official transcript rather than the bill chamber", () => {
+    const input = fixture()
+    input.votes[0]!.sources = [{ url: "https://www.ncleg.gov/Legislation/Votes/RollCallVoteTranscript/2025/H/1" }]
+    const rows = normalizeNcScraperBills(input)
+    expect(rows[0]?.aggregate.bill.chamber).toBe("upper")
+    expect(rows[0]?.aggregate.votes?.[0]?.vote.chamber).toBe("lower")
+  })
+
   it("accepts corrected clocks only from checksum-verified approved build archives", async () => {
     const input = fixture()
     const objects = new Map<string, Uint8Array>()

@@ -3,10 +3,11 @@ import { legislativeTerms, people, personAliases } from "@repo/legislation-core/
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { eq, inArray } from "drizzle-orm"
 
-type Chamber = "lower" | "upper" | "unicameral"
+type Chamber = "legislature" | "lower" | "upper" | "unicameral"
 
 export interface ScraperPersonCandidate {
   familyName: string | null
+  familyNameAliases?: readonly string[]
   names: readonly string[]
   personId: string
   sourcePersonId: string
@@ -18,6 +19,7 @@ export interface ScraperPersonCandidate {
 }
 
 export interface ScraperPersonResolutionContext {
+  allowChamberHistoryFallback?: boolean
   chamber: Chamber
   name: string
   observedDate?: string
@@ -43,8 +45,21 @@ function isIsoDate(value: string | undefined): value is string {
   return value !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
 
+function familyNameFromPublishedAlias(value: string) {
+  const commaName = value.split(",", 1)[0]?.trim()
+  if (value.includes(",") && commaName) return commaName
+  const tokens = value.trim().split(/\s+/)
+  return tokens.length === 2 ? tokens[1] : undefined
+}
+
+function chamberMatches(termChamber: string | null, chamber: Chamber) {
+  return chamber === "legislature"
+    ? termChamber === "lower" || termChamber === "upper" || termChamber === "unicameral"
+    : termChamber === chamber
+}
+
 function termMatches(term: ScraperPersonCandidate["terms"][number], context: ScraperPersonResolutionContext) {
-  if (term.chamber !== context.chamber) return false
+  if (!chamberMatches(term.chamber, context.chamber)) return false
   const start = term.startDate ?? "0000-01-01"
   const end = term.endDate ?? "9999-12-31"
   if (isIsoDate(context.observedDate)) {
@@ -60,6 +75,7 @@ export function createScraperPersonResolver(candidates: readonly ScraperPersonCa
   for (const candidate of candidates) {
     const names = new Set([
       ...(candidate.familyName === null ? [] : [normalizedName(candidate.familyName)]),
+      ...(candidate.familyNameAliases ?? []).map(normalizedName),
       ...candidate.names.map(normalizedName)
     ])
     names.delete("")
@@ -70,12 +86,27 @@ export function createScraperPersonResolver(candidates: readonly ScraperPersonCa
     }
   }
   return (context: ScraperPersonResolutionContext): ScraperPersonResolution => {
-    const matches = (candidatesByName.get(normalizedName(context.name)) ?? []).filter((candidate) =>
-      candidate.terms.some((term) => termMatches(term, context))
-    )
-    if (matches.length === 0) return { status: "not_found" }
-    if (matches.length !== 1) return { status: "ambiguous" }
-    const match = matches[0]!
+    const namedCandidates = candidatesByName.get(normalizedName(context.name)) ?? []
+    const matches = namedCandidates.filter((candidate) => candidate.terms.some((term) => termMatches(term, context)))
+    if (matches.length > 1) return { status: "ambiguous" }
+    let match = matches[0]
+    if (
+      match === undefined &&
+      context.allowChamberHistoryFallback === true &&
+      isIsoDate(context.observedDate) &&
+      (!isIsoDate(context.sessionStartDate) || context.observedDate >= context.sessionStartDate) &&
+      (!isIsoDate(context.sessionEndDate) || context.observedDate <= context.sessionEndDate)
+    ) {
+      const chamberHistoryMatches = namedCandidates.filter((candidate) =>
+        candidate.terms.some((term) => chamberMatches(term.chamber, context.chamber))
+      )
+      if (chamberHistoryMatches.length > 1) return { status: "ambiguous" }
+      if (chamberHistoryMatches.length === 0 && namedCandidates.length > 1) return { status: "ambiguous" }
+      match =
+        chamberHistoryMatches[0] ??
+        (namedCandidates.length === 1 && namedCandidates[0]!.terms.length === 0 ? namedCandidates[0] : undefined)
+    }
+    if (match === undefined) return { status: "not_found" }
     return { status: "resolved", personId: match.personId, sourcePersonId: match.sourcePersonId }
   }
 }
@@ -95,7 +126,7 @@ function dateValue(value: unknown) {
 }
 
 function chamberValue(value: unknown): Chamber | undefined {
-  return value === "lower" || value === "upper" || value === "unicameral" ? value : undefined
+  return value === "legislature" || value === "lower" || value === "upper" || value === "unicameral" ? value : undefined
 }
 
 export async function loadScraperPersonCandidates(database: LegislationDatabase, jurisdictionId: string) {
@@ -143,15 +174,19 @@ export async function loadScraperPersonCandidates(database: LegislationDatabase,
     terms.push({ chamber: term.chamber, endDate: term.endDate, startDate: term.startDate })
     termsByPerson.set(term.personId, terms)
   }
-  return eligiblePeople.map(
-    (person): ScraperPersonCandidate => ({
+  return eligiblePeople.map((person): ScraperPersonCandidate => {
+    const aliases = aliasesByPerson.get(person.id) ?? []
+    return {
       familyName: person.familyName,
-      names: [person.name, ...(aliasesByPerson.get(person.id) ?? [])],
+      familyNameAliases: aliases
+        .map(familyNameFromPublishedAlias)
+        .filter((value): value is string => value !== undefined),
+      names: [person.name, ...aliases],
       personId: person.id,
       sourcePersonId: person.sourceId,
       terms: termsByPerson.get(person.id) ?? []
-    })
-  )
+    }
+  })
 }
 
 /** Enrich name-only scraper relationships without creating people or changing source observation identities. */
@@ -178,7 +213,7 @@ export async function resolveScraperAggregatePeople(
       resolved.push(aggregate)
       continue
     }
-    const context = { chamber, sessionEndDate, sessionStartDate }
+    const context = { allowChamberHistoryFallback: true, chamber, sessionEndDate, sessionStartDate }
     const billDate =
       dateValue(aggregate.bill.introducedAt) ??
       aggregate.actions
@@ -198,8 +233,11 @@ export async function resolveScraperAggregatePeople(
           if (position.personId !== undefined && position.personId !== null) return position
           const sourceName = position.sourceName
           if (typeof sourceName !== "string") return position
+          const voteChamber = chamberValue(vote.vote.chamber)
+          if (voteChamber === undefined) return position
           const match = resolvePerson({
             ...context,
+            chamber: voteChamber,
             name: sourceName,
             observedDate: dateValue(vote.vote.heldDate ?? vote.vote.heldAt)
           })

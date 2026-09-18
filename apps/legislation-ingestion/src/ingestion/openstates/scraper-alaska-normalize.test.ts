@@ -141,6 +141,7 @@ it("distinguishes motions on one journal page and withholds missing positions an
   )
   const votes = rows[0]?.aggregate.votes ?? []
   expect(votes).toHaveLength(3)
+  expect(votes.every((entry) => entry.vote.chamber === "lower")).toBe(true)
   expect(new Set(votes.map((entry) => entry.vote.id)).size).toBe(3)
   expect(votes.every((entry) => entry.positions === undefined && entry.vote.classification === "recorded")).toBe(true)
   expect(votes.map((entry) => entry.vote.result)).toEqual(["passed", "passed", "unknown"])

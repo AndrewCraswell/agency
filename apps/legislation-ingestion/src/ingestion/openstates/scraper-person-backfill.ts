@@ -3,10 +3,11 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { sql } from "drizzle-orm"
 import { z } from "zod"
 import { createScraperPersonResolver, loadScraperPersonCandidates } from "./scraper-person-resolution.js"
+import { scraperVoteChamberFromEvidence } from "./scraper-vote-chamber.js"
 
 const stateSchema = z.enum(["ak", "nc"])
 const sessionSchema = z.string().regex(/^[A-Za-z0-9-]+$/)
-type Chamber = "lower" | "upper" | "unicameral"
+type Chamber = "legislature" | "lower" | "upper" | "unicameral"
 
 interface ResolutionCounts {
   ambiguous: number
@@ -104,17 +105,25 @@ export async function buildScraperPersonBackfillPlan(
     order by sponsor.id
   `)
   const positionRows = await database.execute<{
-    chamber: string | null
     name: string | null
+    motion: string
     observed_date: string | null
+    position_count: number
     source_identity: string
+    source_url: string | null
     vote_id: string
   }>(sql`
-    select position.vote_id, position.source_identity, bill.chamber, position.source_name as name,
+    select position.vote_id, position.source_identity, vote.source_url, vote.motion,
+      totals.position_count, position.source_name as name,
       coalesce(vote.held_date, vote.held_at::date)::text as observed_date
     from legislation.bills bill
     join legislation.votes vote on vote.bill_id = bill.id
     join legislation.vote_positions position on position.vote_id = vote.id
+    join lateral (
+      select count(*)::int as position_count
+      from legislation.vote_positions sibling
+      where sibling.vote_id = vote.id
+    ) totals on true
     where bill.session_id = ${sessionId} and position.person_id is null
     order by position.vote_id, position.source_identity
   `)
@@ -125,6 +134,7 @@ export async function buildScraperPersonBackfillPlan(
     where bill.session_id = ${sessionId} and sponsor.person_id is not null
   `)
   const context = {
+    allowChamberHistoryFallback: true,
     sessionEndDate: sessionRow.end_date ?? undefined,
     sessionStartDate: sessionRow.start_date ?? undefined
   }
@@ -132,7 +142,13 @@ export async function buildScraperPersonBackfillPlan(
   const positions: ScraperPersonBackfillPlan["positions"][number][] = []
   for (const row of positionRows.rows) {
     positionCounts.total += 1
-    const rowChamber = chamber(row.chamber)
+    const rowChamber = scraperVoteChamberFromEvidence({
+      motion: row.motion,
+      positionCount: row.position_count,
+      session,
+      sourceUrl: row.source_url,
+      state
+    })
     if (rowChamber === undefined || row.name === null) {
       positionCounts.notFound += 1
       continue

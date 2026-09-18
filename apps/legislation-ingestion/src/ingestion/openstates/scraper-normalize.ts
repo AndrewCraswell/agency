@@ -7,6 +7,7 @@ import { normalizeOpenStatesBill } from "./normalize.js"
 import { readArchivedScraperAttempt } from "./scraper-archive.js"
 import { assertScraperBillBatchScope, readScraperBillPlan } from "./scraper-batches.js"
 import { readScraperBillDispatch } from "./scraper-dispatch.js"
+import { scraperVoteChamberFromEvidence } from "./scraper-vote-chamber.js"
 
 function explicitAlaskaOutcome(motion: string) {
   if (/\b(?:FAILED|NOT ADOPTED)\b/.test(motion)) {
@@ -419,6 +420,16 @@ function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdict
     aggregate.people = aggregate.people?.filter((person) => !person.upstreamIds?.openstatesVoteName)
     aggregate.votes = aggregate.votes?.map((entry) => ({
       ...entry,
+      vote: {
+        ...entry.vote,
+        chamber: scraperVoteChamberFromEvidence({
+          motion: entry.vote.motion,
+          positionCount: entry.positions?.length ?? 0,
+          session,
+          sourceUrl: entry.vote.sourceUrl ?? null,
+          state: jurisdiction
+        })
+      },
       positions: entry.positions?.length
         ? entry.positions.map((entryPosition) => {
             if (entryPosition.sourcePersonId?.startsWith("vote-name:")) {

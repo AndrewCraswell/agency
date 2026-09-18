@@ -70,4 +70,96 @@ describe("standalone scraper person resolution", () => {
       resolveScraperPersonReference({ chamber: "upper", name: "GRAY JACKSON", observedDate: "2026-05-01" }, candidates)
     ).toMatchObject({ personId: "gray-jackson", status: "resolved" })
   })
+
+  it("resolves a legislature-wide tally across both chambers while retaining ambiguity checks", () => {
+    const candidates = [candidate("lower", "House", "lower"), candidate("upper", "Senate", "upper")]
+    expect(
+      resolveScraperPersonReference({ chamber: "legislature", name: "House", observedDate: "2026-05-01" }, candidates)
+    ).toMatchObject({ personId: "lower", status: "resolved" })
+    expect(
+      resolveScraperPersonReference({ chamber: "legislature", name: "Senate", observedDate: "2026-05-01" }, candidates)
+    ).toMatchObject({ personId: "upper", status: "resolved" })
+  })
+
+  it("uses source-backed surname aliases and unique chamber history to bridge provider tenure gaps", () => {
+    const renamed = candidate("renamed", "Frier", "lower", {
+      familyNameAliases: ["Burke"],
+      names: ["Robyn Frier", "Robyn Burke"]
+    })
+    const transferred = candidate("transferred", "Rauscher", "lower", {
+      terms: [
+        { chamber: "lower", startDate: "2017-01-01", endDate: "2023-01-01" },
+        { chamber: "upper", startDate: "2025-11-29", endDate: null }
+      ]
+    })
+    expect(
+      resolveScraperPersonReference(
+        {
+          chamber: "lower",
+          allowChamberHistoryFallback: true,
+          name: "Burke",
+          observedDate: "2025-05-01",
+          sessionStartDate: "2025-01-01",
+          sessionEndDate: "2026-12-31"
+        },
+        [renamed]
+      )
+    ).toMatchObject({ personId: "renamed", status: "resolved" })
+    expect(
+      resolveScraperPersonReference(
+        {
+          chamber: "lower",
+          allowChamberHistoryFallback: true,
+          name: "Rauscher",
+          observedDate: "2025-05-01",
+          sessionStartDate: "2025-01-01",
+          sessionEndDate: "2026-12-31"
+        },
+        [transferred]
+      )
+    ).toMatchObject({ personId: "transferred", status: "resolved" })
+  })
+
+  it("does not bridge chamber history when the source-backed surname remains ambiguous", () => {
+    const candidates = [candidate("one", "Legacy", "lower"), candidate("two", "Legacy", "lower")]
+    expect(
+      resolveScraperPersonReference(
+        {
+          chamber: "lower",
+          allowChamberHistoryFallback: true,
+          name: "Legacy",
+          observedDate: "2025-05-01",
+          sessionStartDate: "2025-01-01",
+          sessionEndDate: "2026-12-31"
+        },
+        candidates
+      )
+    ).toEqual({ status: "ambiguous" })
+  })
+
+  it("links an exact unique source identity whose contradictory tenure was quarantined", () => {
+    const quarantined = candidate("hughes", "Hughes", "upper", { terms: [] })
+    expect(
+      resolveScraperPersonReference(
+        {
+          allowChamberHistoryFallback: true,
+          chamber: "upper",
+          name: "Hughes",
+          observedDate: "2025-05-01"
+        },
+        [quarantined]
+      )
+    ).toMatchObject({ personId: "hughes", status: "resolved" })
+    expect(
+      resolveScraperPersonReference(
+        {
+          allowChamberHistoryFallback: true,
+          chamber: "upper",
+          name: "Hughes",
+          observedDate: "2025-05-01"
+        },
+        [quarantined, candidate("other-hughes", "Hughes", "upper", { terms: [] })]
+      )
+    ).toEqual({ status: "ambiguous" })
+  })
 })
