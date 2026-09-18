@@ -142,7 +142,9 @@ describe("NC raw scraper mapping", () => {
     expect(prepared.rows).toHaveLength(1)
     const database = drizzle({ connection: "postgresql://unused", schema })
     const persist = vi.fn<typeof upsertBillAggregates>().mockResolvedValue(new Set())
-    const promoted = await promoteArchivedScraperBillBatch(database, preparation, persist)
+    const promoted = await promoteArchivedScraperBillBatch(database, preparation, persist, async (_database, rows) => [
+      ...rows
+    ])
     expect(promoted.sessionComplete).toBe(false)
     expect(persist).toHaveBeenCalledWith(
       database,
@@ -164,10 +166,17 @@ describe("NC raw scraper mapping", () => {
       unresolvedPositions: 1
     })
     persist.mockRejectedValueOnce(new Error("expired owner"))
-    await expect(promoteArchivedScraperBillBatch(database, preparation, persist)).rejects.toThrow("expired owner")
+    await expect(
+      promoteArchivedScraperBillBatch(database, preparation, persist, async (_database, rows) => [...rows])
+    ).rejects.toThrow("expired owner")
     persist.mockClear()
     await expect(
-      promoteArchivedScraperBillBatch(database, { ...preparation, now: dispatchInput.expiresAt }, persist)
+      promoteArchivedScraperBillBatch(
+        database,
+        { ...preparation, now: dispatchInput.expiresAt },
+        persist,
+        async (_database, rows) => [...rows]
+      )
     ).rejects.toThrow("outside")
     expect(persist).not.toHaveBeenCalled()
     expect(prepared.provenance).toMatchObject({

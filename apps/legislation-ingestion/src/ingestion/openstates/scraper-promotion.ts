@@ -1,6 +1,7 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { upsertBillAggregates } from "../../persistence/bill-aggregates.js"
 import { prepareArchivedScraperBillBatch } from "./scraper-normalize.js"
+import { resolveScraperAggregatePeople } from "./scraper-person-resolution.js"
 
 /** Short admission lock groups disjoint batches from one frozen inventory; it is not held during extraction. */
 export const ncBillPromotionOwnership = { source: "openstates", stream: "ownership:nc-bills:2025" } as const
@@ -29,36 +30,45 @@ export function scraperBillBatchOwnership(
 export async function promoteArchivedScraperBillBatch(
   database: LegislationDatabase,
   input: Parameters<typeof prepareArchivedScraperBillBatch>[0],
-  persist: typeof upsertBillAggregates = upsertBillAggregates
+  persist: typeof upsertBillAggregates = upsertBillAggregates,
+  resolvePeople: typeof resolveScraperAggregatePeople = resolveScraperAggregatePeople
 ) {
   const prepared = await prepareArchivedScraperBillBatch(input)
+  const aggregates = await resolvePeople(
+    database,
+    prepared.rows.map((row) => row.aggregate)
+  )
   const receipt = {
     source: "openstates",
     stream: `${prepared.scope.jurisdiction}-bills:${prepared.scope.session}:${prepared.provenance.inventoryId}:${prepared.provenance.batchId}`,
     cursor: {
       status: "promoted",
       ...prepared.provenance,
-      bills: prepared.rows.length,
-      unresolvedSponsors: prepared.rows.reduce(
-        (sum, row) => sum + (row.aggregate.sponsors?.filter((sponsor) => !sponsor.personId).length ?? 0),
+      bills: aggregates.length,
+      unresolvedSponsors: aggregates.reduce(
+        (sum, aggregate) => sum + (aggregate.sponsors?.filter((sponsor) => !sponsor.personId).length ?? 0),
         0
       ),
-      unresolvedPositions: prepared.rows.reduce((sum, row) => sum + row.unresolvedPositions, 0)
+      unresolvedPositions: aggregates.reduce(
+        (sum, aggregate) =>
+          sum +
+          (aggregate.votes?.reduce(
+            (voteSum, vote) => voteSum + (vote.positions?.filter((position) => !position.personId).length ?? 0),
+            0
+          ) ?? 0),
+        0
+      )
     }
   }
-  await persist(
-    database,
-    prepared.rows.map((row) => row.aggregate),
-    {
-      ownership: scraperBillBatchOwnership(
-        prepared.provenance.inventoryId,
-        prepared.provenance.batchId,
-        prepared.provenance.runId,
-        scraperBillPromotionOwnership(prepared.scope)
-      ),
-      receipt,
-      preserveResolvedLinks: true
-    }
-  )
+  await persist(database, aggregates, {
+    ownership: scraperBillBatchOwnership(
+      prepared.provenance.inventoryId,
+      prepared.provenance.batchId,
+      prepared.provenance.runId,
+      scraperBillPromotionOwnership(prepared.scope)
+    ),
+    receipt,
+    preserveResolvedLinks: true
+  })
   return { status: "promoted" as const, receipt, sessionComplete: false as const }
 }
