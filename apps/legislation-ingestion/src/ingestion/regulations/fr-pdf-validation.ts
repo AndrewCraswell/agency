@@ -13,10 +13,10 @@ export const frPdfInspectionSchema = z.strictObject({
   artifactHash: z.string().regex(/^[a-f0-9]{64}$/),
   bytes: z.int().positive(),
   parserVersion: z.string().min(1),
-  pages: z.int().min(1).max(750),
+  pages: z.int().min(1).max(5000),
   textHash: z.string().regex(/^[a-f0-9]{64}$/),
   textCharacters: z.int().nonnegative(),
-  emptyTextPages: z.array(z.int().positive()).max(750),
+  emptyTextPages: z.array(z.int().positive()).max(5000),
   documentNumberFound: z.boolean(),
   parserChecks: z.literal("all_pages_text_and_operators"),
   renderingChecked: z.literal(false)
@@ -25,9 +25,11 @@ export const frPdfInspectionSchema = z.strictObject({
 /** Runs only in the bounded child process. PDF text is evidence, never a replacement for canonical XML. */
 export async function inspectFrPdf(path: string, documentNumber: string) {
   const file = await stat(path)
-  invariant(file.isFile() && file.size > 0 && file.size <= 32 * 1024 * 1024, "fr_pdf_validation_byte_limit")
+  invariant(file.isFile() && file.size > 0 && file.size <= 256 * 1024 * 1024, "fr_pdf_validation_byte_limit")
   const bytes = await readFile(path)
   invariant(bytes.length === file.size, "fr_pdf_changed_during_validation")
+  const artifactHash = digest(bytes)
+  const byteLength = bytes.length
   const { DOMMatrix, ImageData, Path2D } = await import("@napi-rs/canvas")
   Object.defineProperties(globalThis, {
     DOMMatrix: { configurable: true, value: DOMMatrix, writable: true },
@@ -36,7 +38,7 @@ export async function inspectFrPdf(path: string, documentNumber: string) {
   })
   const { getDocument, version } = await import("pdfjs-dist/legacy/build/pdf.mjs")
   const loading = getDocument({
-    data: Uint8Array.from(bytes),
+    data: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength),
     stopAtErrors: true,
     disableFontFace: true,
     useSystemFonts: false,
@@ -47,7 +49,7 @@ export async function inspectFrPdf(path: string, documentNumber: string) {
   })
   try {
     const document = await loading.promise
-    invariant(document.numPages >= 1 && document.numPages <= 750, "fr_pdf_validation_page_limit")
+    invariant(document.numPages >= 1 && document.numPages <= 5000, "fr_pdf_validation_page_limit")
     const texts: string[] = []
     const emptyTextPages: number[] = []
     let characters = 0
@@ -57,7 +59,7 @@ export async function inspectFrPdf(path: string, documentNumber: string) {
       await page.getOperatorList()
       const text = content.items.flatMap((item) => ("str" in item ? [item.str] : [])).join(" ")
       characters += text.length
-      invariant(characters <= 32 * 1024 * 1024, "fr_pdf_validation_text_limit")
+      invariant(characters <= 256 * 1024 * 1024, "fr_pdf_validation_text_limit")
       texts.push(text)
       if (text.trim().length === 0) {
         emptyTextPages.push(number)
@@ -71,8 +73,8 @@ export async function inspectFrPdf(path: string, documentNumber: string) {
       .toUpperCase()
     return frPdfInspectionSchema.parse({
       contract: frPdfValidationContract,
-      artifactHash: digest(bytes),
-      bytes: bytes.length,
+      artifactHash,
+      bytes: byteLength,
       parserVersion: version,
       pages: document.numPages,
       textHash: digest(text),
@@ -92,9 +94,9 @@ export async function validateFrPdfInWorker(path: string, documentNumber: string
   const worker = fileURLToPath(new URL("./workers/inspect-fr-pdf.ts", import.meta.url))
   const result = await execute(
     process.execPath,
-    ["--max-old-space-size=512", "--import", "tsx", worker, path, documentNumber],
+    ["--max-old-space-size=1536", "--import", "tsx", worker, path, documentNumber],
     {
-      timeout: 90_000,
+      timeout: 10 * 60_000,
       maxBuffer: 1024 * 1024,
       windowsHide: true,
       env: Object.fromEntries(

@@ -4559,3 +4559,13 @@ The range operator now also persists the exact incomplete report and failed docu
 of surfacing only a terminal schema error. Focused acquisition tests pass the raised production bound, corruption,
 framing, retry, URL, subset and writer-lock cases. Release-wide acquisition remains in progress; structural validation
 and canonical publication remain later gates.
+
+The independent structural validator now accepts the same bounded production envelope: at most 256 MiB, 5,000 pages,
+256 MiB of extracted text, a 1.5 GiB isolated-worker heap and a ten-minute process timeout. It hashes and records the
+source bytes before PDF.js takes ownership of the zero-copy byte view. This avoids a second full-file allocation without
+allowing buffer detachment to erase the evidence identity. The real `2020-06967` artifact passed the complete worker
+gate: SHA-256 `1e5c0911a5ea2f5abb08ae7b09d4c24cd1ea98642a19fa2660cdd1dac914945f`, 111,796,173 bytes,
+1,105 pages, 4,553,702 extracted characters, no empty-text pages and an exact document-number match. Its extracted-text
+SHA-256 is `85110f225baf80d29262faa44f1dcc39a299622d0623c221feb321493da4e51e`. This proves the
+previously blocking large-file path, not release-wide structural validation. The resumed acquisition had reached 88
+complete date checkpoints and 9,604 receipts at this observation.

@@ -94,6 +94,10 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   73-publication January 2 result. The initial range run retained 9,067 PDFs through 83 issue dates before a legitimate
   111,796,173-byte, 1,105-page rule exceeded the old buffer/timeout limits. PDF acquisition now streams and hashes to
   disk under a 256 MiB ceiling and ten-minute timeout; the repaired April 30 date completed all 111 publications.
+  The separate PDF.js validator now uses matching 256 MiB/ten-minute bounds, permits up to 5,000 pages in its isolated
+  1.5 GiB worker and avoids a second full-file allocation. The exact 111,796,173-byte artifact passed all 1,105 page
+  text/operator checks with no empty pages and confirmed its document identity. This closes the observed large-file
+  failure mode; it does not replace release-wide validation.
   Release-wide acquisition and structural validation remain open.
 - [ ] **ING-07 Freeze current eCFR currency.** Reconcile the retained title inventory with an explicit publisher cutoff,
   reserved title 35, import-in-progress titles and per-title issue dates. Plan only genuinely missing/corrected versions.

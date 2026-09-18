@@ -4,7 +4,12 @@ import { join } from "node:path"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { afterEach, describe, expect, it } from "vitest"
 import { frPdfFixture } from "./fixtures/pdf-fixture.js"
-import { inspectFrPdf, validateFrPdfEvidence, validateFrPdfInWorker } from "./fr-pdf-validation.js"
+import {
+  frPdfInspectionSchema,
+  inspectFrPdf,
+  validateFrPdfEvidence,
+  validateFrPdfInWorker
+} from "./fr-pdf-validation.js"
 
 const directories: string[] = []
 afterEach(async () => {
@@ -50,5 +55,22 @@ describe("FR PDF parser validation gate", () => {
     expect(() =>
       validateFrPdfEvidence({ inspection, expectedHash: digest(bytes), expectedBytes: bytes.length, expectedPages: 1 })
     ).toThrow("identity_unconfirmed")
+  })
+  it("accepts bounded inspection evidence for an official thousand-page rule", () => {
+    expect(
+      frPdfInspectionSchema.parse({
+        contract: "fr-pdf-parse-2026-09-14",
+        artifactHash: digest("large-pdf"),
+        bytes: 111_796_173,
+        parserVersion: "fixture",
+        pages: 1105,
+        textHash: digest("large-text"),
+        textCharacters: 10_000_000,
+        emptyTextPages: [],
+        documentNumberFound: true,
+        parserChecks: "all_pages_text_and_operators",
+        renderingChecked: false
+      })
+    ).toMatchObject({ pages: 1105, bytes: 111_796_173 })
   })
 })
