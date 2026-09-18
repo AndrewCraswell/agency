@@ -39,6 +39,11 @@ after the period, or an omitted `Filed` label followed directly by the filing da
 those structural variants when the number is followed by a numeric filing date and time. Prefix text, malformed filing
 labels, multiple footers and footers without that boundary still fail.
 
+Five other footers retain the exact `Filed` boundary but corrupt the filing date itself: a missing year, an HTML entity,
+publisher insertion text, or an extra digit. Those date strings remain unchanged as source evidence and are never used
+as publication dates. They do not make the preceding document number ambiguous, so the parser accepts the number while
+the independently reconciled issue date and FederalRegister.gov metadata continue to govern publication dating.
+
 The November 19, 2021 Part II rule at `/FEDREG[1]/NEWPART[1]/RULES[1]/RULE[1]` has no closing `FRDOC` element. Its exact
 7,631,810-byte issue artifact, SHA-256 `2b7290a3508d8d04859fb949a60323b58707f9c9429aeaa4fedd235da0abaa28`,
 identifies the rule as `2021-23972` in the issue contents at pages 64996–66030. The retained November metadata manifest

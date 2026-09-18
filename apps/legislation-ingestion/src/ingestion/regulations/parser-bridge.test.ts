@@ -189,6 +189,7 @@ describe("federal streaming parser and bridge", { timeout: 30_000 }, () => {
       "<NOTICE><FRDOC>[FR Doc 2020-04168 Filed 2-28-20; 8:45 am]</FRDOC></NOTICE>" +
       "<NOTICE><FRDOC>[FR Doc.2020-13968 Filed 6-26-20; 8:45 am]</FRDOC></NOTICE>" +
       "<NOTICE><FRDOC>[FR Doc. 2020-02441 2-6-20; 8:45 am]</FRDOC></NOTICE>" +
+      "<NOTICE><FRDOC>[FR Doc. 2023-24109 Filed 10-AK-23; 8:45 am]</FRDOC></NOTICE>" +
       "</FEDREG>"
     const path = join(await temporary(), "historical.xml")
     await writeFile(path, xml)
@@ -198,7 +199,8 @@ describe("federal streaming parser and bridge", { timeout: 30_000 }, () => {
       "00-1098",
       "2020-04168",
       "2020-13968",
-      "2020-02441"
+      "2020-02441",
+      "2023-24109"
     ])
     for (const fragment of [
       "<FRDOC>See FR Doc. 00-1108 Filed 1-14-00</FRDOC>",

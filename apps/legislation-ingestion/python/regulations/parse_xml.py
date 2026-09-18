@@ -23,8 +23,8 @@ ANNUAL_KINDS = {"TITLE", "SUBTITLE", "CHAPTER", "SUBCHAP", "PART", "SUBPART", "S
 TOC_TAGS = {"TOC", "CFRTOC", "CONTENTS", "TITLENO", "FMTR", "BMTR"}
 BREAK_TAGS = {"P", "FP", "PSPACE", "HD", "HEAD", "HED", "ROW", "TR", "SECTNO", "SUBJECT", "FRDOC", "LI"}
 FR_DOCUMENT_NUMBER = re.compile(
-    r"\s*\[?FR\s+Doc\.?\s*([A-Za-z0-9]+(?:-[A-Za-z0-9]+)+)\s+(?:Filed\s*)?"
-    r"(?=\d{1,2}-\d{1,2}-\d{2,4}(?:\s*;\s*|\s+)\d{1,2}:\d{2})",
+    r"\s*\[?FR\s+Doc\.?\s*([A-Za-z0-9]+(?:-[A-Za-z0-9]+)+)\s+"
+    r"(?:Filed(?=\s|\d)|(?=\d{1,2}-\d{1,2}-\d{2,4}(?:\s*;\s*|\s+)\d{1,2}:\d{2}))",
     re.IGNORECASE,
 )
 
