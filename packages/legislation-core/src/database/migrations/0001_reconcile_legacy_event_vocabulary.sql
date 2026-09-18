@@ -1,25 +1,24 @@
 UPDATE legislation.legislative_events
 SET classification = CASE
-  WHEN lower(btrim(replace(classification, '_', '-'))) = 'markup' THEN 'meeting'
-  WHEN lower(btrim(replace(classification, '_', '-'))) ~ '(^|[- ])hearing$' THEN 'hearing'
-  WHEN lower(btrim(replace(classification, '_', '-'))) ~ '(^|[- ])session$' THEN 'session'
-  WHEN lower(btrim(replace(classification, '_', '-'))) ~ '(^|[- ])meeting$' THEN 'meeting'
-  ELSE 'other'
-END,
+    WHEN classification IS NULL OR classification = ANY (ARRAY['meeting', 'hearing', 'session', 'other'])
+      THEN classification
+    WHEN lower(btrim(replace(classification, '_', '-'))) = 'markup' THEN 'meeting'
+    WHEN lower(btrim(replace(classification, '_', '-'))) ~ '(^|[- ])hearing$' THEN 'hearing'
+    WHEN lower(btrim(replace(classification, '_', '-'))) ~ '(^|[- ])session$' THEN 'session'
+    WHEN lower(btrim(replace(classification, '_', '-'))) ~ '(^|[- ])meeting$' THEN 'meeting'
+    ELSE 'other'
+  END,
+  status = CASE
+    WHEN status = ANY (ARRAY['scheduled', 'completed', 'cancelled', 'postponed', 'other']) THEN status
+    WHEN lower(btrim(replace(status, '_', '-'))) IN ('scheduled', 'confirmed', 'tentative') THEN 'scheduled'
+    WHEN lower(btrim(replace(status, '_', '-'))) IN ('completed', 'passed', 'held') THEN 'completed'
+    WHEN lower(btrim(replace(status, '_', '-'))) IN ('cancelled', 'canceled') THEN 'cancelled'
+    WHEN lower(btrim(replace(status, '_', '-'))) IN ('postponed', 'rescheduled', 'deferred') THEN 'postponed'
+    ELSE 'other'
+  END,
 updated_at = clock_timestamp()
-WHERE classification IS NOT NULL
-  AND classification <> ALL (ARRAY['meeting', 'hearing', 'session', 'other']);
---> statement-breakpoint
-UPDATE legislation.legislative_events
-SET status = CASE
-  WHEN lower(btrim(replace(status, '_', '-'))) IN ('scheduled', 'confirmed', 'tentative') THEN 'scheduled'
-  WHEN lower(btrim(replace(status, '_', '-'))) IN ('completed', 'passed', 'held') THEN 'completed'
-  WHEN lower(btrim(replace(status, '_', '-'))) IN ('cancelled', 'canceled') THEN 'cancelled'
-  WHEN lower(btrim(replace(status, '_', '-'))) IN ('postponed', 'rescheduled', 'deferred') THEN 'postponed'
-  ELSE 'other'
-END,
-updated_at = clock_timestamp()
-WHERE status <> ALL (ARRAY['scheduled', 'completed', 'cancelled', 'postponed', 'other']);
+WHERE (classification IS NOT NULL AND classification <> ALL (ARRAY['meeting', 'hearing', 'session', 'other']))
+  OR status <> ALL (ARRAY['scheduled', 'completed', 'cancelled', 'postponed', 'other']);
 --> statement-breakpoint
 ALTER TABLE legislation.bill_relations VALIDATE CONSTRAINT bill_relations_canonical_facts_complete_check;
 --> statement-breakpoint

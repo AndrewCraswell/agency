@@ -129,6 +129,17 @@ describe.skipIf(!databaseUrl).sequential("canonical PostgreSQL baseline", () => 
       [statuses.map(([source]) => source)]
     )
     await pool.query(
+      `insert into legislation.legislative_events
+         (id,jurisdiction_id,source_id,name,classification,status,start_at)
+       values ('migration-overlapping-vocabulary',
+               'migration-event-vocabulary',
+               'migration-overlapping-vocabulary',
+               'Overlapping legacy vocabulary',
+               'markup',
+               'confirmed',
+               '2026-09-18T00:00:00Z'::timestamptz)`
+    )
+    await pool.query(
       `alter table legislation.legislative_events
        add constraint legislative_events_classification_vocabulary_check
          check(classification is null or classification in ('meeting','hearing','session','other')) not valid,
@@ -153,6 +164,14 @@ describe.skipIf(!databaseUrl).sequential("canonical PostgreSQL baseline", () => 
        order by right(id,length(id)-length('migration-status-'))::integer`
     )
     expect(actualStatuses.rows.map(({ status }) => status)).toEqual(statuses.map(([, expected]) => expected))
+    expect(
+      (
+        await pool.query<{ classification: string; status: string }>(
+          `select classification,status from legislation.legislative_events
+           where id='migration-overlapping-vocabulary'`
+        )
+      ).rows
+    ).toEqual([{ classification: "meeting", status: "scheduled" }])
     const constraints = await pool.query<{ conname: string; convalidated: boolean }>(
       `select conname,convalidated from pg_constraint
        where conrelid='legislation.legislative_events'::regclass

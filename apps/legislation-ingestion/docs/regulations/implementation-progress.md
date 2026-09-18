@@ -13,6 +13,30 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Installed and independently verified the canonical regulatory schema in the production Railway PostgreSQL 18.6
+database after the scheduled daily recovery point completed at September 18 20:42:05 UTC. The first checksum-pinned
+transaction exposed an ordering defect in the event-vocabulary reconciliation and rolled back completely: a row with
+both a legacy classification and status could not be rewritten one field at a time while the other `NOT VALID`
+constraint still enforced new row versions. The migration now normalizes both fields in one update. Its integration
+test includes an overlapping `markup`/`confirmed` row, and all five focused migration cases pass against disposable
+PostgreSQL.
+
+The corrected release was rebuilt from a fresh production schema-only snapshot and rehearsed with the exact 62-table,
+48-ledger-row, 16-unvalidated-constraint preflight plus 2,657 legacy classifications and 1,569 legacy statuses, all
+overlapping in the rehearsal where applicable. Exact payload SHA-256
+`32f6dc5c9da069740cf5d790db461c18433ac5f95b7ead5364761ed599ae9159` then committed in production. Independent
+postflight reports 102 legislation tables, 106 relations, 1,071 columns, 1,337 constraints, 305 indexes, eight
+functions, 17 triggers, two canonical ledger rows, zero unvalidated constraints and zero legacy event values. The
+normal `pnpm --filter legislation-web db:migrate` release command subsequently completed as a no-op. The tracked
+reconciliation migration hash is `d6997bd5bf1d519cbebcd7fca05e009a27aa582ac7e0503305adfa4754caa1e3`.
+
+Configured the four nonsecret production Trigger scratch roots used around Azure source, normalized, metadata and PDF
+artifact retention. Production eCFR canary `run_06gbcjcbjrukufukk4b5gisl01` reached the source adapter on deployment
+`20260918.12`; all three bounded attempts correctly deferred on the publisher's live `import_in_progress` inventory
+signal, and the run ended `FAILED` with that explicit source disposition rather than publishing stale or empty titles.
+This is source-gate evidence, not a completed acquisition/publication canary. Retry requires a fresh publisher inventory
+after the import window clears. Recurring source schedules remain disabled.
+
 Installed and independently verified the additive regulatory passage/vector schema on the isolated production search
 database. The fail-closed release first replayed the live one-table schema in a ParadeDB 0.25.9/PostgreSQL 18 clone and
 verified that the existing `document_sections` row and its primary, B-tree and ParadeDB indexes survived. Its first

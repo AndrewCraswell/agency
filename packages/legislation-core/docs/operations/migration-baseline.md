@@ -44,38 +44,44 @@ indexes or weaken constraints just to make textual dumps equal. Do not record mi
 
 ## September 18 rollout status
 
-**Production rollout deferred; no live schema, data or ledger writes were made.** The inspected Railway pgvector database
-has 62 legislation tables and records migrations 0 through 47. The local baseline has 102 tables; the 40 missing live
-tables are the pending regulatory additions. A keyed live-catalog audit confirms every existing column definition,
-function and trigger matches the retained 0-through-47 schema. Both vote-query indexes added to the current schema are
-already deployed. Production also retains its amendment HNSW index and ten constraints that were validated separately;
-neither should be removed.
+**Production rollout completed after the September 18 scheduled recovery point.** The pre-release Railway pgvector
+database had 62 legislation tables and recorded migrations 0 through 47. A keyed live-catalog audit confirmed every
+existing column definition, function and trigger matched the retained 0-through-47 schema. Both vote-query indexes
+added to the current schema were already deployed. Production also retained its amendment HNSW index and ten
+constraints that had been validated separately; the release preserved each of them.
 
 Sixteen other historical constraints remain unvalidated. Read-only predicate scans found zero violations for fourteen.
 The two event-vocabulary constraints found 2,657 legacy classifications and 1,569 legacy statuses. The tracked
 `0001_reconcile_legacy_event_vocabulary.sql` maps those exact legacy forms with the same canonical semantics as current
 ingestion, then validates all 26 formerly deferred constraints. A PostgreSQL integration test replays the observed
-classification/status forms through that migration and verifies their final values and validation state.
+classification/status forms through that migration and verifies their final values and validation state. The first
+production transaction found an additional ordering condition that the separate fixtures did not cover: some live rows
+had both a legacy classification and status, and rewriting one field caused PostgreSQL to enforce the other constraint
+on that new row version. The transaction rolled back. The migration now maps both fields in one update, and its test
+includes an overlapping `markup`/`confirmed` row.
 
 A clean PostgreSQL 18 rehearsal applied retained migrations 0 through 47, then pending migrations 48 through 51 and the
 event-vocabulary reconciliation. It moved from 62 to 102 legislation tables and produced exact catalog parity with the
 canonical baseline across relations, columns, constraints, indexes, functions and triggers. The canonical migration
 hashes are `3cf5d1f0b7a331700a8426695a65b4e9ed07b4c0ca12dff1b985b45a05457ff7` at
-`1789725600000` and `cbe63b9c7528993c84daaad15355086ecbfdb79e0cdc0ef197468da5db81ada1` at
+`1789725600000` and `d6997bd5bf1d519cbebcd7fca05e009a27aa582ac7e0503305adfa4754caa1e3` at
 `1789761185934`.
 
 The exact production-shaped release payload is retained outside tracked source at
 `apps/legislation-ingestion/artifacts/regulatory-backfills/production-migration-release-20260918/production-regulatory-baseline-release.sql`
-with SHA-256 `e9ebe0032754aaa2bfc2eab131e5181d96c0b7856dfa47b2c1fbe3641efee54f`. It takes one advisory
+with SHA-256 `32f6dc5c9da069740cf5d790db461c18433ac5f95b7ead5364761ed599ae9159`. It takes one advisory
 lock and one transaction, verifies the frozen 48-row ledger and live catalog, locks event writes, applies the five exact
 SQL inputs, asserts the complete post-release catalog, and only then replaces the migration ledger. A production-shaped
 rehearsal included the 4,226 legacy rows, 16 unvalidated constraints, 48 historical ledger rows and retained amendment
-HNSW index. It completed with 102 tables, two canonical ledger rows and zero unvalidated constraints or legacy values.
+HNSW index. After the ordering repair, a second rehearsal began from a fresh production schema-only snapshot and the
+same exact counts, including overlapping legacy values. It completed with 102 tables, two canonical ledger rows and
+zero unvalidated constraints or legacy values.
 
-Railway refused a fresh named snapshot because its per-volume backup limit was exceeded. No existing backups were
-deleted. A September 18 read-only Railway API audit returned 17 recovery points for the canonical volume. The latest is
-the September 17, 2026 20:42 UTC daily snapshot and expires September 23 at 20:42 UTC. Before rollout, authorize removal
-of an obsolete recovery point and create/verify a fresh snapshot, or explicitly accept that existing recovery window.
+Railway created the scheduled daily recovery point at September 18, 2026 20:42:05 UTC before the release. No backup was
+deleted or manually created. The checksum-pinned release then committed in one transaction. Independent production
+postflight found 102 legislation tables, 106 relations, 1,071 columns, 1,337 constraints, 305 indexes, eight functions,
+17 triggers, two canonical ledger rows and zero unvalidated constraints or legacy event values. The normal
+`pnpm --filter legislation-web db:migrate` command completed afterward as a no-op.
 
 Ignored release evidence uses the `tmp/migration-baseline-*0fc57135*` prefix; the exact pre-consolidation chain is in
 `tmp/migration-history-retained-0fc57135`. Git history also retains the former files. Never ship these artifacts as a
