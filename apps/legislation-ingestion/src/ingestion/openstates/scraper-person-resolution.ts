@@ -41,6 +41,11 @@ function normalizedName(value: string) {
     .replace(/\s+/g, " ")
 }
 
+function compactPublishedName(value: string) {
+  const normalized = normalizedName(value)
+  return normalized.includes(" ") ? normalized.replaceAll(" ", "") : undefined
+}
+
 function isIsoDate(value: string | undefined): value is string {
   return value !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
@@ -50,6 +55,12 @@ function familyNameFromPublishedAlias(value: string) {
   if (value.includes(",") && commaName) return commaName
   const tokens = value.trim().split(/\s+/)
   return tokens.length === 2 ? tokens[1] : undefined
+}
+
+function terminalFamilyNameToken(value: string | null) {
+  if (value === null) return undefined
+  const tokens = value.trim().split(/\s+/)
+  return tokens.length > 1 ? tokens.at(-1) : undefined
 }
 
 function chamberMatches(termChamber: string | null, chamber: Chamber) {
@@ -73,10 +84,13 @@ function termMatches(term: ScraperPersonCandidate["terms"][number], context: Scr
 export function createScraperPersonResolver(candidates: readonly ScraperPersonCandidate[]) {
   const candidatesByName = new Map<string, ScraperPersonCandidate[]>()
   for (const candidate of candidates) {
+    const terminalFamilyName = terminalFamilyNameToken(candidate.familyName)
+    const publishedNames = [...(candidate.familyNameAliases ?? []), ...candidate.names]
     const names = new Set([
       ...(candidate.familyName === null ? [] : [normalizedName(candidate.familyName)]),
-      ...(candidate.familyNameAliases ?? []).map(normalizedName),
-      ...candidate.names.map(normalizedName)
+      ...(terminalFamilyName === undefined ? [] : [normalizedName(terminalFamilyName)]),
+      ...publishedNames.map(normalizedName),
+      ...publishedNames.map(compactPublishedName).filter((value): value is string => value !== undefined)
     ])
     names.delete("")
     for (const name of names) {

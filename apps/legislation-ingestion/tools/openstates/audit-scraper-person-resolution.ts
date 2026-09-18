@@ -93,11 +93,25 @@ try {
       total: 0
     })
     const sponsors = blank()
+    const unresolvedSponsorSamples: Array<{
+      chamber: string | null
+      name: string
+      reason: "ambiguous" | "missing_chamber_evidence" | "not_found"
+      uses: number
+    }> = []
     for (const row of sponsorRows.rows) {
       sponsors.groups += 1
       sponsors.total += row.uses
       if (row.chamber !== "lower" && row.chamber !== "upper" && row.chamber !== "unicameral") {
         sponsors.notFound += row.uses
+        if (unresolvedSponsorSamples.length < sampleLimit) {
+          unresolvedSponsorSamples.push({
+            chamber: row.chamber,
+            name: row.name,
+            reason: "missing_chamber_evidence",
+            uses: row.uses
+          })
+        }
         continue
       }
       const result = resolvePerson({
@@ -109,8 +123,17 @@ try {
         sessionStartDate: sessionRow.start_date ?? undefined
       })
       if (result.status === "resolved") sponsors.resolved += row.uses
-      else if (result.status === "ambiguous") sponsors.ambiguous += row.uses
-      else sponsors.notFound += row.uses
+      else if (result.status === "ambiguous") {
+        sponsors.ambiguous += row.uses
+        if (unresolvedSponsorSamples.length < sampleLimit) {
+          unresolvedSponsorSamples.push({ chamber: row.chamber, name: row.name, reason: "ambiguous", uses: row.uses })
+        }
+      } else {
+        sponsors.notFound += row.uses
+        if (unresolvedSponsorSamples.length < sampleLimit) {
+          unresolvedSponsorSamples.push({ chamber: row.chamber, name: row.name, reason: "not_found", uses: row.uses })
+        }
+      }
     }
     const positions = blank()
     const unresolvedPositionSamples: Array<{
@@ -193,7 +216,7 @@ try {
       productionWrites: false,
       sessionId,
       sponsors,
-      ...(sampleLimit === 0 ? {} : { unresolvedPositionSamples })
+      ...(sampleLimit === 0 ? {} : { unresolvedPositionSamples, unresolvedSponsorSamples })
     }
   })
   process.stdout.write(`${JSON.stringify(report)}\n`)

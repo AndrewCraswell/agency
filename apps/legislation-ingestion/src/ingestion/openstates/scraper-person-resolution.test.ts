@@ -71,6 +71,23 @@ describe("standalone scraper person resolution", () => {
     ).toMatchObject({ personId: "gray-jackson", status: "resolved" })
   })
 
+  it("uses the terminal token of a source-declared compound family name", () => {
+    const candidates = [candidate("helfrich", "Gardner Helfrich", "lower")]
+    expect(
+      resolveScraperPersonReference({ chamber: "lower", name: "Helfrich", observedDate: "2026-05-01" }, candidates)
+    ).toMatchObject({ personId: "helfrich", status: "resolved" })
+  })
+
+  it("matches a source formatting defect that removed spaces from a unique published full name", () => {
+    const candidates = [
+      candidate("jarrod", "Lowery", "lower", { names: ["Jarrod Lowery"] }),
+      candidate("john", "Lowery", "lower", { names: ["John Lowery"] })
+    ]
+    expect(
+      resolveScraperPersonReference({ chamber: "lower", name: "JohnLowery", observedDate: "2026-05-01" }, candidates)
+    ).toMatchObject({ personId: "john", status: "resolved" })
+  })
+
   it("resolves a legislature-wide tally across both chambers while retaining ambiguity checks", () => {
     const candidates = [candidate("lower", "House", "lower"), candidate("upper", "Senate", "upper")]
     expect(
