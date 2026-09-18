@@ -337,6 +337,16 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
   const abstractMatches = sql<boolean>`to_tsvector('english', coalesce(${bills.summary}, '')) @@ ${searchQuery}`
   const subjectMatches = sql<boolean>`to_tsvector('english', array_to_string(${bills.subjects}, ' ')) @@ ${searchQuery}`
   const sponsorSearchVector = sql`to_tsvector('english', ${billSponsors.name})`
+  const filters = billFilters(input)
+  const filterPredicate = and(...filters) ?? sql`true`
+  const sponsorScope =
+    filters.length === 0
+      ? sql`true`
+      : sql`exists (select 1 from ${bills} where ${bills.id} = ${billSponsors.billId} and ${filterPredicate})`
+  const versionScope =
+    filters.length === 0
+      ? sql`true`
+      : sql`exists (select 1 from ${bills} where ${bills.id} = ${billDocuments.billId} and ${filterPredicate})`
   const versionRank = sql<number>`max(ts_rank_cd(version_section_matches.search_vector, ${searchQuery}))`
   const sponsorRank = sql<number>`max(ts_rank_cd(${sponsorSearchVector}, ${searchQuery}))`
   const rank = sql<number>`
@@ -349,14 +359,15 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
     with bill_text_matches as materialized (
       select ${bills.id} as id
       from ${bills}
-      where ${billTextMatches} and ${and(...billFilters(input)) ?? sql`true`}
-      order by ts_rank_cd(${bills.searchVector}, ${searchQuery}) desc, ${bills.id} asc
+      where ${billTextMatches} and ${filterPredicate}
+      -- GIN identifies a bounded candidate window. Computing ts_rank_cd before
+      -- this limit forced PostgreSQL to fetch and rank every broad match.
       limit ${candidateLimit}
     ),
     identifier_matches as materialized (
       select ${bills.id} as id
       from ${bills}
-      where ${identifierMatches} and ${and(...billFilters(input)) ?? sql`true`}
+      where ${identifierMatches} and ${filterPredicate}
       order by ${bills.id} asc
       limit ${candidateLimit}
     ),
@@ -382,10 +393,9 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
       cross join lateral (
         select ${billSponsors.billId} as bill_id, ${sponsorRank} as sponsor_rank
         from ${billSponsors}
-        inner join ${bills} on ${bills.id} = ${billSponsors.billId}
         where
           ${sponsorSearchVector} @@ ${searchQuery}
-          and ${and(...billFilters(input)) ?? sql`true`}
+          and ${sponsorScope}
         group by ${billSponsors.billId}
         order by ${sponsorRank} desc, ${billSponsors.billId} asc
         limit greatest(${candidateLimit} - primary_count.count, 0)
@@ -400,13 +410,13 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
           ${billDocuments.billId} as bill_id
         from ${documentSections}
         inner join ${billDocuments} on ${documentSections.documentId} = ${billDocuments.id}
-        inner join ${bills} on ${bills.id} = ${billDocuments.billId}
         where
           ${billDocuments.classification} = 'version'
           and ${billDocuments.processingStatus} = 'processed'
           and ${documentSections.searchVector} @@ ${searchQuery}
-          and ${and(...billFilters(input)) ?? sql`true`}
-        order by ${documentSections.id} asc
+          and ${versionScope}
+        -- The lookahead below retains the explicit incomplete-coverage signal;
+        -- relevance is computed only after this bounded indexed retrieval.
         limit case when primary_count.count < ${candidateLimit}
           then ${LEXICAL_BILL_VERSION_CANDIDATE_LIMIT + 1} else 0 end
       ) version_fallback

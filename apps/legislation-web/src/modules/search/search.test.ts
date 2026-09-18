@@ -206,7 +206,7 @@ describe("lexical bill candidate query", () => {
     expect(generated).toContain("limit case when primary_count.count <")
     expect(generated).toContain("else 0 end")
     expect(generated).toContain('"legislation"."document_sections"."id" as section_id')
-    expect(generated).toContain('order by "legislation"."document_sections"."id" asc')
+    expect(generated).not.toContain('order by "legislation"."document_sections"."id" asc')
     expect(generated).toContain('order by ts_rank_cd("legislation"."document_sections"."search_vector"')
     expect(generated).toContain("version_section_matches.search_vector")
     expect(generated).toContain('version_section_coverage.capped as "versionCoverageCapped"')
@@ -228,14 +228,14 @@ describe("lexical bill candidate query", () => {
     expect(renderBillSearch({ query: "appropriations act" }).params).toContain(1_000)
   })
 
-  it("applies bill filters before bounding deterministic version-text sections", () => {
+  it("applies bill filters before bounding indexed version-text sections", () => {
     const generated = renderBillSearch({ jurisdictionIds: ["jurisdiction:us"], query: "premium protection" }).sql
     const candidateStart = generated.indexOf("version_section_lookahead as")
     const coverageStart = generated.indexOf("version_section_coverage as")
     const candidateSql = generated.slice(candidateStart, coverageStart)
 
     expect(candidateSql).toContain('"legislation"."bills"."jurisdiction_id" in')
-    expect(candidateSql).toContain('order by "legislation"."document_sections"."id" asc')
+    expect(candidateSql).not.toContain('order by "legislation"."document_sections"."id" asc')
     expect(candidateSql).not.toContain("group by")
   })
 

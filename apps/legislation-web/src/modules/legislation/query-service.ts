@@ -117,6 +117,7 @@ const DETAIL_RESPONSE_TARGET_BYTES = 750_000
 const DOCUMENT_AMENDMENT_ID_PREFIX = "amendment:document:"
 const LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT = 250
 const LEXICAL_SUPPORTING_MATERIAL_SEARCH_TIMEOUT_MS = 5_000
+const LEXICAL_AMENDMENT_SECTION_CANDIDATE_LIMIT = 5_000
 const amendmentSearchDocumentColumns = {
   id: billDocuments.id,
   billId: billDocuments.billId,
@@ -199,35 +200,38 @@ export function buildDocumentAmendmentLexicalQuery(
   )
   const filters = and(
     documentSearchFilters({ ...input, jurisdictionIds: undefined, sessionIds: undefined }),
-    // The validated non-null bill FK guarantees existence. Only scoped searches
-    // need a bill lookup before ranking; unscoped searches hydrate bills once per page.
-    billFilters === undefined
-      ? undefined
-      : sql`exists (select 1 from ${bills} where ${bills.id} = ${billDocuments.billId} and ${billFilters})`,
-    candidateDocumentIds === undefined ? undefined : inArray(billDocuments.id, candidateDocumentIds)
+    billFilters
   )
+  const projectionFilter =
+    candidateDocumentIds === undefined ? undefined : inArray(amendmentSectionSearch.documentId, candidateDocumentIds)
   const matchingSections = database
     .select({
-      documentId: sql<string>`${billDocuments.id}`.as("document_id"),
+      documentId: sql<string>`${amendmentSectionSearch.documentId}`.as("document_id"),
       identifierMatches: titleMatches.as("identifier_matches"),
       rank: sql<number>`${sectionRank} + ${titleRank}`.as("rank"),
       sectionId: sql<string>`${amendmentSectionSearch.sectionId}`.as("section_id"),
       textMatches: sql<boolean>`true`.as("text_matches")
     })
     .from(amendmentSectionSearch)
-    .innerJoin(billDocuments, eq(billDocuments.id, amendmentSectionSearch.documentId))
-    .where(and(filters, sectionMatches))
+    // Rank the compact, indexed projection before touching the 26 GB parent
+    // document relation. The prior join made broad terms perform random parent
+    // lookups for every matching section and exhausted the API deadline.
+    .where(and(projectionFilter, sectionMatches))
+    .orderBy(desc(sectionRank), asc(amendmentSectionSearch.sectionId))
+    .limit(LEXICAL_AMENDMENT_SECTION_CANDIDATE_LIMIT)
   const titleOnlySections = database
     .select({
-      documentId: sql<string>`${billDocuments.id}`.as("document_id"),
+      documentId: sql<string>`${amendmentSectionSearch.documentId}`.as("document_id"),
       identifierMatches: sql<boolean>`true`.as("identifier_matches"),
       rank: titleRank.as("rank"),
-      sectionId: sql<string>`${amendmentSectionSearch.sectionId}`.as("section_id"),
+      sectionId: sql<string>`min(${amendmentSectionSearch.sectionId})`.as("section_id"),
       textMatches: sql<boolean>`false`.as("text_matches")
     })
-    .from(billDocuments)
-    .innerJoin(amendmentSectionSearch, eq(amendmentSectionSearch.documentId, billDocuments.id))
-    .where(and(filters, titleMatches, sql`not (${sectionMatches})`))
+    .from(amendmentSectionSearch)
+    .where(and(projectionFilter, titleMatches, sql`not (${sectionMatches})`))
+    .groupBy(amendmentSectionSearch.documentId, amendmentSectionSearch.titleVector)
+    .orderBy(desc(titleRank), asc(amendmentSectionSearch.documentId))
+    .limit(LEXICAL_AMENDMENT_SECTION_CANDIDATE_LIMIT)
   const documentCandidates = database
     .$with("amendment_document_lexical_candidates")
     .as(unionAll(matchingSections, titleOnlySections))
@@ -262,7 +266,9 @@ export function buildDocumentAmendmentLexicalQuery(
         textMatches: rankedTextMatches.as("text_matches")
       })
       .from(rankedCandidates)
-      .where(eq(rankedRowNumber, 1))
+      .innerJoin(billDocuments, eq(billDocuments.id, rankedDocumentId))
+      .innerJoin(bills, eq(bills.id, billDocuments.billId))
+      .where(and(eq(rankedRowNumber, 1), filters))
       .orderBy(desc(rankedRank), asc(rankedDocumentId))
       .limit(limit)
   )
