@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto"
 import { constants } from "node:fs"
-import { access, mkdir, readFile, writeFile } from "node:fs/promises"
+import { access, copyFile, link, lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { extname, resolve, sep } from "node:path"
 import { DefaultAzureCredential } from "@azure/identity"
 import { BlobServiceClient } from "@azure/storage-blob"
@@ -8,6 +9,12 @@ export interface ArtifactStore {
   exists(path: string): Promise<boolean>
   put(path: string, bytes: Uint8Array): Promise<boolean>
   read(path: string): Promise<Uint8Array>
+}
+
+/** Streaming file transfer used by large cross-worker artifacts that must not be buffered in task memory. */
+export interface FileArtifactStore extends ArtifactStore {
+  putFile(path: string, localPath: string): Promise<boolean>
+  readToFile(path: string, localPath: string): Promise<void>
 }
 
 export class ArtifactNotFoundError extends Error {
@@ -20,7 +27,7 @@ export class ArtifactNotFoundError extends Error {
   }
 }
 
-export class LocalArtifactStore implements ArtifactStore {
+export class LocalArtifactStore implements FileArtifactStore {
   readonly #root: string
 
   constructor(root: string) {
@@ -64,6 +71,31 @@ export class LocalArtifactStore implements ArtifactStore {
     }
   }
 
+  async putFile(path: string, localPath: string): Promise<boolean> {
+    const source = await lstat(localPath)
+    if (!source.isFile() || source.isSymbolicLink()) throw new Error("Artifact source must be a regular file")
+    const target = this.#resolve(path)
+    await mkdir(resolve(target, ".."), { recursive: true })
+    try {
+      await copyFile(localPath, target, constants.COPYFILE_EXCL)
+      return true
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error
+      return false
+    }
+  }
+
+  async readToFile(path: string, localPath: string): Promise<void> {
+    const target = resolve(localPath)
+    await mkdir(resolve(target, ".."), { recursive: true })
+    try {
+      await copyFile(this.#resolve(path), target, constants.COPYFILE_EXCL)
+    } catch (error) {
+      if (isMissingArtifactError(error)) throw new ArtifactNotFoundError(path, { cause: error })
+      throw error
+    }
+  }
+
   #resolve(path: string): string {
     const target = resolve(this.#root, path)
     if (target !== this.#root && !target.startsWith(`${this.#root}${sep}`)) {
@@ -73,7 +105,7 @@ export class LocalArtifactStore implements ArtifactStore {
   }
 }
 
-export class AzureBlobArtifactStore implements ArtifactStore {
+export class AzureBlobArtifactStore implements FileArtifactStore {
   readonly #container: ReturnType<BlobServiceClient["getContainerClient"]>
 
   constructor(accountName: string, containerName: string) {
@@ -106,6 +138,36 @@ export class AzureBlobArtifactStore implements ArtifactStore {
         throw new ArtifactNotFoundError(path, { cause: error })
       }
       throw error
+    }
+  }
+
+  async putFile(path: string, localPath: string): Promise<boolean> {
+    const source = await lstat(localPath)
+    if (!source.isFile() || source.isSymbolicLink()) throw new Error("Artifact source must be a regular file")
+    const blob = this.#container.getBlockBlobClient(normalizeBlobPath(path))
+    try {
+      await blob.uploadFile(localPath, { conditions: { ifNoneMatch: "*" } })
+      return true
+    } catch (error) {
+      if (!isExistingBlobError(error)) throw error
+      return false
+    }
+  }
+
+  async readToFile(path: string, localPath: string): Promise<void> {
+    const target = resolve(localPath)
+    await mkdir(resolve(target, ".."), { recursive: true })
+    const temporary = `${target}.${randomUUID()}.partial`
+    try {
+      await this.#container.getBlockBlobClient(normalizeBlobPath(path)).downloadToFile(temporary, 0, undefined, {
+        conditions: { ifMatch: "*" }
+      })
+      await link(temporary, target)
+    } catch (error) {
+      if (isMissingArtifactError(error)) throw new ArtifactNotFoundError(path, { cause: error })
+      throw error
+    } finally {
+      await rm(temporary, { force: true })
     }
   }
 }

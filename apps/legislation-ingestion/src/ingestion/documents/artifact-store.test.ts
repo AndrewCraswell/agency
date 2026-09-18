@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -50,5 +50,23 @@ describe("local artifact storage", () => {
     expect(isMissingArtifactError({ statusCode: 404 })).toBe(true)
     expect(isMissingArtifactError({ code: "ENOENT" })).toBe(true)
     expect(isMissingArtifactError({ statusCode: 500 })).toBe(false)
+  })
+
+  it("streams immutable files between scratch space and the durable store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "legislation-artifacts-"))
+    const scratch = await mkdtemp(join(tmpdir(), "legislation-artifact-scratch-"))
+    directories.push(root, scratch)
+    const source = join(scratch, "source.xml")
+    const restored = join(scratch, "restored", "source.xml")
+    await writeFile(source, "large-source-without-buffering")
+    const store = new LocalArtifactStore(root)
+
+    await expect(store.putFile("regulations/source/hash.xml", source)).resolves.toBe(true)
+    await expect(store.putFile("regulations/source/hash.xml", source)).resolves.toBe(false)
+    await expect(store.readToFile("regulations/source/hash.xml", restored)).resolves.toBeUndefined()
+    await expect(readFile(restored, "utf8")).resolves.toBe("large-source-without-buffering")
+    await expect(
+      store.readToFile("regulations/source/missing.xml", join(scratch, "missing.xml"))
+    ).rejects.toBeInstanceOf(ArtifactNotFoundError)
   })
 })
