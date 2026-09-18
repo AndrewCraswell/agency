@@ -8,6 +8,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
+import { LocalArtifactStore } from "../documents/artifact-store.js"
 import { acquireLegalDiscoveryArtifact } from "./discovery-acquisition.js"
 import {
   commitLegalDiscoveryPage,
@@ -25,6 +26,7 @@ import { publishLegalDiscoveryUnit } from "./discovery-publication.js"
 import { recoverLegalDiscoveryDispatchPage } from "./discovery-recovery.js"
 import { registerLegalDiscoveryManifest } from "./discovery-registration.js"
 import { inspectLegalDiscoveryStart } from "./discovery-start.js"
+import { regulatoryArtifactLocator } from "./durable-artifact.js"
 import { runLegalPassagePreparationBatch } from "./passage-preparation.js"
 import { submitLegalPreparation } from "./preparation-dispatch.js"
 import { planLegalPreparationPage } from "./preparation-plan.js"
@@ -192,13 +194,19 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     const sourceClient = new RegulatorySourceClient({ fetch: fetcher, minimumIntervalMs: 0 })
     const directory = await mkdtemp(join(tmpdir(), "tabra-current-acquisition-"))
     directories.push(directory)
+    const sourceStoreRoot = await mkdtemp(join(tmpdir(), "tabra-current-source-store-"))
+    const normalizedStoreRoot = await mkdtemp(join(tmpdir(), "tabra-current-normalized-store-"))
+    directories.push(sourceStoreRoot, normalizedStoreRoot)
+    const sourceStore = new LocalArtifactStore(sourceStoreRoot)
+    const normalizedStore = new LocalArtifactStore(normalizedStoreRoot)
     const input = { manifestId: manifest.id, unitKey: unit.key, artifactDirectory: directory }
-    const first = await acquireLegalDiscoveryArtifact(pool, input, { client: sourceClient })
-    const second = await acquireLegalDiscoveryArtifact(pool, input, { client: sourceClient })
+    const first = await acquireLegalDiscoveryArtifact(pool, input, { client: sourceClient, sourceStore })
+    const second = await acquireLegalDiscoveryArtifact(pool, input, { client: sourceClient, sourceStore })
     expect(first).toMatchObject({ reused: false, bytes: Buffer.byteLength(body) })
     expect(second).toEqual({ ...first, reused: true })
     expect(fetcher).toHaveBeenCalledOnce()
     expect(await readFile(join(directory, "blobs", `${first.artifactHash}.xml`), "utf8")).toBe(body)
+    await rm(directory, { recursive: true, force: true })
     const reconciled = await recoverLegalDiscoveryDispatchPage(
       pool,
       { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
@@ -276,10 +284,11 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     const normalized = await mkdtemp(join(tmpdir(), "tabra-current-normalized-"))
     directories.push(normalized)
     const parseInput = { manifestId: manifest.id, unitKey: unit.key, outputRoot: normalized }
-    const firstParse = await parseLegalDiscoveryArtifact(pool, parseInput)
-    const secondParse = await parseLegalDiscoveryArtifact(pool, parseInput)
+    const firstParse = await parseLegalDiscoveryArtifact(pool, parseInput, { sourceStore, normalizedStore })
+    const secondParse = await parseLegalDiscoveryArtifact(pool, parseInput, { sourceStore, normalizedStore })
     expect(firstParse).toMatchObject({ records: 2, reused: false })
     expect(secondParse).toEqual({ ...firstParse, reused: true })
+    await rm(join(normalized, firstParse.generation), { recursive: true, force: true })
     const parsingCompletion = await recoverLegalDiscoveryDispatchPage(
       pool,
       { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
@@ -363,8 +372,9 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
       ]
     })
     const publicationInput = { manifestId: manifest.id, unitKey: unit.key }
-    const firstPublication = await publishLegalDiscoveryUnit(pool, publicationInput)
-    const secondPublication = await publishLegalDiscoveryUnit(pool, publicationInput)
+    const durableOptions = { sourceStore, normalizedStore, scratchRoot: normalized }
+    const firstPublication = await publishLegalDiscoveryUnit(pool, publicationInput, durableOptions)
+    const secondPublication = await publishLegalDiscoveryUnit(pool, publicationInput, durableOptions)
     expect(firstPublication).toMatchObject({ state: "published", isCurrent: true, reused: false })
     expect(secondPublication).toEqual({ ...firstPublication, reused: true })
     await expect(inspectLegalDiscoveryManifestCompletion(pool, { manifestId: manifest.id })).resolves.toMatchObject({
@@ -639,11 +649,13 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
       state: "published",
       artifact_hash: first.artifactHash,
       bytes: String(first.bytes),
-      storage_locator: join(directory, "blobs", `${first.artifactHash}.xml`),
+      storage_locator: regulatoryArtifactLocator("source", first.artifactHash, "xml"),
       receipt_hash: first.artifactHash,
       parser_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       normalized_generation: firstParse.generation,
-      normalized_locator: join(normalized, firstParse.generation),
+      normalized_locator: expect.stringMatching(
+        /^regulatory-artifact:\/\/normalized\/[a-f0-9]{2}\/[a-f0-9]{64}\.json\/file$/
+      ),
       records: 2,
       publication_generation_id: firstPublication.generationId,
       edition_id: firstPublication.editionId,

@@ -2,6 +2,8 @@ import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { idempotencyKeys, task } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
+import { loadConfig } from "../../config/config.js"
+import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { completeLegalDiscoveryDispatch } from "../../ingestion/regulations/discovery-dispatch.js"
 import {
   legalDiscoveryPublicationSource,
@@ -48,6 +50,10 @@ export async function runRegulatoryDiscoveryPublication(value: unknown) {
     connectionTimeoutMillis: 10_000,
     statement_timeout: 60_000
   })
+  const config = loadConfig()
+  const storageAccount = z.string().trim().min(1).parse(config.azure.storageAccount)
+  const sourceStore = new AzureBlobArtifactStore(storageAccount, config.azure.federalSourceContainer)
+  const normalizedStore = new AzureBlobArtifactStore(storageAccount, config.azure.normalizedDocumentContainer)
   try {
     const sourceId = await legalDiscoveryPublicationSource(pool, payload)
     if (sourceId === "govinfo-fr") {
@@ -81,7 +87,8 @@ export async function runRegulatoryDiscoveryPublication(value: unknown) {
       }
     }
     if (sourceId !== "ecfr") throw new Error("unsupported_legal_discovery_publication_source")
-    const result = await publishLegalDiscoveryUnit(pool, payload)
+    const scratchRoot = z.string().trim().min(1).parse(process.env.REGULATORY_NORMALIZED_DIRECTORY)
+    const result = await publishLegalDiscoveryUnit(pool, payload, { sourceStore, normalizedStore, scratchRoot })
     const controllerScope = await completeLegalDiscoveryDispatch(pool, "publication", payload)
     return { ...result, payload, controllerScope }
   } finally {

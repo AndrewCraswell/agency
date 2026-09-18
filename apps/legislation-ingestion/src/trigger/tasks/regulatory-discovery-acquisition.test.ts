@@ -28,6 +28,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubEnv("DATABASE_URL", "postgresql://localhost:5432/legislation")
   vi.stubEnv("REGULATORY_ARTIFACT_DIRECTORY", "D:\\regulatory-artifacts")
+  vi.stubEnv("AZURE_STORAGE_ACCOUNT", "regulatorytest")
   mocks.complete.mockResolvedValue({ sourceId: "ecfr", scopeKey: "d".repeat(64) })
   mocks.continue.mockResolvedValue({ id: "controller-run" })
 })
@@ -37,10 +38,11 @@ it("passes only durable identities and the configured artifact root to acquisiti
   mocks.acquire.mockResolvedValue({ artifactHash: "c".repeat(64), bytes: 42, reused: false })
   const payload = { manifestId: "a".repeat(64), unitKey: "b".repeat(64) }
   await expect(runRegulatoryDiscoveryAcquisition(payload)).resolves.toMatchObject({ bytes: 42 })
-  expect(mocks.acquire).toHaveBeenCalledWith(expect.anything(), {
-    ...payload,
-    artifactDirectory: "D:\\regulatory-artifacts"
-  })
+  expect(mocks.acquire).toHaveBeenCalledWith(
+    expect.anything(),
+    { ...payload, artifactDirectory: "D:\\regulatory-artifacts" },
+    { sourceStore: expect.anything() }
+  )
   expect(mocks.complete).toHaveBeenCalledWith(expect.anything(), "acquisition", payload)
   expect(mocks.end).toHaveBeenCalledOnce()
 })

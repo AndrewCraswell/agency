@@ -1,6 +1,8 @@
 import { task } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
+import { loadConfig } from "../../config/config.js"
+import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { completeLegalDiscoveryDispatch } from "../../ingestion/regulations/discovery-dispatch.js"
 import { parseLegalDiscoveryArtifact } from "../../ingestion/regulations/discovery-parsing.js"
 import { continueRegulatoryDiscoveryStage } from "./regulatory-discovery-continuation.js"
@@ -36,6 +38,10 @@ export async function runRegulatoryDiscoveryParsing(value: unknown) {
     throw new Error("Regulatory parsing requires a canonical PostgreSQL database")
   }
   const outputRoot = z.string().trim().min(1).parse(process.env.REGULATORY_NORMALIZED_DIRECTORY)
+  const config = loadConfig()
+  const storageAccount = z.string().trim().min(1).parse(config.azure.storageAccount)
+  const sourceStore = new AzureBlobArtifactStore(storageAccount, config.azure.federalSourceContainer)
+  const normalizedStore = new AzureBlobArtifactStore(storageAccount, config.azure.normalizedDocumentContainer)
   const pool = new pg.Pool({
     connectionString: databaseUrl.href,
     max: 2,
@@ -43,7 +49,7 @@ export async function runRegulatoryDiscoveryParsing(value: unknown) {
     statement_timeout: 30_000
   })
   try {
-    const result = await parseLegalDiscoveryArtifact(pool, { ...payload, outputRoot })
+    const result = await parseLegalDiscoveryArtifact(pool, { ...payload, outputRoot }, { sourceStore, normalizedStore })
     const controllerScope = await completeLegalDiscoveryDispatch(pool, "parsing", payload)
     return { ...result, payload, controllerScope }
   } finally {

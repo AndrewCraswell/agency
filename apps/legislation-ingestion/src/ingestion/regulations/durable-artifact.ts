@@ -37,7 +37,7 @@ export function regulatoryArtifactLocator(kindValue: unknown, hashValue: unknown
   return `regulatory-artifact://${kind}/${hash.slice(0, 2)}/${hash}.${extension}/file`
 }
 
-async function hashFile(path: string) {
+export async function inspectRegulatoryArtifactFile(path: string) {
   const stat = await lstat(path)
   invariant(stat.isFile() && !stat.isSymbolicLink() && stat.size > 0, "regulatory_artifact_not_regular_file")
   const hash = createHash("sha256")
@@ -59,14 +59,14 @@ export async function retainRegulatoryArtifact(
   const bytes = z.int().positive().parse(input.bytes)
   const locator = regulatoryArtifactLocator(input.kind, hash, input.extension)
   const parsed = regulatoryArtifactLocatorSchema.parse(locator)
-  const local = await hashFile(input.localPath)
+  const local = await inspectRegulatoryArtifactFile(input.localPath)
   invariant(local.hash === hash && local.bytes === bytes, "regulatory_artifact_local_mismatch")
   const created = await store.putFile(parsed.path, input.localPath)
   if (!created) {
     const verificationPath = join(dirname(input.localPath), `${randomUUID()}.verification`)
     try {
       await store.readToFile(parsed.path, verificationPath)
-      const retained = await hashFile(verificationPath)
+      const retained = await inspectRegulatoryArtifactFile(verificationPath)
       invariant(retained.hash === hash && retained.bytes === bytes, "regulatory_artifact_immutable_conflict")
     } finally {
       await rm(verificationPath, { force: true })
@@ -86,7 +86,7 @@ export async function materializeRegulatoryArtifact(
   invariant(parsed.hash === hash, "regulatory_artifact_locator_hash_mismatch")
   try {
     await store.readToFile(parsed.path, input.localPath)
-    const local = await hashFile(input.localPath)
+    const local = await inspectRegulatoryArtifactFile(input.localPath)
     invariant(local.hash === hash && local.bytes === bytes, "regulatory_artifact_retention_mismatch")
     return { ...parsed, localPath: input.localPath, bytes }
   } catch (error) {

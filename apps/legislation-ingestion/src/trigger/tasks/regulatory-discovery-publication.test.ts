@@ -35,6 +35,8 @@ import {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.stubEnv("DATABASE_URL", "postgresql://localhost:5432/legislation")
+  vi.stubEnv("AZURE_STORAGE_ACCOUNT", "regulatorytest")
+  vi.stubEnv("REGULATORY_NORMALIZED_DIRECTORY", "D:\\regulatory-normalized")
   mocks.complete.mockResolvedValue({ sourceId: "ecfr", scopeKey: "d".repeat(64) })
   mocks.continue.mockResolvedValue({ id: "controller-run" })
   mocks.source.mockResolvedValue("ecfr")
@@ -45,7 +47,11 @@ it("publishes one durable discovery identity", async () => {
   mocks.publish.mockResolvedValue({ generationId: "c".repeat(64), editionId: randomUUID(), state: "published" })
   const payload = { manifestId: "a".repeat(64), unitKey: "b".repeat(64) }
   await expect(runRegulatoryDiscoveryPublication(payload)).resolves.toMatchObject({ state: "published" })
-  expect(mocks.publish).toHaveBeenCalledWith(expect.anything(), payload)
+  expect(mocks.publish).toHaveBeenCalledWith(expect.anything(), payload, {
+    sourceStore: expect.anything(),
+    normalizedStore: expect.anything(),
+    scratchRoot: "D:\\regulatory-normalized"
+  })
   expect(mocks.complete).toHaveBeenCalledWith(expect.anything(), "publication", payload)
   expect(mocks.end).toHaveBeenCalledOnce()
 })

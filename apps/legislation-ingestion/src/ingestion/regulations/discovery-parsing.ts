@@ -1,12 +1,17 @@
-import { isAbsolute } from "node:path"
+import { randomUUID } from "node:crypto"
+import { rm } from "node:fs/promises"
+import { isAbsolute, join } from "node:path"
 import { isDeepStrictEqual } from "node:util"
 import { regulatoryParseSummarySchema } from "@repo/legislation-core/legal-text/parser-contract"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import type { FileArtifactStore } from "../documents/artifact-store.js"
 import { currentReceiptSchema, validateRegulatoryArtifactRetention } from "./artifact-backfill.js"
 import { legalDiscoveryPayloadHash, legalDiscoveryUnitSchema } from "./discovery-checkpoint.js"
 import { legalDiscoveryManifestSchema } from "./discovery-registration.js"
+import { materializeRegulatoryArtifact } from "./durable-artifact.js"
+import { retainRegulatoryNormalizedBundle } from "./durable-normalized-bundle.js"
 import { parseRegulatoryArtifact } from "./parser-bridge.js"
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
@@ -27,7 +32,11 @@ const storedUnitSchema = z.object({
 })
 
 /** Parses one acquired current unit and commits only a completely revalidated normalized generation. */
-export async function parseLegalDiscoveryArtifact(pool: pg.Pool, value: unknown) {
+export async function parseLegalDiscoveryArtifact(
+  pool: pg.Pool,
+  value: unknown,
+  options: { sourceStore?: FileArtifactStore; normalizedStore?: FileArtifactStore } = {}
+) {
   const input = inputSchema.parse(value)
   invariant(isAbsolute(input.outputRoot), "legal_discovery_normalized_directory_not_absolute")
   const manifestRow = await pool.query("SELECT body FROM legislation.legal_import_manifests WHERE id=$1", [
@@ -54,18 +63,48 @@ export async function parseLegalDiscoveryArtifact(pool: pg.Pool, value: unknown)
       acquired.acquisition_receipt.bytes === Number(acquired.artifact_bytes),
     "legal_discovery_parser_input_changed"
   )
-  await validateRegulatoryArtifactRetention(
-    acquired.storage_locator,
-    acquired.artifact_hash,
-    Number(acquired.artifact_bytes)
-  )
-  const parsed = await parseRegulatoryArtifact({
-    unit: manifestUnit,
-    artifactHash: acquired.artifact_hash,
-    path: acquired.storage_locator,
-    outputRoot: input.outputRoot
-  })
+  const durableSource = acquired.storage_locator.startsWith("regulatory-artifact://")
+  invariant(!durableSource || options.sourceStore !== undefined, "legal_discovery_source_store_required")
+  const materializedSource = durableSource
+    ? join(input.outputRoot, `${randomUUID()}.source.xml`)
+    : acquired.storage_locator
+  if (durableSource) {
+    await materializeRegulatoryArtifact(options.sourceStore!, {
+      locator: acquired.storage_locator,
+      hash: acquired.artifact_hash,
+      bytes: Number(acquired.artifact_bytes),
+      localPath: materializedSource
+    })
+  } else {
+    await validateRegulatoryArtifactRetention(
+      acquired.storage_locator,
+      acquired.artifact_hash,
+      Number(acquired.artifact_bytes)
+    )
+  }
+  let parsed
+  try {
+    parsed = await parseRegulatoryArtifact({
+      unit: manifestUnit,
+      artifactHash: acquired.artifact_hash,
+      path: materializedSource,
+      outputRoot: input.outputRoot
+    })
+  } finally {
+    if (durableSource) await rm(materializedSource, { force: true })
+  }
   const summary = regulatoryParseSummarySchema.parse(parsed.summary)
+  const normalizedLocator =
+    options.normalizedStore === undefined
+      ? parsed.directory
+      : (
+          await retainRegulatoryNormalizedBundle(options.normalizedStore, {
+            directory: parsed.directory,
+            generation: parsed.generation,
+            sourceHash: acquired.artifact_hash,
+            summary
+          })
+        ).locator
   const client = await pool.connect()
   try {
     await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE")
@@ -92,7 +131,7 @@ export async function parseLegalDiscoveryArtifact(pool: pg.Pool, value: unknown)
       invariant(
         locked.parser_hash === summary.parserCodeHash &&
           locked.normalized_generation === parsed.generation &&
-          locked.normalized_locator === parsed.directory &&
+          locked.normalized_locator === normalizedLocator &&
           isDeepStrictEqual(regulatoryParseSummarySchema.parse(locked.parse_summary), summary),
         "legal_discovery_parser_replay_conflict"
       )
@@ -107,7 +146,7 @@ export async function parseLegalDiscoveryArtifact(pool: pg.Pool, value: unknown)
           manifestUnit.key,
           summary.parserCodeHash,
           parsed.generation,
-          parsed.directory,
+          normalizedLocator,
           JSON.stringify(summary)
         ]
       )

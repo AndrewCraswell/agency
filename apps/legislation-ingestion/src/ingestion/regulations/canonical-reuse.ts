@@ -85,7 +85,13 @@ async function compareRecords(
 /** Verifies exact eCFR acquisition reuse across parser versions. Other corpora retain their own publication contracts. */
 export async function inspectCanonicalRegulatoryReuse(
   pool: pg.Pool,
-  input: { unit: unknown; artifactHash: string; parserCodeHash: string; directory: string }
+  input: {
+    unit: unknown
+    artifactHash: string
+    parserCodeHash: string
+    directory: string
+    artifactValidationPath?: string
+  }
 ) {
   const unit = regulatoryImportUnitSchema.parse(input.unit)
   invariant(unit.sourceId === "ecfr" && unitIdentity(unit) === unit.key, "canonical_reuse_requires_ecfr")
@@ -175,7 +181,11 @@ export async function inspectCanonicalRegulatoryReuse(
     )
     const artifact = artifacts.rows[0]
     invariant(artifact && Number(artifact.bytes) === candidate.summary.inputBytes, "canonical_artifact_mismatch")
-    await validateRegulatoryArtifactRetention(artifact.storage_locator, artifactHash, Number(artifact.bytes))
+    await validateRegulatoryArtifactRetention(
+      input.artifactValidationPath ?? artifact.storage_locator,
+      artifactHash,
+      Number(artifact.bytes)
+    )
     const editions = await client.query<{
       id: string
       code_id: string

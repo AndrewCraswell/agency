@@ -23,6 +23,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubEnv("DATABASE_URL", "postgresql://localhost:5432/legislation")
   vi.stubEnv("REGULATORY_NORMALIZED_DIRECTORY", "D:\\regulatory-normalized")
+  vi.stubEnv("AZURE_STORAGE_ACCOUNT", "regulatorytest")
   mocks.complete.mockResolvedValue({ sourceId: "ecfr", scopeKey: "d".repeat(64) })
   mocks.continue.mockResolvedValue({ id: "controller-run" })
 })
@@ -32,7 +33,11 @@ it("passes durable identities and the configured normalized root to parsing", as
   mocks.parse.mockResolvedValue({ generation: "c".repeat(64), records: 2, reused: false })
   const payload = { manifestId: "a".repeat(64), unitKey: "b".repeat(64) }
   await expect(runRegulatoryDiscoveryParsing(payload)).resolves.toMatchObject({ records: 2 })
-  expect(mocks.parse).toHaveBeenCalledWith(expect.anything(), { ...payload, outputRoot: "D:\\regulatory-normalized" })
+  expect(mocks.parse).toHaveBeenCalledWith(
+    expect.anything(),
+    { ...payload, outputRoot: "D:\\regulatory-normalized" },
+    { sourceStore: expect.anything(), normalizedStore: expect.anything() }
+  )
   expect(mocks.complete).toHaveBeenCalledWith(expect.anything(), "parsing", payload)
   expect(mocks.end).toHaveBeenCalledOnce()
 })

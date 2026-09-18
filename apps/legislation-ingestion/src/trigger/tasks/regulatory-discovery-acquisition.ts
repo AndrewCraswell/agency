@@ -1,6 +1,8 @@
 import { task } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
+import { loadConfig } from "../../config/config.js"
+import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { acquireLegalDiscoveryArtifact } from "../../ingestion/regulations/discovery-acquisition.js"
 import { completeLegalDiscoveryDispatch } from "../../ingestion/regulations/discovery-dispatch.js"
 import { continueRegulatoryDiscoveryStage } from "./regulatory-discovery-continuation.js"
@@ -36,6 +38,9 @@ export async function runRegulatoryDiscoveryAcquisition(value: unknown) {
     throw new Error("Regulatory acquisition requires a canonical PostgreSQL database")
   }
   const artifactDirectory = z.string().trim().min(1).parse(process.env.REGULATORY_ARTIFACT_DIRECTORY)
+  const config = loadConfig()
+  const storageAccount = z.string().trim().min(1).parse(config.azure.storageAccount)
+  const sourceStore = new AzureBlobArtifactStore(storageAccount, config.azure.federalSourceContainer)
   const pool = new pg.Pool({
     connectionString: databaseUrl.href,
     max: 2,
@@ -43,7 +48,7 @@ export async function runRegulatoryDiscoveryAcquisition(value: unknown) {
     statement_timeout: 30_000
   })
   try {
-    const result = await acquireLegalDiscoveryArtifact(pool, { ...payload, artifactDirectory })
+    const result = await acquireLegalDiscoveryArtifact(pool, { ...payload, artifactDirectory }, { sourceStore })
     const controllerScope = await completeLegalDiscoveryDispatch(pool, "acquisition", payload)
     return { ...result, payload, controllerScope }
   } finally {

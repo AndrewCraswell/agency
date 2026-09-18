@@ -141,23 +141,30 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
 - [ ] **ORCH-03 Add the acquisition worker adapter.** Wrap existing source clients/artifact acquisition with strict
   payloads, source budgets, artifact references and committed checkpoints. **Done:** interrupted downloads never
   produce a complete artifact; retry verifies checksum and reuses valid retained bytes. Depends on ORCH-01.
-  Local progress: one current discovery unit now streams through the existing bounded XML/checksum implementation and
-  atomically records its artifact and receipt on the registered discovery row. Retry revalidates retained bytes. Shared
-  provider admission/cooldown, persisted worker leases and deployed durable artifact storage remain open.
+  Local progress: one current discovery unit now streams through the existing bounded XML/checksum implementation,
+  uploads the verified file to the configured immutable federal source store and atomically records its content-addressed
+  locator and receipt on the registered discovery row. Retry revalidates retained bytes, including an existing remote
+  object. Shared provider admission/cooldown, persisted worker leases and deployed storage verification remain open.
 - [ ] **ORCH-04 Add the parser and validation worker adapters.** Invoke the existing Python bridge with bounded
   manifests/shards, resource limits and safe failure summaries. **Done:** process exit, timeout, missing shard and
   invalid envelope leave the unit unpublished; retry preserves deterministic normalized hashes. Depends on ORCH-03.
-  Local progress: acquired current units now use the existing bounded Python parser and full TypeScript shard,
-  provenance, hierarchy, hash and count validation. Parser state commits only after validation and deterministic retry
-  reuses the generation. Deployed runtime/resource smoke and durable submission/lease recovery remain open.
+  Local progress: acquired current units now materialize their verified source into worker-local scratch, use the existing
+  bounded Python parser and full TypeScript shard, provenance, hierarchy, hash and count validation, then stream every
+  summary/shard into the configured immutable normalized store. A content-addressed bundle descriptor is the checkpoint;
+  another worker can recreate and revalidate the exact generation after both producer scratch trees are removed. Parser
+  state commits only after the durable bundle exists. Deployed runtime/resource smoke and submission/lease recovery remain
+  open.
 - [ ] **ORCH-05 Add publication worker adapters.** Invoke existing eCFR/FR/annual writers only after full required-unit
   validation; persist stage completion with the canonical publication transaction. **Done:** missing annual volume or
   failed outbox write cannot partially promote a title. Depends on ORCH-04, ING-11.
-  Local progress: a parsed current eCFR unit now revalidates its manifest, receipt, source artifact and normalized shards,
-  then uses the existing fenced canonical staging/materialization/publication path. Its discovery row records the exact
-  published generation and edition only after the canonical transaction succeeds. Real retained Title 1 bytes published
-  368 members, one current head and one lexical outbox item; replay reused the same identities. FR/annual controller
-  handoff, deployed verification and downstream dispatch remain open.
+  Local progress: a parsed current eCFR unit now revalidates its manifest, receipt, durable source artifact and normalized
+  bundle after materializing both into exclusive worker scratch, then uses the existing fenced canonical
+  staging/materialization/publication path. Scratch is removed after success or failure while canonical storage retains
+  the durable source locator. Its discovery row records the exact published generation and edition only after the
+  canonical transaction succeeds. Real retained Title 1 bytes published 368 members, one current head and one lexical
+  outbox item; replay reused the same identities. A destructive PostgreSQL smoke also removed both producer scratch trees
+  before the next stage and published successfully from separate local artifact stores. FR/annual durable handoff,
+  deployed verification and downstream dispatch remain open.
 - [ ] **ORCH-06 Connect preparation, copying and acknowledgement.** Dispatch existing workers from publication state;
   route copy exhaustion to resumable INDEX-03 validation before acknowledgement. **Done:** copied-but-unacknowledged
   data remains unavailable, completed stage replay is safe, and no preparation task automatically creates vectors.

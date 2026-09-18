@@ -1,10 +1,16 @@
+import { randomUUID } from "node:crypto"
+import { rm } from "node:fs/promises"
+import { isAbsolute, join } from "node:path"
 import { isDeepStrictEqual } from "node:util"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import type { FileArtifactStore } from "../documents/artifact-store.js"
 import { currentReceiptSchema } from "./artifact-backfill.js"
 import { legalDiscoveryUnitSchema } from "./discovery-checkpoint.js"
 import { validateLegalDiscoveryManifest } from "./discovery-registration.js"
+import { materializeRegulatoryArtifact } from "./durable-artifact.js"
+import { materializeRegulatoryNormalizedBundle } from "./durable-normalized-bundle.js"
 import { importNormalizedRegulatoryUnit } from "./import-normalized.js"
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
@@ -47,7 +53,11 @@ export async function legalDiscoveryPublicationSource(pool: pg.Pool, value: unkn
 }
 
 /** Publishes one fully parsed current eCFR unit and records the canonical identities on its durable discovery row. */
-export async function publishLegalDiscoveryUnit(pool: pg.Pool, value: unknown) {
+export async function publishLegalDiscoveryUnit(
+  pool: pg.Pool,
+  value: unknown,
+  options: { sourceStore?: FileArtifactStore; normalizedStore?: FileArtifactStore; scratchRoot?: string } = {}
+) {
   const input = publicationInputSchema.parse(value)
   const manifestResult = await pool.query<{ body: unknown }>(
     "SELECT body FROM legislation.legal_import_manifests WHERE id=$1",
@@ -75,59 +85,93 @@ export async function publishLegalDiscoveryUnit(pool: pg.Pool, value: unknown) {
     "legal_discovery_publication_receipt_mismatch"
   )
 
-  const published = publicationResultSchema.parse(
-    await importNormalizedRegulatoryUnit(pool, {
-      manifest,
-      receipt: row.acquisition_receipt,
-      directory: row.normalized_locator,
-      parserCodeHash: row.parser_hash,
-      artifactLocator: row.storage_locator
-    })
+  const durableSource = row.storage_locator.startsWith("regulatory-artifact://")
+  const durableNormalized = row.normalized_locator.startsWith("regulatory-artifact://")
+  invariant(durableSource === durableNormalized, "legal_discovery_durability_mismatch")
+  invariant(
+    !durableSource ||
+      (options.sourceStore !== undefined && options.normalizedStore !== undefined && options.scratchRoot !== undefined),
+    "legal_discovery_artifact_stores_required"
   )
-
-  const client = await pool.connect()
+  if (options.scratchRoot !== undefined)
+    invariant(isAbsolute(options.scratchRoot), "legal_discovery_scratch_not_absolute")
+  const materializedSource = durableSource
+    ? join(options.scratchRoot!, `${randomUUID()}.source.xml`)
+    : row.storage_locator
+  let materializedDirectory: string | undefined
   try {
-    await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE")
-    await client.query("SET LOCAL lock_timeout='5s'")
-    await client.query("SET LOCAL statement_timeout='30s'")
-    const lockedResult = await client.query(
-      `SELECT manifest_id,state,unit,acquisition_receipt,storage_locator,parser_hash,normalized_locator,
+    if (durableSource) {
+      await materializeRegulatoryArtifact(options.sourceStore!, {
+        locator: row.storage_locator,
+        hash: row.acquisition_receipt.sha256,
+        bytes: row.acquisition_receipt.bytes,
+        localPath: materializedSource
+      })
+      materializedDirectory = (
+        await materializeRegulatoryNormalizedBundle(options.normalizedStore!, {
+          locator: row.normalized_locator,
+          outputRoot: options.scratchRoot!
+        })
+      ).directory
+    }
+    const published = publicationResultSchema.parse(
+      await importNormalizedRegulatoryUnit(pool, {
+        manifest,
+        receipt: row.acquisition_receipt,
+        directory: materializedDirectory ?? row.normalized_locator,
+        parserCodeHash: row.parser_hash,
+        artifactLocator: row.storage_locator,
+        artifactValidationPath: materializedSource
+      })
+    )
+
+    const client = await pool.connect()
+    try {
+      await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE")
+      await client.query("SET LOCAL lock_timeout='5s'")
+      await client.query("SET LOCAL statement_timeout='30s'")
+      const lockedResult = await client.query(
+        `SELECT manifest_id,state,unit,acquisition_receipt,storage_locator,parser_hash,normalized_locator,
         publication_generation_id,edition_id
        FROM legislation.legal_discovery_units
        WHERE source_id=$1 AND scope_key=$2 AND unit_key=$3 FOR UPDATE`,
-      [manifest.sourceId, manifest.scopeKey, input.unitKey]
-    )
-    const locked = discoveryRowSchema.parse(lockedResult.rows[0])
-    invariant(
-      locked.manifest_id === row.manifest_id &&
-        isDeepStrictEqual(locked.unit, row.unit) &&
-        isDeepStrictEqual(locked.acquisition_receipt, row.acquisition_receipt) &&
-        locked.storage_locator === row.storage_locator &&
-        locked.parser_hash === row.parser_hash &&
-        locked.normalized_locator === row.normalized_locator,
-      "legal_discovery_publication_input_changed"
-    )
-    if (locked.state === "published") {
-      invariant(
-        locked.publication_generation_id === published.generationId && locked.edition_id === published.editionId,
-        "legal_discovery_publication_conflict"
+        [manifest.sourceId, manifest.scopeKey, input.unitKey]
       )
-      await client.query("COMMIT")
-      return { ...published, reused: true }
-    }
-    const updated = await client.query(
-      `UPDATE legislation.legal_discovery_units
+      const locked = discoveryRowSchema.parse(lockedResult.rows[0])
+      invariant(
+        locked.manifest_id === row.manifest_id &&
+          isDeepStrictEqual(locked.unit, row.unit) &&
+          isDeepStrictEqual(locked.acquisition_receipt, row.acquisition_receipt) &&
+          locked.storage_locator === row.storage_locator &&
+          locked.parser_hash === row.parser_hash &&
+          locked.normalized_locator === row.normalized_locator,
+        "legal_discovery_publication_input_changed"
+      )
+      if (locked.state === "published") {
+        invariant(
+          locked.publication_generation_id === published.generationId && locked.edition_id === published.editionId,
+          "legal_discovery_publication_conflict"
+        )
+        await client.query("COMMIT")
+        return { ...published, reused: true }
+      }
+      const updated = await client.query(
+        `UPDATE legislation.legal_discovery_units
        SET state='published',publication_generation_id=$4,edition_id=$5,published_at=clock_timestamp()
        WHERE source_id=$1 AND scope_key=$2 AND unit_key=$3 AND state='parsed'`,
-      [manifest.sourceId, manifest.scopeKey, input.unitKey, published.generationId, published.editionId]
-    )
-    invariant(updated.rowCount === 1, "legal_discovery_publication_lost")
-    await client.query("COMMIT")
-    return published
-  } catch (error) {
-    await client.query("ROLLBACK")
-    throw error
+        [manifest.sourceId, manifest.scopeKey, input.unitKey, published.generationId, published.editionId]
+      )
+      invariant(updated.rowCount === 1, "legal_discovery_publication_lost")
+      await client.query("COMMIT")
+      return published
+    } catch (error) {
+      await client.query("ROLLBACK")
+      throw error
+    } finally {
+      client.release()
+    }
   } finally {
-    client.release()
+    if (durableSource) await rm(materializedSource, { force: true })
+    if (materializedDirectory !== undefined) await rm(materializedDirectory, { recursive: true, force: true })
   }
 }

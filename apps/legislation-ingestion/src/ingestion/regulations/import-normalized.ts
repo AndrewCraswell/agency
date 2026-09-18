@@ -38,6 +38,7 @@ export async function importNormalizedRegulatoryUnit(
     directory: string
     parserCodeHash: string
     artifactLocator: string
+    artifactValidationPath?: string
     reuseOnly?: boolean
   }
 ) {
@@ -45,7 +46,11 @@ export async function importNormalizedRegulatoryUnit(
   const receipt = regulatoryImportReceiptSchema.parse(input.receipt)
   const unit = manifest.units.find((item) => item.key === receipt.unit.key)
   invariant(unit && sameRegulatoryImportUnit(unit, receipt.unit), "unit_manifest_mismatch")
-  await validateRegulatoryArtifactRetention(input.artifactLocator, receipt.sha256, receipt.bytes)
+  await validateRegulatoryArtifactRetention(
+    input.artifactValidationPath ?? input.artifactLocator,
+    receipt.sha256,
+    receipt.bytes
+  )
   // Revalidate every retained shard before creating a database generation. No trust in a prior CLI report.
   const summary = await validateRegulatoryOutput(input.directory, receipt.unit, receipt.sha256, input.parserCodeHash)
   if (unit.sourceId === "ecfr") {
@@ -53,7 +58,8 @@ export async function importNormalizedRegulatoryUnit(
       unit,
       artifactHash: receipt.sha256,
       directory: input.directory,
-      parserCodeHash: input.parserCodeHash
+      parserCodeHash: input.parserCodeHash,
+      artifactValidationPath: input.artifactValidationPath
     })
     if (reuse.status === "verified") {
       return {

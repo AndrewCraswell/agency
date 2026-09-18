@@ -4105,3 +4105,22 @@ resolved `21 CFR 177.2800` and code-scoped `section 177.2800` to provision
 an absent exact section returned `not_found`; and an MCP-audience bearer returned 401. Evidence is
 `artifacts/regulatory-backfills/legal-citation-api-canary.json`. This is local evidence. Built-router and deployed
 acceptance remain HTTP-14, recurring ingestion remains disabled and bulk regulatory embeddings remain held.
+
+## Durable cross-worker current-eCFR artifacts
+
+Current discovery acquisition, parsing and publication no longer depend on a producer worker's filesystem. Acquisition
+streams the checksum-verified XML file into the configured federal source artifact store and commits a strict
+`regulatory-artifact://source/...` locator. Parsing materializes and rehashes that source into exclusive scratch, runs the
+existing bounded parser, then streams `summary.json` and every normalized NDJSON shard into the normalized artifact store.
+The database checkpoint contains a content-addressed bundle descriptor whose members bind file name, SHA-256 and byte
+count. Publication downloads and verifies the descriptor, summary, shards and source before canonical reuse or import,
+keeps the durable source locator in canonical storage and removes worker scratch on both success and failure.
+
+Focused unit and task-adapter verification passed 17 tests, including a real Python parser replay from an immutable
+normalized bundle. The destructive PostgreSQL discovery workflow passed both tests against a clean copy of the committed
+migration chain. Its end-to-end test deletes acquisition scratch before parsing and deletes the parser generation before
+publication, then proves the same worker-independent artifacts publish one edition with the expected current head and
+lexical outbox item. The active worktree's unrelated uncommitted migration `0000` still fails independently because it
+creates `votes_session_idx` before that workstream adds `votes.session_id`; the regulatory test did not modify that file.
+Azure identity/container connectivity and a deployed Trigger run remain open, as do durable Federal Register metadata,
+PDF and annual-CFR handoffs. Recurring ingestion and bulk regulatory embeddings remain disabled.

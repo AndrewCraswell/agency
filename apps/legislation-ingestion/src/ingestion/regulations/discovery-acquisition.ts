@@ -3,9 +3,11 @@ import { isDeepStrictEqual } from "node:util"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import type { FileArtifactStore } from "../documents/artifact-store.js"
 import { acquireCurrentRegulatoryArtifact, currentReceiptSchema } from "./artifact-backfill.js"
 import { legalDiscoveryPayloadHash, legalDiscoveryUnitSchema } from "./discovery-checkpoint.js"
 import { legalDiscoveryManifestSchema } from "./discovery-registration.js"
+import { retainRegulatoryArtifact } from "./durable-artifact.js"
 import type { RegulatorySourceClient } from "./source-client.js"
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
@@ -19,7 +21,7 @@ const inputSchema = z.strictObject({
 export async function acquireLegalDiscoveryArtifact(
   pool: pg.Pool,
   value: unknown,
-  options: { maximumBytes?: number; client?: RegulatorySourceClient } = {}
+  options: { maximumBytes?: number; client?: RegulatorySourceClient; sourceStore?: FileArtifactStore } = {}
 ) {
   const input = inputSchema.parse(value)
   invariant(isAbsolute(input.artifactDirectory), "legal_discovery_artifact_directory_not_absolute")
@@ -33,7 +35,19 @@ export async function acquireLegalDiscoveryArtifact(
   const acquired = await acquireCurrentRegulatoryArtifact(input.artifactDirectory, unit, options)
   const { reused, ...receiptValue } = acquired
   const receipt = currentReceiptSchema.parse(receiptValue)
-  const storageLocator = join(input.artifactDirectory, "blobs", `${receipt.sha256}.xml`)
+  const localPath = join(input.artifactDirectory, "blobs", `${receipt.sha256}.xml`)
+  const storageLocator =
+    options.sourceStore === undefined
+      ? localPath
+      : (
+          await retainRegulatoryArtifact(options.sourceStore, {
+            kind: "source",
+            hash: receipt.sha256,
+            bytes: receipt.bytes,
+            extension: "xml",
+            localPath
+          })
+        ).locator
   const client = await pool.connect()
   try {
     await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE")
