@@ -29,6 +29,33 @@ describe("semantic passage query", () => {
     expect(nearest).toContain("limit")
     expect(nearest).toContain('order by "distance" asc, "nearest_passage_embeddings"."section_id" asc')
     expect(query.sql).toContain('order by "distance" asc, "legislation"."document_sections"."id" asc')
-    expect(query.params).toEqual(expect.arrayContaining([20_000, "jurisdiction:ak", 26]))
+    expect(query.sql).toContain('"legislation"."document_section_embeddings"."section_id" like')
+    expect(query.params).toEqual(expect.arrayContaining(["bill:ak:%", "jurisdiction:ak", 26]))
+    expect(query.params).not.toContain(20_000)
+  })
+
+  it("keeps the bounded state graph while retaining a larger window for narrower relational filters", () => {
+    const embedding = Array.from({ length: 1536 }, () => 0)
+    const query = buildSemanticPassageSearchQuery(database, {
+      embedding,
+      jurisdictionIds: ["jurisdiction:nc"],
+      limit: 25,
+      sessionIds: ["session:nc:2025"]
+    }).toSQL()
+
+    expect(query.sql).toContain('"legislation"."document_section_embeddings"."section_id" like')
+    expect(query.params).toEqual(expect.arrayContaining(["bill:nc:%", 20_000, "session:nc:2025"]))
+  })
+
+  it("uses the global candidate window when more than one jurisdiction is requested", () => {
+    const embedding = Array.from({ length: 1536 }, () => 0)
+    const query = buildSemanticPassageSearchQuery(database, {
+      embedding,
+      jurisdictionIds: ["jurisdiction:ak", "jurisdiction:nc"],
+      limit: 25
+    }).toSQL()
+
+    expect(query.sql).not.toContain('"legislation"."document_section_embeddings"."section_id" like')
+    expect(query.params).toEqual(expect.arrayContaining([20_000, "jurisdiction:ak", "jurisdiction:nc"]))
   })
 })

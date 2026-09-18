@@ -18,7 +18,7 @@ import {
 } from "@repo/legislation-core/database/schema/schema"
 import { billActionTimestamp } from "@repo/legislation-core/domain/bill-action-timestamp"
 import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
-import { and, arrayOverlaps, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm"
+import { and, arrayOverlaps, asc, desc, eq, gte, inArray, like, lte, sql } from "drizzle-orm"
 import { getTableColumns, type SQL } from "drizzle-orm"
 
 const DEFAULT_LIMIT = 20
@@ -33,6 +33,7 @@ const MAXIMUM_QUERY_LENGTH = 500
 // acceptance found 20,000 candidates sufficient for the currently onboarded
 // state corpora while remaining below the request deadline on a cold cache.
 const SEMANTIC_PASSAGE_FILTER_CANDIDATE_LIMIT = 20_000
+const STATE_JURISDICTION_ID = /^jurisdiction:([a-z]{2})$/
 const {
   embedding: _billEmbedding,
   embeddingInputHash: _billEmbeddingInputHash,
@@ -1209,7 +1210,11 @@ export function buildSemanticPassageSearchQuery(
   const distance = sql<number>`${documentSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const snippet = sql<string | null>`left(${documentSections.text}, 1200)`
   const filters = passageFilters(input)
-  const nearestLimit = filters.length === 0 ? limit + offset + 1 : SEMANTIC_PASSAGE_FILTER_CANDIDATE_LIMIT
+  const jurisdictionSectionPrefix = semanticPassageJurisdictionSectionPrefix(input)
+  const nearestLimit =
+    filters.length === 0 || hasOnlySemanticPassageJurisdictionFilter(input)
+      ? limit + offset + 1
+      : SEMANTIC_PASSAGE_FILTER_CANDIDATE_LIMIT
   // Keep the HNSW order expression as the only nearest-neighbor ordering in
   // the bounded CTE. Adding a stable ID tie-breaker to this scan disables the
   // vector index and turns passage search into a full embedding-table sort.
@@ -1220,7 +1225,10 @@ export function buildSemanticPassageSearchQuery(
       .where(
         and(
           eq(documentSectionEmbeddings.model, route.model),
-          eq(documentSectionEmbeddings.inputContract, route.embeddingInputContract)
+          eq(documentSectionEmbeddings.inputContract, route.embeddingInputContract),
+          jurisdictionSectionPrefix === undefined
+            ? undefined
+            : like(documentSectionEmbeddings.sectionId, jurisdictionSectionPrefix)
         )
       )
       .orderBy(asc(distance))
@@ -1254,6 +1262,41 @@ export function buildSemanticPassageSearchQuery(
     .orderBy(asc(candidates.distance), asc(documentSections.id))
 }
 
+function semanticPassageJurisdictionSectionPrefix(
+  input: Omit<PassageSearchInput, "query"> & { embedding: number[] }
+): string | undefined {
+  if (input.jurisdictionIds?.length !== 1) {
+    return undefined
+  }
+  const match = STATE_JURISDICTION_ID.exec(input.jurisdictionIds[0] ?? "")
+  return match === null ? undefined : `bill:${match[1]}:%`
+}
+
+function hasOnlySemanticPassageJurisdictionFilter(
+  input: Omit<PassageSearchInput, "query"> & { embedding: number[] }
+): boolean {
+  return (
+    semanticPassageJurisdictionSectionPrefix(input) !== undefined &&
+    input.billIds === undefined &&
+    input.documentIds === undefined &&
+    input.documentClassifications === undefined &&
+    input.versionCodes === undefined &&
+    input.headings === undefined &&
+    input.pageFrom === undefined &&
+    input.pageTo === undefined &&
+    input.sessionIds === undefined &&
+    input.statuses === undefined &&
+    input.subjects === undefined &&
+    input.classifications === undefined &&
+    input.introducedFrom === undefined &&
+    input.introducedTo === undefined &&
+    input.updatedFrom === undefined &&
+    input.updatedTo === undefined &&
+    input.updatedToExclusive === undefined &&
+    input.sponsorIds === undefined
+  )
+}
+
 export async function semanticPassageSearch(
   database: LegislationDatabase,
   input: Omit<PassageSearchInput, "query"> & { embedding: number[] }
@@ -1261,10 +1304,11 @@ export async function semanticPassageSearch(
   const limit = input.limit ?? DEFAULT_LIMIT
   const offset = decodePassageSearchCursor(input.cursor, { ...input, query: "semantic" })
   // HNSW settings are read when PostgreSQL initializes the index scan. A CTE
-  // in the same statement is too late and can leave a selective jurisdiction
-  // query with no matches. Pin the settings and query to one transaction so
-  // iterative scanning can fill the bounded global candidate window before
-  // the relational filters are applied in bulk.
+  // in the same statement is too late and can leave a selective query with no
+  // matches. Pin the settings and query to one transaction. A single canonical
+  // jurisdiction is also encoded in the stable section ID and can therefore be
+  // filtered inside the graph scan; narrower relational filters still use the
+  // bounded candidate window before being applied in bulk.
   const rows = await database.transaction(async (transaction) => {
     await transaction.execute(sql`select
       set_config('hnsw.ef_search', '100', true),
