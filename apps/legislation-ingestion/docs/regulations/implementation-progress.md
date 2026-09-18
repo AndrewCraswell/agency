@@ -4393,3 +4393,44 @@ implementation evidence. Azure connectivity, a real multi-document issue through
 recovery and retained evidence from that run remain required before closing the FR orchestration gate. Annual-CFR
 discovery still uses the offline backfill path and has not received this worker adapter. Recurring ingestion and bulk
 regulatory embeddings remain disabled.
+
+## Complete 2020–2024 Federal Register source reconciliation
+
+The frozen Federal Register manifest `fr-2020-2024-manifest.json`, ID
+`ac666b7b72bcc6f54389853affdea47ddeb89244b1a03dcf5fc7c74d9af11705`, now has checksum-verified local source
+receipts for all 1,248 daily issues. The receipts contain 4,016,059,961 bytes, exactly matching the frozen inventory;
+all receipt keys, artifact hashes and issue identities are unique, and no expected-size, missing-blob or blob-size
+mismatch remains.
+
+The first complete parse correctly stopped on eight publisher defects: five malformed `FRDOC` footers, one Part II
+rule without a closing footer, and three repeated publication identities. Full-corpus replay then exposed five more
+corrupted filing-date strings when the footer boundary was initially tightened, plus one transient Windows rename
+failure after output validation. The final parser retains unambiguous numbers across historical punctuation and filing
+date corruption, requires a strict numeric date/time boundary when `Filed` is absent, and binds the footerless identity
+and three redundant-node suppressions to exact official artifact hashes and XML locators. Changed bytes, ambiguous
+footers and unreviewed duplicate identities still fail closed. The source review and hashes are recorded in
+[Federal Register source identities](fr-source-identities.md#reviewed-20202024-bulk-source-defects).
+
+Final parser hash `4a77318e9b94caf2e4c89cb394f123ea63c48c533805e4e23c8887480bb9bd2e` was produced in three disjoint year
+partitions: 2020–2021, 2022–2023 and 2024. The 2022–2023 worker completed 499/499 issues and the 2024 worker completed
+250/250, both with zero failures. The broader first worker was intentionally stopped after its 2020–2021 range and
+after it began replaying already-created 2022 generations; it was not treated as aggregate success. The subsequent
+full reconciliation independently revalidated every receipt, parser summary, shard hash, record schema, provenance,
+hierarchy, identity and count for all 1,248 issues under the final parser hash.
+
+`reconcile-fr-backfill` replays each of the 60 retained monthly FederalRegister.gov manifests exactly once, processes
+issues with bounded concurrency and writes replay-stable per-issue reports plus one aggregate. Its eight-defect canary
+reconciled 938 publications and eight presidential exclusions twice without changing reports. The complete run wrote
+1,248 unique issue reports and reconciled 141,580 supported publications with zero gaps: 16,044 final rules, 10,158
+proposed rules and 115,378 notices. It explicitly excludes 1,620 presidential documents, so supported publications plus
+exclusions exactly equal all 143,200 metadata records. One uncategorized publisher record uses its exact GovInfo XML
+classification; the other 141,579 use publisher metadata. All 329 correction links currently point outside their daily
+slice and remain `unresolved_target`, rather than being guessed.
+
+Evidence is under `artifacts/regulatory-backfills/fr-2020-2024-reconciliation/`. Its aggregate `summary.json` has
+SHA-256 `8375c2dc3693fc052a13d2a13bde37891551156567844474e29dfc3682807381`. Independent file-by-file audit found 1,248
+unique report IDs, dates, units and source artifact hashes, one parser hash, zero gaps and zero incomplete issues. All
+141,580 matched publications list an official individual PDF that has not yet been acquired. Therefore acquisition,
+XML normalization and text/metadata reconciliation are complete for this frozen window, while rendition acquisition,
+canonical publication, passage preparation, indexing and embeddings remain open. Recurring ingestion and bulk
+regulatory embeddings remain disabled.

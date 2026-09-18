@@ -98,8 +98,11 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   19,321,556 XML bytes, parsed 590 publications without warnings and reconciled every publication with zero gaps while
   retaining one presidential exclusion. Historical publication preparation now replays a retained monthly metadata
   manifest from the configured metadata root, validates that it covers the issue and retains its immutable locator,
-  avoiding per-day source refetches. Broad document-level XML joins, deployed monthly-evidence availability and required
-  rendition accounting remain open.
+  avoiding per-day source refetches. The complete 1,248-issue source backfill is now acquired, parsed and reconciled:
+  141,580 supported publications match exact metadata with zero gaps, while 1,620 presidential documents account for
+  the remainder of all 143,200 metadata records. Replay-stable per-issue reports were independently audited under one
+  parser hash. All 141,580 listed individual PDFs remain unacquired, so required rendition accounting, canonical
+  publication and deployed monthly-evidence availability remain open.
 - [ ] **ING-09 Finish source-agency mapping.** Persist publisher agency IDs/names and reviewed mappings to existing
   organization identities; preserve unresolved aliases and multiple issuing agencies. **Done:** unknown aliases remain
   searchable as source references without creating fictitious organizations or dropping documents.
@@ -129,7 +132,9 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   to the retained canonical recovery database: 1,390 registered units across 15 replay-bound pages. Volume
   acquisition/import fan-out and a deployed Trigger run remain open.
   The separate Federal Register 2020–2024 manifest is also admitted locally: 1,248 registered daily issue units across
-  13 pages, with an apply-ready controller preview. Independent document metadata and deployed fan-out remain open.
+  13 pages, with an apply-ready controller preview. Its 4,016,059,961 source bytes are acquired and all 1,248 issues now
+  pass final-parser and independent metadata reconciliation with zero gaps. Canonical publication, individual rendition
+  acquisition and deployed fan-out remain open.
 - [ ] **ING-14 Qualify extended history.** Sample each source-format era, then freeze FR 2000–2019/CFR 1996–2019 units
   with missing XML and alternate-rendition policies. **Done:** representative years and known defect fixtures pass;
   no pre-2000 FR XML assumption leaks into the supported manifest. Depends on ING-06, ING-12.
