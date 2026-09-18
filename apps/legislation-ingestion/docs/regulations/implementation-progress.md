@@ -13,6 +13,14 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Completed the first bounded Federal Register PDF structural-validation backfill. The retained applied report covers all
+100 publication dates from January 2 through May 22, 2020 and accounts for 10,878 supported publications with 10,878
+validated official PDF renditions. Ninety-nine dates were validated during this run, one date resumed from its durable
+checkpoint and 73 publication receipts were safely reused. The report declares `validationComplete: true`; its SHA-256
+is `9b4c5fd0532b3390fd75baf030242424675dd6122a70520372a72774658a3cb2`. This closes the bounded structural sample only:
+the report correctly retains `publicationReady: false`, made no canonical writes and did not enable recurring ingestion.
+The independent 2020-through-2024 acquisition backfill remains live and was not restarted.
+
 Deployed the production Trigger bundle twice to exercise the first bounded current-eCFR canary. Deployment
 `20260918.11` reached PostgreSQL but exposed that `statement_timeout` in `pg.Pool` startup parameters is incompatible
 with Railway PgBouncer. Commit `d05f440` removed that startup option from all regulatory task pools while retaining the
