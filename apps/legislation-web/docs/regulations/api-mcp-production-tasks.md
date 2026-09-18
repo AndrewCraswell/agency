@@ -57,9 +57,13 @@ vertical slices: application service, serializer, strict client parser, explicit
   exact text URL only with validated edition context. Provision-version lists, reverse memberships and discriminated
   direct version detail are implemented with caller/rights-bound reads and exact source context. Deployed acceptance
   remains open.
-- [ ] **HTTP-06 Implement bounded source-text and passage reads.** Ship version text/passages and passage detail using
+- [x] **HTTP-06 Implement bounded source-text and passage reads.** Ship version text/passages and passage detail using
   the existing lossless reader, anchors and continuation; enforce body and text limits. **Done:** complete continuation
-  reconstructs the selected source, oversized responses are bounded, revoked cached text is refused. Depends on HTTP-05, PASS-08.
+  reconstructs the selected source, oversized responses are bounded, revoked cached text is refused. Exact text and
+  passage routes now require an edition or source-observation context. Passage reads use the verified search-copy
+  receipt to select among tokenizer generations, verify copy revisions plus the stored count and owner, bind continuations to caller/context/rights/generation,
+  and return source text plus a text anchor without exposing embedding input text. Authenticated route, typed-client,
+  strict-contract and reader tests pass locally. Deployed acceptance remains HTTP-14. Depends on HTTP-05, PASS-08.
 - [ ] **HTTP-07 Implement citation resolution.** Ship provisions/resolve over canonical aliases with jurisdiction/code/
   edition constraints. **Done:** ambiguous and absent citations return the documented result with bounded candidates;
   no fuzzy guess is silently presented as an exact provision. Depends on HTTP-02–03, ING-10.

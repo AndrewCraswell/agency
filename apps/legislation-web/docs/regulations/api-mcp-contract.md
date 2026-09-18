@@ -94,8 +94,8 @@ entire title text or child collections. Readable text uses ordered source blocks
 | GET `/api/legal/provisions/{provisionId}/editions` | versionId?; sourceId? | `Page<LegalEditionMembership>`; edition ID ascending; rights-filtered membership discovery |
 | GET `/api/legal/versions/{versionId}` | editionId? for a provision; sourceObservationId? for a publication | `LegalVersionDetail`; discriminated immutable identity and optional validated context |
 | GET `/api/legal/versions/{versionId}/text` | exactly one editionId for provision text OR sourceObservationId for publication text; anchor OR cursor; limit | `ResourceResponse<LegalTextWindow>`; lossless ordered source blocks; locally implemented |
-| GET `/api/legal/versions/{versionId}/passages` | none | `Page<LegalPassage>`; ordinal/id; provision or publication version |
-| GET `/api/legal/passages/{passageId}` | none | `LegalPassage`; exact source/version/locator and bounded text |
+| GET `/api/legal/versions/{versionId}/passages` | exactly one editionId for a provision OR sourceObservationId for a publication; cursor; limit | `Page<LegalPassage>`; ordinal/id from the completed generation selected by the verified search-copy receipt; locally implemented |
+| GET `/api/legal/passages/{passageId}` | exactly one editionId for a provision OR sourceObservationId for a publication | `LegalPassage`; exact source/version/locator and bounded text; locally implemented |
 | POST `/api/legal/provisions/resolve` | citation, jurisdictionId, codeId?, editionId? OR asOf? | `CitationResolution`; resolved, ambiguous or not_found result |
 | GET `/api/legal/publications` | jurisdictionId, agencyId OR sourceId + sourceAgencyId, kind, publishedFrom, publishedTo, updatedSince | `Page<RegulatoryDocumentSummary>`; publication date descending/id |
 | GET `/api/legal/agencies` | jurisdictionId; sourceId?; q? | `Page<LegalAgencyReference>`; name/source/alias; publisher-reference directory, not new organization identities |

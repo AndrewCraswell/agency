@@ -5,6 +5,7 @@ import { createLegalAgenciesReader } from "../../request-handling/api/legal-agen
 import { createLegalBrowser } from "../../request-handling/api/legal-browse-read"
 import { createLegalCodesReader } from "../../request-handling/api/legal-codes-read"
 import { createLegalCoverageReader } from "../../request-handling/api/legal-coverage-read"
+import { createLegalPassageReader } from "../../request-handling/api/legal-passage-read"
 import { createLegalPublicationsReader } from "../../request-handling/api/legal-publications-read"
 import { createLegalSearch } from "../../request-handling/api/legal-search-read"
 import { createLegalTextReader } from "../../request-handling/api/legal-text-read"
@@ -21,6 +22,7 @@ export interface NextLegislationApplication {
   readonly readiness: NextDatabaseReadiness
   readonly readLegalText: ReturnType<typeof createLegalTextReader>
   readonly readLegalVersion: ReturnType<typeof createLegalVersionReader>
+  readonly legalPassages: ReturnType<typeof createLegalPassageReader>
   readonly legalAgencies: ReturnType<typeof createLegalAgenciesReader>
   readonly legalCodes: ReturnType<typeof createLegalCodesReader>
   readonly legalCoverage: ReturnType<typeof createLegalCoverageReader>
@@ -65,6 +67,7 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
     database,
     readLegalText: createLegalTextReader(pool, config.legalApi.allowedOrganizationIds),
     readLegalVersion: createLegalVersionReader(pool, config.legalApi.allowedOrganizationIds),
+    legalPassages: createLegalPassageReader(pool, passageSearchDatabase?.pool, config.legalApi.allowedOrganizationIds),
     legalAgencies: createLegalAgenciesReader(pool, config.legalApi.allowedOrganizationIds),
     legalCodes: createLegalCodesReader(pool, config.legalApi.allowedOrganizationIds),
     legalCoverage: createLegalCoverageReader(pool, passageSearchDatabase?.pool, config.legalApi.allowedOrganizationIds),

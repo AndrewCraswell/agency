@@ -24,7 +24,7 @@ export const legalTextRequestSchema = z
   })
 export type LegalTextRequest = z.input<typeof legalTextRequestSchema>
 
-const selectedContext = z.discriminatedUnion("kind", [
+export const legalSelectedTextContextSchema = z.discriminatedUnion("kind", [
   legalEditionContextSchema.extend({ kind: z.literal("provision") }),
   z.strictObject({
     kind: z.literal("publication"),
@@ -41,7 +41,7 @@ const selectedContext = z.discriminatedUnion("kind", [
 
 export const legalTextResponseSchema = resourceSchema
   .extend({
-    data: legalTextWindowSchema.extend({ selectedContext })
+    data: legalTextWindowSchema.extend({ selectedContext: legalSelectedTextContextSchema })
   })
   .superRefine(({ data }, ctx) => {
     const end = data.startBlock + data.blocks.length

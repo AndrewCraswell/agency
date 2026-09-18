@@ -43,6 +43,14 @@ import {
   type LegalCoverageRequest
 } from "./legal-coverage-contract"
 import {
+  legalPassageRequestSchema,
+  legalPassagesRequestSchema,
+  validateLegalPassageResponse,
+  validateLegalPassagesResponse,
+  type LegalPassageRequest,
+  type LegalPassagesRequest
+} from "./legal-passage-contract"
+import {
   legalPublicationsRequestSchema,
   legalPublicationVersionsRequestSchema,
   validateLegalPublicationResponse,
@@ -646,6 +654,37 @@ export class LegislationApiClient {
       return validateLegalVersionResponse(result, id, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid legal version response")
+    }
+  }
+
+  async listLegalPassages(versionId: string, query: LegalPassagesRequest, options?: ApiRequestOptions) {
+    const id = z.uuid().parse(versionId)
+    const input = legalPassagesRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/versions/${segment(id)}/passages`, query: input },
+      options
+    )
+    try {
+      return validateLegalPassagesResponse(result, id, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal passages response")
+    }
+  }
+
+  async getLegalPassage(passageId: string, query: LegalPassageRequest, options?: ApiRequestOptions) {
+    const id = z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .parse(passageId)
+    const input = legalPassageRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/passages/${segment(id)}`, query: input },
+      options
+    )
+    try {
+      return validateLegalPassageResponse(result, id, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal passage response")
     }
   }
 
