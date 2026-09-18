@@ -1,5 +1,34 @@
 # Open States rollout requirements and results
 
+## September 18 Alaska and North Carolina serving acceptance
+
+- [x] The North Carolina frozen current-bill cycle reached its authoritative completion path and dispatched the
+  shared content controller. The callback processed the bounded changed-bill set without resetting the frozen
+  inventory or overlapping the state lease.
+- [x] Reconciled the current North Carolina scraper observations with canonical people deterministically. The locked
+  apply resolved 58,789 vote positions and 16,908 sponsorships. A repeat plan had zero resolvable updates; the five
+  remaining committee-label sponsorships and four duplicate person/classification conflicts remain explicit instead
+  of being guessed.
+- [x] Alaska session 34 and North Carolina session 2025 document acceptance has no unresolved OCR failure, no
+  processed document without sections and no missing or stale routed bill or section embedding. The final North
+  Carolina embedding run completed on Trigger `20260918.6`; no overlapping run was started.
+- [x] Added and ran a read-only, deterministic passage-corpus parity audit across every processed historical document
+  in both states. All 256 document-keyed checksum buckets matched between canonical PostgreSQL and the isolated
+  ParadeDB copy: Alaska 61,391 documents and 259,076 sections; North Carolina 30,315 documents and 151,997 sections.
+  The passage change queue was empty, its backfill checkpoint complete and its BM25 index valid and ready at the
+  observation.
+- [x] Corrected semantic passage SQL so its bounded nearest-neighbor CTE can use the existing HNSW index. HNSW
+  settings and the scan now execute on the same transaction-pinned connection. Selective requests retrieve a bounded
+  20,000-result global semantic window before applying state and document filters in bulk, avoiding both empty
+  post-filtered pages and unbounded joined scans. Corrected hybrid passage search to use the isolated ranked lexical
+  store instead of the legacy primary-database full-text query. State-filtered production acceptance returned three
+  correctly scoped results in every lexical, semantic and hybrid check for both states. The coldest semantic check was
+  North Carolina at 4.85 seconds; the other five checks completed in 1.70 seconds or less.
+- [x] North Carolina event ingestion is an hourly current-calendar snapshot, not a historical meeting archive. Eleven
+  hosted event runs completed during the rollout. Production retains one source-backed meeting dated September 16;
+  the latest empty calendar does not authorize deletion or a historical-completeness claim. This is a documented
+  source boundary rather than a failed ingestion lane.
+
 ## September 17 self-hosted refresh closure
 
 - [x] Replaced the Alaska and North Carolina hosted-API schedules with six active self-hosted bill, event and content
@@ -11,9 +40,9 @@
 - [x] Alaska frozen bill inventory `aabfb2518ee7c6934f4aeb35cedbc350659c397e0edd1dcc77ab1b576278f2a9`
   completed all 87/87 promotion receipts on production. No active Alaska bill-batch ownership remained, and the
   completion path dispatched the Alaska content controller.
-- [ ] North Carolina frozen bill inventory `747a0fd613bf82dbab2427280872d9cdb4544e6b77584b0ed4a4ee2b7374dcb7`
-  was at 56/235 receipts at the 23:25 UTC observation and still advancing under the shared fan-out controller. Final
-  content and serving acceptance wait for all receipts.
+- [x] North Carolina frozen bill inventory `747a0fd613bf82dbab2427280872d9cdb4544e6b77584b0ed4a4ee2b7374dcb7`
+  reached the authoritative promotion-complete path and dispatched the shared content controller. Final content,
+  embedding and passage-copy acceptance is recorded in the September 18 section above.
 - [x] Implemented durable people and committee freshness acquisition. The daily schedule resolves Open States people
   `main`, freezes the exact 40-character commit, downloads that immutable archive, writes checksum-verified current and
   history manifests for each enabled state, and replays the shared people/term/committee/membership importer. Source
