@@ -45,6 +45,19 @@ admission or cancellation-recovery dispatcher are provided by this slice.
 
 ## Scope and default backfill order
 
+`pnpm --filter legislation-ingestion tool regulations/register-regulatory-historical-manifest --environment <name>
+--manifest <frozen.json> --source govinfo-cfr --output <receipt.json> [--after <unit-key>] [--limit 100]` previews one
+historical admission page without opening a database. `--apply --plan <preview-page-id>` additionally requires the same
+`REGULATORY_ENVIRONMENT` and a canonical `DATABASE_URL`. The command validates the complete inventory before selecting
+units, stores that full manifest once, and registers only the selected source page into the durable source-stage work
+table. Pages use an exact prior-unit cursor and immutable payload hashes; retrying the same page is a no-op, while a
+foreign or stale cursor fails. Admission downloads nothing, submits no Trigger task and does not enable a schedule.
+
+After admission, the existing discovery controller can see the registered rows and create bounded stage intents. Its
+acquisition, parsing and publication services currently accept current-discovery manifests, so historical dispatch must
+remain off until those adapters use the shared historical/current import contract and annual publication coordinates all
+volumes of a title.
+
 `inspect:regulatory-canonical --manifest <frozen.json> --replay <complete-replay.json> --report <new-report.json>`
 checks the retained local eCFR database selected by `REGULATORY_TEST_DATABASE_URL`. It requires the exact complete
 replay scope and current parser hash, uses a read-only PostgreSQL connection, and takes one repeatable-read snapshot

@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added the historical-manifest admission boundary that was missing between frozen GovInfo inventory and the durable
+source-stage controller. One complete validated backfill manifest is stored unchanged, while source-specific units are
+registered into the shared discovery work table in keyset pages capped at 100. The page identity binds the manifest,
+source, scope, prior cursor and every unit payload hash. Exact task retry reuses the committed page; an unknown, skipped
+or stale cursor fails without admitting units. Registration performs no provider I/O and keeps recurring ingestion
+disabled. The `register-regulatory-historical-manifest` operator command is read-only by default and requires its exact
+preview page hash plus the configured deployment environment before database writes.
+
+A destructive PostgreSQL check passed three cases: two one-volume pages retained one full manifest and two durable work
+rows, replay of the first page inserted nothing, a foreign cursor wrote no unit, and a tampered manifest wrote no
+checkpoint. Focused formatting, lint and ingestion type-check also pass. This advances ORCH-02 and ORCH-12. Historical
+acquisition/parsing still need to accept the shared historical unit contract, and annual title publication remains a
+separate all-volume gate; no source download, Trigger submission, canonical publication or schedule ran in this slice.
+The read-only operator smoke also validated retained 49-title manifest
+`c78337adbdec100afe517c85e007063420a17c38851d4c4d72003c83d246f3ee` and planned its first 25-unit page as
+`9565442ca0de484498a19fe85ce2b40e09d3362a70e5e40995e5d3678bb1a560`; the receipt is
+`artifacts/regulatory-backfills/ecfr-recovery-registration-preview.json` and no database was opened.
+
 Added the deployed-task boundary for atomic annual-CFR title publication. `regulatory-annual-publication` accepts one
 frozen historical manifest, package year, title and one to 200 exact volume-generation hashes. It shares the two-worker
 regulatory publication queue, opens only a canonical database and delegates to the existing fail-closed title publisher.

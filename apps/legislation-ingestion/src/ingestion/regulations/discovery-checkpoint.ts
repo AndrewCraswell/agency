@@ -96,7 +96,7 @@ const checkpointColumns = `source_id AS "sourceId",scope_key AS "scopeKey",query
   to_char(last_success_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "lastSuccessAt",
   last_page_id AS "lastPageId",revision::integer`
 
-const sourceMetadata = {
+export const legalDiscoverySourceMetadata = {
   ecfr: ["Office of the Federal Register and Government Publishing Office", "official"],
   "govinfo-fr": ["Government Publishing Office", "official"],
   "govinfo-cfr": ["Government Publishing Office", "official"]
@@ -124,7 +124,7 @@ export async function startLegalDiscoveryAttempt(pool: pg.Pool, value: unknown) 
   const input = attemptSchema.parse(value)
   const scope = legalDiscoveryScope(input.sourceId, input.query)
   return transaction(pool, async (client) => {
-    const [publisher, authority] = sourceMetadata[scope.sourceId]
+    const [publisher, authority] = legalDiscoverySourceMetadata[scope.sourceId]
     await client.query(
       `INSERT INTO legislation.legal_sources(id,publisher,authority) VALUES($1,$2,$3)
        ON CONFLICT(id) DO UPDATE SET publisher=legal_sources.publisher

@@ -138,6 +138,10 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   after committing changed units, and every canonically completed source-stage worker replenishes that bounded window
   with a replay-stable global key after closing its database pool. Multi-source admission, deployed verification and
   measured aggregate limits remain open.
+  Frozen historical manifests can now enter the same controller tables without loading the inventory into a Trigger
+  payload. Registration retains the complete manifest once and admits source-specific keyset pages of at most 100 with
+  exact page replay, cursor continuity and immutable unit checks. The historical acquisition, parse and publication
+  adapters still need to consume those registered rows before this task can close.
   Model-bound preparation waves now also have an explicit planning controller. It registers at most ten admitted owners
   per run, closes the pool and schedules one replay-stable continuation bound to the catalog and committed selected
   count. It stops only at exact manifest exhaustion and never submits preparation children; recovery remains a separate
@@ -241,7 +245,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   cutoff, wave and bounded worker size to one plan hash. Apply additionally requires the trusted configured model, uses a
   global seven-day Trigger key and retains an exclusive fsynced receipt. The real retained-database preview reconciled
   275,138 versions without dispatch. Targeted repair and deployed apply evidence remain open; reviewed model selection
-  still gates the current-eCFR apply.
+  still gates the current-eCFR apply. `register-regulatory-historical-manifest` now previews one exact source page from a
+  complete historical inventory and requires that page hash plus the configured environment before admission. It writes
+  an exclusive fsynced disposition receipt and performs no source request or task submission.
 - [ ] **ORCH-13 Run deployed fault-injection smoke.** Exercise 429/5xx, missing blob, parser kill, lost lease, duplicate
   parent, submit-before-ack crash, target commit/source failure and cancelled child. **Done:** retained run IDs and DB
   checks show no lost work, duplicate publication or premature acknowledgement. Depends on ORCH-03–12, OPS-04–05.
