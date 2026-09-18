@@ -4034,3 +4034,28 @@ The API-backed `search_regulations` MCP tool returned the same document/version/
 This supplies current-code, difficult-table, historical-annual and Federal Register publication portions of local
 EVAL-11. It is not a deployed canary and contains no vectors. Human relevance review, selected route, bounded persisted
 vectors and deployed acceptance remain open. Recurring ingestion and bulk embeddings remain disabled.
+
+## Full-current tokenizer terminal audit and citation resolution
+
+The prior read-only tokenizer process ID 76852 is no longer present, but its retained terminal artifacts establish that
+the run completed rather than requiring a restart. `canonical-preparation-all-current/progress.json` contains 49 selected
+editions and 49 results: 21 computed and 28 reused. `audit-2026-09-17.json` reports 275,149 records prepared for both
+`openai/text-embedding-3-small` with pinned `tiktoken:1.0.22:cl100k_base` and `voyageai/voyage-4` with pinned
+`huggingface-tokenizers:0.2.0:voyage-4:44f3b2ae4ddf33403ed4dd66bec3fa48ff7dbbf9`. Both prepared every record with
+zero invalid, oversized, empty or blocked preparations. Terminal integrity and tokenizer qualification are true.
+Table-shape qualification remains false in that terminal audit because 148 table blocks required source review; newer
+review artifacts are retained and must be reconciled separately before closing the table gate. No embedding provider
+requests or vector writes occurred.
+
+HTTP-07 now has a strict `CitationResolution` request/result contract, authenticated
+`POST /api/legal/provisions/resolve` route and typed client. It accepts canonical CFR identities and deterministic full
+CFR citation forms, applies jurisdiction/code/edition constraints, authorizes the selected source rights before returning
+metadata, bounds ambiguous candidates to 25 and never performs fuzzy text matching. Unsupported `asOf` selection retains
+the documented `historical_coverage_unavailable` conflict instead of selecting nearby text.
+
+The real retained-database canary passed through the WorkOS authentication boundary, handler and typed client. It
+resolved `21 CFR 177.2800` and code-scoped `section 177.2800` to provision
+`fed91a5a-01f7-4d42-a690-ffbade55b6da`; unscoped `section 1.1` returned an ambiguous 25-candidate page with truncation;
+an absent exact section returned `not_found`; and an MCP-audience bearer returned 401. Evidence is
+`artifacts/regulatory-backfills/legal-citation-api-canary.json`. This is local evidence. Built-router and deployed
+acceptance remain HTTP-14, recurring ingestion remains disabled and bulk regulatory embeddings remain held.

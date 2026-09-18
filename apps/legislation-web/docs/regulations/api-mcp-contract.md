@@ -10,6 +10,8 @@ are implemented locally. The typed direct-version route resolves both provision 
 namespaces with optional exact source context;
 code detail serves authorized metadata, published edition-component counts and the explicit current eCFR edition;
 complete-history and search-capability enrichment remains planned.
+[Citation resolution](#reader-traversal-and-source-context) is implemented locally through the authenticated typed
+`POST /api/legal/provisions/resolve` route and client.
 [Federal lexical search](legal-search-serving.md) is also locally implemented as a POST route and typed client;
 the API-backed `search_regulations` tool is also implemented locally. The rights-filtered coverage route, typed client
 and API-backed `get_regulatory_coverage` tool are implemented locally. Other routes/tools remain proposed.
@@ -96,7 +98,7 @@ entire title text or child collections. Readable text uses ordered source blocks
 | GET `/api/legal/versions/{versionId}/text` | exactly one editionId for provision text OR sourceObservationId for publication text; anchor OR cursor; limit | `ResourceResponse<LegalTextWindow>`; lossless ordered source blocks; locally implemented |
 | GET `/api/legal/versions/{versionId}/passages` | exactly one editionId for a provision OR sourceObservationId for a publication; cursor; limit | `Page<LegalPassage>`; ordinal/id from the completed generation selected by the verified search-copy receipt; locally implemented |
 | GET `/api/legal/passages/{passageId}` | exactly one editionId for a provision OR sourceObservationId for a publication | `LegalPassage`; exact source/version/locator and bounded text; locally implemented |
-| POST `/api/legal/provisions/resolve` | citation, jurisdictionId, codeId?, editionId? OR asOf? | `CitationResolution`; resolved, ambiguous or not_found result |
+| POST `/api/legal/provisions/resolve` | citation, jurisdictionId, codeId?, editionId? OR asOf? | `CitationResolution`; resolved, ambiguous or not_found result; locally implemented |
 | GET `/api/legal/publications` | jurisdictionId, agencyId OR sourceId + sourceAgencyId, kind, publishedFrom, publishedTo, updatedSince | `Page<RegulatoryDocumentSummary>`; publication date descending/id |
 | GET `/api/legal/agencies` | jurisdictionId; sourceId?; q? | `Page<LegalAgencyReference>`; name/source/alias; publisher-reference directory, not new organization identities |
 | GET `/api/legal/publications/{documentId}` | versionId? | `RegulatoryDocumentDetail`; latest validated default; dates, kind, agencies, current text version ID |
@@ -116,7 +118,10 @@ is discoverable through document/relationship/search results; a broad action-sea
 
 `CitationResolution` includes normalized input, status, exact provision/version when resolved, or at most 25 candidates
 with a refinement requirement when ambiguous. A conflicting jurisdiction/code is invalid. Bare citations such as
-`section 12` cannot resolve silently across codes; source citations are matched through the canonical alias registry.
+`section 12` cannot resolve silently across codes. Current CFR citations match canonical provision identity keys and
+exact published edition-native citations after deterministic citation parsing. Future provider aliases must enter the
+same evidence-backed identity boundary before this resolver can serve them; descriptive or approximate text is never
+used as a fuzzy citation match.
 
 Diff requires two versions of the same provision or publication. Different owners return `400 invalid_request`;
 cross-state semantic comparison is a later analysis feature. Hunk types are added/removed/unchanged, with source
@@ -129,7 +134,7 @@ not an unbounded synchronous recomputation on every page.
 The executable foundation is C's `src/legal-text/reader-contract.ts` and `reader-text.ts`. Database-backed exact
 text reads, the explicit HTTP text route and typed client are implemented behind the organization allowlist.
 Code/edition lists, provision traversal, provision detail, version history, reverse edition membership, direct version
-detail and stage-specific coverage are implemented locally; citation resolution and deployed acceptance remain phase gates.
+detail, citation resolution and stage-specific coverage are implemented locally; deployed acceptance remains a phase gate.
 
 Coverage reports one rights-visible published edition per row. `sourceCollection`, `canonical`, `lexical` and `semantic`
 are independent stages with explicit status, reason and requested/available/excluded counts. Canonical record count comes

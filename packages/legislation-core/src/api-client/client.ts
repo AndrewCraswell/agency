@@ -32,6 +32,11 @@ import {
   type LegalProvisionsRequest
 } from "./legal-browse-contract"
 import {
+  legalCitationRequestSchema,
+  validateLegalCitationResponse,
+  type LegalCitationRequest
+} from "./legal-citation-contract"
+import {
   legalCodesRequestSchema,
   validateLegalCodesResponse,
   validateLegalCodeResponse,
@@ -591,6 +596,19 @@ export class LegislationApiClient {
       return validateLegalProvisionResponse(result, id, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid legal provision response")
+    }
+  }
+
+  async resolveLegalCitation(input: LegalCitationRequest, options?: ApiRequestOptions) {
+    const request = legalCitationRequestSchema.parse(input)
+    const result = await this.#request(
+      { method: "POST", path: "/api/legal/provisions/resolve", body: request },
+      options
+    )
+    try {
+      return validateLegalCitationResponse(result, request)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal citation resolution response")
     }
   }
 

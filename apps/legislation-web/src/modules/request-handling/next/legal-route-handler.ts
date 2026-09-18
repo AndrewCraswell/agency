@@ -1,6 +1,7 @@
 import { getNextLegislationApplication } from "../../legislation/runtime/runtime"
 import { createLegalAgenciesApiHandler } from "../api/legal-agencies-routes"
 import { createLegalBrowseApiHandler } from "../api/legal-browse-routes"
+import { createLegalCitationApiHandler } from "../api/legal-citation-routes"
 import { createLegalCodesApiHandler } from "../api/legal-codes-routes"
 import { createLegalCoverageApiHandler } from "../api/legal-coverage-routes"
 import { createLegalPassageApiHandler } from "../api/legal-passage-routes"
@@ -48,6 +49,11 @@ export async function handleLegalPublicationsRequest(request: Request): Promise<
 export async function handleLegalBrowseRequest(request: Request): Promise<Response> {
   const application = getNextLegislationApplication()
   return executeAuthenticatedApiRequest(request, createLegalBrowseApiHandler(application.legalBrowser))
+}
+
+export async function handleLegalCitationRequest(request: Request): Promise<Response> {
+  const application = getNextLegislationApplication()
+  return executeAuthenticatedApiRequest(request, createLegalCitationApiHandler(application.resolveLegalCitation))
 }
 
 export async function handleLegalSearchRequest(request: Request): Promise<Response> {

@@ -3,6 +3,7 @@ import { OpenRouterRetrievalClient } from "../../../services/openrouter/openrout
 import { loadConfig, type LegislationConfig } from "../../configuration/config"
 import { createLegalAgenciesReader } from "../../request-handling/api/legal-agencies-read"
 import { createLegalBrowser } from "../../request-handling/api/legal-browse-read"
+import { createLegalCitationResolver } from "../../request-handling/api/legal-citation-read"
 import { createLegalCodesReader } from "../../request-handling/api/legal-codes-read"
 import { createLegalCoverageReader } from "../../request-handling/api/legal-coverage-read"
 import { createLegalPassageReader } from "../../request-handling/api/legal-passage-read"
@@ -28,6 +29,7 @@ export interface NextLegislationApplication {
   readonly legalCoverage: ReturnType<typeof createLegalCoverageReader>
   readonly legalPublications: ReturnType<typeof createLegalPublicationsReader>
   readonly legalBrowser: ReturnType<typeof createLegalBrowser>
+  readonly resolveLegalCitation: ReturnType<typeof createLegalCitationResolver>
   readonly searchLegal: ReturnType<typeof createLegalSearch>
   close(): Promise<void>
 }
@@ -73,6 +75,7 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
     legalCoverage: createLegalCoverageReader(pool, passageSearchDatabase?.pool, config.legalApi.allowedOrganizationIds),
     legalPublications: createLegalPublicationsReader(pool, config.legalApi.allowedOrganizationIds),
     legalBrowser: createLegalBrowser(pool, config.legalApi.allowedOrganizationIds),
+    resolveLegalCitation: createLegalCitationResolver(pool, config.legalApi.allowedOrganizationIds),
     searchLegal: createLegalSearch(pool, passageSearchDatabase?.pool, config.legalApi.allowedOrganizationIds),
     queryService: new LegislationQueryService(database, retrievalClient, rankedPassageSearch),
     retrievalClient,

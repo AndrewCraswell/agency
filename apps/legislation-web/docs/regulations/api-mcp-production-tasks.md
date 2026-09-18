@@ -64,9 +64,15 @@ vertical slices: application service, serializer, strict client parser, explicit
   receipt to select among tokenizer generations, verify copy revisions plus the stored count and owner, bind continuations to caller/context/rights/generation,
   and return source text plus a text anchor without exposing embedding input text. Authenticated route, typed-client,
   strict-contract and reader tests pass locally. Deployed acceptance remains HTTP-14. Depends on HTTP-05, PASS-08.
-- [ ] **HTTP-07 Implement citation resolution.** Ship provisions/resolve over canonical aliases with jurisdiction/code/
+- [x] **HTTP-07 Implement citation resolution.** Ship provisions/resolve over canonical aliases with jurisdiction/code/
   edition constraints. **Done:** ambiguous and absent citations return the documented result with bounded candidates;
   no fuzzy guess is silently presented as an exact provision. Depends on HTTP-02–03, ING-10.
+  Local progress: the strict request/result contract, authenticated POST route and typed client resolve canonical CFR
+  identities and complete printed CFR citations against published, rights-visible editions. A bare section cannot
+  silently resolve without code or edition context. The retained current-eCFR canary resolved `21 CFR 177.2800` and its
+  Title 21-scoped section form to provision `fed91a5a-01f7-4d42-a690-ffbade55b6da`, returned 25 bounded candidates plus
+  truncation for unscoped `section 1.1`, returned `not_found` for an absent exact citation and rejected the MCP audience
+  at the API boundary with 401. Deployed acceptance remains HTTP-14.
 - [x] **HTTP-08 Implement publication and agency discovery.** Ship publication list/detail/versions and source-agency
   directory with publication-date/kind/agency filters. **Done:** unresolved source agencies remain representable, duplicate
   printed numbers resolve to distinct canonical documents, all results retain exact provenance. Depends on ING-05/09, HTTP-01/03.

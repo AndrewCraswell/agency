@@ -12,6 +12,7 @@
     "./api-client/envelopes": "./src/api-client/envelopes.ts",
     "./api-client/legal-agencies-contract": "./src/api-client/legal-agencies-contract.ts",
     "./api-client/legal-browse-contract": "./src/api-client/legal-browse-contract.ts",
+    "./api-client/legal-citation-contract": "./src/api-client/legal-citation-contract.ts",
     "./api-client/legal-coverage-contract": "./src/api-client/legal-coverage-contract.ts",
     "./api-client/legal-publications-contract": "./src/api-client/legal-publications-contract.ts",
     "./api-client/legal-passage-contract": "./src/api-client/legal-passage-contract.ts",
