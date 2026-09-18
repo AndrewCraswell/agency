@@ -13,6 +13,20 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Removed serial Trigger submission from the regulatory source-stage controller while preserving its persist-before-submit
+boundary. Each controller payload now binds a submission concurrency from one through 16, defaulting to four; the
+operator preview and plan hash include that value so a 2/4/8/16 trial cannot silently run at a different setting. A
+shared bounded concurrency primitive submits only already-persisted dispatch intents. The controller waits for every
+admitted peer to settle before surfacing an uncertain submission, so successfully accepted peers retain their database
+handles and task retry reuses them. Worker queues remain the separate limit on actual source, parser and publication
+execution.
+
+Focused controller and continuation coverage passes 17 tests, including an observed peak of exactly two concurrent
+submissions for a six-intent fixture and rejection of zero or more than 16. The dedicated destructive PostgreSQL
+discovery lifecycle passes two integration tests with the new plan payload and hash. The complete
+ingestion/parsing/tools suite passes 234 files and 1,879 tests. This establishes locally testable fan-out controls; it
+does not substitute for the pending deployed 2/4/8/16 capacity trials.
+
 Expanded the Federal Register artifact and reconciliation canary from one issue to an eight-issue bounded trial using the
 frozen 2020–2024 manifest. The January 2–13, 2020 units acquired 19,321,556 official GovInfo XML bytes with no failures.
 All eight parsed with no warnings into 590 publications in 3.026 aggregate parser seconds: 83 rules, 48 proposed rules

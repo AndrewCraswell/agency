@@ -20,7 +20,8 @@ export const legalDiscoveryDispatchPlanSchema = z.strictObject({
   sourceId: sourceSchema,
   scopeKey: hashSchema,
   afterUnitKey: hashSchema.nullable().default(null),
-  limit: z.int().min(1).max(100).default(25)
+  limit: z.int().min(1).max(100).default(25),
+  submissionConcurrency: z.int().min(1).max(16).default(4)
 })
 
 const candidateSchema = z.object({

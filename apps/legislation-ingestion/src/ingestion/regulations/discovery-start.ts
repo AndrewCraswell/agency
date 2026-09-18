@@ -13,7 +13,8 @@ export const legalDiscoveryStartRequestSchema = z.strictObject({
     .regex(/^[a-z][a-z0-9-]{0,63}$/),
   sourceId: z.enum(["ecfr", "govinfo-fr", "govinfo-cfr"]),
   scopeKey: hashSchema,
-  limit: z.int().min(1).max(100).default(25)
+  limit: z.int().min(1).max(100).default(25),
+  submissionConcurrency: z.int().min(1).max(16).default(4)
 })
 
 const checkpointSchema = z.object({
@@ -93,7 +94,8 @@ export async function inspectLegalDiscoveryStart(pool: pg.Pool, value: unknown) 
       sourceId: input.sourceId,
       scopeKey: input.scopeKey,
       afterUnitKey: null,
-      limit: input.limit
+      limit: input.limit,
+      submissionConcurrency: input.submissionConcurrency
     })
     const runnable = units.pending + units.registered + units.acquired + units.parsed
     const planId = digest(

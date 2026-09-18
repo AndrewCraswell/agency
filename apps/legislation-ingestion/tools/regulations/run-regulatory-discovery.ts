@@ -13,6 +13,7 @@ const program = new Command()
   .requiredOption("--source <source>", "ecfr, govinfo-fr or govinfo-cfr")
   .requiredOption("--scope <hash>", "persisted discovery scope hash")
   .option("--limit <number>", "controller window size", "25")
+  .option("--submission-concurrency <number>", "parallel Trigger submissions, from 1 through 16", "4")
   .option("--apply", "submit the controller; without this flag the command is read-only")
   .option("--plan <hash>", "exact preview plan hash required with --apply")
   .action(run)
@@ -32,6 +33,7 @@ async function run(options: {
   plan?: string
   scope: string
   source: string
+  submissionConcurrency: string
 }) {
   const url = new URL(z.url().parse(process.env.DATABASE_URL))
   invariant(
@@ -46,7 +48,8 @@ async function run(options: {
       environment: options.environment,
       sourceId: options.source,
       scopeKey: options.scope,
-      limit: z.coerce.number().int().parse(options.limit)
+      limit: z.coerce.number().int().parse(options.limit),
+      submissionConcurrency: z.coerce.number().int().parse(options.submissionConcurrency)
     })
     if (options.apply !== true) {
       process.stdout.write(`${JSON.stringify({ status: "planned", ...report }, null, 2)}\n`)

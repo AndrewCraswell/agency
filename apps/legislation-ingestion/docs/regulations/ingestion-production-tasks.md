@@ -159,10 +159,12 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   Local progress: pending discovery rows can now be registered in immutable current-acquisition manifests of at most
   100 units. Selection, manifest persistence and the registered transition are atomic and use locked bounded rows. A
   manual controller now plans the next committed stage with keyset pages of at most 100, persists all child intents and
-  submits them serially with stable global Trigger keys. Current-eCFR discovery now starts one 25-unit controller window
-  after committing changed units, and every canonically completed source-stage worker replenishes that bounded window
-  with a replay-stable global key after closing its database pool. Multi-source admission, deployed verification and
-  measured aggregate limits remain open.
+  submits them with one-to-16 bounded concurrency and stable global Trigger keys. The operator preview and plan hash bind
+  the selected concurrency, enabling the required 2/4/8/16 trials. The controller waits for all admitted peers to settle
+  before surfacing uncertainty, preserving accepted handles for retry reconciliation. Current-eCFR discovery now starts
+  one 25-unit controller window after committing changed units, and every canonically completed source-stage worker
+  replenishes that bounded window with a replay-stable global key after closing its database pool. Multi-source admission,
+  deployed verification and measured aggregate limits remain open.
   Frozen historical manifests can now enter the same controller tables without loading the inventory into a Trigger
   payload. Registration retains the complete manifest once and admits source-specific keyset pages of at most 100 with
   exact page replay, cursor continuity and immutable unit checks. The historical acquisition, parse and publication

@@ -1,3 +1,4 @@
+import { mapConcurrent } from "@repo/legislation-core/concurrency/map-concurrent"
 import { idempotencyKeys, task, tasks } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
@@ -41,17 +42,27 @@ export async function runRegulatoryDiscoveryController(value: unknown) {
       limit: input.limit
     })
     const plan = await planLegalDiscoveryDispatchPage(pool, input)
-    const results = []
-    for (const dispatch of plan.dispatches) {
-      results.push(
-        await submitLegalDiscoveryDispatch(pool, dispatch.id, async (stage, payload, options) =>
+    const outcomes = await mapConcurrent(plan.dispatches, input.submissionConcurrency, async (dispatch) => {
+      try {
+        const result = await submitLegalDiscoveryDispatch(pool, dispatch.id, async (stage, payload, options) =>
           tasks.trigger(legalDiscoveryTaskIdentifier(stage), payload, {
             ...options,
             idempotencyKey: await idempotencyKeys.create(options.idempotencyKey, { scope: "global" })
           })
         )
-      )
+        return { status: "fulfilled" as const, result }
+      } catch (error) {
+        return { status: "rejected" as const, error }
+      }
+    })
+    const failure = outcomes.find((outcome) => outcome.status === "rejected")
+    if (failure?.status === "rejected") {
+      throw failure.error
     }
+    const results = outcomes.map((outcome) => {
+      if (outcome.status !== "fulfilled") throw new Error("legal_discovery_submission_outcome_missing")
+      return outcome.result
+    })
     return {
       registered: manifest?.units.length ?? 0,
       manifestId: manifest?.id ?? null,
@@ -59,6 +70,7 @@ export async function runRegulatoryDiscoveryController(value: unknown) {
       submitted: results.length,
       afterUnitKey: plan.afterUnitKey,
       exhausted: plan.exhausted,
+      submissionConcurrency: input.submissionConcurrency,
       results
     }
   } finally {
