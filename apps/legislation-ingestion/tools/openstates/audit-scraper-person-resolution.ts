@@ -31,10 +31,12 @@ function sponsorSamplePriority(sample: { name: string; reason: string }) {
   return 2
 }
 
-const { pool } = createDatabase(
-  { connectionTimeoutMs: 10_000, idleTimeoutMs: 10_000, maxConnections: 1, url: databaseUrl },
-  { statementTimeoutMs: 30_000 }
-)
+const { pool } = createDatabase({
+  connectionTimeoutMs: 10_000,
+  idleTimeoutMs: 10_000,
+  maxConnections: 1,
+  url: databaseUrl
+})
 
 try {
   const report = await withReadOnlyDatabase(pool, 30_000, async (transaction) => {

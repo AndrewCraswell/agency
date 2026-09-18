@@ -20,10 +20,11 @@ const config = loadConfig({
     ? z.string().url().parse(process.env[options.databaseEnv])
     : "postgresql://legislation:legislation@127.0.0.1:55432/legislation_test"
 })
-const { pool } = createDatabase(config.database, { statementTimeoutMs: 30_000 })
+const { pool } = createDatabase(config.database)
 const client = await pool.connect()
 try {
   await client.query("begin transaction isolation level repeatable read read only")
+  await client.query("set local statement_timeout = '30s'")
   const billRoute = embeddingRouteFor("bill")
   const sectionRoute = embeddingRouteFor("document-section")
   const states = []

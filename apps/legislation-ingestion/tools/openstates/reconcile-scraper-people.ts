@@ -33,10 +33,12 @@ if (options.apply && expectedPlanSha256 === undefined) {
   throw new Error("--apply requires --expected-plan-sha256 from a reviewed dry run")
 }
 const databaseUrl = z.string().url().parse(process.env[options.databaseEnv])
-const { database, pool } = createDatabase(
-  { connectionTimeoutMs: 10_000, idleTimeoutMs: 10_000, maxConnections: 1, url: databaseUrl },
-  { statementTimeoutMs: 60_000 }
-)
+const { database, pool } = createDatabase({
+  connectionTimeoutMs: 10_000,
+  idleTimeoutMs: 10_000,
+  maxConnections: 1,
+  url: databaseUrl
+})
 
 try {
   if (!options.apply) {
@@ -56,6 +58,7 @@ try {
   } else {
     const result = await database.transaction(async (transaction) => {
       await transaction.execute(sql`set local lock_timeout = '5s'`)
+      await transaction.execute(sql`set local statement_timeout = '60s'`)
       const plan = await buildScraperPersonBackfillPlan(transaction, state, session)
       const planSha256 = scraperPersonBackfillPlanSha256(plan)
       if (planSha256 !== expectedPlanSha256) {

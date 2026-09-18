@@ -1,5 +1,37 @@
 # Open States rollout requirements and results
 
+## September 18 final frozen-cycle acceptance
+
+- [x] North Carolina frozen inventory `2929490cc95d5a24e194bf14b2884b3dc95057ec0d91ed84c671ef32e386af1f`
+  completed all 235/235 promotion receipts without an overlapping worker or a failed Open States run in the observed
+  Trigger window. Its production person reconciliation completed as run `run_06gb7al1rb2dd1nqlftmhu0f01` and the
+  shared content controller drained before the next deployment.
+- [x] Deployed clean committed Trigger version `20260918.10` with the frozen-plan attestation contract. Fresh Alaska
+  run `run_06gb7btei0hgso5g24s8957l01` and North Carolina run `run_06gb7btf65vgccnsaji0dq0201` each verified the
+  exact plan path, inventory digest and promotion-complete receipt set. Both produced zero person updates and reused
+  their inventory-keyed content run instead of launching duplicate ingestion.
+- [x] Reconciled North Carolina vote completeness only after the frozen cycle and person handoff settled. Reviewed
+  plan `2efb48b6018346f4fe0beb4b0472459893aaf1d05c79049abc68ca5090b01bd1` contained 25 complete named-position
+  votes and no rejected rows. The locked apply updated exactly 25 canonical votes; the repeat plan contains zero rows.
+- [x] Current-session content acceptance is clean. Alaska has 857 bills and 66,724 sections; North Carolina has 2,338
+  bills and 36,187 sections. Neither state has a missing routed bill/section embedding, unresolved OCR requirement or
+  processed document without sections. Input-hash freshness separately reports zero missing and zero stale vectors
+  for both products in both sessions. Both HNSW indexes are valid and ready.
+- [x] Passage synchronization is caught up with pending zero, failed zero and a valid/ready BM25 index. All 256
+  checksum buckets match for both full historical corpora: Alaska 61,391 documents and 259,076 sections; North
+  Carolina 30,315 documents and 151,997 sections. Authenticated scoped-bill API smoke passed for both states. Fresh
+  lexical, semantic and hybrid passage requests returned three correctly scoped hits per state in 270-3,030 ms.
+- [x] Hardened the Open States audit/reconciliation commands for Railway's PostgreSQL proxy. They no longer send
+  `statement_timeout` as a startup parameter rejected by the proxy; each bounded read/apply sets it transaction-locally.
+  Focused formatting, lint and ingestion type-check pass, and the content, person and vote tools completed against
+  production through the proxy.
+- [ ] Positive MCP re-acceptance is blocked by WorkOS resource registration, not legislation data. Production MCP is
+  now `https://legislation-mcp-production.up.railway.app/mcp`, while WorkOS recognizes only the retired web-service
+  resource. A fresh OAuth request for the deployed target returns `invalid_target`; the retained user-consent token is
+  correctly audience-bound to the old URL and the new service rejects a machine token with 401. Register the new MCP
+  resource in WorkOS, then repeat browser consent and `pnpm --filter legislation-mcp smoke:deployment`. Do not weaken
+  audience validation or substitute the API machine credential.
+
 ## September 18 Alaska and North Carolina serving acceptance
 
 - [x] The North Carolina frozen current-bill cycle reached its authoritative completion path and dispatched the
