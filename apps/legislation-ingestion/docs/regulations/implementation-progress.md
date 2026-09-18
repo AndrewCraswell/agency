@@ -25,7 +25,11 @@ revision 13, the second is at revision 2, and both terminal registration receipt
 Each apply was bound to its exact preview page hash and `local-recovery` environment. This retained the full immutable
 manifest once per release scope and admitted only 100 units per transaction. Registration performed no provider I/O,
 source download, parser execution, Trigger submission, canonical publication, indexing, embedding or schedule change.
-The next gate is a read-only controller preview followed by deployed Trigger/storage acceptance before acquisition fan-out.
+Read-only controller previews then reconciled all 1,390 units as manifested, registered and runnable, with zero acquired,
+parsed, published, quarantined or existing dispatch rows. The 2020–2024 preview is apply-ready as plan
+`aa1a5c292e69ac6926191ed6ae6e0cf27929cc2f3e6ba6d7424cf67eb16cf7cc`; the 2025 available-title preview is apply-ready
+as `36a4d54b66df9fb5c537d46124562825381cd27766fbf013c40e5f4c1edef0e8`. Deployed Trigger credentials and provider-backed
+storage acceptance remain the gate before acquisition fan-out; neither preview submitted work.
 
 Froze the first complete recent annual-CFR release inventories from the retained GovInfo listings and closed a
 completeness hole found during the live crawl. The planner now records absent annual Title 35 as a publisher-reserved
