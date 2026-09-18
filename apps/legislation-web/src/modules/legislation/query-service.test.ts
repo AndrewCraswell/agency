@@ -427,9 +427,7 @@ describe("ranked passage search routing", () => {
       search: { isReranked: false, models: [] },
       truncated: false
     }))
-    const query = vi
-      .spyOn(pool, "query")
-      .mockImplementationOnce(async () => ({ command: "SELECT", fields: [], oid: 0, rowCount: 0, rows: [] }))
+    const transaction = vi.spyOn(database, "transaction").mockResolvedValueOnce([])
     const service = new LegislationQueryService(
       database,
       {
@@ -451,7 +449,7 @@ describe("ranked passage search routing", () => {
         rankingGeneration: "generation-a"
       })
     } finally {
-      query.mockRestore()
+      transaction.mockRestore()
     }
   })
 })

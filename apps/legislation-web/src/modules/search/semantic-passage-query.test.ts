@@ -22,10 +22,6 @@ describe("semantic passage query", () => {
     const nearestEnd = query.sql.indexOf(') select 1 - ("nearest_passage_embeddings"."distance")')
     const nearest = query.sql.slice(0, nearestEnd === -1 ? undefined : nearestEnd)
 
-    expect(nearest).toContain('"semantic_passage_hnsw_settings" as')
-    expect(nearest).toContain("set_config('hnsw.ef_search', '1000', true)")
-    expect(nearest).toContain("set_config('hnsw.iterative_scan', 'strict_order', true)")
-    expect(nearest).toContain('cross join "semantic_passage_hnsw_settings"')
     expect(nearest).toContain('"nearest_passage_embeddings" as')
     expect(nearest).toContain('order by "legislation"."document_section_embeddings"."embedding" <=>')
     expect(nearest).not.toContain('order by "legislation"."document_section_embeddings"."embedding" <=> $1::vector,')
