@@ -72,6 +72,7 @@ export const citedAnswerSchema = z
   })
 
 export type EvidenceSnapshot = z.infer<typeof evidenceSnapshotSchema>
+export const researchContextSchema = z.object({ evidence: z.array(evidenceSnapshotSchema).max(320) })
 
 const sourceRecordSchema = z.object({
   origin: z.enum(["canonical", "web"]).optional(),
@@ -105,6 +106,7 @@ const sourceRecordSchema = z.object({
   textOffset: z.number().int().nonnegative().nullish(),
   nextTextOffset: z.number().int().nonnegative().nullish(),
   totalCharacters: z.number().int().nonnegative().nullish(),
+  truncated: z.boolean().optional(),
   snippet: z.string().nullish(),
   heading: z.string().nullable().optional(),
   sectionIdentifier: z.string().nullable().optional(),
@@ -408,6 +410,7 @@ export function evidenceSourceUrl(evidence: Pick<EvidenceSnapshot, "sourceUrl" |
 function evidenceContent(source: EvidenceSourceContext, quote: string | null | undefined): EvidenceSnapshot["content"] {
   if (quote) {
     const truncated =
+      source.truncated === true ||
       quote.length > 20000 ||
       (source.totalCharacters ?? quote.length) > quote.length ||
       (source.nextTextOffset !== null && source.nextTextOffset !== undefined) ||

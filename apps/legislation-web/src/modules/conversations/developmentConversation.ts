@@ -4,6 +4,7 @@ import { stagedReferenceSchema, type StagedReference } from "./chatRequest"
 import { clarificationRequestSchema, clarificationResponseSchema, type ClarificationResponse } from "./clarification"
 import { composerDraftSchema, type ComposerDraft } from "./composerDraft"
 import { presentationBlockSchema } from "./composition"
+import { researchContextSchema } from "./evidence"
 
 export const developmentConversationKey = "rostra.development.conversation"
 
@@ -40,7 +41,7 @@ export async function parseDevelopmentConversation(serialized: string): Promise<
   }
   const validated = await safeValidateUIMessages({
     messages: snapshot.data.messages,
-    dataSchemas: { presentation: presentationBlockSchema }
+    dataSchemas: { presentation: presentationBlockSchema, "research-context": researchContextSchema }
   })
   if (!validated.success) {
     return undefined

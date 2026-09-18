@@ -11,7 +11,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/
 import { clarificationRequestSchema } from "../clarification"
 import { presentationCitation, presentationEvidence } from "../composition"
 import { entityPageSchema } from "../entityResults"
-import { evidenceSnapshotSchema, evidenceSourceUrl, humanReadableUrl, type EvidenceSnapshot } from "../evidence"
+import {
+  evidenceSnapshotSchema,
+  evidenceSourceUrl,
+  humanReadableUrl,
+  researchContextSchema,
+  type EvidenceSnapshot
+} from "../evidence"
 import { createCitationPresentation, type CitationSelection } from "./citationPresentation"
 import { ClarificationQuestion, ClarificationReceiptStatus } from "./ClarificationQuestion"
 import { ComposedRecord } from "./ComposedRecord"
@@ -56,6 +62,14 @@ export function responseClarification(message: UIMessage) {
 export function responseEvidence(message: UIMessage): EvidenceSnapshot[] {
   const found = new Map<string, EvidenceSnapshot>()
   for (const part of message.parts) {
+    if (part.type === "data-research-context") {
+      const context = researchContextSchema.safeParse(part.data)
+      if (context.success) {
+        for (const source of context.data.evidence) {
+          found.set(source.id, source)
+        }
+      }
+    }
     if (part.type === "data-presentation") {
       const source = presentationEvidence(part.data)
       if (source) {

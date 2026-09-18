@@ -122,6 +122,32 @@ function inlineResponse(parts: UIMessage["parts"], isRunning = false) {
 }
 
 describe("response presentation snapshots", () => {
+  it("opens freshly registered prior-turn evidence by keyboard without a repeated tool call", async () => {
+    const onEvidence = vi.fn<(selection: CitationSelection) => void>()
+    const source = { ...first, citationRef: "e42" }
+    render(
+      <ConversationResponse
+        message={{
+          id: "follow-up",
+          role: "assistant",
+          parts: [
+            { type: "data-research-context", data: { evidence: [source] } },
+            { type: "text", text: "Previously collected text [1](#citation-e42)." }
+          ]
+        }}
+        isRunning={false}
+        isIncomplete={false}
+        onEvidence={onEvidence}
+      />,
+      { wrapper: InlineProviders }
+    )
+    const button = screen.getByRole("button", { name: "Read source 1: First provision" })
+    button.focus()
+    await userEvent.setup().keyboard("{Enter}")
+    expect(onEvidence).toHaveBeenCalledWith({ answerId: "follow-up", number: 1, evidence: source })
+    expect(screen.queryByRole("button", { name: /unavailable/i })).toBeNull()
+  })
+
   it("renders published service years without adding a month or day", () => {
     const record: EntityCard = {
       ...selectedRecord,

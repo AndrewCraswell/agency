@@ -1,5 +1,5 @@
 import { startLangfuseTelemetry } from "../../services/langfuse/telemetry"
-import { redactCredentials } from "./capture"
+import { redactCredentials } from "./redactCredentials"
 
 let telemetry: ReturnType<typeof startLangfuseTelemetry> | undefined
 

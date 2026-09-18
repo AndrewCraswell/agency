@@ -15,12 +15,12 @@ import { and, asc, eq, isNotNull, like } from "drizzle-orm"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import { loadConfig } from "../src/modules/configuration/config"
-import { redactCredentials } from "../src/modules/conversations/capture"
 import {
   projectMeetingDetails,
   projectProfileDetails,
   projectVoteDetails
 } from "../src/modules/conversations/recordDetails"
+import { redactCredentials } from "../src/modules/conversations/redactCredentials"
 import { createResultStore } from "../src/modules/conversations/resultStore"
 import {
   reviewDatasetSchema,

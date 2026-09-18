@@ -39,31 +39,40 @@ export function isClarificationSubmission(message: UIMessage) {
 
 export function conversationTextMessages(messages: readonly UIMessage[]) {
   return messages
-    .map((message) => ({
-      id: message.id,
-      role: message.role,
-      parts: message.parts.flatMap((part) => {
-        if (part.type === "text") {
-          return [{ type: "text", text: part.text }]
-        }
-        if (part.type === "data-presentation") {
-          const text = presentationText(part.data)
-          return text ? [{ type: "text", text }] : []
-        }
-        if (
-          part.type === "dynamic-tool" &&
-          part.toolName === "ask_clarification" &&
-          part.state === "output-available"
-        ) {
-          const parsed = z.object({ clarification: clarificationRequestSchema }).safeParse(part.output)
-          if (parsed.success) {
-            return [{ type: "text", text: parsed.data.clarification.input.question }]
+    .map((message) => {
+      const metadata = z.object({ runId: z.uuid() }).safeParse(message.metadata)
+      return {
+        id: message.id,
+        role: message.role,
+        ...(message.role === "assistant" && metadata.success ? { researchRunId: metadata.data.runId } : {}),
+        parts: message.parts.flatMap((part) => {
+          if (part.type === "text") {
+            return [{ type: "text", text: part.text }]
           }
-        }
-        return []
-      })
-    }))
-    .filter((message) => message.parts.length > 0)
+          if (part.type === "data-presentation") {
+            const text = presentationText(part.data)
+            return text ? [{ type: "text", text }] : []
+          }
+          if (
+            part.type === "dynamic-tool" &&
+            part.toolName === "ask_clarification" &&
+            part.state === "output-available"
+          ) {
+            const parsed = z.object({ clarification: clarificationRequestSchema }).safeParse(part.output)
+            if (parsed.success) {
+              return [{ type: "text", text: parsed.data.clarification.input.question }]
+            }
+          }
+          return []
+        })
+      }
+    })
+    .filter((message) => message.parts.length > 0 || message.researchRunId)
+    .map((message) =>
+      message.parts.length > 0
+        ? message
+        : { ...message, parts: [{ type: "text", text: "The previous research turn produced no text answer." }] }
+    )
 }
 
 export const clarificationAnswerRequestSchema = z.strictObject({
@@ -75,6 +84,11 @@ export const clarificationAnswerRequestSchema = z.strictObject({
 export const chatRequestSchema = z
   .object({
     sessionKey: z.uuid(),
+    sessionId: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[a-zA-Z0-9_-]+$/),
     clarificationId: z.uuid().optional(),
     references: z.array(conversationReferenceSchema).max(12).optional(),
     messages: z
@@ -82,12 +96,16 @@ export const chatRequestSchema = z
         z.object({
           id: z.string().min(1).max(128),
           role: z.enum(["user", "assistant"]),
+          researchRunId: z.uuid().optional(),
           parts: z.array(z.object({ type: z.literal("text"), text: z.string().max(24000) })).min(1)
         })
       )
       .min(1)
   })
   .superRefine((request, context) => {
+    if (request.sessionId === request.sessionKey) {
+      context.addIssue({ code: "custom", message: "The session ID must not be the session access key." })
+    }
     if (request.messages.at(-1)?.role !== "user") {
       context.addIssue({ code: "custom", message: "The conversation must end with a user question." })
     }

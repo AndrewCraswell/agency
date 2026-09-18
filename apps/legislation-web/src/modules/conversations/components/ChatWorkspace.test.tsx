@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { chatRequestSchema, referenceSearchSchema, type StagedReference } from "../chatRequest"
+import { downloadConversationExport } from "../conversationExport"
 import { ChatProviders } from "./ChatProviders"
 import { ChatWorkspace } from "./ChatWorkspace"
 import * as composerStyles from "./ChatComposer.css"
@@ -17,7 +18,14 @@ afterEach(() => {
 })
 
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }))
-vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn<typeof import("@sentry/nextjs").captureException>() }))
+vi.mock("@sentry/nextjs", () => ({
+  captureException: vi.fn<typeof import("@sentry/nextjs").captureException>(),
+  getReplay: () => ({ getReplayId: () => "replay-1" })
+}))
+vi.mock("../conversationExport", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../conversationExport")>()),
+  downloadConversationExport: vi.fn<typeof downloadConversationExport>()
+}))
 
 function streamedAnswer(text: string) {
   const chunks = [
@@ -33,6 +41,52 @@ function streamedAnswer(text: string) {
 }
 
 describe("ChatWorkspace", () => {
+  it("exports locally by command without another model request, even when research is disconnected", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => streamedAnswer("An exportable response"))
+    vi.stubGlobal("fetch", fetchMock)
+    const user = userEvent.setup()
+    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "First question")
+    await user.click(screen.getByRole("button", { name: "Send question" }))
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
+    const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+    view.rerender(<ChatWorkspace conversationId={conversationId} />)
+    await screen.findByText("An exportable response")
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
+    const input = screen.getByRole("textbox", { name: "Your question" })
+    await user.type(input, "/export")
+    await user.keyboard("{Enter}")
+    await waitFor(() => expect(downloadConversationExport).toHaveBeenCalledOnce())
+    expect(downloadConversationExport).toHaveBeenCalledWith(
+      conversationId,
+      expect.objectContaining({
+        sessionId: conversationId,
+        replayId: "replay-1",
+        messages: expect.arrayContaining([
+          expect.objectContaining({ role: "user" }),
+          expect.objectContaining({ role: "assistant" })
+        ])
+      })
+    )
+    expect(JSON.stringify(vi.mocked(downloadConversationExport).mock.calls)).not.toContain("sessionKey")
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toHaveProperty("sessionId", conversationId)
+    await waitFor(() => expect(input.textContent).toBe(""))
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(screen.queryByRole("button", { name: "Export conversation" })).toBeNull()
+  })
+
+  it("does not send an export command from an empty homepage to the model", async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+    vi.stubGlobal("fetch", fetchMock)
+    const user = userEvent.setup()
+    render(<ChatWorkspace />, { wrapper: ChatProviders })
+    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
+    await user.keyboard("{Enter}")
+    expect(await screen.findByText("Start a conversation before exporting.")).toBeDefined()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(navigation.push).not.toHaveBeenCalled()
+  })
+
   const person: StagedReference = {
     resultId: "23974c17-3898-4b92-96f7-1c600704e12e",
     recordId: "person:ocasio-cortez",

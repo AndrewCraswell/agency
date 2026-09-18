@@ -6,8 +6,14 @@ claims of live availability or acceptance of the separated deployments.
 
 ## Conversation experience
 
+[Follow-up research context](engineering/conversation-research-memory.md) retains bounded server-owned evidence,
+provenance and incomplete research across turns, with fresh citation registration and owner isolation.
+
 [Conversation model settings](operations/development.md#development-chat-research-connection) use Luna with high
 reasoning for answers; suggestions and offline judges retain their separately configured low reasoning.
+
+[Conversation export](operations/conversation-export.md) documents the local `/export` command, public telemetry
+session IDs, diagnostic metadata, redaction and snapshot limitations.
 
 [Inline person and committee tags](operations/development.md#inline-person-and-committee-tags) use debounced published-name
 search and preserve exact session-owned record references with the message. Storybook renders the production composer.

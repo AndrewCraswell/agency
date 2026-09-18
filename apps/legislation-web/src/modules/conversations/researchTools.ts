@@ -1,4 +1,6 @@
 export const researchToolLabels: Readonly<Record<string, string>> = {
+  search_web: "Search the web",
+  read_web_page: "Read webpage",
   describe_analytics: "Explore data relationships",
   analyze_legislation: "Analyze legislative data",
   read_record_collection: "Read record details",

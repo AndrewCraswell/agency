@@ -35,7 +35,7 @@ function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string
   const sessionKey = snapshot?.sessionKey ?? ownerKey ?? crypto.randomUUID()
   const transport = new DefaultChatTransport({
     api: "/chat",
-    prepareSendMessagesRequest: ({ messages, body }) => {
+    prepareSendMessagesRequest: ({ id, messages, body }) => {
       const metadata = z
         .object({ references: z.array(conversationReferenceSchema).max(12) })
         .safeParse(messages.findLast((message) => message.role === "user")?.metadata)
@@ -44,6 +44,7 @@ function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string
           ...body,
           references: metadata.success ? metadata.data.references : [],
           sessionKey,
+          sessionId: id,
           messages: conversationTextMessages(messages)
         }
       }
@@ -59,7 +60,7 @@ function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string
       }
     },
     onError: (error) => {
-      captureException(error, { tags: { operation: "chat_transport" } })
+      captureException(error, { tags: { operation: "chat_transport", sessionId: chat.id } })
     }
   })
   return { chat, sessionKey }

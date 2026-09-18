@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import type { Logger } from "@repo/legislation-core/observability/logger"
 import { z } from "zod"
-import { projectResearchEvidence, sourceUrlSchema, type EvidenceSourceContext } from "./evidence"
+import { projectResearchEvidence, sourceUrlSchema, type EvidenceSourceContext, type EvidenceSnapshot } from "./evidence"
 
 const renditionSchema = z.object({
   id: z.string().nullish(),
@@ -143,13 +143,19 @@ function retainedRenditions(source: EvidenceSourceContext) {
 export function createResearchEvidenceProjector(
   logger: Logger,
   runId: string,
-  previousReferences: readonly string[] = []
+  previousReferences: readonly string[] = [],
+  restoredEvidence: readonly EvidenceSnapshot[] = []
 ) {
   const reported = new Set<string>()
   const retained = new Map<string, Rendition>()
   const references = new Map<string, string>()
   let nextReference = 1n
-  for (const reference of previousReferences) {
+  for (const source of restoredEvidence) {
+    if (source.citationRef) {
+      references.set(source.id, source.citationRef)
+    }
+  }
+  for (const reference of [...previousReferences, ...references.values()]) {
     if (/^e[1-9][0-9]{0,30}$/.test(reference)) {
       const next = BigInt(reference.slice(1)) + 1n
       if (next > nextReference) {

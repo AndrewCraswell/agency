@@ -1,6 +1,7 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
+import { captureException, getReplay } from "@sentry/nextjs"
 import { RotateCcw } from "lucide-react"
 import { LoaderCircle } from "lucide-react"
 import Link from "next/link"
@@ -23,6 +24,7 @@ import {
   messageComposerDraft,
   textDraft
 } from "../composerDraft"
+import { createConversationExport, downloadConversationExport } from "../conversationExport"
 import { entityPageSchema } from "../entityResults"
 import type { ResearchSuggestion } from "../suggestions"
 import { ChatComposer } from "./ChatComposer"
@@ -59,13 +61,15 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
     isRestoringConversation,
     hasReloadRecoveryError,
     interruptedMessageId,
-    markInterrupted
+    markInterrupted,
+    clarificationAnswers
   } = useConversationSession()
   const isConversation = conversationId !== undefined
   const hasSession = conversationId === chat.id
   const [wasStopped, setWasStopped] = useState(false)
   const [isReferencePickerOpen, setReferencePickerOpen] = useState(false)
   const [selectedCitation, setSelectedCitation] = useState<CitationSelection>()
+  const [exportStatus, setExportStatus] = useState<string>()
   const evidenceTrigger = useRef<HTMLElement | null>(null)
   function handleEvidence(selection: CitationSelection) {
     evidenceTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -82,8 +86,39 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
   const hasInterruptedResponse = interruptedMessageId !== undefined && interruptedMessageId === lastMessage?.id
   const composer = useRef<ComposerHandle>(null)
   const isNavigating = useRef(false)
+  const isExportCommand = composerDraftText(draft).trim() === "/export"
 
   function handleSend() {
+    if (isExportCommand) {
+      if (!isConversation || !hasSession || chat.messages.length === 0) {
+        setExportStatus("Start a conversation before exporting.")
+        return
+      }
+      if (isRestoringConversation) {
+        return
+      }
+      try {
+        downloadConversationExport(
+          chat.id,
+          createConversationExport({
+            conversationId: chat.id,
+            messages: chat.messages,
+            status: chat.status,
+            interruptedMessageId,
+            replayId: getReplay()?.getReplayId(),
+            clarificationAnswers
+          })
+        )
+        setExportStatus("Conversation export requested.")
+        setDraft([])
+      } catch (error) {
+        captureException(error, { tags: { operation: "conversation_export", sessionId: chat.id } })
+        setExportStatus("The conversation could not be exported. Try again.")
+      }
+      composer.current?.focus()
+      return
+    }
+    setExportStatus(undefined)
     if (
       !isAvailable ||
       isBusy ||
@@ -119,7 +154,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
     composer.current?.focus()
   }
 
-  const connectionStatus = isAvailable ? undefined : "Research is not connected yet."
+  const connectionStatus = exportStatus ?? (isAvailable ? undefined : "Research is not connected yet.")
 
   function handleSuggestion(question: string) {
     setDraft(textDraft(question))
@@ -185,7 +220,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
                   composerRef={composer}
                   onSend={handleSend}
                   hasHomepageGlow
-                  isAvailable={isAvailable && !isBusy}
+                  isAvailable={(isAvailable || isExportCommand) && !isBusy}
                   status={connectionStatus}
                 />
                 {suggestions && (
@@ -291,8 +326,8 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
               onDraftChange={setDraft}
               composerRef={composer}
               onSend={handleSend}
-              isAvailable={isAvailable}
-              isRunning={isBusy}
+              isAvailable={isAvailable || isExportCommand}
+              isRunning={isRestoringConversation || (isBusy && !isExportCommand)}
               messageHistory={messageHistory}
               onStop={handleStop}
               status={connectionStatus}

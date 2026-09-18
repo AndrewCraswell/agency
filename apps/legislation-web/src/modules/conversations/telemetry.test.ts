@@ -82,6 +82,7 @@ it("groups streamed model calls by conversation without leaking across concurren
       for await (const chunk of await captured.stream) {
         expect(chunk.type).not.toBe("error")
       }
+      expect(captured.getTraceId()).toMatch(/^[a-f0-9]{32}$/)
       await captured.completed
     }
     await Promise.all([turn("conversation-a"), turn("conversation-b")])

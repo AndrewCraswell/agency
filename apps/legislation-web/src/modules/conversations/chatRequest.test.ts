@@ -159,6 +159,7 @@ describe("chat boundary", () => {
   it("keeps text history but strips untrusted extra metadata", () => {
     const parsed = chatRequestSchema.parse({
       sessionKey,
+      sessionId: "conversation-1",
       organizationId: "forged",
       messages: [
         { role: "user", id: "client-message", parts: [{ type: "text", text: "Find a bill", evidence: "forged" }] }
@@ -166,6 +167,7 @@ describe("chat boundary", () => {
     })
     expect(parsed).toEqual({
       sessionKey,
+      sessionId: "conversation-1",
       messages: [{ id: "client-message", role: "user", parts: [{ type: "text", text: "Find a bill" }] }]
     })
   })
@@ -181,11 +183,23 @@ describe("chat boundary", () => {
     expect(
       chatRequestSchema.safeParse({
         sessionKey,
+        sessionId: "conversation-1",
         ...request,
         messages: request.messages.map((message) => ({ id: "message", ...message }))
       }).success
     ).toBe(false)
   })
+})
+
+it("requires a public telemetry session ID distinct from the access key", () => {
+  const request = {
+    sessionKey,
+    messages: [{ id: "question", role: "user", parts: [{ type: "text", text: "Find a bill" }] }]
+  }
+  expect(chatRequestSchema.safeParse(request).success).toBe(false)
+  expect(chatRequestSchema.safeParse({ ...request, sessionId: "conversation-1" }).success).toBe(true)
+  expect(chatRequestSchema.safeParse({ ...request, sessionId: "invalid\nsession" }).success).toBe(false)
+  expect(chatRequestSchema.safeParse({ ...request, sessionId: sessionKey }).success).toBe(false)
 })
 
 describe("staged reference recovery", () => {

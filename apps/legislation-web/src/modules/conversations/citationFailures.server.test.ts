@@ -43,6 +43,25 @@ const events: EvalEvent[] = [
 const answer = { text: "Claim [1](#citation-known).", events, termination: "stop", isInterrupted: false }
 
 describe("missing citation telemetry", () => {
+  it("accepts newly registered retained evidence without a current-turn tool result", () => {
+    createCitationFailureReporter(context)({
+      ...answer,
+      events: [],
+      text: "Previously collected text [1](#citation-e42).",
+      retainedEvidence: [
+        {
+          id: "prior",
+          citationRef: "e42",
+          title: "Prior source",
+          origin: "canonical",
+          sourceUrl: null,
+          content: { state: "available", quote: "Proposed remedy." }
+        }
+      ]
+    })
+    expect(captureException).not.toHaveBeenCalled()
+  })
+
   it("accepts exact short references in evaluation without treating unknown aliases as valid", () => {
     const item = smokeDataset.cases.find((candidate) => candidate.id === "bill-identity")
     invariant(item)

@@ -1,6 +1,7 @@
+import type { LookupAddress } from "node:dns"
 import { dynamicTool, isStepCount, streamText } from "ai"
 import { MockLanguageModelV4 } from "ai/test"
-import { expect, it } from "vitest"
+import { afterEach, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { createCitationPresentation } from "./components/citationPresentation"
 import { recordMentionHref } from "./composition"
@@ -8,6 +9,236 @@ import type { EntityPage } from "./entityResults"
 import { projectResearchEvidence } from "./evidence"
 import { createResearchTools, modelInputSchema, researchModelOutput } from "./research"
 import { researchFailureCode } from "./researchFailure"
+
+const { lookupMock } = vi.hoisted(() => ({
+  lookupMock: vi.fn<() => Promise<LookupAddress[]>>(async () => [{ address: "8.8.8.8", family: 4 }])
+}))
+vi.mock("node:dns/promises", () => ({ lookup: lookupMock }))
+vi.mock("../legislation/runtime/runtime", () => ({ getNextLegislationApplication: () => ({ queryService: {} }) }))
+const webEnvironment: NodeJS.ProcessEnv = {
+  NODE_ENV: "development",
+  FIRECRAWL_API_KEY: "fixture-secret",
+  FIRECRAWL_BASE_URL: "https://firecrawl.example"
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.clearAllMocks()
+})
+
+function webTools(signal = new AbortController().signal, canResearch = () => true) {
+  return createResearchTools(webEnvironment, signal, canResearch, vi.fn<() => void>())
+}
+
+async function callWebTool(name: string, input: unknown, tools = webTools()) {
+  const definition = tools[name]
+  if (definition?.type !== "dynamic" || !definition.execute) {
+    throw new Error("Missing tool")
+  }
+  const execute = dynamicTool(definition).execute
+  if (!execute) {
+    throw new Error("Missing tool execution")
+  }
+  return execute(input, { toolCallId: crypto.randomUUID(), messages: [], context: {} })
+}
+
+it("only registers web tools when both provider settings are configured", () => {
+  expect(webTools()).toHaveProperty("search_web")
+  expect(webTools()).toHaveProperty("read_web_page")
+  expect(createResearchTools({ NODE_ENV: "development" }, new AbortController().signal)).not.toHaveProperty(
+    "search_web"
+  )
+  expect(
+    createResearchTools({ NODE_ENV: "development", FIRECRAWL_API_KEY: "fixture" }, new AbortController().signal)
+  ).not.toHaveProperty("read_web_page")
+})
+
+it("returns web search citations without presenting snippets as collected text", async () => {
+  const fetchMock = vi.fn<typeof fetch>(async () =>
+    Response.json({
+      success: true,
+      data: {
+        web: [
+          {
+            url: "https://example.org/report",
+            title: "Report",
+            description: "Search excerpt",
+            markdown: "Not requested"
+          },
+          { url: "http://127.0.0.1/private", title: "Private" },
+          { url: "https://example.org/?api_key=private", title: "Credential" }
+        ]
+      }
+    })
+  )
+  vi.stubGlobal("fetch", fetchMock)
+  const result = await callWebTool("search_web", { query: "public policy" })
+  expect(result).toMatchObject({
+    evidence: [{ origin: "web", citationRef: "e1", content: { state: "not-collected" } }],
+    data: { items: [{ sourceUrl: "https://example.org/report", snippet: "Search excerpt" }] }
+  })
+  expect(fetchMock).toHaveBeenCalledWith(
+    new URL("https://firecrawl.example/v2/search"),
+    expect.objectContaining({
+      redirect: "error",
+      body: JSON.stringify({ query: "public policy", limit: 5, sources: ["web"], timeout: 25000 })
+    })
+  )
+  expect(researchModelOutput({ output: result }).value).toContain("#citation-e1")
+  expect(JSON.stringify(result)).not.toContain("fixture-secret")
+})
+
+it("projects page text and truncation into attributable web evidence", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () =>
+      Response.json({
+        success: true,
+        data: {
+          markdown: "Text ".repeat(5000),
+          metadata: { title: ["Agency", "guidance"], url: "https://example.org/final", statusCode: 200 }
+        }
+      })
+    )
+  )
+  const result = await callWebTool("read_web_page", { url: "https://example.org/start" })
+  expect(result).toMatchObject({
+    evidence: [
+      {
+        origin: "web",
+        sourceUrl: "https://example.org/final",
+        title: "Agency guidance",
+        content: { state: "available", truncated: true }
+      }
+    ]
+  })
+})
+
+it("marks a page-capped PDF excerpt incomplete even when its text is short", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () =>
+      Response.json({
+        success: true,
+        data: {
+          markdown: "First pages only",
+          metadata: { sourceURL: "https://example.org/report.pdf", numPages: 10, totalPages: 100 }
+        }
+      })
+    )
+  )
+  const result = await callWebTool("read_web_page", { url: "https://example.org/report.pdf" })
+  expect(result).toMatchObject({
+    evidence: [{ locator: "First 10 of 100 PDF pages", content: { state: "available", truncated: true } }]
+  })
+})
+
+it("rejects unsafe final URLs and publisher error pages", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () =>
+      Response.json({ success: true, data: { markdown: "Private", metadata: { url: "http://127.0.0.1/private" } } })
+    )
+  )
+  await expect(callWebTool("read_web_page", { url: "https://example.org" })).rejects.toMatchObject({
+    code: "forbidden"
+  })
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () =>
+      Response.json({ success: true, data: { markdown: "Missing page", metadata: { statusCode: 404 } } })
+    )
+  )
+  await expect(callWebTool("read_web_page", { url: "https://example.org" })).rejects.toMatchObject({
+    code: "dependency_unavailable"
+  })
+})
+
+it("cancels in-flight web calls and discards late responses", async () => {
+  const controller = new AbortController()
+  const fetchMock = vi.fn<typeof fetch>(async () => {
+    controller.abort()
+    return Response.json({ success: true, data: { web: [] } })
+  })
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(callWebTool("search_web", { query: "policy" }, webTools(controller.signal))).rejects.toMatchObject({
+    code: "interrupted"
+  })
+})
+
+it("maps provider deadlines to research timeout failures", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () => new Response("Timed out", { status: 408 }))
+  )
+  await expect(callWebTool("search_web", { query: "policy" })).rejects.toMatchObject({ code: "timeout" })
+})
+
+it.each([
+  "http://127.0.0.1",
+  "http://[::1]",
+  "http://169.254.169.254",
+  "https://localhost",
+  "https://service.internal",
+  "file:///private",
+  "https://user:secret@example.org",
+  "https://example.org?token=secret",
+  "https://example.org:8443"
+])("rejects unsafe web input %s without a provider call", async (url) => {
+  const fetchMock = vi.fn<typeof fetch>()
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(callWebTool("read_web_page", { url })).rejects.toMatchObject({ code: "invalid_request" })
+  expect(fetchMock).not.toHaveBeenCalled()
+})
+
+it("rejects public hostnames resolving to private addresses", async () => {
+  lookupMock.mockResolvedValueOnce([{ address: "10.0.0.1", family: 4 }])
+  const fetchMock = vi.fn<typeof fetch>()
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(callWebTool("read_web_page", { url: "https://example.org" })).rejects.toMatchObject({
+    code: "forbidden"
+  })
+  expect(fetchMock).not.toHaveBeenCalled()
+})
+
+it.each([401, 402, 429, 500])("sanitizes web provider failure %s", async (status) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () => new Response("fixture-secret", { status }))
+  )
+  await expect(callWebTool("search_web", { query: "policy" })).rejects.toMatchObject({ code: "dependency_unavailable" })
+})
+
+it("rejects malformed and oversized web responses", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () => Response.json({ success: true, data: {} }))
+  )
+  await expect(callWebTool("search_web", { query: "policy" })).rejects.toMatchObject({ code: "invalid_response" })
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () => new Response("x".repeat(1_000_001)))
+  )
+  await expect(callWebTool("search_web", { query: "policy" })).rejects.toMatchObject({ code: "result_limit" })
+})
+
+it("shares the research call budget and clarification gate with web tools", async () => {
+  const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ success: true, data: { web: [] } }))
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(
+    callWebTool(
+      "search_web",
+      { query: "policy" },
+      webTools(undefined, () => false)
+    )
+  ).rejects.toMatchObject({ code: "interrupted" })
+  const tools = webTools()
+  for (let index = 0; index < 24; index++) {
+    await callWebTool("search_web", { query: "policy" }, tools)
+  }
+  await expect(callWebTool("search_web", { query: "policy" }, tools)).rejects.toMatchObject({ code: "step_limit" })
+  expect(fetchMock).toHaveBeenCalledTimes(24)
+})
 
 it("preserves web provenance without treating search snippets as collected page text", () => {
   const evidence = projectResearchEvidence(

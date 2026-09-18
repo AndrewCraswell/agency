@@ -10,11 +10,19 @@ const toolEvidenceSchema = z.object({ evidence: z.array(evidenceSnapshotSchema).
 
 export function createCitationFailureReporter(context: CitationTelemetryContext) {
   const reported = new Set<string>()
-  return (answer: { text: string; events: EvalEvent[]; termination: string; isInterrupted: boolean }) => {
+  return (answer: {
+    text: string
+    events: EvalEvent[]
+    termination: string
+    isInterrupted: boolean
+    retainedEvidence?: EvidenceSnapshot[]
+  }) => {
     if (answer.isInterrupted || answer.termination !== "stop") {
       return
     }
-    const evidence = new Map<string, EvidenceSnapshot>()
+    const evidence = new Map<string, EvidenceSnapshot>(
+      (answer.retainedEvidence ?? []).map((source) => [source.id, source])
+    )
     for (const event of answer.events) {
       if (event.type !== "result") {
         continue

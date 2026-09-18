@@ -3,51 +3,8 @@ import type { TextStreamPart, ToolSet } from "ai"
 import type { EvalEvent, EvalTurn } from "../evaluations/contracts"
 import { createCitationFailureReporter, type CitationTelemetryContext } from "./citationFailures.server"
 import type { ComposedAnswer } from "./compositionStream"
-
-export function redactCredentials(value: unknown): unknown {
-  if (typeof value === "string") {
-    if (/^https?:\/\//i.test(value)) {
-      try {
-        const url = new URL(value)
-        url.username = ""
-        url.password = ""
-        for (const key of url.searchParams.keys()) {
-          if (/token|secret|signature|api.?key|^sig$/i.test(key)) {
-            url.searchParams.delete(key)
-          }
-        }
-        return url.toString()
-      } catch {
-        return "[INVALID URL]"
-      }
-    }
-    return value
-      .replace(/\b(?:sk-or-v1-|sk-lf-)[a-z0-9-]+/gi, "[REDACTED]")
-      .replace(/\b(?:Bearer|Basic)\s+\S+/gi, "[REDACTED]")
-  }
-  if (Array.isArray(value)) {
-    return value.map(redactCredentials)
-  }
-  if (value !== null && typeof value === "object") {
-    if (value instanceof Error) {
-      return { name: value.name, message: redactCredentials(value.message) }
-    }
-    if (value instanceof Date) {
-      return value.toISOString()
-    }
-    return Object.fromEntries(
-      Object.entries(value)
-        .filter(
-          ([key]) =>
-            !/^(headers|authorization|cookie|set-cookie|password|secret|api.?key|access[_-]?token|refresh[_-]?token|.*secretKey|.*publicKey|reasoning|reasoningText)$/i.test(
-              key
-            )
-        )
-        .map(([key, item]) => [key, redactCredentials(item)])
-    )
-  }
-  return value
-}
+import type { EvidenceSnapshot } from "./evidence"
+import { redactCredentials } from "./redactCredentials"
 
 export async function collectChatStream(stream: ReadableStream<TextStreamPart<ToolSet>>) {
   const started = performance.now()
@@ -104,6 +61,16 @@ export async function collectChatStream(stream: ReadableStream<TextStreamPart<To
       if (chunk.type === "abort" || chunk.type === "error") {
         output.termination = chunk.type
       }
+      if (chunk.type === "error") {
+        events.push({
+          turn: 0,
+          step,
+          type: "error",
+          tool: "generation",
+          callId: "generation",
+          value: redactCredentials(chunk.error)
+        })
+      }
     }
   } catch (error) {
     output.termination = "error"
@@ -119,7 +86,11 @@ export async function collectChatStream(stream: ReadableStream<TextStreamPart<To
     reader.releaseLock()
     output.durationMs = Math.round(performance.now() - started)
   }
-  if (events.some((event) => event.tool === "ask_clarification" && event.type === "result")) {
+  if (
+    output.termination !== "error" &&
+    output.termination !== "abort" &&
+    events.some((event) => event.tool === "ask_clarification" && event.type === "result")
+  ) {
     output.termination = "clarification"
   }
   return { events, output }
@@ -131,9 +102,11 @@ export function observeChatResponse(options: {
   metadata: Record<string, unknown>
   start: () => ReadableStream<TextStreamPart<ToolSet>>
   composed?: Promise<ComposedAnswer>
+  retainedEvidence?: EvidenceSnapshot[]
   citationTelemetry?: CitationTelemetryContext
 }) {
   const stream = Promise.withResolvers<ReadableStream<TextStreamPart<ToolSet>>>()
+  let traceId: string | null = null
   const redacted = redactCredentials(options.metadata)
   const redactedMetadata = Object.fromEntries(
     Object.entries(typeof redacted === "object" && redacted !== null ? redacted : {})
@@ -153,6 +126,9 @@ export function observeChatResponse(options: {
       startActiveObservation(
         "legislative-research-conversation",
         async (observation) => {
+          if (observation.traceId && !/^0+$/.test(observation.traceId)) {
+            traceId = observation.traceId
+          }
           observation.update({ input: redactCredentials(options.input), metadata: redactedMetadata })
           const [uiStream, captureStream] = options.start().tee()
           stream.resolve(uiStream)
@@ -162,6 +138,7 @@ export function observeChatResponse(options: {
             createCitationFailureReporter(options.citationTelemetry)({
               text: composition.text,
               events: raw.events,
+              retainedEvidence: options.retainedEvidence,
               termination: raw.output.termination,
               isInterrupted: composition.isInterrupted
             })
@@ -173,6 +150,7 @@ export function observeChatResponse(options: {
   )
   return {
     stream: stream.promise,
+    getTraceId: () => traceId,
     completed: completed.catch((error: unknown) => {
       stream.reject(error)
       throw error

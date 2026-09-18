@@ -1,5 +1,11 @@
-import { captureException } from "@sentry/nextjs"
-import { createUIMessageStream, createUIMessageStreamResponse, toUIMessageStream } from "ai"
+import { captureException, setTag, withIsolationScope } from "@sentry/nextjs"
+import {
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  toUIMessageStream,
+  type ModelMessage,
+  type UIMessageChunk
+} from "ai"
 import { after } from "next/server"
 import { z } from "zod"
 import {
@@ -34,7 +40,9 @@ import {
 import { searchReferences } from "../../modules/conversations/referenceSearch"
 import { createResearchTools } from "../../modules/conversations/research"
 import { ResearchFailure } from "../../modules/conversations/researchFailure"
+import { createResearchTurn, restoreResearchMemory } from "../../modules/conversations/researchMemory"
 import { resultStore } from "../../modules/conversations/resultStore"
+import { researchSnapshotPersistence } from "../../modules/conversations/snapshotPersistence.server"
 import { flushChatTelemetry } from "../../modules/conversations/telemetry"
 import { createToolFailureReporter } from "../../modules/conversations/toolFailures"
 import { digest } from "../../modules/evaluations/contracts"
@@ -53,6 +61,10 @@ export function GET() {
 }
 
 export async function POST(request: Request) {
+  return withIsolationScope(() => handleChatRequest(request))
+}
+
+async function handleChatRequest(request: Request) {
   if (!chatIsAvailable(process.env)) {
     return Response.json({ error: "The conversation service is not available." }, { status: 503 })
   }
@@ -202,6 +214,7 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+    setTag("sessionId", parsed.data.sessionId)
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(researchAgentLimits.timeoutMs)])
     let references
     try {
@@ -241,6 +254,7 @@ export async function POST(request: Request) {
     }
     let isAwaitingClarification = false
     const runId = crypto.randomUUID()
+    setTag("runId", runId)
     const reportToolFailure = createToolFailureReporter(runId)
     const presentationRecords = createPresentationRecords(parsed.data.sessionKey)
     const previousCitationReferences = parsed.data.messages
@@ -250,6 +264,23 @@ export async function POST(request: Request) {
           createCitationPresentation(message.id, message.parts.map((part) => part.text).join("\n"), [])
             .missingReferences
       )
+    const memory = await restoreResearchMemory(
+      parsed.data,
+      parsed.data.messages,
+      previousCitationReferences,
+      researchSnapshotPersistence
+    )
+    presentationRecords.registerContents(memory.contents)
+    const turn = createResearchTurn(
+      parsed.data.sessionKey,
+      parsed.data.sessionId,
+      clarificationText ??
+        parsed.data.messages
+          .at(-1)
+          ?.parts.map((part) => part.text)
+          .join("\n") ??
+        ""
+    )
     const tools = createResearchTools(
       process.env,
       signal,
@@ -260,12 +291,13 @@ export async function POST(request: Request) {
       runId,
       presentationRecords.register,
       previousCitationReferences,
-      presentationRecords.registerContents
+      presentationRecords.registerContents,
+      { evidence: memory.evidence, record: turn.record }
     )
     tools.ask_clarification = createClarificationTool(parsed.data.sessionKey, signal, () => {
       isAwaitingClarification = true
     })
-    const messages = parsed.data.messages.map((message, index) => {
+    const messages: ModelMessage[] = parsed.data.messages.map((message, index) => {
       let content = message.parts.map((part) => part.text).join("\n")
       if (index === parsed.data.messages.length - 1) {
         content = clarificationText ?? content
@@ -275,13 +307,16 @@ export async function POST(request: Request) {
       }
       return { role: message.role, content }
     })
+    if (memory.message) {
+      messages.splice(messages.length - 1, 0, memory.message)
+    }
     const acceptedAt = new Date().toISOString()
     const composed = Promise.withResolvers<ComposedAnswer>()
     const capture = observeChatResponse({
-      sessionId: parsed.data.sessionKey,
+      sessionId: parsed.data.sessionId,
       start: () =>
         runResearchAgent({
-          sessionId: parsed.data.sessionKey,
+          sessionId: parsed.data.sessionId,
           captureId: runId,
           model: createResearchModel(process.env.OPENROUTER_API_KEY),
           instructions: `${prompt.prompt}\n\n${compositionInstructions}`,
@@ -295,6 +330,7 @@ export async function POST(request: Request) {
           signal
         }).stream,
       composed: composed.promise,
+      retainedEvidence: memory.evidence,
       citationTelemetry: { runId, model: researchModelId, promptVersion: prompt.version },
       input: {
         messages,
@@ -330,7 +366,17 @@ export async function POST(request: Request) {
     const responseStream = toUIMessageStream({
       stream: await capture.stream,
       sendReasoning: false,
-      messageMetadata: ({ part }) => (part.type === "start" ? { createdAt: new Date().toISOString() } : undefined),
+      messageMetadata: ({ part }) =>
+        part.type === "start"
+          ? {
+              createdAt: new Date().toISOString(),
+              sessionId: parsed.data.sessionId,
+              runId,
+              traceId: capture.getTraceId(),
+              model: researchModelId,
+              promptVersion: prompt.version
+            }
+          : undefined,
       onError: (error) => {
         if (error instanceof ResearchFailure) {
           return error.message
@@ -343,7 +389,7 @@ export async function POST(request: Request) {
     })
     return createUIMessageStreamResponse({
       stream: createUIMessageStream({
-        execute: ({ writer }) => {
+        execute: async ({ writer }) => {
           const reportedCompositionFailures = new Set<string>()
           if (userMessage) {
             writer.write({
@@ -353,28 +399,46 @@ export async function POST(request: Request) {
             })
           }
           writer.merge(
-            createCompositionStream(responseStream, {
-              resolveRecord: presentationRecords.resolve,
-              canonicalReference: presentationRecords.canonicalReference,
-              resolveContent: presentationRecords.resolveContent,
-              onComplete: composed.resolve,
-              onInvalid: (reason) => {
-                if (reportedCompositionFailures.has(reason)) {
-                  return
-                }
-                reportedCompositionFailures.add(reason)
-                captureException(new Error(reason), {
-                  fingerprint: ["answer_composition", reason],
-                  tags: {
-                    operation: "answer_composition",
-                    runId,
-                    model: researchModelId,
-                    promptVersion: String(prompt.version)
+            createCompositionStream(
+              responseStream.pipeThrough(
+                new TransformStream<UIMessageChunk, UIMessageChunk>({
+                  transform(chunk, controller) {
+                    controller.enqueue(chunk)
+                    if (chunk.type === "start" && memory.evidence.length > 0) {
+                      controller.enqueue({ type: "data-research-context", data: { evidence: memory.evidence } })
+                    }
                   }
                 })
+              ),
+              {
+                resolveRecord: presentationRecords.resolve,
+                canonicalReference: presentationRecords.canonicalReference,
+                resolveContent: presentationRecords.resolveContent,
+                onComplete: composed.resolve,
+                onInvalid: (reason) => {
+                  if (reportedCompositionFailures.has(reason)) {
+                    return
+                  }
+                  reportedCompositionFailures.add(reason)
+                  captureException(new Error(reason), {
+                    fingerprint: ["answer_composition", reason],
+                    tags: {
+                      operation: "answer_composition",
+                      runId,
+                      model: researchModelId,
+                      promptVersion: String(prompt.version)
+                    }
+                  })
+                }
               }
-            })
+            )
           )
+          const answer = await composed.promise
+          await turn.save(runId, answer.isInterrupted, researchSnapshotPersistence)
+        },
+        onError: (error) => {
+          captureException(error, { tags: { operation: "chat_research_memory", runId } })
+          return "Research context could not be saved. Retry this question before continuing."
         }
       }),
       headers: { "cache-control": "no-store" }
