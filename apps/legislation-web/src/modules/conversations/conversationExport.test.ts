@@ -3,6 +3,104 @@ import { describe, expect, it } from "vitest"
 import { createConversationExport } from "./conversationExport"
 
 describe("conversation export", () => {
+  it.each([
+    {
+      name: "inline credentials and public URL spelling",
+      text: "See [source](https://reader:synthetic@EXAMPLE.org:443/bill?sessionKey=synthetic&id=AB%202&label=Basic%20Grant~#access_token=synthetic&section=Part%202).",
+      expected: "See [source](https://EXAMPLE.org:443/bill?id=AB%202&label=Basic%20Grant~#section=Part%202)."
+    },
+    {
+      name: "parentheses within credential values",
+      text: "See [source](https://example.org/bill?token=synthetic(secret)&id=1#access_token=synthetic(secret)).",
+      expected: "See [source](https://example.org/bill?id=1)."
+    },
+    {
+      name: "adjacent Markdown links without intervening whitespace",
+      text: "[one](https://example.org/bill(1)?token=synthetic)[two](https://example.org/bill(2)?token=synthetic&id=2)",
+      expected: "[one](https://example.org/bill(1))[two](https://example.org/bill(2)?id=2)"
+    },
+    {
+      name: "fragment routes after parenthesized public paths",
+      text: "https://example.org/bill(2)#section(3)?access_token=synthetic&id=AB%202",
+      expected: "https://example.org/bill(2)#section(3)?id=AB%202"
+    },
+    {
+      name: "fragment routes with no public parameters",
+      text: "https://example.org/bill#section(2)?access_token=synthetic",
+      expected: "https://example.org/bill#section(2)"
+    },
+    {
+      name: "encoded and duplicate credential parameter names",
+      text: "https://example.org/bill?%61ccess_token=synthetic&id=1&SESSION_KEY=synthetic&id=2&access_token=synthetic",
+      expected: "https://example.org/bill?id=1&id=2"
+    },
+    {
+      name: "IPv6 authorities and user information",
+      text: "[https://reader:synthetic@[::1]:8080/bill?api_key=synthetic&id=1]",
+      expected: "[https://[::1]:8080/bill?id=1]"
+    },
+    {
+      name: "known keys in standalone and embedded URL paths",
+      text: "https://example.org/sk-or-v1-synthetic-key\nSee [source](https://example.org/sk-lf-synthetic-key?id=1).",
+      expected: "https://example.org/[REDACTED]\nSee [source](https://example.org/[REDACTED]?id=1)."
+    },
+    {
+      name: "public prose beginning with a URL",
+      text: "https://EXAMPLE.org:443/bill?id=AB%202&label=Basic%20Grant~#section(2)\nBasic Grant rules. See [source](https://example.org/bill(3)).",
+      expected:
+        "https://EXAMPLE.org:443/bill?id=AB%202&label=Basic%20Grant~#section(2)\nBasic Grant rules. See [source](https://example.org/bill(3))."
+    }
+  ])("redacts $name at every export boundary", ({ text, expected }) => {
+    const messages: UIMessage[] = [
+      {
+        id: "answer",
+        role: "assistant",
+        parts: [
+          { type: "text", text },
+          { type: "source-url", sourceId: "1", url: text },
+          {
+            type: "dynamic-tool",
+            toolName: "get_bill",
+            toolCallId: "call-1",
+            state: "output-available",
+            input: { source: text },
+            output: { source: text }
+          },
+          {
+            type: "dynamic-tool",
+            toolName: "get_bill",
+            toolCallId: "call-2",
+            state: "output-error",
+            input: {},
+            errorText: text
+          }
+        ]
+      }
+    ]
+    const exported = createConversationExport({
+      conversationId: "conversation-1",
+      status: "ready",
+      messages,
+      clarificationAnswers: { source: text }
+    })
+    expect(exported).toMatchObject({
+      messages: [
+        {
+          parts: [
+            { type: "text", text: expected },
+            { type: "source-url", url: expected },
+            { input: { source: expected }, output: { source: expected } },
+            { errorText: expected }
+          ]
+        }
+      ],
+      toolCalls: [{ input: { source: expected }, output: { source: expected } }, { error: expected }],
+      clarificationAnswers: { source: expected }
+    })
+    expect(JSON.stringify(exported)).not.toContain("synthetic")
+    expect(messages[0]?.parts[0]).toEqual({ type: "text", text })
+  })
+
   it("removes nested provider reasoning metadata", () => {
     const exported = createConversationExport({
       conversationId: "conversation-1",

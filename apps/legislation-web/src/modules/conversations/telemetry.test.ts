@@ -3,8 +3,13 @@ import { expect, it } from "vitest"
 import { startLangfuseTelemetry } from "../../services/langfuse/telemetry"
 import { runResearchAgent } from "./agent"
 import { observeChatResponse } from "./capture"
+import { redactCredentials } from "./redactCredentials"
 
-it("groups streamed model calls by conversation without leaking across concurrent runs", async () => {
+it("groups streamed model calls by conversation and redacts credentials without changing public research", async () => {
+  const research =
+    "https://EXAMPLE.org:443/bill?id=AB%202\nBasic Grant rules. See [source](https://reader:synthetic@EXAMPLE.org:443/bill(2)?sessionKey=synthetic(secret)&id=AB%202#access_token=synthetic&section=Part%202). Path: https://example.org/sk-or-v1-synthetic-key"
+  const expectedResearch =
+    "https://EXAMPLE.org:443/bill?id=AB%202\nBasic Grant rules. See [source](https://EXAMPLE.org:443/bill(2)?id=AB%202#section=Part%202). Path: https://example.org/[REDACTED]"
   const spans: {
     sessionId: unknown
     traceId: string
@@ -15,11 +20,14 @@ it("groups streamed model calls by conversation without leaking across concurren
     input: unknown
     output: unknown
     captureId: unknown
+    source: unknown
+    attributes: unknown
   }[] = []
   const telemetry = startLangfuseTelemetry({
     publicKey: "test-public",
     secretKey: "test-secret",
     mediaUploadEnabled: false,
+    mask: ({ data }) => redactCredentials(data),
     exporter: {
       export(batch, callback) {
         for (const span of batch) {
@@ -32,7 +40,9 @@ it("groups streamed model calls by conversation without leaking across concurren
             name: span.name,
             input: span.attributes["langfuse.observation.input"],
             output: span.attributes["langfuse.observation.output"],
-            captureId: span.attributes["langfuse.trace.metadata.captureId"]
+            captureId: span.attributes["langfuse.trace.metadata.captureId"],
+            source: span.attributes["langfuse.trace.metadata.source"],
+            attributes: span.attributes
           })
         }
         callback({ code: 0 })
@@ -49,7 +59,7 @@ it("groups streamed model calls by conversation without leaking across concurren
           start(controller) {
             controller.enqueue({ type: "stream-start", warnings: [] })
             controller.enqueue({ type: "text-start", id: "text" })
-            controller.enqueue({ type: "text-delta", id: "text", delta: "Hello." })
+            controller.enqueue({ type: "text-delta", id: "text", delta: research })
             controller.enqueue({ type: "text-end", id: "text" })
             controller.enqueue({
               type: "finish",
@@ -67,14 +77,17 @@ it("groups streamed model calls by conversation without leaking across concurren
     const turn = async (sessionId: string) => {
       const captured = observeChatResponse({
         sessionId,
-        input: { question: "Hello" },
-        metadata: { captureId: sessionId },
+        input: { question: research, reasoning_details: [{ data: "synthetic-reasoning" }] },
+        metadata: {
+          captureId: sessionId,
+          source: "https://EXAMPLE.org:443/bill?sessionKey=synthetic(secret)&id=AB%202"
+        },
         start: () =>
           runResearchAgent({
             sessionId,
             model,
             instructions: "Test instructions",
-            messages: [{ role: "user", content: "Hello" }],
+            messages: [{ role: "user", content: research }],
             tools: {},
             signal: new AbortController().signal
           }).stream
@@ -88,17 +101,27 @@ it("groups streamed model calls by conversation without leaking across concurren
     await Promise.all([turn("conversation-a"), turn("conversation-b")])
     await turn("conversation-a")
     await telemetry.flush()
+    expect(JSON.stringify(spans)).not.toContain("synthetic")
     expect(spans.length).toBeGreaterThanOrEqual(6)
     expect(spans.every((span) => ["conversation-a", "conversation-b"].includes(String(span.sessionId)))).toBe(true)
     expect(spans.every((span) => span.traceName === "legislative-research-conversation")).toBe(true)
     expect(spans.filter((span) => span.observationType === "chat")).toHaveLength(3)
     expect(spans.every((span) => span.captureId === span.sessionId)).toBe(true)
+    expect(spans.every((span) => span.source === "https://EXAMPLE.org:443/bill?id=AB%202")).toBe(true)
     const roots = spans.filter((span) => !span.parentId)
     expect(roots).toHaveLength(3)
     for (const root of roots) {
       expect(root.name).toBe("legislative-research-conversation")
-      expect(JSON.parse(String(root.input))).toEqual({ question: "Hello" })
-      expect(JSON.parse(String(root.output))).toMatchObject({ output: { text: "Hello." } })
+      expect(JSON.parse(String(root.input))).toEqual({ question: expectedResearch })
+      expect(JSON.parse(String(root.output))).toMatchObject({ output: { text: expectedResearch } })
+    }
+    const generations = spans.filter((span) => span.observationType === "chat")
+    for (const generation of generations) {
+      expect(generation.input).toBeUndefined()
+      expect(generation.output).toBeUndefined()
+      expect(generation.attributes).not.toHaveProperty("gen_ai.input.messages")
+      expect(generation.attributes).not.toHaveProperty("gen_ai.output.messages")
+      expect(JSON.stringify(generation)).not.toContain("synthetic")
     }
     const first = new Set(spans.filter((span) => span.sessionId === "conversation-a").map((span) => span.traceId))
     const second = new Set(spans.filter((span) => span.sessionId === "conversation-b").map((span) => span.traceId))

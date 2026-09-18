@@ -15,6 +15,13 @@ Reasoning parts and known credential fields are removed recursively before seria
 credential-like query or fragment parameters are removed, and recognized bearer, basic, OpenRouter, and Langfuse
 credentials are redacted. The session access key is not exported.
 
+Redaction covers standalone URLs and URLs embedded in prose or Markdown, including parenthesized URL paths and
+values, IPv6 hosts, and query parameters inside fragments. Removing credentials preserves surrounding text and the
+original spelling, encoding, and order of retained public URL components. The same redactor masks conversation
+observations; provider reasoning metadata is removed recursively. AI SDK child spans retain model/usage metadata but
+do not record raw inputs or outputs, which bypass Langfuse's observation mask. Redacted research content remains on
+the parent conversation observation.
+
 An export is a diagnostic browser snapshot, not a complete server execution ledger. Replaced or regenerated messages,
 provider retries, exact tool timings, and data outside the browser's retained conversation may be absent. Research text
 can contain sensitive information even after credential redaction, so review the file before sharing it.
