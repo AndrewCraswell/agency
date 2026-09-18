@@ -4122,5 +4122,23 @@ migration chain. Its end-to-end test deletes acquisition scratch before parsing 
 publication, then proves the same worker-independent artifacts publish one edition with the expected current head and
 lexical outbox item. The active worktree's unrelated uncommitted migration `0000` still fails independently because it
 creates `votes_session_idx` before that workstream adds `votes.session_id`; the regulatory test did not modify that file.
-Azure identity/container connectivity and a deployed Trigger run remain open, as do durable Federal Register metadata,
-PDF and annual-CFR handoffs. Recurring ingestion and bulk regulatory embeddings remain disabled.
+Azure identity/container connectivity, a deployed Trigger run and the annual-CFR worker handoff remain open. Recurring
+ingestion and bulk regulatory embeddings remain disabled.
+
+## Durable Federal Register issue evidence
+
+The current Federal Register publication branch now uses the same worker-independent artifact contract as eCFR. Issue
+preparation materializes the durable source XML and normalized bundle before staging. Its exact-day FederalRegister.gov
+manifest is retained as an immutable metadata artifact; retry reads the committed locator instead of recollecting a
+potentially changed snapshot. Each rendition worker streams its acquired official PDF into the federal artifact store,
+then downloads and rehashes that retained copy before accepting PDF parser evidence. The finalizer independently
+rehashes the metadata manifest and every required PDF before the canonical publication transaction, while publication
+attachments keep the durable PDF locators.
+
+The task adapters require the configured Azure storage account and pass separate source/normalized stores through the
+FR preparation, rendition and finalization boundaries. Focused task, metadata-planning and durable-artifact tests pass,
+including locator-only materialization where byte count comes from the verified content-addressed object. This is local
+implementation evidence. Azure connectivity, a real multi-document issue through deployed Trigger workers, killed-worker
+recovery and retained evidence from that run remain required before closing the FR orchestration gate. Annual-CFR
+discovery still uses the offline backfill path and has not received this worker adapter. Recurring ingestion and bulk
+regulatory embeddings remain disabled.

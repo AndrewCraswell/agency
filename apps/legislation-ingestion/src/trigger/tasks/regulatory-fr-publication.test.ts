@@ -38,6 +38,7 @@ vi.mock("./regulatory-discovery-continuation.js", () => ({
 import {
   continueRegulatoryFrPublicationFinalization,
   continueRegulatoryFrRendition,
+  runRegulatoryFrPublicationFinalization,
   runRegulatoryFrRendition
 } from "./regulatory-fr-publication.js"
 
@@ -52,6 +53,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubEnv("DATABASE_URL", "postgresql://localhost:5432/legislation")
   vi.stubEnv("REGULATORY_FR_PDF_DIRECTORY", "D:\\regulatory-fr-pdfs")
+  vi.stubEnv("AZURE_STORAGE_ACCOUNT", "regulatorytest")
   mocks.createKey.mockResolvedValue("stable-key")
 })
 afterEach(() => vi.unstubAllEnvs())
@@ -59,10 +61,11 @@ afterEach(() => vi.unstubAllEnvs())
 it("runs one bounded rendition worker against the configured retained directory", async () => {
   mocks.process.mockResolvedValue({ state: "validated", publicationReady: false })
   await expect(runRegulatoryFrRendition(payload)).resolves.toMatchObject({ state: "validated" })
-  expect(mocks.process).toHaveBeenCalledWith(expect.anything(), {
-    ...payload,
-    pdfRoot: "D:\\regulatory-fr-pdfs"
-  })
+  expect(mocks.process).toHaveBeenCalledWith(
+    expect.anything(),
+    { ...payload, pdfRoot: "D:\\regulatory-fr-pdfs" },
+    { pdfStore: expect.anything() }
+  )
   expect(mocks.end).toHaveBeenCalledOnce()
 })
 
@@ -88,4 +91,18 @@ it("closes canonical publication and replenishes discovery only after the finali
   })
   expect(mocks.complete).toHaveBeenCalledWith(expect.anything(), "publication", finalizationPayload)
   expect(mocks.end.mock.invocationCallOrder[0]).toBeLessThan(mocks.continue.mock.invocationCallOrder[0]!)
+})
+
+it("materializes durable metadata and PDFs for finalization", async () => {
+  const finalizationPayload = { manifestId: payload.manifestId, unitKey: payload.unitKey }
+  mocks.finalize.mockResolvedValue({ generationId: "d".repeat(64), state: "published" })
+  mocks.complete.mockResolvedValue({ sourceId: "govinfo-fr", scopeKey: payload.scopeKey })
+  await expect(runRegulatoryFrPublicationFinalization(finalizationPayload)).resolves.toMatchObject({
+    state: "published"
+  })
+  expect(mocks.finalize).toHaveBeenCalledWith(expect.anything(), finalizationPayload, {
+    metadataStore: expect.anything(),
+    pdfStore: expect.anything(),
+    scratchRoot: "D:\\regulatory-fr-pdfs"
+  })
 })

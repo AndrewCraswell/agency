@@ -2,6 +2,8 @@ import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { idempotencyKeys, task, tasks } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
+import { loadConfig } from "../../config/config.js"
+import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { completeLegalDiscoveryDispatch } from "../../ingestion/regulations/discovery-dispatch.js"
 import { finalizeFrIssuePublication } from "../../ingestion/regulations/fr-publication-finalization.js"
 import { recordFrFinalizationFailure } from "../../ingestion/regulations/fr-publication-recovery.js"
@@ -54,6 +56,12 @@ function pool() {
   })
 }
 
+function federalArtifactStore() {
+  const config = loadConfig()
+  const storageAccount = z.string().trim().min(1).parse(config.azure.storageAccount)
+  return new AzureBlobArtifactStore(storageAccount, config.azure.federalSourceContainer)
+}
+
 export async function continueRegulatoryFrRendition(value: unknown) {
   const payload = regulatoryFrRenditionPayloadSchema.parse(value)
   const result = await runRegulatoryFrRendition(payload)
@@ -71,7 +79,7 @@ export async function runRegulatoryFrRendition(value: unknown) {
   const pdfRoot = z.string().trim().min(1).parse(process.env.REGULATORY_FR_PDF_DIRECTORY)
   const database = pool()
   try {
-    return await processFrRendition(database, { ...payload, pdfRoot })
+    return await processFrRendition(database, { ...payload, pdfRoot }, { pdfStore: federalArtifactStore() })
   } finally {
     await database.end()
   }
@@ -85,11 +93,17 @@ export async function continueRegulatoryFrPublicationFinalization(value: unknown
 
 export async function runRegulatoryFrPublicationFinalization(value: unknown) {
   const payload = regulatoryFrFinalizationPayloadSchema.parse(value)
+  const scratchRoot = z.string().trim().min(1).parse(process.env.REGULATORY_FR_PDF_DIRECTORY)
+  const artifactStore = federalArtifactStore()
   const database = pool()
   try {
     let result
     try {
-      result = await finalizeFrIssuePublication(database, payload)
+      result = await finalizeFrIssuePublication(database, payload, {
+        metadataStore: artifactStore,
+        pdfStore: artifactStore,
+        scratchRoot
+      })
     } catch (error) {
       await recordFrFinalizationFailure(database, payload, error)
       throw error

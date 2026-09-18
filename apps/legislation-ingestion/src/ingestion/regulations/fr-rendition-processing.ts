@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto"
-import { readFile } from "node:fs/promises"
+import { rm } from "node:fs/promises"
 import { isAbsolute, join } from "node:path"
-import { digest } from "@repo/legislation-core/legal-text/contracts"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import type { FileArtifactStore } from "../documents/artifact-store.js"
+import { materializeRegulatoryArtifact, retainRegulatoryArtifact } from "./durable-artifact.js"
 import { frMetadataRecordSchema, normalizeFrDocumentNumber } from "./fr-metadata-contract.js"
 import { validateFrPdfEvidence, validateFrPdfInWorker } from "./fr-pdf-validation.js"
 import { acquireFrPdfs, pdfReceiptSchema } from "./fr-pdf.js"
@@ -37,6 +38,7 @@ export async function processFrRendition(
   options: {
     acquire?: typeof acquireFrPdfs
     inspect?: typeof validateFrPdfInWorker
+    pdfStore?: FileArtifactStore
   } = {}
 ) {
   const input = frRenditionProcessingInputSchema.parse(value)
@@ -99,7 +101,19 @@ export async function processFrRendition(
       const result = acquired.results[0]
       invariant(result?.status === "acquired", "fr_rendition_acquisition_failed")
       const receipt = pdfReceiptSchema.parse(result.receipt)
-      const storageLocator = join(directory, "blobs", `${receipt.sha256}.pdf`)
+      const localPath = join(directory, "blobs", `${receipt.sha256}.pdf`)
+      const storageLocator =
+        options.pdfStore === undefined
+          ? localPath
+          : (
+              await retainRegulatoryArtifact(options.pdfStore, {
+                kind: "pdf",
+                hash: receipt.sha256,
+                bytes: receipt.bytes,
+                extension: "pdf",
+                localPath
+              })
+            ).locator
       const saved = await pool.query(
         `UPDATE legislation.legal_fr_issue_renditions
          SET state='acquired',receipt=$5::jsonb,storage_locator=$6,updated_at=clock_timestamp(),
@@ -116,58 +130,71 @@ export async function processFrRendition(
     }
     const receipt = pdfReceiptSchema.parse(claimed.receipt)
     invariant(claimed.storage_locator, "fr_rendition_storage_missing")
-    const bytes = await readFile(claimed.storage_locator)
-    invariant(bytes.length === receipt.bytes && digest(bytes) === receipt.sha256, "fr_pdf_retention_mismatch")
-    const inspection = validateFrPdfEvidence({
-      inspection: await (options.inspect ?? validateFrPdfInWorker)(claimed.storage_locator, input.documentNumber),
-      expectedHash: receipt.sha256,
-      expectedBytes: receipt.bytes,
-      expectedPages: claimed.metadata_record.end_page - claimed.metadata_record.start_page + 1
-    })
-    const client = await pool.connect()
+    const durablePdf = claimed.storage_locator.startsWith("regulatory-artifact://")
+    invariant(!durablePdf || options.pdfStore !== undefined, "fr_pdf_store_required")
+    const validationPath = durablePdf ? join(directory, `${randomUUID()}.validation.pdf`) : claimed.storage_locator
     try {
-      await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE")
-      await client.query("SET LOCAL lock_timeout='5s'")
-      await client.query("SET LOCAL statement_timeout='30s'")
-      const advanced = await client.query(
-        `UPDATE legislation.legal_fr_issue_renditions
+      if (durablePdf) {
+        await materializeRegulatoryArtifact(options.pdfStore!, {
+          locator: claimed.storage_locator,
+          hash: receipt.sha256,
+          bytes: receipt.bytes,
+          localPath: validationPath
+        })
+      }
+      const inspection = validateFrPdfEvidence({
+        inspection: await (options.inspect ?? validateFrPdfInWorker)(validationPath, input.documentNumber),
+        expectedHash: receipt.sha256,
+        expectedBytes: receipt.bytes,
+        expectedPages: claimed.metadata_record.end_page - claimed.metadata_record.start_page + 1
+      })
+      const client = await pool.connect()
+      try {
+        await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE")
+        await client.query("SET LOCAL lock_timeout='5s'")
+        await client.query("SET LOCAL statement_timeout='30s'")
+        const advanced = await client.query(
+          `UPDATE legislation.legal_fr_issue_renditions
          SET state='validated',inspection=$5::jsonb,lease_token=NULL,lease_expires_at=NULL,
            last_error=NULL,updated_at=clock_timestamp()
          WHERE source_id='govinfo-fr' AND scope_key=$1 AND unit_key=$2 AND document_number=$3
            AND lease_token=$4 AND lease_expires_at>clock_timestamp() AND state='acquired'
          RETURNING document_number`,
-        [input.scopeKey, input.unitKey, input.documentNumber, token, JSON.stringify(inspection)]
-      )
-      invariant(advanced.rowCount === 1, "fr_rendition_lease_lost")
-      const counted = await client.query<{ count: number }>(
-        `SELECT count(*)::integer AS count FROM legislation.legal_fr_issue_renditions
+          [input.scopeKey, input.unitKey, input.documentNumber, token, JSON.stringify(inspection)]
+        )
+        invariant(advanced.rowCount === 1, "fr_rendition_lease_lost")
+        const counted = await client.query<{ count: number }>(
+          `SELECT count(*)::integer AS count FROM legislation.legal_fr_issue_renditions
          WHERE source_id='govinfo-fr' AND scope_key=$1 AND unit_key=$2 AND state='validated'`,
-        [input.scopeKey, input.unitKey]
-      )
-      const validated = counted.rows[0]?.count ?? 0
-      const preparation = await client.query<{ expected_renditions: number; state: string }>(
-        `UPDATE legislation.legal_fr_issue_preparations
+          [input.scopeKey, input.unitKey]
+        )
+        const validated = counted.rows[0]?.count ?? 0
+        const preparation = await client.query<{ expected_renditions: number; state: string }>(
+          `UPDATE legislation.legal_fr_issue_preparations
          SET validated_renditions=$3,state=CASE WHEN expected_renditions=$3 THEN 'ready' ELSE state END,
            updated_at=clock_timestamp()
          WHERE source_id='govinfo-fr' AND scope_key=$1 AND unit_key=$2 AND state IN ('renditions_pending','ready')
          RETURNING expected_renditions,state`,
-        [input.scopeKey, input.unitKey, validated]
-      )
-      invariant(preparation.rowCount === 1, "fr_preparation_missing")
-      await client.query("COMMIT")
-      return {
-        ...input,
-        state: "validated" as const,
-        reused: false,
-        validatedRenditions: validated,
-        expectedRenditions: preparation.rows[0]?.expected_renditions,
-        publicationReady: preparation.rows[0]?.state === "ready"
+          [input.scopeKey, input.unitKey, validated]
+        )
+        invariant(preparation.rowCount === 1, "fr_preparation_missing")
+        await client.query("COMMIT")
+        return {
+          ...input,
+          state: "validated" as const,
+          reused: false,
+          validatedRenditions: validated,
+          expectedRenditions: preparation.rows[0]?.expected_renditions,
+          publicationReady: preparation.rows[0]?.state === "ready"
+        }
+      } catch (error) {
+        await client.query("ROLLBACK")
+        throw error
+      } finally {
+        client.release()
       }
-    } catch (error) {
-      await client.query("ROLLBACK")
-      throw error
     } finally {
-      client.release()
+      if (durablePdf) await rm(validationPath, { force: true })
     }
   } catch (error) {
     await pool.query(

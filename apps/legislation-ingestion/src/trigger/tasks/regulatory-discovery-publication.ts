@@ -58,7 +58,11 @@ export async function runRegulatoryDiscoveryPublication(value: unknown) {
     const sourceId = await legalDiscoveryPublicationSource(pool, payload)
     if (sourceId === "govinfo-fr") {
       const metadataRoot = z.string().trim().min(1).parse(process.env.REGULATORY_FR_METADATA_DIRECTORY)
-      const prepared = await prepareFrIssuePublication(pool, { ...payload, metadataRoot })
+      const prepared = await prepareFrIssuePublication(
+        pool,
+        { ...payload, metadataRoot },
+        { sourceStore, normalizedStore, metadataStore: sourceStore }
+      )
       const renditionItems = await Promise.all(
         prepared.renditions.map(async ({ documentNumber }) => {
           const renditionPayload = {

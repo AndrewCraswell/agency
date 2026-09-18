@@ -94,3 +94,24 @@ export async function materializeRegulatoryArtifact(
     throw error
   }
 }
+
+/** Materializes a content-addressed locator when the database contract does not store its byte count separately. */
+export async function materializeRegulatoryArtifactFromLocator(
+  store: FileArtifactStore,
+  input: { locator: string; localPath: string; maximumBytes: number; expectedKind?: z.infer<typeof kindSchema> }
+) {
+  const parsed = regulatoryArtifactLocatorSchema.parse(input.locator)
+  if (input.expectedKind !== undefined) {
+    invariant(parsed.kind === input.expectedKind, "regulatory_artifact_locator_kind_mismatch")
+  }
+  const maximumBytes = z.int().positive().parse(input.maximumBytes)
+  try {
+    await store.readToFile(parsed.path, input.localPath)
+    const local = await inspectRegulatoryArtifactFile(input.localPath)
+    invariant(local.hash === parsed.hash && local.bytes <= maximumBytes, "regulatory_artifact_retention_mismatch")
+    return { ...parsed, localPath: input.localPath, bytes: local.bytes }
+  } catch (error) {
+    await rm(input.localPath, { force: true })
+    throw error
+  }
+}

@@ -1,13 +1,22 @@
-import { readFile } from "node:fs/promises"
+import { randomUUID } from "node:crypto"
+import { readFile, rm } from "node:fs/promises"
 import { isAbsolute, join } from "node:path"
 import { isDeepStrictEqual } from "node:util"
 import { regulatoryRecordSchema } from "@repo/legislation-core/legal-text/parser-contract"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import type { FileArtifactStore } from "../documents/artifact-store.js"
 import { currentReceiptSchema } from "./artifact-backfill.js"
 import { legalDiscoveryUnitSchema } from "./discovery-checkpoint.js"
 import { validateLegalDiscoveryManifest } from "./discovery-registration.js"
+import {
+  inspectRegulatoryArtifactFile,
+  materializeRegulatoryArtifact,
+  materializeRegulatoryArtifactFromLocator,
+  retainRegulatoryArtifact
+} from "./durable-artifact.js"
+import { materializeRegulatoryNormalizedBundle } from "./durable-normalized-bundle.js"
 import { frMetadataRecordSchema, normalizeFrDocumentNumber, type FrMetadataManifest } from "./fr-metadata-contract.js"
 import { collectFrMetadataToDirectory, replayFrMetadata } from "./fr-metadata.js"
 import { frPdfLocation, reconcileFrIssue } from "./fr-reconciliation.js"
@@ -73,8 +82,29 @@ export function planFrPublicationRenditions(input: {
 async function loadOrCollectMetadata(
   directory: string,
   issueDate: string,
-  collect: typeof collectFrMetadataToDirectory
+  collect: typeof collectFrMetadataToDirectory,
+  options: { store?: FileArtifactStore; retainedLocator?: string } = {}
 ) {
+  if (options.retainedLocator?.startsWith("regulatory-artifact://")) {
+    invariant(options.store, "fr_metadata_store_required")
+    const localPath = join(directory, `${randomUUID()}.metadata.json`)
+    try {
+      await materializeRegulatoryArtifactFromLocator(options.store, {
+        locator: options.retainedLocator,
+        localPath,
+        maximumBytes: 128 * 1024 * 1024,
+        expectedKind: "metadata"
+      })
+      const manifest = await replayFrMetadata(JSON.parse(await readFile(localPath, "utf8")))
+      invariant(
+        manifest.scope.start === issueDate && manifest.scope.end === issueDate && manifest.scope.cutoff === issueDate,
+        "fr_metadata_scope_mismatch"
+      )
+      return { manifest, manifestPath: options.retainedLocator, reused: true }
+    } finally {
+      await rm(localPath, { force: true })
+    }
+  }
   const manifestPath = join(directory, "manifest.json")
   try {
     const manifest = await replayFrMetadata(JSON.parse(await readFile(manifestPath, "utf8")))
@@ -82,19 +112,40 @@ async function loadOrCollectMetadata(
       manifest.scope.start === issueDate && manifest.scope.end === issueDate && manifest.scope.cutoff === issueDate,
       "fr_metadata_scope_mismatch"
     )
-    return { manifest, manifestPath, reused: true }
+    const retained = await retainMetadata(options.store, manifestPath)
+    return { manifest, manifestPath: retained ?? manifestPath, reused: true }
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error
   }
   const manifest = await collect(directory, { start: issueDate, end: issueDate, cutoff: issueDate })
-  return { manifest, manifestPath, reused: false }
+  const retained = await retainMetadata(options.store, manifestPath)
+  return { manifest, manifestPath: retained ?? manifestPath, reused: false }
+}
+
+async function retainMetadata(store: FileArtifactStore | undefined, manifestPath: string) {
+  if (store === undefined) return undefined
+  const file = await inspectRegulatoryArtifactFile(manifestPath)
+  return (
+    await retainRegulatoryArtifact(store, {
+      kind: "metadata",
+      hash: file.hash,
+      bytes: file.bytes,
+      extension: "json",
+      localPath: manifestPath
+    })
+  ).locator
 }
 
 /** Stages one parsed FR issue, freezes its exact-day metadata, and atomically registers resumable PDF work. */
 export async function prepareFrIssuePublication(
   pool: pg.Pool,
   value: unknown,
-  options: { collectMetadata?: typeof collectFrMetadataToDirectory } = {}
+  options: {
+    collectMetadata?: typeof collectFrMetadataToDirectory
+    sourceStore?: FileArtifactStore
+    normalizedStore?: FileArtifactStore
+    metadataStore?: FileArtifactStore
+  } = {}
 ) {
   const input = inputSchema.parse(value)
   invariant(isAbsolute(input.metadataRoot), "fr_metadata_root_not_absolute")
@@ -119,19 +170,57 @@ export async function prepareFrIssuePublication(
     row.manifest_id === manifest.id && isDeepStrictEqual(row.unit, manifestUnit),
     "fr_preparation_input_changed"
   )
+  const retainedPreparation = await pool.query<{ metadata_locator: string }>(
+    `SELECT metadata_locator FROM legislation.legal_fr_issue_preparations
+     WHERE source_id='govinfo-fr' AND scope_key=$1 AND unit_key=$2`,
+    [manifest.scopeKey, manifestUnit.key]
+  )
   const metadataDirectory = join(input.metadataRoot, manifestUnit.key)
   const metadata = await loadOrCollectMetadata(
     metadataDirectory,
     manifestUnit.issueDate,
-    options.collectMetadata ?? collectFrMetadataToDirectory
+    options.collectMetadata ?? collectFrMetadataToDirectory,
+    { store: options.metadataStore, retainedLocator: retainedPreparation.rows[0]?.metadata_locator }
   )
-  const staged = await importNormalizedRegulatoryUnit(pool, {
-    manifest,
-    receipt: row.acquisition_receipt,
-    directory: row.normalized_locator,
-    parserCodeHash: row.parser_hash,
-    artifactLocator: row.storage_locator
-  })
+  const durableSource = row.storage_locator.startsWith("regulatory-artifact://")
+  const durableNormalized = row.normalized_locator.startsWith("regulatory-artifact://")
+  invariant(durableSource === durableNormalized, "fr_discovery_durability_mismatch")
+  invariant(
+    !durableSource || (options.sourceStore !== undefined && options.normalizedStore !== undefined),
+    "fr_discovery_artifact_stores_required"
+  )
+  const materializedSource = durableSource
+    ? join(input.metadataRoot, `${randomUUID()}.source.xml`)
+    : row.storage_locator
+  let materializedDirectory: string | undefined
+  let staged: Awaited<ReturnType<typeof importNormalizedRegulatoryUnit>>
+  try {
+    if (durableSource) {
+      await materializeRegulatoryArtifact(options.sourceStore!, {
+        locator: row.storage_locator,
+        hash: row.acquisition_receipt.sha256,
+        bytes: row.acquisition_receipt.bytes,
+        localPath: materializedSource
+      })
+      materializedDirectory = (
+        await materializeRegulatoryNormalizedBundle(options.normalizedStore!, {
+          locator: row.normalized_locator,
+          outputRoot: input.metadataRoot
+        })
+      ).directory
+    }
+    staged = await importNormalizedRegulatoryUnit(pool, {
+      manifest,
+      receipt: row.acquisition_receipt,
+      directory: materializedDirectory ?? row.normalized_locator,
+      parserCodeHash: row.parser_hash,
+      artifactLocator: row.storage_locator,
+      artifactValidationPath: materializedSource
+    })
+  } finally {
+    if (durableSource) await rm(materializedSource, { force: true })
+    if (materializedDirectory !== undefined) await rm(materializedDirectory, { recursive: true, force: true })
+  }
   invariant(staged.state === "validated" || staged.state === "published", "fr_staging_not_validated")
   const recordsResult = await pool.query<{ payload: unknown }>(
     "SELECT payload FROM legislation.legal_import_records WHERE generation_id=$1 ORDER BY ordinal",

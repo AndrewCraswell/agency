@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { LocalArtifactStore } from "../documents/artifact-store.js"
 import {
   materializeRegulatoryArtifact,
+  materializeRegulatoryArtifactFromLocator,
   regulatoryArtifactLocator,
   regulatoryArtifactLocatorSchema,
   retainRegulatoryArtifact
@@ -48,6 +49,16 @@ describe("durable regulatory artifacts", () => {
       })
     ).resolves.toMatchObject({ kind: "source", localPath: restored })
     await expect(readFile(restored)).resolves.toEqual(body)
+    const locatorOnly = join(scratch, "locator-only.xml")
+    await expect(
+      materializeRegulatoryArtifactFromLocator(store, {
+        locator: retained.locator,
+        localPath: locatorOnly,
+        maximumBytes: body.length,
+        expectedKind: "source"
+      })
+    ).resolves.toMatchObject({ bytes: body.length, localPath: locatorOnly })
+    await expect(readFile(locatorOnly)).resolves.toEqual(body)
   })
 
   it("rejects locator traversal, hash mismatches and corrupted retained collisions", async () => {

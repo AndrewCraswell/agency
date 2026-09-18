@@ -145,6 +145,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   uploads the verified file to the configured immutable federal source store and atomically records its content-addressed
   locator and receipt on the registered discovery row. Retry revalidates retained bytes, including an existing remote
   object. Shared provider admission/cooldown, persisted worker leases and deployed storage verification remain open.
+  Federal Register exact-day metadata manifests and required publication PDFs now use the same immutable federal artifact
+  store. Metadata retries prefer the already-committed manifest locator; PDF retries materialize the committed hash rather
+  than relying on the acquisition worker's directory.
 - [ ] **ORCH-04 Add the parser and validation worker adapters.** Invoke the existing Python bridge with bounded
   manifests/shards, resource limits and safe failure summaries. **Done:** process exit, timeout, missing shard and
   invalid envelope leave the unit unpublished; retry preserves deterministic normalized hashes. Depends on ORCH-03.
@@ -164,7 +167,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   canonical transaction succeeds. Real retained Title 1 bytes published 368 members, one current head and one lexical
   outbox item; replay reused the same identities. A destructive PostgreSQL smoke also removed both producer scratch trees
   before the next stage and published successfully from separate local artifact stores. FR/annual durable handoff,
-  deployed verification and downstream dispatch remain open.
+  deployed verification and downstream dispatch remain open. The FR branch now also materializes durable source XML and
+  normalized shards for issue staging, verifies every retained metadata/PDF object again in the finalizer and retains
+  durable attachment locators in canonical publication storage. A full deployed FR issue run remains open.
 - [ ] **ORCH-06 Connect preparation, copying and acknowledgement.** Dispatch existing workers from publication state;
   route copy exhaustion to resumable INDEX-03 validation before acknowledgement. **Done:** copied-but-unacknowledged
   data remains unavailable, completed stage replay is safe, and no preparation task automatically creates vectors.
