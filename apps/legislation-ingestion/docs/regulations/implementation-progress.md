@@ -13,6 +13,23 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added the missing operator boundary for a full admitted passage-preparation wave. The new
+`run-regulatory-passage-backfill` command re-runs the complete frozen-catalog admission against the retained canonical
+database before it can construct a Trigger controller payload. Its preview binds the catalog hash, exact admitted owner
+inventory, selected tokenizer/model, immutable wave ID, UTC cutoff, bounded worker limit and named deployment
+environment into one stable plan hash. Apply requires that exact hash plus matching `REGULATORY_ENVIRONMENT` and trusted
+`REGULATORY_EMBEDDING_MODEL`; an absent or different selected route fails before Trigger access. Trigger submission uses
+a seven-day global idempotency key, and the command exclusively reserves and fsyncs a success or bounded failure receipt.
+
+The final read-only preview revalidated the OpenAI Small current-eCFR catalog against retained canonical port 55457 in
+21.74 seconds: 49 editions, 275,138 versions, 501,543 expected passages, 35 already materialized versions and 275,103
+pending. It produced plan `569abfb26537a4b3c1a2b7c6a1034a4e4dc461bfe33bb49fd95d7f850e245125` for wave
+`9c08ac62-2298-4932-a771-c8cdcb9c15ae`. Three focused tests pass stable payload construction, exact apply binding and
+source-kind refusal; ingestion type-check, formatting and scoped lint pass. The receipt is
+`artifacts/regulatory-backfills/openai-small-passage-backfill-preview-final.json`. This closes the full-corpus preview gap in
+ORCH-12. Apply was intentionally not attempted because EVAL-04/EVAL-12 have not selected the trusted model; no Trigger,
+passage, provider, embedding, vector or recurring-source work ran.
+
 Connected modified Federal Register issues to a bounded current-publication pipeline without enabling recurring sync.
 The shared discovery controller now carries `govinfo-fr` units through existing immutable XML acquisition and parsing.
 At publication it freezes an exact-day FederalRegister.gov metadata snapshot, stages and reconciles the parsed issue, and

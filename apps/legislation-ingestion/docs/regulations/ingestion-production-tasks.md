@@ -232,7 +232,12 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   transaction and reports its exact checkpoint, cutoff, unit/dispatch states and bounded controller payload. Apply binds
   the named environment and complete snapshot to a required plan hash, rejects drift before Trigger access and uses that
   hash as the global submission identity. A real PostgreSQL preview and stale-plan/environment rejection passed without
-  remote dispatch. Targeted repair, multi-partition backfill planning and deployed apply evidence remain open.
+  remote dispatch. `run-regulatory-passage-backfill` now performs the full PASS-09 catalog admission before producing a
+  multi-partition preparation-controller payload. Preview binds all 49 current-eCFR owners, catalog, model, environment,
+  cutoff, wave and bounded worker size to one plan hash. Apply additionally requires the trusted configured model, uses a
+  global seven-day Trigger key and retains an exclusive fsynced receipt. The real retained-database preview reconciled
+  275,138 versions without dispatch. Targeted repair and deployed apply evidence remain open; reviewed model selection
+  still gates the current-eCFR apply.
 - [ ] **ORCH-13 Run deployed fault-injection smoke.** Exercise 429/5xx, missing blob, parser kill, lost lease, duplicate
   parent, submit-before-ack crash, target commit/source failure and cancelled child. **Done:** retained run IDs and DB
   checks show no lost work, duplicate publication or premature acknowledgement. Depends on ORCH-03–12, OPS-04–05.

@@ -87,6 +87,24 @@ as `artifacts/regulatory-backfills/openai-small-passage-admission.json` and
 `artifacts/regulatory-backfills/voyage-4-passage-admission.json`. These are local read-only admission results. They do
 not select a model or claim PASS-09 completion.
 
+`pnpm tool regulations/run-regulatory-passage-backfill` is the operator entry point for converting one of those audited
+catalogs into a complete planning-controller wave. It requires explicit environment, catalog path and hash, wave UUID,
+source, publisher cutoff, bounded child limit and exclusive output receipt. The default invocation is read-only and
+repeats the complete catalog/database audit before emitting a stable plan hash and exact controller payload. This avoids
+using a stale retained admission report as write authorization.
+
+Apply additionally requires `--apply --plan <preview-plan-hash>`, an exact `REGULATORY_ENVIRONMENT` match and
+`REGULATORY_EMBEDDING_MODEL` equal to the catalog model. The selected-model requirement keeps both candidate catalogs
+previewable while preventing either one from becoming a full passage corpus before EVAL-12. A successful submission
+uses a seven-day global idempotency key and retains the Trigger run ID; an uncertain failure retains a bounded failure
+receipt. The controller still only registers durable preparation intents. Use the existing recovery flow to inspect and
+submit those intents after the complete plan is visible.
+
+The retained OpenAI Small preview on canonical port 55457 revalidated all 49 current editions and 275,138 versions,
+including 35 materialized and 275,103 pending versions, before producing plan
+`569abfb26537a4b3c1a2b7c6a1034a4e4dc461bfe33bb49fd95d7f850e245125`. No apply was attempted because reviewed model
+selection remains open. Receipt: `artifacts/regulatory-backfills/openai-small-passage-backfill-preview-final.json`.
+
 The task also accepts `{ "admission": { ...plan, "pendingOnly": true } }`. This selects only due pending lexical
 outbox scopes, registers at most ten intents under the durable wave checkpoint and immediately executes one recovery
 page to submit those recorded intents. eCFR and annual CFR admissions join `legal_derived_outbox`; Federal Register
