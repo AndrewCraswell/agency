@@ -16,7 +16,7 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [x] | Add Washington to shared extraction and promotion | Shared reviewed profiles, source policy and fingerprint checks are implemented; version-pinned hosted bill batches and event windows have promoted successfully. Full inventory acceptance remains separate |
 | [x] | Run isolated bounded bill extraction in both chambers | HB 1000 and SB 5000 retained successfully; this is source extraction only, not canonical promotion or hosted activation |
 | [ ] | Validate bill actions, documents and individual votes | Compare retained cases from both chambers to official pages, including substitutions, engrossments, resolutions and amendments |
-| [ ] | Import and validate people and service history | Production import and replay verified for 337 people and 376 accepted terms; 12 historical conflicts remain quarantined as of the Liias review. Current 147-member roster is complete; history acceptance remains open |
+| [ ] | Import and validate people and service history | Production import and replay verified for 337 people and 377 accepted terms; 11 historical conflicts remain quarantined as of the Corry review. Current 147-member roster is complete; history acceptance remains open |
 | [x] | Validate current people/committee snapshot with reusable district capacities | Shared validator accepts 98 House members, 49 senators, 51 committees and 609 membership assertions; zero unresolved member references; source snapshot, not production import |
 | [x] | Import committees and memberships | Production import/replay verified for 51 committees and 609 current membership assertions. This does not establish complete committee detail profiles or historical memberships |
 | [ ] | Import meetings and agenda items | Bound event windows, preserve Pacific time, stable source IDs and cancellation evidence; validate related bills/committees |
@@ -27,6 +27,19 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [ ] | Enable and observe regular syncing | Only after acceptance; verify a subsequent scheduled delta run, source failures and freshness reporting |
 
 ## Production baseline (2026-09-19 05:01 UTC)
+
+Latest historical review: Corry's [official biography](https://chriscorry.houserepublicans.wa.gov/about/) identifies
+prior district 14 service followed by district 15 after redistricting. The source-fingerprinted review removes the
+contradictory overlapping prior district 15 role, retaining the supplied district 14 and current district 15 roles.
+This does not independently certify their exact boundary dates. The shared import and second production replay
+preserved all 18 canonical terms for nine reviewed people without duplicates or changed identities/dates/provenance.
+Authenticated `get_person` returned Corry's two expected districts. Thirteen focused review/import tests passed;
+the full retained pair has zero current-roster coverage issues. Repository verification has been started again;
+it must not be represented as complete until its terminal result is inspected.
+
+Hosted progress at this check: 19 of 90 meeting windows completed; continuation `run_06gbikp0hd3jdjeap3t8sodt01`
+and bill run `run_06gbikltulcosot05nbh20v901` were executing on candidate `20260919.22`. The preceding bill batch
+promoted ten bills with no unresolved sponsors or vote positions. No duplicate dispatch or schedule was started.
 
 | Session | Stored bills |
 | --- | ---: |

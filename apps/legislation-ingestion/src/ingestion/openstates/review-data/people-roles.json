@@ -209,5 +209,26 @@
         "reason": "The 2008 House journal records the January 7 appointment to district 21, position 2. The proofed 2014 House journal page 71 records immediate resignation on January 21. The 2023 Members of the Legislature reference confirms Senate appointment January 21 and swearing-in January 22. Replace the duplicate one-day Senate assertion with the documented House service and preserve the supplied Senate swearing-in start."
       }
     ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Chris-Corry-a0a48572-259f-4a6c-b035-a85b80e187d6.yml",
+    "sourceSha256": "b5cf88acfe030bbee474561886a37571bca69cbedfa728ec42cff6eeb219d497",
+    "personId": "ocd-person/a0a48572-259f-4a6c-b035-a85b80e187d6",
+    "changes": [
+      {
+        "before": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "15",
+          "start_date": "2019-01-14",
+          "end_date": "2025-01-12"
+        },
+        "after": null,
+        "evidenceUrls": ["https://chriscorry.houserepublicans.wa.gov/about/"],
+        "reason": "Corry's official biography identifies prior service in district 14 and a transition to district 15 after redistricting. Remove the contradictory continuous prior district 15 assertion that overlaps the supplied district 14 role. Preserve the independently supplied district 14 and current district 15 roles without claiming independent verification of their exact boundary dates."
+      }
+    ]
   }
 ]
