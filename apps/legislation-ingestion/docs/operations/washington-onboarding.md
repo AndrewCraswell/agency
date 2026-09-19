@@ -7,6 +7,28 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Trigger `20260919.35` deployed successfully without promotion: deployment `szinz4le`, image
+`f897057a1300336ce8fb7bd2c04f5496793234646b3499ea87705e1281b23f32`. Refresh canary
+`run_06gbkb0fmtklbl9u8t16bm8101` is executing against the retained upstream revision. Its expected first result is
+an import because the previous checkpoint has no review digest; verify the persisted digest and a subsequent
+`no_change` response before closing the refresh gate. No foundation task was active before dispatch.
+Alias dry run 65742 completed through HB 1304; 307 candidates passed checks with no held groups. Guarded apply
+is now running as 93473. The last verified completed cleanup cursor remains HB 1279.
+
+Full verification for shared review-refresh fix `bb7fb42` passed (20720), including API/built MCP acceptance.
+Default optional database and positive-corpus skips remain as described below. The live API/importer compatibility
+check passed. Unpromoted Trigger deployment is now building in session 8743; do not dispatch its refresh canary
+until deployment success and exact version are confirmed. No schedule or global promotion changed.
+Latest receipt inspections show 67 promoted bill batches and 81/90 calendar windows, with active runs
+`run_06gbk9rtlh21tcfaq6msf3e901` and `run_06gbka43pqtr92gj502g5ssl01` respectively.
+
+Historical research: the official January 13, 2014 House journal at
+`https://lawfilesext.leg.wa.gov/law/Journals/2014/HJ_14_001.htm` reproduces Spokane County's January 8 appointment
+of Leonard Christian to House District 4 Position One, until his successor qualifies. This contradicts the archived
+2014 Senate assertion and 2013 House start. The successor qualification boundary still needs primary-source
+verification; no Christian role correction has been applied. The old House Republican successor announcement
+returned HTTP 403, so its search/secondary references are not sufficient acceptance evidence.
+
 Duplicate-free production replay `run_06gbk9eih3vtv6t2gqcvd8bl01` completed with unchanged 337 people/381 terms
 and seven holds. Dufault read-back again contained exactly the same two canonical term IDs and date ranges,
 without an undated fallback. This closes his production correction/replay gate, not the seven other history holds.
