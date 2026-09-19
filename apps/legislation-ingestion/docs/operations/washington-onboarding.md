@@ -26,6 +26,18 @@ canonical Local Government committee and one agenda item. This is one verified r
 meeting acceptance. No name-specific correction was introduced. The prior full verification exited unsuccessfully
 in web coverage; focused ingestion checks pass, but full repository acceptance remains open.
 
+The focused inventory/import/event/task suite passed 24 tests, with ingestion types and lint passing. Commit
+`e0012df` contains the crosswalk implementation; it has not yet been deployed to hosted calendar continuations.
+The preceding full verification had eight `voteAttribution.test.ts` failures: the test expects `e1`-style IDs but
+receives UUID evidence IDs. The unrelated web search worktree was left untouched.
+
+At the subsequent live inspection, 44/342 bill batches were promoted. HB 1440-1449 run
+`run_06gbjjj8rkqrco8m88mfd2rb01` failed with retained `source_http_server_error`, exit 1 and no bill output.
+Two ownership checks showed no active owner. One idempotent retry, `run_06gbjmko5h2dcs42o3jp7vb001`, was accepted
+on `20260919.29`; do not start another retry without inspecting that handle. Calendar run
+`run_06gbjlv5g0db1bqqr6pvu10101` was executing on its existing pinned `20260919.27` chain. No schedules or concurrency
+limits were changed.
+
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |
 | [x] | Inspect production archive baseline | September 19 2026 read-only query: 16,753 bills across five sessions below; historical-import runs exist for each |
