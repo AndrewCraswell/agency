@@ -84,7 +84,8 @@ export async function prepareWashingtonEventWindow(input: {
 }
 
 const host = z.object({
-  id: z.string().regex(/^[1-9][0-9]*$/),
+  // Publisher identities are signed: joint committees include negative IDs.
+  id: z.string().regex(/^-?[1-9][0-9]*$/),
   agency: z.enum(["House", "Senate", "Joint", "Agency", "Other"]),
   code: z.string().regex(/^[A-Z0-9&]+$/),
   name: z.string().trim().min(1)

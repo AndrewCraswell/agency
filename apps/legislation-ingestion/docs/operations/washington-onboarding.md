@@ -719,3 +719,14 @@ ran from 09:11:54 to 09:12:24 UTC and succeeded. The shared coordinator then con
 receipt: one completed window, 89 pending, next window ID
 `4ea6955f88beb592bf507954d1e23362f81c147434fca7a99dfafc834eba8266`. Queue peek was empty after settlement.
 This closes the empty-week runtime defect end to end; it does not establish full-calendar completion.
+
+January 8-14 extraction `leg-dev-openstates-candidate-fdvds` succeeded, but promotion correctly stopped on a committee
+ID validation mismatch. The official `GetCommitteeMeetings?beginDate=2025-01-08&endDate=2025-01-14` response identifies
+agenda 32315's joint JLARC host as ID `-5`. Committee IDs now accept signed nonzero integers; agenda IDs remain positive,
+and joint-host canonical relationships remain incomplete rather than guessed. The retained archive from
+`wa-event-ce1f05c2-1ce4-426e-9adb-7b791f7f5bc9` then passed full preparation with 31 meetings and exact inventory coverage.
+Eight event preparation tests passed, including malformed signed IDs and the incomplete joint-link boundary.
+
+Hosted bill and meeting tasks now use the same explicit jurisdiction queue resolver. Twenty focused routing/task tests
+passed, including candidate isolation and failure before dispatch when an explicit routing table omits a state.
+The routing change is local until the Trigger deployment is updated; production NC/AK routing was not changed.
