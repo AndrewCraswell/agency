@@ -260,6 +260,24 @@ active. A separate preexisting UUID-based event (`event:openstates:ocd-event-7a5
 September 16, 2026) has no source URL and incomplete organization relations. Audit it against the later calendar
 window before asserting duplicate-free event coverage; do not merge by title/date or delete it without identity evidence.
 
+The selected 46-window relationship replay completed successfully. During the subsequent snapshot, 861 of 883
+canonical `wa-agenda` meetings had complete organization links; newer windows were still being promoted on the old
+adapter, and this is not a final coverage denominator. Remaining hosts include absent-roster agencies/commissions,
+the empty-code Civic Health committee, older code evidence, and windows reconciled before agency identifiers were added.
+Cleanup HB 1130–1154 completed across the original attempt and same-page retry (219 candidates total); independent
+read-only replay found zero candidates or held groups. The completed cursor is `bill:wa:2025-2026:hb:1154`.
+
+Combined source-failure diagnostics and joint agency-URL mapping deployed successfully, without global promotion,
+as `20260919.29` with 70 tasks: `https://cloud.trigger.dev/projects/v3/proj_bsjukvltatwjsyczuatb/deployments/u66rd0xu`.
+The API/importer contract preflight passed. Running version-pinned continuations were not cancelled or overlapped.
+
+Agenda 32344 reveals why publisher numeric IDs are needed in addition to abbreviations: its retained January 8–14
+window (`wa-event-6969e0f8-5e3a-408c-a72a-4b7c47536a52`) supplies Senate host ID 34080 with acronym `LGLT`, while
+live `GetCommitteeMeetings` for January 13 and `GetCommittees?biennium=2025-26` both supply ID 34080 with `LGV`.
+The canonical roster has exactly one `waCommittee:senate:LGV` organization. Implement a retained, source-validated
+numeric-ID crosswalk and shared unambiguous reference resolution rather than adding a name or acronym exception.
+The live inventory returned 34 standing committees; it is not evidence of complete joint/agency coverage.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
