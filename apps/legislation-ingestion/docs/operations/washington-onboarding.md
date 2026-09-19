@@ -140,6 +140,22 @@ metadata remains recoverable in the per-alias audit snapshots. The completed cur
 the next page has not yet been applied. Twenty focused unit tests, ingestion type-check and lint passed. A new full
 verification run passed types/lint/unused checks and is still in coverage; this is not a full green acceptance claim.
 
+The next bounded page, HB 1005 through HB 1029, completed 166 fresh-byte-verified untouched-alias removals with no
+held groups. Audit snapshots preserve the removed metadata; the completed cursor is now `bill:wa:2025-2026:hb:1029`.
+The two processed HB 1000 pairs remain unchanged: their text and section rows match after excluding row IDs and
+timestamps, but all four documents also have model-specific embeddings (4/6/4/6). Null inline section vectors must
+not be mistaken for absence of embeddings. Their consolidation still requires explicit reference/search handling.
+
+Bill batch HB 1390–1399 failed in `run_06gbj1gs08h12agnvn5l03q401` on version `20260919.25`. The retained immutable
+attempt reports `source_timeout`, exit 1, and no emitted bills; the generic promotion error did not expose that reason.
+Confirmed terminal failure plus a released ownership receipt allowed one idempotent retry,
+`run_06gbj7son8rp19kqck5dlu9101`, verified EXECUTING on the same version. No incomplete source output was promoted and
+no active worker was overlapped. Calendar receipts remain 25/90; its continuation still needs independent inspection.
+
+The newer full verification failed in ingestion coverage (2,044 passed, five failed): one reviewed-document-source
+test and four retained-regulatory-audit tests timed out, with a cleanup error after timeout. Both files passed all
+15 tests unchanged in isolation. The full verification gate is still not green.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
