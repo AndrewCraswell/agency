@@ -7,6 +7,18 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Trigger `20260919.36` deployed without promotion (`hx6dcxkp`, 71 tasks,
+image `24e1187ae6892ffc53bc058ae5b1860203bc859029d51973eeb309ec91a492a6`). Retained replay canary
+`run_06gbkf7vr8hosh58qsj92qdt01` completed: 39 events, 38 organization links, zero bill links.
+Independent retained-source/database read-back confirmed all 39 canonical IDs and 38 linked events. The single
+unresolved event is `event:openstates:wa-agenda-32331`, publisher name "Other Committee to Hear SAO Performance
+Audits", with no resolvable host references; its organization readiness correctly remains false. This is not a
+missing-event failure or permission to guess a committee identity. A second, 86-event retained-window canary is
+running as `run_06gbkfn6qdifo75cihsbolq401`. Verify that result before expanding replay across the full calendar.
+The shared database safety test is committed as `9efc0d0`. Calendar worker `run_06gbkeuabtthgrijn9rtd8cl01`
+was confirmed live; no replacement calendar worker or schedule was dispatched.
+The next alias dry run after HB 1304 is active as 34440 (154 candidates, no held groups); no apply yet.
+
 Retained meeting replay `c24c6af` passed full `pnpm verify` (10453), including 240 API acceptance cases and
 built MCP tests. Default optional database/positive-corpus skips remain explicit. An additional isolated PostgreSQL
 test passed against `legislation_ingestion_test` on port 55461: two identical relationship replays preserve exactly
