@@ -7,11 +7,16 @@ import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { importArchivedStateFoundation } from "../../ingestion/openstates/foundation-import.js"
 import {
+  acquireFoundationCommitteeInventory,
+  foundationSourcesUnchanged
+} from "../../ingestion/openstates/foundation-refresh.js"
+import {
   archivePeopleRepositoryRevision,
   downloadPeopleRepositoryRevision,
   resolvePeopleRepositoryRevision
 } from "../../ingestion/openstates/people-source-acquisition.js"
 import { requireScraperActivation } from "../../ingestion/openstates/scraper-activation.js"
+import { scraperBillState } from "../../ingestion/openstates/scraper-bill-profiles.js"
 import { parseScheduledScraperJurisdictions } from "../scraper-schedule-manifest.js"
 
 const manifestPath = z
@@ -29,7 +34,7 @@ export const openStatesFoundationImportPayload = z.strictObject({
 })
 
 const refreshPayload = z.strictObject({
-  state: z.enum(["ak", "nc"]),
+  state: scraperBillState,
   revision: z.string().regex(/^[a-f0-9]{40}$/),
   retrievedAt: z.iso.datetime()
 })
@@ -73,7 +78,8 @@ export const openStatesFoundationRefresh = schemaTask({
           })
         )
       )
-      if (checkpoints.every((checkpoint) => checkpoint?.cursor.revision === payload.revision)) {
+      const inventory = await acquireFoundationCommitteeInventory(payload.state, store)
+      if (foundationSourcesUnchanged(payload.revision, checkpoints[0]?.cursor, checkpoints[1]?.cursor, inventory)) {
         return { status: "no_change" as const, state: payload.state, revision: payload.revision }
       }
       const files = await downloadPeopleRepositoryRevision(payload.revision, fetch, process.env.GITHUB_TOKEN)
@@ -83,7 +89,11 @@ export const openStatesFoundationRefresh = schemaTask({
         revision: payload.revision,
         state: payload.state
       })
-      return await importArchivedStateFoundation(database, { store, ...archive })
+      return await importArchivedStateFoundation(database, {
+        store,
+        ...archive,
+        ...(inventory ? { committeeInventoryPath: inventory.path } : {})
+      })
     } finally {
       await pool.end()
     }
@@ -103,7 +113,10 @@ export const openStatesFoundationSchedule = schedules.task({
     const runs = []
     for (const state of states) {
       requireScraperActivation(state, process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
-      const key = await idempotencyKeys.create(`openstates-foundation:${state}:${revision}`, { scope: "global" })
+      const key = await idempotencyKeys.create(
+        `openstates-foundation:${state}:${revision}:${payload.timestamp.toISOString()}`,
+        { scope: "global" }
+      )
       const handle = await tasks.trigger(
         "openstates-foundation-refresh",
         { state, revision, retrievedAt: payload.timestamp.toISOString() },

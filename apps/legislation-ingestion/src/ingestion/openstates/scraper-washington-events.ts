@@ -186,7 +186,7 @@ export function normalizeWashingtonScraperEvents(
       entry.agency === "House" || entry.agency === "Senate" || entry.agency === "Joint"
         ? [
             [
-              `waCommitteeId:2025-26:${entry.agency.toLowerCase()}:${entry.id}`,
+              `waCommitteeId:${scraperBillProfiles.wa.biennium}:${entry.agency.toLowerCase()}:${entry.id}`,
               ...(entry.code.length > 0 ? [`waCommittee:${entry.agency.toLowerCase()}:${entry.code}`] : [])
             ]
           ]

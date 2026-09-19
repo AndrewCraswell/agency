@@ -7,8 +7,8 @@ export type ScraperBillState = z.infer<typeof scraperBillState>
 export const scraperBillProfiles = {
   nc: { session: "2025", identifier: /^[HS][1-9][0-9]{0,4}$/ },
   ak: { session: "34", identifier: /^[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}$/ },
-  wa: { session: "2025-2026", identifier: /^[HS](?:B|CR|JM|JR|R) [1-9][0-9]{0,4}$/ }
-} as const satisfies Record<ScraperBillState, { session: string; identifier: RegExp }>
+  wa: { session: "2025-2026", biennium: "2025-26", identifier: /^[HS](?:B|CR|JM|JR|R) [1-9][0-9]{0,4}$/ }
+} as const satisfies Record<ScraperBillState, { session: string; biennium?: string; identifier: RegExp }>
 
 export const scraperBillPlanPath = z
   .string()

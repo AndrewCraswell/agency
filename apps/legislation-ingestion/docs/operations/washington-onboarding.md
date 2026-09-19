@@ -17,8 +17,11 @@ Washington now also supplies biennium-scoped numeric committee IDs. The official
 `openstates/committee-inventories/wa/2025-26/c1561487f80e3c20b7b8ecbf54c9f5236c2c4ecb48cc87ca6d436072aa9dfdd6.xml`.
 All 34 entries matched unique existing organizations; production import and replay preserved identical identifiers
 and the existing 51 organizations / 609 membership snapshot. Manual Washington foundation replay requires this
-retained crosswalk so it cannot silently remove the numeric identifiers. Scheduled Washington foundation refresh
-remains unenabled and still needs acquisition wiring before activation.
+retained crosswalk so it cannot silently remove the numeric identifiers. Foundation refresh now acquires and retains
+the official inventory with a 30-second timeout, 2 MiB bound and redirects disabled. It compares the inventory hash
+as well as the people revision before declaring no change. Refresh dispatch keys include the scheduled observation
+timestamp, permitting source changes within an unchanged people revision while deduplicating the same invocation.
+Washington scheduling remains unenabled; hosted refresh acceptance is still required.
 
 Meeting 32344 was reconciled from its retained window without rewriting source facts. Its old `LGLT` abbreviation
 and current `LGV` committee resolve through official Senate ID 34080. Authenticated MCP `get_event` returned the
@@ -37,6 +40,9 @@ Two ownership checks showed no active owner. One idempotent retry, `run_06gbjmko
 on `20260919.29`; do not start another retry without inspecting that handle. Calendar run
 `run_06gbjlv5g0db1bqqr6pvu10101` was executing on its existing pinned `20260919.27` chain. No schedules or concurrency
 limits were changed.
+
+The subsequent refresh-focused suite passed 24 tests, plus ingestion types and lint. The bill retry was verified
+`EXECUTING`; calendar continuation reached 54/90 windows and dispatched `run_06gbjme7dkinun7iau3l6lju01`.
 
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |

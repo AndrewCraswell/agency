@@ -5,6 +5,7 @@ import { inventoryCommitteeHistory } from "./committee-history.js"
 import { normalizeOpenStatesCommittees } from "./entities.js"
 import { preparePeopleRepositoryImport } from "./people-import.js"
 import { peopleSourceProfiles, type PeopleRepositoryFile } from "./people-repository.js"
+import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 import { bindCommitteeInventory, type parseWashingtonCommitteeInventory } from "./washington-committee-inventory.js"
 
 /** Current repository rosters are complete only after every referenced identity is accepted. */
@@ -16,7 +17,7 @@ export function prepareCommitteeRepositoryImport(
   revision: string = peopleSourceProfiles[state].revision,
   officialInventory?: ReturnType<typeof parseWashingtonCommitteeInventory>
 ) {
-  if (officialInventory && (state !== "wa" || officialInventory.biennium !== "2025-26"))
+  if (officialInventory && (state !== "wa" || officialInventory.biennium !== scraperBillProfiles.wa.biennium))
     throw new Error("Committee inventory does not match reviewed jurisdiction/session")
   const people = preparePeopleRepositoryImport(currentFiles, historyFiles, retrievedAt, state, revision)
   const inventory = inventoryCommitteeHistory(
