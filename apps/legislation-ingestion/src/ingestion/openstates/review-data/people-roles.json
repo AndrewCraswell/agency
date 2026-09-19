@@ -148,5 +148,35 @@
         "reason": "The January 13, 2025 Senate journal page 9 lists Goehner among newly elected senators, separately from re-elected senators, and records his oath. Remove the contradictory continuous 2019-2025 Senate assertion. Retain the independently supplied House and current Senate roles without claiming independent verification of the House boundary dates."
       }
     ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Jeff-Holy-0396b4de-01b1-4784-a604-aafc516f5e39.yml",
+    "sourceSha256": "34e80ffd2d430098ccfca9fd3c27423d62f3a46a77eebb0d4db837874c42a87b",
+    "personId": "ocd-person/0396b4de-01b1-4784-a604-aafc516f5e39",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "6",
+          "start_date": "2019-01-14",
+          "end_date": "2019-01-13"
+        },
+        "after": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "6",
+          "start_date": "2013-01-14",
+          "end_date": "2019-01-13"
+        },
+        "evidenceUrls": [
+          "https://lawfilesext.leg.wa.gov/law/Journals/2013/HJ_13_001.htm",
+          "https://jeffholy.src.wastateleg.org/senator-jeff-holy-takes-oath-office-olympia/"
+        ],
+        "reason": "The 2013 first-day House journal records Holy as the sixth-district representative and the members' oath on January 14. The January 14, 2019 official announcement identifies his first Senate term after three House terms. Replace the reversed, duplicate Senate assertion with that House service; retain the supplied January 13, 2019 end immediately before the documented Senate transition."
+      }
+    ]
   }
 ]

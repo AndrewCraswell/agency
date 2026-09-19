@@ -927,3 +927,13 @@ reviews preserve independently supplied House roles; their precise House boundar
 The full retained pair now prepares 337 people and 374 terms with 14 held histories and no current-roster coverage
 issues. Production import and replay succeeded: all six reviewed people have exactly two canonical terms each, and
 the second import preserves all twelve IDs, dates and source URLs. No new name-specific engine logic was introduced.
+
+Jeff Holy's reversed duplicate Senate assertion is now reviewed as House service beginning January 14, 2013, retaining
+the supplied January 13, 2019 end. The [2013 House first-day journal](https://lawfilesext.leg.wa.gov/law/Journals/2013/HJ_13_001.htm)
+records the House oath, and his [official Senate announcement](https://jeffholy.src.wastateleg.org/senator-jeff-holy-takes-oath-office-olympia/)
+records a first Senate term on January 14, 2019 after three House terms. Full retained-pair preparation now yields
+337 people, 375 terms, seven applied reviews and 13 quarantines, with no current-roster coverage issues. Production
+import and replay preserved all fourteen terms for the seven reviewed people. Authenticated MCP `get_person` returned
+Holy's historical House term with journal provenance, current Senate term and four current committee memberships.
+The focused review/import/quarantine suite passed all 24 tests. Full repository verification is still running; this
+cohort check does not establish full-session or statewide acceptance.
