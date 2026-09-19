@@ -7,6 +7,21 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Current-session document audit at `2026-09-19T16:13:59.114Z` scanned all 3,413 bills in bounded batches of 100:
+19,493 processed documents with retained blobs, 139 untouched pending documents, and seven unsupported `not-found`
+documents. All 139 pending IDs are provisional candidates from `planUntouchedDocumentAliases`, all on HB 1355-1379;
+zero pending IDs are unmatched. Fresh publisher bytes were not verified, so no removal was authorized or performed.
+The only two held processed-alias pairs are the already documented HB 1000 pairs. The unsupported IDs exactly match
+the retained seven training-document 404 observations for HB 3992/SB 7991. This scope is 2025-2026, not all archives.
+The initial all-Washington aggregate hit its 20-second statement timeout; the bounded current-session audit succeeded.
+
+Authenticated MCP `get_bill_text` for HB 1355 returned processed sections and a continuation cursor, but `get_bill`
+with `childLimit: 2` returned `unprocessable: Document OCR status is unavailable`. Control bill-detail reads for
+HB 1354 and HB 1380 succeeded. Local `document-reads.ts` explicitly supports null OCR status on processed rows but
+rejects it on pending rows; HB 1355 contains untouched pending aliases with null OCR status. Do not attribute this
+failure to all 19,491 older processed rows with null OCR status or bulk-label them. The pending-document projection
+and cleanup gate remain open; a pending attachment must not silently acquire a fabricated OCR outcome.
+
 Full `pnpm verify` for `6e604d2` completed successfully (10729), including 240 API acceptance cases and
 built MCP checks. Its optional database and positive-corpus skips are not production acceptance evidence.
 Docker `legislation-wa-acceptance` was confirmed running on loopback port 55461. An explicit isolated
