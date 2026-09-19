@@ -292,15 +292,140 @@ describe("dependent prompt selection and coverage", () => {
     })
   })
 
-  it("supplies actual returned record identities for an authored dependent question", () => {
+  it.each([1, 8, 100])(
+    "preserves the authored prompt regardless of %i discoveries, ordering or repetition",
+    (count) => {
+      const records = Array.from({ length: count }, (_, index) => ({
+        id: `bill:candidate-${index}`,
+        kind: "bill",
+        title: `Unselected candidate ${index}`
+      }))
+      const steps = progress()
+      steps[0]!.answered = true
+      for (const inventory of [records, records.toReversed(), [...records, ...records]]) {
+        steps[0]!.records = inventory
+        expect(selectStep(scenarioSchema.parse(authored), 1, steps)).toEqual({
+          kind: "submit",
+          branch: "primary",
+          prompt: "Compare the discovered proposals.\n\nApproved jurisdictions: U.S. federal, California, New York."
+        })
+        expect(steps[0]!.records).toEqual(inventory)
+      }
+    }
+  )
+
+  it("keeps a selected web-only bill in the answer rather than inventing a selected discovery ID", () => {
+    const scenario = scenarioSchema.parse({
+      ...authored,
+      steps: [
+        { id: "discover", prompt: "Identify 2-3 relevant proposals total." },
+        {
+          id: "compare",
+          prompt: "Compare only the proposals you identified, keeping the same sample.",
+          requiresRecordsFrom: { stepId: "discover", kind: "bill" }
+        }
+      ],
+      clarificationAnswers: [
+        ...authored.clarificationAnswers,
+        { question: "Which period?", kind: "other", text: "Since 2025" }
+      ]
+    })
+    const records = Array.from({ length: 8 }, (_, index) => ({
+      id: `bill:federal-candidate-${index}`,
+      kind: "bill",
+      title: `Discovered candidate ${index}`
+    }))
     const steps = progress()
-    steps[0]!.answered = true
-    steps[0]!.records.push({ id: "bill:fixture", kind: "bill", title: "Synthetic proposal" })
-    const selection = selectStep(scenarioSchema.parse(authored), 1, steps)
-    expect(selection.kind).toBe("submit")
-    invariant(selection.kind === "submit")
-    expect(selection.prompt).toContain("Synthetic proposal (bill:fixture)")
-    expect(selection.branch).toBe("primary")
+    const seen = new Set<string>()
+    const answered = new Set<string>()
+    const clarifications = [
+      request,
+      { ...request, id: otherClarificationId, input: { ...request.input, question: "Which period?" } }
+    ]
+    for (const [index, clarification] of clarifications.entries()) {
+      const messageId = `clarification-${index}`
+      const inspection = inspectSnapshot(
+        snapshotSchema.parse({
+          format: "rostra-conversation",
+          schemaVersion: 1,
+          conversationId: "selection-fixture",
+          interactionStatus: "ready",
+          messages: [
+            {
+              id: messageId,
+              role: "assistant",
+              parts: [
+                {
+                  type: "dynamic-tool",
+                  toolName: "ask_clarification",
+                  state: "output-available",
+                  output: { clarification }
+                }
+              ]
+            }
+          ],
+          responseOutcomes: [{ messageId, ...complete, status: "clarification", hasAnswer: false }],
+          toolCalls: [
+            {
+              messageId,
+              toolCallId: `search-${index}`,
+              toolName: "search_bills",
+              state: "output-available",
+              output: { resultSet: { items: index === 0 ? records : records.toReversed() } }
+            }
+          ]
+        }),
+        seen
+      )
+      steps[0]!.records.push(...inspection.records)
+      steps[0]!.answered = summarizeExchange([], inspection.outcome).answered
+      for (const id of inspection.messageIds) {
+        seen.add(id)
+      }
+      expect(selectStep(scenario, 1, steps).kind).toBe("pause")
+      invariant(inspection.clarification)
+      const answer = selectClarification(scenario, inspection.clarification, answered)
+      expect(answer.kind).toBe("answer")
+      answered.add(inspection.clarification.input.question)
+    }
+    const selectedAnswer = "Selected sample: federal-candidate-0 and California proposal bill:web-only-state."
+    const final = inspectSnapshot(
+      snapshotSchema.parse({
+        format: "rostra-conversation",
+        schemaVersion: 1,
+        conversationId: "selection-fixture",
+        interactionStatus: "ready",
+        messages: [{ id: "final", role: "assistant", parts: [{ type: "text", text: selectedAnswer }] }],
+        responseOutcomes: [{ messageId: "final", ...complete }],
+        toolCalls: [
+          {
+            messageId: "final",
+            toolCallId: "web-read",
+            toolName: "web_search",
+            state: "output-available",
+            output: {
+              text: "California proposal bill:web-only-state",
+              evidence: [{ id: "state-source" }]
+            }
+          }
+        ]
+      }),
+      seen
+    )
+    steps[0]!.records.push(...final.records)
+    steps[0]!.answered = summarizeExchange([], final.outcome).answered
+    expect(steps[0]!.records).toHaveLength(16)
+    expect(final.records).toEqual([])
+    expect(final.messages[0]?.parts).toEqual([{ type: "text", text: selectedAnswer }])
+    expect(final.evidenceCandidates).toEqual([
+      { messageId: "final", toolCallId: "web-read", evidenceIds: ["state-source"] }
+    ])
+    expect(selectStep(scenario, 1, steps)).toEqual({
+      kind: "submit",
+      branch: "primary",
+      prompt:
+        "Compare only the proposals you identified, keeping the same sample.\n\nApproved jurisdictions: U.S. federal, California, New York."
+    })
   })
 
   it("distinguishes planned, selected, executed, answered and unassessed work", () => {

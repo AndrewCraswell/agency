@@ -15,6 +15,14 @@ const serverRequestId = "11111111-1111-4111-8111-111111111111"
 const runId = "22222222-2222-4222-8222-222222222222"
 const traceId = "33333333333333333333333333333333"
 const secret = "sk-or-v1-fixtureprivate"
+const sampleFollowUp = "Compare only the 2-3 proposals you identified, keeping the same sample."
+const selectedAnswer =
+  "Selected sample: Federal candidate 0, California web-only proposal, and New York web-only proposal."
+const discoveredCandidates = Array.from({ length: 8 }, (_, index) => ({
+  id: `bill:federal-candidate-${index}`,
+  kind: "bill",
+  title: index === 0 ? "Federal candidate 0" : `Unrelated federal candidate ${index}`
+}))
 type Mode =
   | "late-completion"
   | "cancelled-stream"
@@ -25,6 +33,8 @@ type Mode =
   | "http-error"
   | "prior-answer"
   | "completed"
+  | "selected-sample"
+  | "reordered-sample"
 
 const requestSchema = z.object({
   id: z.string(),
@@ -57,6 +67,12 @@ const reportSchema = z.object({
   exchanges: z.array(receiptSchema),
   requests: z.array(requestSchema),
   events: z.array(z.object({ event: z.string(), exchange: z.number(), data: z.record(z.string(), z.unknown()) })),
+  progress: z.array(
+    z.object({
+      id: z.string(),
+      records: z.array(z.object({ id: z.string(), kind: z.string(), title: z.string() }))
+    })
+  ),
   coverage: z.object({
     executed: z.array(z.object({ stepId: z.string(), requestIds: z.array(z.string()) })),
     answered: z.array(z.object({ stepId: z.string() }))
@@ -65,6 +81,45 @@ const reportSchema = z.object({
 
 function snapshot(mode: Mode, isComplete = false, messageNumber = 1) {
   const messageId = `assistant-${messageNumber}`
+  if ((mode === "selected-sample" || mode === "reordered-sample") && messageNumber === 1) {
+    return {
+      format: "rostra-conversation",
+      schemaVersion: 1,
+      conversationId: "synthetic-conversation",
+      interactionStatus: "ready",
+      messages: [{ id: messageId, role: "assistant", parts: [{ type: "text", text: selectedAnswer }] }],
+      responseOutcomes: [
+        {
+          messageId,
+          status: "completed",
+          finishReason: "stop",
+          hasAnswer: true,
+          failedToolCalls: [],
+          pendingToolCalls: []
+        }
+      ],
+      toolCalls: [
+        {
+          messageId,
+          toolCallId: "discovery",
+          toolName: "search_bills",
+          state: "output-available",
+          output: {
+            resultSet: {
+              items: mode === "selected-sample" ? discoveredCandidates : discoveredCandidates.toReversed()
+            }
+          }
+        },
+        {
+          messageId,
+          toolCallId: "state-sources",
+          toolName: "web_search",
+          state: "output-available",
+          output: { text: selectedAnswer, evidence: [{ id: "california-source" }, { id: "new-york-source" }] }
+        }
+      ]
+    }
+  }
   return {
     format: "rostra-conversation",
     schemaVersion: 1,
@@ -183,18 +238,30 @@ async function runFixture(mode: Mode) {
   const directory = await mkdtemp(join(appDirectory, "tmp", "scenario-timeout-"))
   let generationCount = 0
   let captureCount = 0
+  const isSample = mode === "selected-sample" || mode === "reordered-sample"
+  const submittedPrompts: string[] = []
   let delayed: ServerResponse | undefined
   const server = createServer((request, response) => {
     if (request.url === "/chat") {
       generationCount++
-      request.resume()
+      let body = ""
+      request.setEncoding("utf8")
+      request.on("data", (chunk: string) => (body += chunk))
+      request.once("end", () => {
+        const input = z
+          .object({ messages: z.array(z.object({ role: z.string(), content: z.string() })) })
+          .parse(JSON.parse(body))
+        const message = input.messages.at(-1)
+        invariant(message)
+        submittedPrompts.push(message.content)
+      })
       response.setHeader("x-rostra-request-id", serverRequestId)
       if (mode === "http-error" || (mode === "prior-answer" && generationCount > 1)) {
         response.writeHead(500).end("Synthetic upstream failure")
         return
       }
       response.writeHead(200, { "Content-Type": "application/x-ndjson" })
-      const isComplete = mode === "completed" || mode === "prior-answer"
+      const isComplete = mode === "completed" || mode === "prior-answer" || isSample
       response.write(JSON.stringify(snapshot(mode, isComplete, generationCount)) + "\n")
       if (isComplete || mode === "no-metadata") {
         response.end()
@@ -234,7 +301,7 @@ async function runFixture(mode: Mode) {
         "--output",
         directory,
         "--wait-ms",
-        ["http-error", "no-metadata", "prior-answer", "completed"].includes(mode) ? "1800" : "600",
+        isSample || ["http-error", "no-metadata", "prior-answer", "completed"].includes(mode) ? "1800" : "600",
         "--capture-ms",
         mode === "missing-download" ? "500" : "3000"
       ],
@@ -257,11 +324,13 @@ async function runFixture(mode: Mode) {
       JSON.stringify({
         id: mode,
         objective: "Preserve a synthetic response without model or external network calls.",
-        jurisdictions: ["U.S. federal"],
+        jurisdictions: isSample ? ["U.S. federal", "California", "New York"] : ["U.S. federal"],
         maximumExchanges: 2,
         steps: [
-          { id: "first", prompt: "Synthetic first question" },
-          { id: "second", prompt: "Synthetic dependent question" }
+          { id: "first", prompt: isSample ? "Identify 2-3 relevant proposals total." : "Synthetic first question" },
+          isSample
+            ? { id: "second", prompt: sampleFollowUp, requiresRecordsFrom: { stepId: "first", kind: "bill" } }
+            : { id: "second", prompt: "Synthetic dependent question" }
         ]
       })
     )
@@ -292,7 +361,7 @@ async function runFixture(mode: Mode) {
       .map(({ text }) => receiptSchema.parse(JSON.parse(text)))
       .sort((left, right) => left.exchange - right.exchange)
     expect(receipts).toEqual(report.exchanges)
-    return { code, report, receipts, contents, generationCount, captureCount }
+    return { code, report, receipts, contents, generationCount, captureCount, submittedPrompts }
   } finally {
     server.closeAllConnections()
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())))
@@ -434,4 +503,22 @@ describe("scenario CLI final observation", () => {
       delivery: "completed"
     })
   }, 25_000)
+
+  it.each(["selected-sample", "reordered-sample"] as const)(
+    "submits the authored sample-scoped follow-up without injecting the %s inventory",
+    async (mode) => {
+      const result = await runFixture(mode)
+      expect(result.code).toBe(0)
+      expect(result.submittedPrompts).toEqual([
+        "Identify 2-3 relevant proposals total.\n\nApproved jurisdictions: U.S. federal, California, New York.",
+        `${sampleFollowUp}\n\nApproved jurisdictions: U.S. federal, California, New York.`
+      ])
+      expect(result.report.progress[0]?.records).toEqual(
+        mode === "selected-sample" ? discoveredCandidates : discoveredCandidates.toReversed()
+      )
+      expect(result.receipts[0]?.messages?.[0]?.parts).toEqual([{ type: "text", text: selectedAnswer }])
+      expect(result.report.coverage.answered.map((step) => step.stepId)).toEqual(["first", "second"])
+    },
+    25_000
+  )
 })

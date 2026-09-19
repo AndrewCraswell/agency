@@ -181,6 +181,7 @@ export type StepProgress = {
   selected: "primary" | "missing-records" | null
   executedRequestIds: string[]
   answered: boolean
+  // Discovery receipts are not the assistant's selected research sample.
   records: ObservedRecord[]
 }
 
@@ -200,11 +201,11 @@ export function selectStep(scenario: Scenario, index: number, progress: readonly
   let branch: NonNullable<StepProgress["selected"]> = "primary"
   if (step.requiresRecordsFrom) {
     const dependency = step.requiresRecordsFrom
-    const records =
+    const hasRecords =
       progress
         .find((entry) => entry.id === dependency.stepId)
-        ?.records.filter((record) => record.kind === dependency.kind) ?? []
-    if (records.length === 0) {
+        ?.records.some((record) => record.kind === dependency.kind) ?? false
+    if (!hasRecords) {
       if (!dependency.onMissingRecords) {
         return {
           kind: "pause" as const,
@@ -213,8 +214,6 @@ export function selectStep(scenario: Scenario, index: number, progress: readonly
       }
       prompt = dependency.onMissingRecords
       branch = "missing-records"
-    } else {
-      prompt += `\n\nPreviously observed records:\n${records.map((record) => `${record.title} (${record.id})`).join("\n")}`
     }
   }
   prompt += `\n\nApproved jurisdictions: ${approvedJurisdictions(scenario).join(", ")}.`

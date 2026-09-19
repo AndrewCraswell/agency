@@ -77,6 +77,14 @@ mappings must exactly name those choices; otherwise the driver pauses. Non-juris
 authored answer. An unanswered/repeated clarification or absent discovery blocks dependent prompts unless an explicit
 missing-records branch exists. Accepted narrowing must be recorded in the plan; it is never selected automatically.
 
+Record dependencies check whether matching discovery was observed; they do not select the research sample.
+The `progress.records` inventory stays separate from the assistant's chosen proposals in the retained messages and
+evidence. Follow-ups contain only the authored prompt and approved-jurisdiction suffix, never an appended candidate
+list. Discovery size, order and repeated results across clarification exchanges cannot broaden that instruction.
+Selected proposals supported outside `resultSet` remain in the conversation context; the driver does not infer their
+IDs from prose or fabricate them in the discovery inventory.
+If the author wants specific IDs in a follow-up, they must be part of the authored prompt.
+
 Only `--execute --base-url http://127.0.0.1:3000` authorizes actual browser research against a credential-free loopback
 application. This can incur the application's model/provider costs, including homepage suggestions. It creates a
 fresh directory under ignored `artifacts/scenario-runs` and never resumes or rewrites an old run. Browser execution
@@ -106,6 +114,7 @@ answer. No uncertain generation is retried and no dependent question is sent aft
 Run the deterministic CLI/browser and policy regressions with
 `pnpm exec vitest run --project backend tools/agent/run-scenarios.test.ts tools/agent/scenario-policy.test.ts`.
 They use only synthetic loopback HTTP/stream/download fixtures, not models, credentials or historical campaign output.
+Scope regressions inspect the actual outgoing follow-up text as well as retained discovery and selected-answer evidence.
 
 ## Frozen vote fixtures
 
