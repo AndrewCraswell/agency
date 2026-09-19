@@ -130,7 +130,7 @@ describe("RepresentativeLookup", () => {
     const user = userEvent.setup()
     render(<RepresentativeLookup />)
     const button = screen.getByRole("button", { name: "Use my location" })
-    expect(screen.getByText(/Your browser sends coordinates to Geocodio/).textContent).toContain(
+    expect(screen.getByText(/Rostra sends coordinates to an external location service/).textContent).toContain(
       "Rostra does not save your location."
     )
     expect(button.getAttribute("aria-describedby")).toBeTruthy()
@@ -167,9 +167,11 @@ describe("RepresentativeLookup", () => {
     expect(within(state).getByRole("article", { name: "Manka Dhingra" })).toBeDefined()
     expect(within(federal).getByText("Congressional district: Washington 1")).toBeDefined()
     expect(within(state).getByText("State upper chamber: District 45")).toBeDefined()
-    expect(within(federal).getByText("Democrat")).toBeDefined()
+    expect(within(federal).queryByText("Democrat")).toBeNull()
     expect(within(federal).getByText("Democratic")).toBeDefined()
-    expect(within(federal).getByText("Profile matched")).toBeDefined()
+    expect(within(federal).getByRole("article", { name: "Suzan K. DelBene" })).toBeDefined()
+    expect(within(federal).queryByRole("heading", { name: "Suzan DelBene" })).toBeNull()
+    expect(view.container.innerHTML).not.toMatch(/geocodio|geocodia/iu)
     expect(within(results).getByText(/Browser-reported accuracy: within about 25 meters/)).toBeDefined()
     expect(within(results).getByRole("region", { name: "Lookup warnings" })).toBeDefined()
     expect(results.hasAttribute("data-sentry-block")).toBe(true)
@@ -189,7 +191,7 @@ describe("RepresentativeLookup", () => {
     }
     expect(
       within(federal)
-        .getByRole("link", { name: /Official website from Rostra/ })
+        .getByRole("link", { name: /Official website/ })
         .getAttribute("href")
     ).toBe("https://delbene.house.gov/about/")
     fireEvent.error(portrait)
@@ -278,7 +280,7 @@ describe("RepresentativeLookup", () => {
     expect(screen.getByRole("alert").textContent).toContain("Check your connection and try again.")
     expect(screen.queryByText(/Private request coordinates/)).toBeNull()
     await startLookup()
-    expect(screen.getByRole("heading", { name: "Representatives matched" })).toBeDefined()
+    expect(screen.getByRole("heading", { name: "Your representatives" })).toBeDefined()
     expect(fetcher).toHaveBeenCalledTimes(2)
   })
 
@@ -308,12 +310,12 @@ describe("RepresentativeLookup", () => {
     render(<RepresentativeLookup />)
     await startLookup()
     expect(screen.getByRole("heading", { name: title })).toBeDefined()
-    expect(screen.getByText("No representatives were returned for this location.")).toBeDefined()
+    expect(screen.getByText("No database profiles are available for this location.")).toBeDefined()
     expect(screen.queryByRole("article")).toBeNull()
     expect(screen.queryByRole("region", { name: "Lookup warnings" })).toBeNull()
   })
 
-  it("shows unavailable names with the returned code and distinguishes unmatched provider records", async () => {
+  it("shows jurisdiction gaps without presenting unconfirmed matches as database profiles", async () => {
     respondWith({
       status: "partial",
       jurisdictions: [{ code: "wa", id: null, name: null, districts: [] }],
@@ -327,42 +329,44 @@ describe("RepresentativeLookup", () => {
     })
     render(<RepresentativeLookup />)
     await startLookup()
-    expect(screen.getByRole("heading", { name: "Some matches are incomplete" })).toBeDefined()
+    expect(screen.getByRole("heading", { name: "Some profiles are unavailable" })).toBeDefined()
     expect(screen.getAllByRole("heading", { name: "Jurisdiction name unavailable" })).toHaveLength(2)
     expect(screen.getByText("Jurisdiction code: wa")).toBeDefined()
     expect(screen.getByText("Jurisdiction code: us")).toBeDefined()
-    expect(screen.getAllByText("Provider identifier unavailable")).toHaveLength(2)
-    expect(screen.getAllByText("Party unavailable")).toHaveLength(2)
-    expect(screen.getAllByText(/No confirmed Rostra profile is available/)).toHaveLength(2)
+    expect(screen.getByText("2 representatives have no confirmed database profile yet.")).toBeDefined()
+    expect(screen.queryByRole("article")).toBeNull()
+    expect(screen.queryByText("Suzan DelBene")).toBeNull()
     expect(screen.queryByText("Suzan K. DelBene")).toBeNull()
     expect(screen.queryByRole("img")).toBeNull()
     expect(screen.queryByRole("heading", { name: "Washington" })).toBeNull()
   })
 
-  it.each([
-    { matchStatus: "not_found", label: "Profile not found" },
-    { matchStatus: "ambiguous", label: "Profile match is ambiguous" }
-  ] as const)("labels a $matchStatus profile explicitly", async ({ matchStatus, label }) => {
-    respondWith({
-      ...matchedResult,
-      status: "partial",
-      representatives: matchedResult.representatives.map((representative) => ({
-        ...representative,
-        matchStatus,
-        profile: null
-      }))
-    })
-    render(<RepresentativeLookup />)
-    await startLookup()
-    expect(screen.getAllByText(label)).toHaveLength(2)
-  })
+  it.each([{ matchStatus: "not_found" }, { matchStatus: "ambiguous" }] as const)(
+    "summarizes $matchStatus profiles without substituting external details",
+    async ({ matchStatus }) => {
+      respondWith({
+        ...matchedResult,
+        status: "partial",
+        representatives: matchedResult.representatives.map((representative) => ({
+          ...representative,
+          matchStatus,
+          profile: null
+        }))
+      })
+      render(<RepresentativeLookup />)
+      await startLookup()
+      expect(screen.getByText("2 representatives have no confirmed database profile yet.")).toBeDefined()
+      expect(screen.queryByRole("article")).toBeNull()
+      expect(screen.queryByRole("link")).toBeNull()
+    }
+  )
 
   it("shows empty jurisdictions and omits invalid accuracy estimates", async () => {
     respondWith({ ...matchedResult, status: "no_match", representatives: [] })
     render(<RepresentativeLookup />)
     await userEvent.setup().click(screen.getByRole("button", { name: "Use my location" }))
     await act(async () => getCurrentPosition.mock.calls[0]?.[0](createPosition(Number.NaN)))
-    expect(screen.getAllByText("No representatives were returned for this jurisdiction.")).toHaveLength(2)
+    expect(screen.getAllByText("No database profiles are available for this jurisdiction.")).toHaveLength(2)
     expect(screen.queryByText(/Browser-reported accuracy/)).toBeNull()
     expect(screen.getByText(/An imprecise location can select the wrong district/)).toBeDefined()
   })
@@ -399,7 +403,7 @@ describe("RepresentativeLookup", () => {
     expect(fetcher).not.toHaveBeenCalled()
     expect(screen.queryByRole("alert")).toBeNull()
     await act(async () => getCurrentPosition.mock.calls[1]?.[0](createPosition()))
-    expect(screen.getByRole("heading", { name: "Representatives matched" })).toBeDefined()
+    expect(screen.getByRole("heading", { name: "Your representatives" })).toBeDefined()
   })
 
   it("cancels an active request and keeps a newer result when the old request finishes", async () => {
@@ -419,7 +423,7 @@ describe("RepresentativeLookup", () => {
         })
       )
     )
-    expect(screen.getByRole("heading", { name: "Representatives matched" })).toBeDefined()
+    expect(screen.getByRole("heading", { name: "Your representatives" })).toBeDefined()
     expect(screen.queryByRole("heading", { name: "This location is not supported" })).toBeNull()
   })
 

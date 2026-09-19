@@ -14,10 +14,13 @@ Open the page and choose **Use my location**. Location is requested only after t
 require permission and a secure context (HTTPS or localhost); location can be unavailable in an embedded
 browser. Permission denial, timeout and unsupported browsers remain explicit errors.
 
-The page shows federal and state legislative districts, jurisdiction names from the database, provider
-representatives, and their matched stored profiles. Missing or ambiguous matches are labeled; provider
-photos and websites are distinguished from stored profile facts. Browser location accuracy does not
-prove district membership near a boundary. This is not a general local-official directory.
+The page demos fetching representatives from the database. It shows federal and state legislative districts,
+database jurisdiction names, and only confirmed database profiles. Names, parties, portraits and official
+website links come from those stored profiles; unconfirmed matches are summarized as coverage gaps rather
+than displayed as profiles. The page has no provider comparison panels or vendor branding. Location resolution
+still uses Geocodio behind the scenes, and the consent text discloses the external location service.
+Browser location accuracy does not prove district membership near a boundary. This is not a general
+local-official directory.
 
 ## Backend contract
 

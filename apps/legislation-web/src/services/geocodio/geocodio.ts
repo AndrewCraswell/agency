@@ -100,7 +100,7 @@ export function createGeocodioClient(
     }
     const results = parsed.data.results[0]!.response.results
     if (results.length === 0) {
-      return empty("no_match", "Geocodio did not find a matching location.")
+      return empty("no_match", "No matching location was found.")
     }
     if (results.length > 1 || (!isCoordinates && ["place", "street"].includes(results[0]!.accuracy_type ?? ""))) {
       return empty("ambiguous", "The location is not precise enough to identify representatives unambiguously.")
@@ -195,11 +195,11 @@ function projectResult(result: z.infer<typeof resultSchema>): GeocodioLookup {
   }
   const codes = new Set(allDistricts.map((district) => stateCode(district.ocd_id)).filter((code) => code !== undefined))
   if (codes.size > 1 || federal.length > 1 || lower.length > 1 || upper.length > 1) {
-    return empty("ambiguous", "Geocodio returned overlapping jurisdiction or district matches.")
+    return empty("ambiguous", "The location lookup returned overlapping jurisdiction or district matches.")
   }
   const code = [...codes][0]
   if (!code) {
-    return empty("unsupported", "Geocodio did not return supported U.S. legislative districts for this location.")
+    return empty("unsupported", "No supported U.S. legislative districts were found for this location.")
   }
   const jurisdictions: RepresentativeLookupResult["jurisdictions"] = []
   const representatives: GeocodioRepresentative[] = []
@@ -220,7 +220,7 @@ function projectResult(result: z.infer<typeof resultSchema>): GeocodioLookup {
     }
     jurisdiction.districts.push({ id: district.ocd_id, name: district.name, chamber })
     if (!district.current_legislators?.length) {
-      warnings.push(`Geocodio returned no current legislators for ${district.name}. This does not confirm a vacancy.`)
+      warnings.push(`No current legislators were identified for ${district.name}. This does not confirm a vacancy.`)
     }
     for (const person of district.current_legislators ?? []) {
       const name = `${person.bio.first_name} ${person.bio.last_name}`
@@ -256,7 +256,7 @@ function projectResult(result: z.infer<typeof resultSchema>): GeocodioLookup {
     }
   }
   if (!federal.length || !lower.length || !upper.length) {
-    warnings.push("Some legislative district coverage is missing from the provider response.")
+    warnings.push("Some legislative district coverage is unavailable for this location.")
   }
   return {
     status: warnings.length ? "partial" : "matched",

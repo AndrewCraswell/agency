@@ -79,6 +79,7 @@ describe("Geocodio", () => {
     expect(result.status).toBe(status)
     expect(result.representatives).toEqual([])
     expect(result.warnings.length).toBeGreaterThan(0)
+    expect(result.warnings.join(" ")).not.toMatch(/geocodio|geocodia/iu)
   })
 
   it("does not label missing legislator information as a vacancy", async () => {

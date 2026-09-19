@@ -18,26 +18,28 @@ type LookupState =
 
 type LookupAttempt = { controller: AbortController; timeout: number | undefined }
 type Representative = RepresentativeLookupResult["representatives"][number]
+type MatchedRepresentative = Representative & { profile: NonNullable<Representative["profile"]> }
 
 const progressMessages = {
   idle: "Your location has not been requested.",
   locating: "Waiting for your browser to find your location.",
-  loading: "Looking up representatives and matching stored profiles.",
+  loading: "Looking up representatives from the Rostra database.",
   cancelled: "Lookup cancelled. You can try again when you are ready."
 }
 
 const resultMessages = {
   matched: {
-    title: "Representatives matched",
-    description: "The returned representatives match stored Rostra profiles."
+    title: "Your representatives",
+    description: "These profiles were retrieved from the Rostra database."
   },
   partial: {
-    title: "Some matches are incomplete",
-    description: "Some representatives or jurisdiction names could not be matched to stored Rostra records."
+    title: "Some profiles are unavailable",
+    description:
+      "Available database profiles are shown below. Representative or jurisdiction coverage may be incomplete."
   },
   no_match: {
     title: "No matching location found",
-    description: "Geocodio could not resolve this location to representatives."
+    description: "This location could not be resolved to representatives."
   },
   ambiguous: {
     title: "The lookup needs confirmation",
@@ -47,13 +49,6 @@ const resultMessages = {
     title: "This location is not supported",
     description: "Representative coverage is unavailable for this location."
   }
-}
-
-const matchLabels = {
-  matched: "Profile matched",
-  not_found: "Profile not found",
-  ambiguous: "Profile match is ambiguous",
-  missing_identifier: "Provider identifier unavailable"
 }
 
 const chamberLabels = {
@@ -223,15 +218,13 @@ export function RepresentativeLookup() {
           Development only
         </Badge>
         <h1 className="text-3xl font-semibold tracking-tight">Find your representatives</h1>
-        <p className="text-muted-foreground">
-          Compare representatives returned by Geocodio with stored Rostra profiles.
-        </p>
+        <p className="text-muted-foreground">Find representatives in the Rostra database for your location.</p>
       </header>
 
       <section aria-label="Location lookup" className="space-y-4">
         <p id={privacyId} className="max-w-2xl text-sm text-muted-foreground">
-          Location is requested only when you choose Use my location. Your browser sends coordinates to Geocodio through
-          the Rostra server for this lookup. Rostra does not save your location.
+          When you choose Use my location, Rostra sends coordinates to an external location service to identify your
+          districts. Representative profiles come from our database. Rostra does not save your location.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button
@@ -286,6 +279,8 @@ type LookupResultsProps = Readonly<{ result: RepresentativeLookupResult; accurac
 function LookupResults({ result, accuracy }: LookupResultsProps) {
   const headingId = useId()
   const message = resultMessages[result.status]
+  const profiles = result.representatives.filter(hasMatchedProfile)
+  const unavailableCount = result.representatives.length - profiles.length
   const jurisdictionCodes = new Set([
     ...result.jurisdictions.map((jurisdiction) => jurisdiction.code),
     ...result.representatives.map((representative) => representative.jurisdictionCode)
@@ -313,13 +308,19 @@ function LookupResults({ result, accuracy }: LookupResultsProps) {
         </section>
       )}
 
-      {result.representatives.length === 0 && (
-        <p className="text-sm text-muted-foreground">No representatives were returned for this location.</p>
+      {unavailableCount > 0 && (
+        <p className="text-sm text-muted-foreground">
+          {unavailableCount} {unavailableCount === 1 ? "representative has" : "representatives have"} no confirmed
+          database profile yet.
+        </p>
+      )}
+      {profiles.length === 0 && (
+        <p className="text-sm text-muted-foreground">No database profiles are available for this location.</p>
       )}
 
       {Array.from(jurisdictionCodes, (code, index) => {
         const jurisdiction = result.jurisdictions.find((item) => item.code === code)
-        const representatives = result.representatives.filter((item) => item.jurisdictionCode === code)
+        const representatives = profiles.filter((item) => item.jurisdictionCode === code)
         const jurisdictionHeadingId = `${headingId}-${index}`
         return (
           <section key={code} aria-labelledby={jurisdictionHeadingId} className="space-y-4">
@@ -339,14 +340,16 @@ function LookupResults({ result, accuracy }: LookupResultsProps) {
               )}
             </div>
             <div className="space-y-3">
-              {representatives.map((representative, representativeIndex) => (
+              {representatives.map((representative) => (
                 <RepresentativeDetails
-                  key={`${representative.office}:${representative.name}:${representativeIndex}`}
+                  key={`${representative.office}:${representative.profile.id}`}
                   representative={representative}
                 />
               ))}
               {representatives.length === 0 && (
-                <p className="text-sm text-muted-foreground">No representatives were returned for this jurisdiction.</p>
+                <p className="text-sm text-muted-foreground">
+                  No database profiles are available for this jurisdiction.
+                </p>
               )}
             </div>
           </section>
@@ -356,63 +359,38 @@ function LookupResults({ result, accuracy }: LookupResultsProps) {
   )
 }
 
-type RepresentativeDetailsProps = Readonly<{ representative: Representative }>
+function hasMatchedProfile(representative: Representative): representative is MatchedRepresentative {
+  return representative.matchStatus === "matched" && representative.profile !== null
+}
+
+type RepresentativeDetailsProps = Readonly<{ representative: MatchedRepresentative }>
 
 function RepresentativeDetails({ representative }: RepresentativeDetailsProps) {
   const { profile } = representative
   const headingId = useId()
 
   return (
-    <article aria-labelledby={headingId} className="space-y-5 rounded-lg border bg-card p-4 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 id={headingId} className="text-lg font-semibold">
-          {representative.name}
-        </h3>
-        <Badge variant="secondary" className="rounded-md">
-          {matchLabels[representative.matchStatus]}
-        </Badge>
+    <article aria-labelledby={headingId} className="space-y-4 rounded-lg border bg-card p-4 sm:p-5">
+      <div className="flex items-start gap-3">
+        {profile.imageUrl && <Portrait key={profile.imageUrl} src={profile.imageUrl} name={profile.name} />}
+        <div className="min-w-0 space-y-1">
+          <h3 id={headingId} className="text-lg font-semibold">
+            {profile.name}
+          </h3>
+          <p className="text-sm text-muted-foreground">{profile.party ?? "Party unavailable"}</p>
+        </div>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2">
-        <section aria-label={`Geocodio details for ${representative.name}`} className="min-w-0 space-y-3">
-          <h4 className="text-sm font-semibold">Geocodio result</h4>
-          <dl className="space-y-2 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Office</dt>
-              <dd>{representative.office}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">District</dt>
-              <dd>{representative.districtName}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Party</dt>
-              <dd>{representative.party ?? "Party unavailable"}</dd>
-            </div>
-          </dl>
-          {representative.officialUrl && (
-            <OfficialLink href={representative.officialUrl} label="Official website from Geocodio" />
-          )}
-        </section>
-        <section aria-label={`Stored profile for ${representative.name}`} className="min-w-0 space-y-3">
-          <h4 className="text-sm font-semibold">Rostra profile</h4>
-          {profile ? (
-            <>
-              <div className="flex items-start gap-3">
-                {profile.imageUrl && <Portrait key={profile.imageUrl} src={profile.imageUrl} name={profile.name} />}
-                <div className="min-w-0 space-y-1">
-                  <p className="font-medium">{profile.name}</p>
-                  <p className="text-sm text-muted-foreground">{profile.party ?? "Party unavailable"}</p>
-                </div>
-              </div>
-              {profile.officialUrl && <OfficialLink href={profile.officialUrl} label="Official website from Rostra" />}
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No confirmed Rostra profile is available. The Geocodio details are not a stored profile match.
-            </p>
-          )}
-        </section>
-      </div>
+      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-muted-foreground">Office</dt>
+          <dd>{representative.office}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">District</dt>
+          <dd>{representative.districtName}</dd>
+        </div>
+      </dl>
+      {profile.officialUrl && <OfficialLink href={profile.officialUrl} label="Official website" />}
     </article>
   )
 }
