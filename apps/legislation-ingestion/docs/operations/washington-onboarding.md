@@ -7,6 +7,20 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Brad Hawkins has a partial, exact-file-hash-bound review correcting the House start from January 1 to
+January 14, 2013. The official first-day House journal contains his district 12 election certification and the
+members' oath. Visually inspected member-history PDF page 51 (printed 45) confirms House service in 2013/2015
+and Mike Steele in 2017; visually inspected 2017 Senate journal PDF page 14 (printed 9) confirms Hawkins's
+January 9 Senate oath. The conflicting supplied House end remains held pending exact handoff evidence;
+neither supplied end date is certified by this partial review. No canonical or production write was made.
+Sources: https://lawfilesext.leg.wa.gov/law/Journals/2013/HJ_13_001.htm and
+https://leg.wa.gov/media/s4zhym3d/2017senatejournal.pdf.
+
+Eight focused review tests pass. Full retained-pair preparation still produces 337 people, 383 terms,
+14 accepted reviews, six structural holds and zero coverage issues: Hawkins remains quarantined for overlapping
+roles. Full verification for this partial review is running as 10729. The January 2025 Senate end also needs
+independent verification; county office commencement alone must not be substituted for a Senate resignation date.
+
 Washington's official website publishes a September 19 scheduled-maintenance notice (7 AM-7 PM), consistent
 with both hosted extraction and local publisher connection failures. Do not spin up repeated replacements during
 the outage. Source: https://leg.wa.gov/about-the-legislature/legislative-agencies/leap/.

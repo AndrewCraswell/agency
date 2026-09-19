@@ -2,6 +2,36 @@
   {
     "state": "wa",
     "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/retired/Brad-Hawkins-11de0f04-3a78-49cf-a5a9-7d7f59bf94b3.yml",
+    "sourceSha256": "108a1b02663db8283d2004a484c1c2a073cfb3e0eda94fe33010b05c248ae9d2",
+    "personId": "ocd-person/11de0f04-3a78-49cf-a5a9-7d7f59bf94b3",
+    "changes": [
+      {
+        "before": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "12",
+          "start_date": "2013-01-01",
+          "end_date": "2018-12-31"
+        },
+        "after": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "12",
+          "start_date": "2013-01-14",
+          "end_date": "2018-12-31"
+        },
+        "evidenceUrls": [
+          "https://lawfilesext.leg.wa.gov/law/Journals/2013/HJ_13_001.htm",
+          "https://leg.wa.gov/media/2f5orsfq/members-of-the-legislature-1889-2025.pdf"
+        ],
+        "reason": "The January 14, 2013 House journal certifies Hawkins as the elected district 12 representative and records the members' oath that day; the official member-history book, printed page 45, confirms his first House service in 2013. Correct only the unsupported January 1 start. The supplied House end still conflicts with the January 9, 2017 Senate oath and deliberately remains quarantined pending exact handoff evidence. This partial review does not validate either supplied end date."
+      }
+    ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
     "path": "data/wa/legislature/Leonard-Christian-4d01a3aa-64e5-439d-9574-c1b749c1d52a.yml",
     "sourceSha256": "ef58ba68db160109af054639b89d1ed3d75385589c7ca7b19b0c268da1e1c3fe",
     "personId": "ocd-person/4d01a3aa-64e5-439d-9574-c1b749c1d52a",
