@@ -44,10 +44,16 @@ Two additional local draft datasets target the remaining claim-quality acceptanc
 
 - `evals/vote-attribution-regressions.json` covers amendment sequencing, restoration, unread operative text, voice
   votes and partial member positions. Fixtures are authored projections with public-source references, not complete
-  historical captures.
+  historical captures. Captured explicit page-limit requests have separate exact-match fixtures; other limits,
+  cursors and versions remain coverage gaps rather than wildcard matches.
 - `evals/legal-fiscal-regressions.json` covers legal conditions, proposed/final authority, fiscal net effects and
-  sample/date scope. Public excerpts and hypothetical controls are labeled separately; the actual CBO S. 1339
-  estimate remains an unresolved source gap.
+  sample/date scope. Public excerpts, retained research-service passages and hypothetical controls are labeled
+  separately. Source-captured cases embed provenance in their references and use supplied-text questions, not
+  live retrieval. Retained evidence includes S. 2081, the CBO S. 1339 estimate, Medicaid hearing/correction clauses
+  and CMS proposed/final-framework passages. Truncation, encoding defects and missing dates remain explicit.
+  The retained CBO passage permits evidence-relative acceptance; fresh publisher verification and H.R. 7148's
+  final operative scope remain unresolved. Paired turns check both unread-text limits and appropriate use of
+  subsequently supplied text without attributing future evidence to an earlier answer.
 
 Validate either with `pnpm tool agent/evaluate-agent --dataset PATH --config evals/agent-smoke.json`, omitting
 `--execute`, `--sync` and hosted-dataset flags. This validates local inputs without inference or hosted writes.

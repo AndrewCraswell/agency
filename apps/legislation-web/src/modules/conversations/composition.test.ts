@@ -57,8 +57,31 @@ describe("composition contracts", () => {
   it("composes the same pinned prompt, application rules and date context for chat and evaluations", () => {
     const prompt = "Pinned research instructions."
     const dateContext = "TRUSTED REQUEST DATE CONTEXT\n2026-09-19"
-    expect(composeResearchInstructions(prompt, dateContext)).toBe(
-      [prompt, compositionInstructions, dateContext].join("\n\n")
+    const instructions = composeResearchInstructions(prompt, dateContext)
+    expect(instructions).toBe([prompt, compositionInstructions, dateContext].join("\n\n"))
+    expect(instructions).toContain(
+      "Preserve which official holds legal authority and which entity acts through that authority; an implementing entity's role does not itself establish independent discretion beyond an authorized schedule or other operative constraints."
+    )
+  })
+
+  it("wires unread-cross-reference limits into composed instructions without claiming semantic enforcement", () => {
+    const instructions = composeResearchInstructions("Pinned research instructions.", "Trusted date context.")
+    expect(instructions).toContain(
+      "A cross-reference identifies other text; it does not supply that text's contents or legal effect."
+    )
+    expect(instructions).toContain(
+      "do not infer whether an unread provision expands, restricts, restores or independently supplies a protection, duty, remedy or payment"
+    )
+    expect(instructions).toContain("Hedging with may, might or unless does not ground an attributed legal effect.")
+    expect(instructions).toContain(
+      "read the referenced operative text in the applicable version before assigning it an effect"
+    )
+    expect(instructions).toContain(
+      "identify the unread cross-reference and leave its effect unverified while answering from the supplied text"
+    )
+    expect(instructions).toContain("Do not turn this limit into a claim that the referenced provision has no effect.")
+    expect(instructions).toContain(
+      "If its text is subsequently supplied, apply only its supported effect and preserve any remaining unread-reference limits."
     )
   })
 

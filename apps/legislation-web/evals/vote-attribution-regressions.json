@@ -402,6 +402,36 @@
             ],
             "truncated": false
           }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:9000", "documentId": "document:us:119:hr:9000:eas", "limit": 50 },
+          "output": {
+            "billId": "bill:us:119:hr:9000",
+            "document": {
+              "id": "document:us:119:hr:9000:eas",
+              "billId": "bill:us:119:hr:9000",
+              "billIdentifier": "H.R. 9000",
+              "classification": "version",
+              "versionCode": "eas",
+              "documentDate": "2025-07-01",
+              "title": "Synthetic engrossed Senate amendment after restoration",
+              "sourceUrl": "https://example.org/leg-5/restoration/operative-text",
+              "processingStatus": "processed",
+              "sectionCount": 1
+            },
+            "sections": [
+              {
+                "id": "section:fixture:restored-900",
+                "documentId": "document:us:119:hr:9000:eas",
+                "ordinal": 0,
+                "sectionIdentifier": "Section 900",
+                "heading": "Grant eligibility",
+                "text": "SEC. 900. A State regulating artificial intelligence is ineligible for the specified grant."
+              }
+            ],
+            "truncated": false
+          }
         }
       ],
       "expected": {
@@ -477,6 +507,42 @@
         {
           "method": "getBillText",
           "input": { "id": "bill:us:119:hr:1", "documentId": "document:fixture:119hr1:eas" },
+          "error": {
+            "category": "precondition_failed",
+            "message": "Controlled fixture: the requested Senate operative text is not available in this frozen record set."
+          }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:1", "documentId": "document:fixture:119hr1:eh", "limit": 50 },
+          "output": {
+            "billId": "bill:us:119:hr:1",
+            "document": {
+              "id": "document:fixture:119hr1:eh",
+              "billId": "bill:us:119:hr:1",
+              "billIdentifier": "H.R. 1",
+              "classification": "version",
+              "versionCode": "eh",
+              "title": "H.R. 1 Engrossed in House: selected section 43201(c)(1) excerpt",
+              "sourceUrl": "https://www.govinfo.gov/content/pkg/BILLS-119hr1eh/html/BILLS-119hr1eh.htm",
+              "processingStatus": "processed"
+            },
+            "sections": [
+              {
+                "id": "section:fixture:119hr1:eh:43201-c-1",
+                "documentId": "document:fixture:119hr1:eh",
+                "ordinal": 0,
+                "sectionIdentifier": "Section 43201(c)(1)",
+                "heading": "Moratorium: in general",
+                "text": "(1) In general.--Except as provided in paragraph (2), no State or political subdivision thereof may enforce, during the 10-year period beginning on the date of the enactment of this Act, any law or regulation of that State or a political subdivision thereof limiting, restricting, or otherwise regulating artificial intelligence models, artificial intelligence systems, or automated decision systems entered into interstate commerce."
+              }
+            ],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:1", "documentId": "document:fixture:119hr1:eas", "limit": 50 },
           "error": {
             "category": "precondition_failed",
             "message": "Controlled fixture: the requested Senate operative text is not available in this frozen record set."
@@ -654,6 +720,36 @@
             ],
             "truncated": false
           }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:9100", "documentId": "document:us:119:hr:9100:eas", "limit": 50 },
+          "output": {
+            "billId": "bill:us:119:hr:9100",
+            "document": {
+              "id": "document:us:119:hr:9100:eas",
+              "billId": "bill:us:119:hr:9100",
+              "billIdentifier": "H.R. 9100",
+              "classification": "version",
+              "versionCode": "eas",
+              "documentDate": "2025-07-02",
+              "title": "Synthetic engrossed Senate grant-report amendment",
+              "sourceUrl": "https://example.org/leg-5/voice/operative-text",
+              "processingStatus": "processed",
+              "sectionCount": 1
+            },
+            "sections": [
+              {
+                "id": "section:fixture:voice-10",
+                "documentId": "document:us:119:hr:9100:eas",
+                "ordinal": 0,
+                "sectionIdentifier": "Section 10",
+                "heading": "Annual report",
+                "text": "SEC. 10. The agency shall publish an annual report on grants awarded under this Act."
+              }
+            ],
+            "truncated": false
+          }
         }
       ],
       "expected": {
@@ -768,6 +864,14 @@
             "category": "precondition_failed",
             "message": "Controlled fixture: the operative version after the partial amendment history has not been supplied."
           }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:9200", "documentId": "document:us:119:hr:9200:eas", "limit": 50 },
+          "error": {
+            "category": "precondition_failed",
+            "message": "Controlled fixture: the operative version after the partial amendment history has not been supplied."
+          }
         }
       ],
       "expected": {
@@ -844,7 +948,60 @@
         },
         {
           "method": "getSupportingMaterial",
+          "input": { "id": "material:fixture:crec-2025-06-28-sa2360", "limit": 100 },
+          "output": {
+            "material": {
+              "id": "material:fixture:crec-2025-06-28-sa2360",
+              "billId": "bill:us:119:hr:1",
+              "amendmentId": "amendment:us:119:samdt:2360",
+              "title": "Congressional Record, June 28, 2025: S.Amdt. 2360 as printed, selected excerpts",
+              "sourceUrl": "https://www.govinfo.gov/content/pkg/CREC-2025-06-28/html/CREC-2025-06-28-pt1-PgS3687.htm",
+              "processingStatus": "processed"
+            },
+            "sections": [
+              {
+                "id": "section:fixture:sa2360-print-header",
+                "ordinal": 0,
+                "sectionIdentifier": "SA 2360 introductory paragraph",
+                "text": "SA 2360. Mr. THUNE (for Mr. Graham) proposed an amendment to the bill H.R. 1, to provide for reconciliation pursuant to title II of H. Con. Res. 14; as follows:\n\nStrike all after the enacting clause and insert the following:"
+              },
+              {
+                "id": "section:fixture:sa2360-print-40012-opening",
+                "ordinal": 1,
+                "sectionIdentifier": "Section 40012 heading and opening of subsection (a)",
+                "text": "SEC. 40012. SUPPORT FOR ARTIFICIAL INTELLIGENCE UNDER THE BROADBAND EQUITY, ACCESS, AND DEPLOYMENT PROGRAM.\n\n(a) In General.--Section 60102 of division F of Public Law 117-58 (47 U.S.C. 1702) is amended--"
+              }
+            ],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getSupportingMaterial",
           "input": { "id": "material:fixture:crec-2025-06-30-sa2814" },
+          "output": {
+            "material": {
+              "id": "material:fixture:crec-2025-06-30-sa2814",
+              "billId": "bill:us:119:hr:1",
+              "amendmentId": "amendment:us:119:samdt:2814",
+              "title": "Congressional Record, June 30, 2025: S.Amdt. 2814 to S.Amdt. 2360, operative instruction",
+              "description": "The printed introductory paragraph identifies SA 2814 as an amendment proposed by Mrs. Blackburn to SA 2360 proposed by Mr. Thune for Mr. Graham to H.R. 1. The complete operative instruction follows; neighboring amendments are omitted.",
+              "sourceUrl": "https://www.govinfo.gov/content/pkg/CREC-2025-06-30/html/CREC-2025-06-30-pt1-PgS4089.htm",
+              "processingStatus": "processed"
+            },
+            "sections": [
+              {
+                "id": "section:fixture:sa2814-strike-instruction",
+                "ordinal": 0,
+                "sectionIdentifier": "SA 2814 operative instruction",
+                "text": "Strike section 40012."
+              }
+            ],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getSupportingMaterial",
+          "input": { "id": "material:fixture:crec-2025-06-30-sa2814", "limit": 100 },
           "output": {
             "material": {
               "id": "material:fixture:crec-2025-06-30-sa2814",
@@ -869,6 +1026,48 @@
         {
           "method": "getBillText",
           "input": { "id": "bill:us:119:hr:1", "documentId": "document:fixture:119hr1:eas-source-bound" },
+          "output": {
+            "billId": "bill:us:119:hr:1",
+            "document": {
+              "id": "document:fixture:119hr1:eas-source-bound",
+              "billId": "bill:us:119:hr:1",
+              "billIdentifier": "H.R. 1",
+              "classification": "version",
+              "versionCode": "eas",
+              "documentDate": "2025-07-01",
+              "title": "H.R. 1 Engrossed Amendment Senate: selected dated header and section-boundary excerpts",
+              "sourceUrl": "https://www.govinfo.gov/content/pkg/BILLS-119hr1eas/html/BILLS-119hr1eas.htm",
+              "processingStatus": "processed"
+            },
+            "sections": [
+              {
+                "id": "section:fixture:eas-dated-header",
+                "documentId": "document:fixture:119hr1:eas-source-bound",
+                "ordinal": 0,
+                "sectionIdentifier": "Senate engrossed version dated header",
+                "text": "In the Senate of the United States,\n\nJuly 1 (legislative day, June 30), 2025."
+              },
+              {
+                "id": "section:fixture:eas-commerce-title-boundary",
+                "documentId": "document:fixture:119hr1:eas-source-bound",
+                "ordinal": 1,
+                "sectionIdentifier": "Section 40011 through the opening of Title V",
+                "text": "SEC. 40011. RESCISSION OF AMOUNTS APPROPRIATED TO PUBLIC WIRELESS SUPPLY CHAIN INNOVATION FUND.\n\nOf the unobligated balances of amounts made available under section 106(a) of the CHIPS Act of 2022 (Public Law 117-167; 136 Stat. 1392), $850,000,000 are permanently rescinded.\n\nTITLE V--COMMITTEE ON ENERGY AND NATURAL RESOURCES\n\nSubtitle A--Oil and Gas Leasing\n\nSEC. 50101. ONSHORE OIL AND GAS LEASING."
+              },
+              {
+                "id": "section:fixture:eas-50404-heading",
+                "documentId": "document:fixture:119hr1:eas-source-bound",
+                "ordinal": 2,
+                "sectionIdentifier": "Section 50404 heading only",
+                "text": "SEC. 50404. TRANSFORMATIONAL ARTIFICIAL INTELLIGENCE MODELS."
+              }
+            ],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:1", "documentId": "document:fixture:119hr1:eas-source-bound", "limit": 50 },
           "output": {
             "billId": "bill:us:119:hr:1",
             "document": {
