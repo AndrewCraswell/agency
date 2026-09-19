@@ -102,6 +102,24 @@ fresh hash `082cb9c3aace0c2988a4c7a7f9f6f263d6c5cf6197ae53ac591b96cf98d32070` ma
 `bill:wa:2025-2026:hb:1002:document:97dd5a60fe4ef21157c8027e`. Its row is recoverable from the transactional audit.
 The broader duplicate census, processed-duplicate pairs and public bill-detail acceptance remain open.
 
+The first corrected ten-bill batch (HB 1380 through HB 1389) has now been audited against its retained manifest and
+current database rows: all 69 source documents resolve to exactly one canonical document, all 69 preserve an existing
+ID rather than the newly derived scraper ID, zero are missing or ambiguous, and zero pending matches have null OCR
+status. This proves document identity reuse for this deployed batch, not full-session acceptance. The initial audit
+probe incorrectly inspected the document wrapper rather than its nested `document` value; those counts were discarded
+and the corrected probe produced the results above. Inventory checkpoints subsequently showed 39/342 batches promoted.
+
+HB 1002's remaining six untouched HTML aliases were individually dry-run checked and reconciled with fresh source-byte
+hashes through the same shared transaction. Together with the PDF canary, seven redundant metadata rows were removed;
+each remains recoverable from its `document-alias-reconciliation` checkpoint snapshot. No processed keeper, section or
+vector was removed. Authenticated MCP `get_bill` now succeeds for HB 1002, returning seven documents with processed /
+not-required statuses and two document-backed amendments. This closes that sample's prior OCR-status read failure,
+not the statewide duplicate census or the separate processed-copy reconciliation requirement. The response still has
+an unresolved Scott sponsor, which remains within the full-cycle person-reconciliation acceptance gate.
+
+The latest full `pnpm verify` completed unsuccessfully in web coverage: 2,636 tests passed and 18 failed across eight
+files. The complete repository verification gate remains open; no test bypass or timeout relaxation was introduced.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
