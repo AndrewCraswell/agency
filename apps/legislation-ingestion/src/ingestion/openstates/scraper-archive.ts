@@ -5,8 +5,15 @@ import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 
 const revision = "d43f853796ceeeb49205f7d144790647764ce105"
 const runIdSchema = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{0,100}$/)
+const artifactPath = z.string().regex(/^_data\/(nc|ak|wa)\/[a-zA-Z0-9_-][a-zA-Z0-9_.-]*\.json$/)
+
+/** The filesystem reader and immutable manifest must admit exactly the same portable data paths. */
+export function isScraperDataArtifactPath(path: string) {
+  return artifactPath.safeParse(path).success
+}
+
 const fileSchema = z.strictObject({
-  path: z.string().regex(/^_data\/(nc|ak|wa)\/[a-zA-Z0-9_-][a-zA-Z0-9_.-]*\.json$/),
+  path: artifactPath,
   bytes: z
     .number()
     .int()

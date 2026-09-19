@@ -1,12 +1,13 @@
 import { lstat, readFile } from "node:fs/promises"
 import { resolve } from "node:path"
+import { isScraperDataArtifactPath } from "./scraper-archive.js"
 
 /** Read only portable, regular attempt files. Never follow paths supplied by the scraper manifest. */
 export function scraperAttemptDirectory(directory: string) {
   const root = resolve(directory)
   return {
     async read(path: string) {
-      if (path !== "attempt.json" && !/^_data\/(nc|ak)\/[a-zA-Z0-9_-][a-zA-Z0-9_.-]*\.json$/.test(path)) {
+      if (path !== "attempt.json" && !isScraperDataArtifactPath(path)) {
         throw new Error("Invalid attempt artifact path")
       }
       let current = root

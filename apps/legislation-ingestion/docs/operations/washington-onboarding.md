@@ -185,3 +185,10 @@ vectors instead of storing them again. Retained job reports are under
 `artifacts/openstates-washington-content-canary/reports/sb5000-content-{canary,remainder}.json`.
 This proves text extraction and embedding for this bill only. Local OCR credentials were unavailable, no OCR call
 was exercised, and lexical synchronization, index usage and authenticated API/MCP retrieval remain unverified.
+
+The shared-executor retry exposed a stale NC/AK-only filesystem artifact validator. The directory reader now uses
+the manifest's single shared path contract; 20 focused archive/path tests and ingestion type-checking passed.
+The retained attempt was recovered without repeating extraction. It too contains an upstream server error (two
+completed bill records), not a complete batch, and remains unpromoted. Evidence is retained as
+`wa-frozen-house-retry-20260919` in the same local archive store. Investigate source diagnostics/retry policy before
+increasing concurrency; neither failure authorizes partial promotion or claims a complete Washington refresh.
