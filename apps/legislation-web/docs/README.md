@@ -6,6 +6,11 @@ claims of live availability or acceptance of the separated deployments.
 
 ## Conversation experience
 
+[Conversation and composer telemetry](engineering/conversation-telemetry.md) specifies draft/reference interactions,
+turn and attempt correlation, streaming/render timing, clarification, recovery and privacy-safe engagement measurement.
+[Tool execution telemetry](engineering/tool-execution-telemetry.md) adds per-call outcomes, dependency/stage timing,
+retries, result-size limits and parallel critical-path attribution.
+
 [Follow-up research context](engineering/conversation-research-memory.md) retains bounded server-owned evidence,
 provenance and incomplete research across turns, with fresh citation registration and owner isolation.
 
@@ -54,6 +59,7 @@ spec closure is not a clean verification or deployment claim.
 | What should we build next? | [Public chat backlog](backlog/public-chat.md), [product backlog](backlog/backlog.md) |
 | How does the experience fit together? | [Design](design/design.md), [information architecture](product/information-architecture.md), [design source](../legislation.pen) |
 | What are the API and serving contracts? | [HTTP index](engineering/api/README.md), [retrieval dispatch](engineering/retrieval-acceptance.md), [authentication](operations/authentication.md) |
+| How will we measure usage, performance and reliability? | [Telemetry specification](engineering/telemetry-spec.md), [coverage and events](engineering/telemetry-events.md), [reporting and acceptance](operations/telemetry-acceptance.md) |
 | What has recorded acceptance? | [API/passage delivery](operations/passage-search-delivery.md); dated evidence, not a fresh deployment audit |
 | How do I work on W? | [Source and service organization](../README.md#structure), [runtime/development](operations/development.md), [testing and final gate](operations/testing.md), [frontend styling](engineering/frontend-styling.md) |
 | Where are source workers and evidence? | [I index](../../legislation-ingestion/docs/README.md), [state rollout](../../legislation-ingestion/docs/operations/openstates-rollout-checklist.md) |
@@ -73,6 +79,8 @@ Migrations live once in C and release explicitly through `pnpm --filter legislat
 
 ## Engineering and serving
 
+- [Web telemetry specification](engineering/telemetry-spec.md), [event coverage](engineering/telemetry-events.md) and
+  [dashboards, budgets and acceptance](operations/telemetry-acceptance.md)
 - [Research identity and collection retrieval](engineering/research-record-retrieval.md)
 - [Architecture decisions](engineering/architecture-decisions.md), including separate runtimes and explicit migration releases
 - [Civic graph/events](engineering/api/civic-graph-and-events.md), [membership projection](engineering/committee-membership-history.md)
@@ -180,6 +188,10 @@ The catalog below includes every retained document. Most product work needs only
 - [Search, research answers, and document comparison](engineering/api/search-and-diffs.md)
 - [Subscription, delivery, and webhook endpoints](engineering/api/subscriptions-and-webhooks.md)
 - [Architecture decision log](engineering/architecture-decisions.md)
+- [Web application telemetry specification](engineering/telemetry-spec.md)
+- [Telemetry event and coverage catalog](engineering/telemetry-events.md)
+- [Conversation and composer telemetry](engineering/conversation-telemetry.md)
+- [Conversation tool execution and performance telemetry](engineering/tool-execution-telemetry.md)
 - [Committee membership history](engineering/committee-membership-history.md)
 - [Historical committee reconciliation](../../legislation-ingestion/docs/engineering/committee-reconciliation.md)
 - [Legislative data coverage policy](../../legislation-ingestion/docs/engineering/coverage-policy.md)
@@ -200,6 +212,7 @@ The catalog below includes every retained document. Most product work needs only
 - [Authentication and MCP client setup](operations/authentication.md)
 - [Database connection pooling](../../../packages/legislation-core/docs/operations/database-connection-pooling.md)
 - [Development, runtime and observability](operations/development.md)
+- [Telemetry reporting, rollout and acceptance](operations/telemetry-acceptance.md)
 - [Document OCR implementation and operations](../../legislation-ingestion/docs/operations/document-ocr.md)
 - [Document-processing operations](../../legislation-ingestion/docs/operations/document-processing-operations.md)
 - [HTTP API local smoke checklist](operations/http-api-local-smoke.md)
