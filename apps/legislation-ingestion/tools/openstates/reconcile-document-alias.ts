@@ -7,6 +7,7 @@ import {
   planUntouchedDocumentAliases,
   reconcileUntouchedDocumentAlias
 } from "../../src/persistence/document-alias-reconciliation.js"
+import { retryLockContention } from "../../src/persistence/retry-lock-contention.js"
 
 const options = new Command()
   .option("--bill-id <id>")
@@ -91,11 +92,13 @@ try {
     // Sequential source requests; on failure no completion cursor is printed. Rerun the same page safely.
     for (const candidate of candidates) {
       const downloaded = await downloadDocument(candidate.sourceUrl, { timeoutMs: 30000 })
-      const result = await reconcileUntouchedDocumentAlias(client, {
-        ...candidate,
-        bytes: downloaded.bytes,
-        apply: options.apply === true
-      })
+      const result = await retryLockContention(() =>
+        reconcileUntouchedDocumentAlias(client, {
+          ...candidate,
+          bytes: downloaded.bytes,
+          apply: options.apply === true
+        })
+      )
       console.log(JSON.stringify({ ...result, productionWrites: result.status === "reconciled" }))
     }
     console.log(JSON.stringify({ pageComplete: true, nextBillId, dryRun: !options.apply }))

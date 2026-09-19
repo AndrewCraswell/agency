@@ -7,6 +7,19 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+The read-only input-hash audit at `2026-09-19T15:23:18.468Z` passed for all 3,413 bill vectors and 92,940
+existing document-section vectors: zero missing and zero stale routed embeddings. This does not include text for
+pending documents, lexical synchronization or full search acceptance. A separate status snapshot found 19,493
+processed documents, 385 pending and seven unsupported; the pending count can include untouched aliases still
+being reconciled and is not an OCR-required count. Calendar replay reached 28 completed, one executing and 61
+queued, with no failed runs.
+
+Alias apply 2901 stopped safely on PostgreSQL `55P03` while locking a bill. Same-page retry 11394 resumed with
+97 remaining candidates; keep the verified cursor at HB 1304 until completion and repeat dry run. The repair CLI
+now uses a reusable bounded lock-contention retry: at most three complete, rolled-back attempts with one/two-second
+backoff. Every attempt revalidates source hashes and dependencies under locks. Validation failures, connection
+errors and statement timeouts are not retried. Twenty-three focused tests pass; full verification is running (1014).
+
 All 90 initial calendar windows have committed, verified receipts. The second retained replay canary
 `run_06gbkfn6qdifo75cihsbolq401` completed with 86 events, 86 organization links and 344 bill links; independent
 PostgreSQL read-back confirmed those counts against its retained source IDs. After confirming no active calendar
