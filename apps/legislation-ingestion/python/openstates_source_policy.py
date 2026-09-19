@@ -49,6 +49,8 @@ PATCHES = {
         path = Path("_data/wa/meeting_window.json")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(dict(self.window_evidence, complete=True)), encoding="utf8")
+        if event_count == 0:
+            raise EmptyScrape
 '''),
         ('''            if event_cancelled == "true":
                 continue

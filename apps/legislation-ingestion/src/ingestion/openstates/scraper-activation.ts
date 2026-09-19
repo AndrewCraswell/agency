@@ -1,6 +1,6 @@
 export const approvedScraperBuildInputsSha256 = "e8d0ffa3bb0427ce079632f45dcb875baf7d602bae3c972e6d76de57030c1213"
-// Local acceptance candidate only. The separate activation switch remains off until hosted acceptance.
-export const washingtonScraperCandidateBuild = "3556d11cfa4010e0e8909e14b551f054e2b84a3d7deb0a242d62101e5bc8156e"
+// Isolated acceptance candidate. Regular syncing remains gated separately.
+export const washingtonScraperCandidateBuild = "7b5f40cb0eca33867b3509486a7f8f869733ec033d79f2a19f47c7189dd17b01"
 export const legacyAlaskaEventBuildInputsSha256 = "8dd4689bcfe72cf8b1cee5372c1106bd9f077845bea3187074fe17cc833beaeb"
 
 export function requireApprovedAlaskaEventReceiptBuild(value: string) {

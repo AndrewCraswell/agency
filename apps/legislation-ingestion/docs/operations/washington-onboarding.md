@@ -665,7 +665,7 @@ Read-back confirmed the persistent production job still uses image `sha256:cd415
 and queue `openstates-scraper-dispatch`. The canary has no database credentials and performed no canonical writes.
 This proves hosted House extraction, identity-based queue/blob access, retention, settlement and deterministic normalization;
 it does not prove Senate/vote extraction, hosted event windows, canonical promotion, full-session refresh or regular syncing.
-The canary queue has no automatic scaler; future canaries require explicit one-off executions.
+At that point the canary queue had no automatic scaler; the isolated deployment below supersedes that limitation.
 
 Two further one-off executions passed using that same immutable image and isolated queue:
 
@@ -690,3 +690,26 @@ This is not authorization to loosen tenure checks or insert a guessed voter ID. 
 states House service from 2019 to 2025, Senate service beginning January 2025, and death on April 19, 2025.
 The retained source also ends his current Senate role on April 23. A source-backed, replayable history adjudication
 remains required; no person-specific engine rule or production correction was applied in these checks.
+
+## Isolated calendar worker and empty-window correction (2026-09-19)
+
+Deployment `wa-scraper-candidate-20260919` succeeded using the shared Bicep template, creating only
+`leg-dev-openstates-candidate` on `openstates-scraper-canary`, capped at one execution. Read-back confirmed the existing
+NC/AK job retained its original image, queue and maximum of three. This is bounded extraction capacity, not activation
+of Washington's regular schedule.
+
+The shared plan builder retained 90 seven-day-or-shorter windows spanning 2025-01-01 through 2026-09-19, at
+`openstates/event-window-plans/wa/2025-2026/c2e3cc9c1b0f9fdcbd5dd40c8f4aa20fe8128c2740e85ceebb267daffac97a42/plan.json`.
+The first automatic execution, `leg-dev-openstates-candidate-t8qp6`, failed safely: the publisher returned a valid empty
+January 1-7 inventory, but the adapter had removed the upstream `EmptyScrape` signal. Open States rejects a silent
+zero-object return. No canonical promotion occurred; the failed attempt and complete empty inventory remain retained
+under run `wa-event-f4286234-c9a2-4762-a4fc-33c45d401211`.
+
+The source policy now preserves that native empty-result protocol after saving complete-window evidence. The regression
+test exercises `do_scrape`, not only the generator, and still rejects malformed inventory. Six Washington event tests,
+13 source-policy tests, and 16 TypeScript calendar/task tests passed. Live local execution of the same empty window
+exited zero. Corrected source-input fingerprint:
+`7b5f40cb0eca33867b3509486a7f8f869733ec033d79f2a19f47c7189dd17b01`.
+Corrected cloud image: `sha256:ef58f4a63286c8d6d6a3c105830530c945bf9dc14d15e3eed0385bb74c38df51`.
+Full `pnpm verify` was attempted but stopped in unrelated concurrent web edits at `conversations/capture.ts:161-162`;
+this is not a clean repository-wide verification result.

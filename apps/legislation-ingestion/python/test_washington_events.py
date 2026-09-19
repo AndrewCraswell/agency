@@ -111,13 +111,23 @@ class WashingtonEventTests(unittest.TestCase):
             list(scraper.scrape(start="2025-01-15", end="2025-01-15"))
 
     def test_explicit_empty_inventory_is_valid_but_unknown_document_is_not(self):
+        from openstates.exceptions import EmptyScrape
         scraper = self.scraper()
         scraper.get = Mock(return_value=SimpleNamespace(content=b'<ArrayOfCommitteeMeeting xmlns="http://WSLWebServices.leg.wa.gov/"/>'))
-        self.assertEqual(list(scraper.scrape(start="2025-01-14", end="2025-01-14")), [])
+        with self.assertRaises(EmptyScrape):
+            list(scraper.scrape(start="2025-01-14", end="2025-01-14"))
         self.assertEqual(scraper.get.call_count, 1)
+        # The runtime wrapper rejects a silent zero-object return. Its native
+        # EmptyScrape protocol must succeed, after retaining complete evidence.
+        report = scraper.do_scrape(start="2025-01-14", end="2025-01-14")
+        self.assertEqual(dict(report["objects"]), {})
+        import json
+        evidence = json.loads(Path("_data/wa/meeting_window.json").read_text())
+        self.assertEqual(evidence["agenda_ids"], [])
+        self.assertTrue(evidence["complete"])
         scraper.get = Mock(return_value=SimpleNamespace(content=b'<html/>'))
         with self.assertRaisesRegex(ValueError, "invalid_meeting_inventory"):
-            list(scraper.scrape(start="2025-01-14", end="2025-01-14"))
+            scraper.do_scrape(start="2025-01-14", end="2025-01-14")
 
 
 if __name__ == "__main__":
