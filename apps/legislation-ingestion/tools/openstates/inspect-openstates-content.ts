@@ -4,6 +4,7 @@ import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-r
 import { Command } from "commander"
 import { z } from "zod"
 import { loadConfig } from "../../src/config/config.js"
+import { stateContentScope, stateContentSession } from "../../src/ingestion/openstates/state-content-scope.js"
 
 const command = new Command()
   .argument("[state]", "limit the report to one supported state")
@@ -14,7 +15,7 @@ const command = new Command()
   )
   .parse()
 const options = command.opts<{ databaseEnv?: string }>()
-const selectedState = command.args[0] === undefined ? undefined : z.enum(["nc", "ak"]).parse(command.args[0])
+const selectedState = command.args[0] === undefined ? undefined : stateContentScope.parse(command.args[0])
 const selectedSession = z
   .string()
   .regex(/^[A-Za-z0-9-]+$/)
@@ -40,18 +41,11 @@ try {
   const billRoute = embeddingRouteFor("bill")
   const sectionRoute = embeddingRouteFor("document-section")
   const states = []
-  const scopes = selectedState
-    ? [
-        {
-          jurisdictionId: jurisdictionId(selectedState),
-          sessionId: legislativeSessionId(selectedState, selectedSession ?? (selectedState === "nc" ? "2025" : "34")),
-          state: selectedState
-        }
-      ]
-    : [
-        { jurisdictionId: jurisdictionId("ak"), sessionId: legislativeSessionId("ak", "34"), state: "ak" },
-        { jurisdictionId: jurisdictionId("nc"), sessionId: legislativeSessionId("nc", "2025"), state: "nc" }
-      ]
+  const scopes = (selectedState ? [selectedState] : stateContentScope.options).map((state) => ({
+    jurisdictionId: jurisdictionId(state),
+    sessionId: legislativeSessionId(state, stateContentSession(state, selectedSession)),
+    state
+  }))
   for (const scope of scopes) {
     const billRows = await client.query<{ id: string }>(
       "select id from legislation.bills where jurisdiction_id=$1 and session_id=$2 order by id",

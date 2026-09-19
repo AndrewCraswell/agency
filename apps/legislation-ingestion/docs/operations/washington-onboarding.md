@@ -10,7 +10,7 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |
 | [x] | Inspect production archive baseline | September 19 2026 read-only query: 16,753 bills across five sessions below; historical-import runs exist for each |
-| [ ] | Reconcile the complete published archive inventory | Compare the current archive catalog and checksums; stored counts alone do not prove archive completeness |
+| [x] | Reconcile the complete published archive inventory | All five catalog sessions have retained archives with verified stored checksums; refreshed current-session release compared across all 3,413 bills. This proves inventory coverage, not historical database field parity |
 | [x] | Review pinned scraper and live source access | Pinned revision `d43f853796ceeeb49205f7d144790647764ce105` has bill and event scrapers; both 2025 and 2026 official bill inventory requests returned HTTP 200 without credentials |
 | [x] | Freeze bounded current-session bill inventory | Both annual XML sources retained and replayed; 3,411 unique bills in 342 disjoint batches, with validated exclusions and source hashes |
 | [ ] | Add Washington to shared extraction and promotion | Extend reviewed jurisdiction profiles and source policy, not a parallel ingestion engine; validate source/dispatch/build fingerprints |
@@ -439,3 +439,18 @@ and indistinguishable unidentified roll calls. It still collapses identical dupl
 vote/position array order. This prevents silent first-record-wins loss; it does not invent identities from vote tallies.
 Sixty focused normalizer/scraper tests passed, and all 3,413 current archive bills still normalize to 2,306 votes under
 the stricter rule. A new full verification run was started after this change.
+
+## Shared content audit scope
+
+The content-status and embedding-freshness command-line audits now obtain admitted states and default sessions from
+`state-content-scope`, matching the processing pipeline. Washington no longer fails an NC/AK-only enum or defaults
+to Alaska's session 34. The all-state status report uses the same capability list; admission remains separate from
+hosted activation. Washington's production content-status audit is read-only and was started without triggering
+document processing, OCR or embeddings.
+
+The production audit at 2026-09-19T07:52:25Z found all 3,413 current-session bills with routed embeddings, 19,491
+processed documents, seven unsupported documents, and 92,930 sections with no missing routed embeddings. There were
+zero processed documents without sections, zero OCR-processed documents and zero documents currently flagged as
+unresolved OCR. Both bill and document-section HNSW indexes were valid and ready. These are existence/status checks,
+not proof of embedding input freshness or extraction completeness. A separate freshness audit and review of the seven
+unsupported sources remain open. The shared scope regression tests (three) and ingestion type-check passed.

@@ -5,6 +5,7 @@ import { Command } from "commander"
 import { z } from "zod"
 import { loadConfig } from "../../src/config/config.js"
 import { billEmbeddingInputHash, sectionEmbeddingInputHash } from "../../src/ingestion/embeddings/jobs.js"
+import { stateContentScope, stateContentSession } from "../../src/ingestion/openstates/state-content-scope.js"
 
 const command = new Command()
   .argument("<state>")
@@ -15,11 +16,8 @@ const command = new Command()
   )
   .parse()
 const options = command.opts<{ databaseEnv?: string }>()
-const state = z.enum(["nc", "ak"]).parse(command.args[0])
-const session = z
-  .string()
-  .regex(/^[A-Za-z0-9-]+$/)
-  .parse(command.args[1] ?? (state === "nc" ? "2025" : "34"))
+const state = stateContentScope.parse(command.args[0])
+const session = stateContentSession(state, command.args[1])
 const prefix = legislativeSessionId(state, session).replace("session:", "bill:") + ":%"
 const config = loadConfig({
   NODE_ENV: "test",
