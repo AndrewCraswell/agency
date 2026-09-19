@@ -4,6 +4,7 @@ import {
   clarificationResponseSchemaFor,
   type ClarificationRequest
 } from "../../src/modules/conversations/clarification"
+import { entityCardSchema, entityKindSchema, type EntityCard } from "../../src/modules/conversations/entityResults"
 import { responseOutcomeSchema } from "../../src/modules/conversations/responseOutcome"
 
 const jurisdiction = z.enum([
@@ -90,7 +91,7 @@ export const scenarioSchema = z
           requiresRecordsFrom: z
             .strictObject({
               stepId: identifier,
-              kind: z.string().trim().min(1).max(80),
+              kind: entityKindSchema,
               onMissingRecords: text.optional()
             })
             .optional()
@@ -182,7 +183,7 @@ export const snapshotSchema = z
   })
   .passthrough()
 export type Snapshot = z.infer<typeof snapshotSchema>
-export type ObservedRecord = { id: string; kind: string; title: string }
+export type ObservedRecord = Pick<EntityCard, "id" | "kind" | "title">
 export type StepProgress = {
   id: string
   selected: "primary" | "missing-records" | null
@@ -493,9 +494,7 @@ export function inspectSnapshot(snapshot: Snapshot, previousMessageIds: Readonly
     ok: z.boolean().optional(),
     isError: z.boolean().optional(),
     error: z.unknown().optional(),
-    resultSet: z
-      .object({ items: z.array(z.object({ id: z.string(), kind: z.string(), title: z.string() })) })
-      .optional(),
+    resultSet: z.object({ items: z.array(entityCardSchema.pick({ id: true, kind: true, title: true })) }).optional(),
     evidence: z.array(z.object({ id: z.string() })).optional()
   })
   for (const call of calls) {

@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url"
 import { parseArgs } from "node:util"
 import type { LanguageModel } from "ai"
 import type { Page, Request } from "playwright"
+import { entityKindSchema } from "../../src/modules/conversations/entityResults"
 import { redactCredentials } from "../../src/modules/conversations/redactCredentials"
 import { createChatModel } from "../../src/services/openrouter/chat-model"
 import { planAdaptiveTurn } from "./adaptive-planner"
@@ -543,6 +544,7 @@ async function main() {
         "clarificationAnswers: jurisdiction rules {question,kind:'jurisdiction',jurisdictions,options?:[{label,jurisdictions}]}; other rules {question,kind:'other',optionLabels,text}.\n" +
         "Jurisdiction text is generated from structured choices; option labels must exactly join their mapped jurisdiction names with ', '. State-only answers may omit an already approved federal scope.\n" +
         "Optional: acceptedNarrowing {jurisdictions,reason}; step.requiresRecordsFrom {stepId,kind,onMissingRecords}.\n" +
+        `Dependency kind must be one of: ${entityKindSchema.options.join(", ")}. Use meeting for search_events results, not event; unsupported kinds fail validation before execution.\n` +
         "Fixed clarification questions/options match exactly; missing answers pause. No resume or semantic pass claim.\n" +
         "Adaptive: add adaptive {persona,constraints,maximumRecoveries:0-2}; steps become coverage goals after the opening prompt. --adaptive-model <model-id> is required with --execute and incurs planner calls using OPENROUTER_API_KEY.\n" +
         "--wait-ms defaults to 600000 per browser exchange; on expiry Stop and final capture are attempted, never automatic resubmission.\n"

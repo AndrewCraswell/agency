@@ -77,7 +77,12 @@ mappings must exactly name those choices; otherwise the driver pauses. Non-juris
 authored answer. An unanswered/repeated clarification or absent discovery blocks dependent prompts unless an explicit
 missing-records branch exists. Accepted narrowing must be recorded in the plan; it is never selected automatically.
 Discovered record inventories are not appended to user prompts. In fixed mode they establish prerequisites only,
-not the user's selected sample. Dependency kinds must match the exported UI kinds (`meeting`, not `event`).
+not the user's selected sample. Dependency kinds are validated against the canonical exported UI kinds:
+`bill`, `person`, `organization`, `meeting`, `document`, `amendment`, `vote`, and `material`.
+For `search_events`, author `requiresRecordsFrom` with `kind: "meeting"` even though record IDs start with
+`event:`. Unsupported kinds such as `event` fail plan validation before browser or paid execution; they are not
+aliases. The CLI help lists the supported kinds from the same schema. Correct new plans rather than rewriting
+historical run snapshots: old missing-records branches remain missing-records coverage, not primary passes.
 
 ### Adaptive conversations
 

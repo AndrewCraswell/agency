@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url"
 import invariant from "tiny-invariant"
 import { describe, expect, it } from "vitest"
 import type { ClarificationRequest } from "../../src/modules/conversations/clarification"
+import { entityKindSchema, projectEntityResult } from "../../src/modules/conversations/entityResults"
 import {
   approvedJurisdictions,
   adaptiveDecisionSchema,
@@ -353,6 +354,119 @@ describe("explicit scenario scope", () => {
 })
 
 describe("dependent prompt selection and coverage", () => {
+  it.each(entityKindSchema.options)("accepts the canonical %s prerequisite kind", (kind) => {
+    expect(
+      scenarioSchema.safeParse({
+        ...authored,
+        steps: [authored.steps[0], { ...authored.steps[1], requiresRecordsFrom: { stepId: "discover", kind } }]
+      }).success
+    ).toBe(true)
+  })
+
+  it.each(["event", "hearing", "unknown", ""])("rejects unsupported prerequisite kind %j", (kind) => {
+    const result = scenarioSchema.safeParse({
+      ...authored,
+      steps: [authored.steps[0], { ...authored.steps[1], requiresRecordsFrom: { stepId: "discover", kind } }]
+    })
+    expect(result.success).toBe(false)
+    invariant(!result.success)
+    expect(result.error.issues).toContainEqual(
+      expect.objectContaining({ path: ["steps", 1, "requiresRecordsFrom", "kind"] })
+    )
+  })
+
+  it.each([true, false])(
+    "selects meeting prerequisites from exported discovery and preserves branch coverage (has meetings: %s)",
+    (hasMeetings) => {
+      const scenario = scenarioSchema.parse({
+        ...authored,
+        steps: [
+          { id: "discover", prompt: "Find AI committee hearings." },
+          {
+            id: "compare",
+            prompt: "Compare the discovered hearings.",
+            requiresRecordsFrom: {
+              stepId: "discover",
+              kind: "meeting",
+              onMissingRecords: "Explain the hearing discovery gap."
+            }
+          }
+        ]
+      })
+      const resultSet = projectEntityResult("search_events", {
+        items: hasMeetings
+          ? [
+              {
+                id: "event:congress:committee-meeting-123",
+                name: "Artificial intelligence oversight hearing",
+                startAt: "2026-09-18T14:00:00Z",
+                sourceUrl: "https://www.congress.gov/event/119th-congress/house-event/123"
+              }
+            ]
+          : []
+      })
+      invariant(resultSet)
+      const snapshot = snapshotSchema.parse({
+        format: "rostra-conversation",
+        schemaVersion: 1,
+        conversationId: "meeting-fixture",
+        interactionStatus: "ready",
+        messages: [{ id: "answer", role: "assistant", parts: [{ type: "text", text: "Discovery complete." }] }],
+        responseOutcomes: [{ messageId: "answer", ...complete }],
+        toolCalls: [
+          {
+            messageId: "answer",
+            toolCallId: "events",
+            toolName: "search_events",
+            state: "output-available",
+            output: { resultSet }
+          }
+        ]
+      })
+      const inspection = inspectSnapshot(snapshot, new Set())
+      expect(inspection.records).toEqual(
+        hasMeetings
+          ? [
+              {
+                id: "event:congress:committee-meeting-123",
+                kind: "meeting",
+                title: "Artificial intelligence oversight hearing"
+              }
+            ]
+          : []
+      )
+      const steps = progress()
+      steps[0] = {
+        id: "discover",
+        selected: "primary",
+        executedRequestIds: ["opening"],
+        answered: summarizeExchange([observed({ messages: [] })], inspection.outcome).answered,
+        records: inspection.records
+      }
+      const selection = selectStep(scenario, 1, steps)
+      const branch = hasMeetings ? "primary" : "missing-records"
+      expect(selection).toEqual({
+        kind: "submit",
+        branch,
+        prompt: `${hasMeetings ? "Compare the discovered hearings." : "Explain the hearing discovery gap."}\n\nApproved jurisdictions: U.S. federal, California, New York.`
+      })
+      steps[1] = {
+        id: "compare",
+        selected: branch,
+        executedRequestIds: ["follow-up"],
+        answered: true,
+        records: []
+      }
+      const coverage = scenarioCoverage(scenario, steps)
+      expect(coverage.answered).toEqual([
+        { stepId: "discover", branch: "primary" },
+        { stepId: "compare", branch }
+      ])
+      expect(coverage.executed).toContainEqual({ stepId: "compare", branch, requestIds: ["follow-up"] })
+      expect(coverage.unassessed).toEqual(["discover", "compare"])
+    }
+  )
+
   it("does not advance after clarification-only output or absent discovery", () => {
     const scenario = scenarioSchema.parse(authored)
     const steps = progress()
@@ -587,5 +701,23 @@ describe("export observation and the executable plan", () => {
         unassessed: ["discover", "compare"]
       }
     })
+  })
+
+  it("rejects an event prerequisite before execution even when paid browser execution is requested", () => {
+    const cli = fileURLToPath(new URL("./run-scenarios.ts", import.meta.url))
+    const result = spawnSync(process.execPath, ["--import", "tsx", cli, "--scenario", "-", "--execute"], {
+      cwd: fileURLToPath(new URL("../../", import.meta.url)),
+      input: JSON.stringify({
+        ...authored,
+        steps: [authored.steps[0], { ...authored.steps[1], requiresRecordsFrom: { stepId: "discover", kind: "event" } }]
+      }),
+      encoding: "utf8",
+      timeout: 30_000,
+      env: { ...process.env, OPENROUTER_API_KEY: "", LANGFUSE_SECRET_KEY: "" }
+    })
+    expect(result.status).toBe(1)
+    expect(result.stdout).toBe("")
+    expect(result.stderr).toContain("requiresRecordsFrom")
+    expect(result.stderr).toContain('"meeting"')
   })
 })
