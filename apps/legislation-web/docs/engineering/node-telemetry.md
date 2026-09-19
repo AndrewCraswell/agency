@@ -44,8 +44,8 @@ Sentry declines export, the provider records locally without setting the origina
 originally sampled spans; Langfuse receives detached, sink-local sampled snapshots through its own eligibility filter.
 Snapshot attributes, events, links and status are detached because Langfuse masks its input in place.
 
-The application sampler defaults to zero. An explicitly approved `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` value
-sets the local budget independently of incoming flags; invalid values warn and disable tracing. The optional
+The shared application sampler enables diagnostic tracing at 100% when Sentry is configured, independently of incoming
+sampling flags. There is no application sampling-rate setting. The optional
 `NEXT_PUBLIC_SENTRY_ENVIRONMENT` label uses the same approved environment names across runtimes.
 Existing configured Langfuse observation
 behavior is preserved; this is not permission to expand its collection. Sentry's

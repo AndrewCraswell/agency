@@ -1,6 +1,6 @@
 import { createTransport, type BaseTransportOptions, type Envelope, type TransportRequestExecutor } from "@sentry/core"
 import { afterEach, expect, it, vi } from "vitest"
-import { diagnosticEnvironment, diagnosticTraceSampleRate } from "./diagnosticSettings"
+import { diagnosticEnvironment } from "./diagnosticSettings"
 import { diagnosticTransport } from "./diagnosticTransport"
 import { sentryOptions } from "./sentryOptions"
 
@@ -55,13 +55,9 @@ it("respects SDK rate-limit backoff and reports network failures without retry m
   expect(JSON.stringify(warning.mock.calls)).not.toContain("PRIVATE_NETWORK_DETAIL")
 })
 
-it("keeps optional collection off and accepts only an explicit valid local trace budget", () => {
+it("enables diagnostic traces by default without enabling logs, metrics or replay", () => {
   vi.spyOn(console, "warn").mockImplementation(() => undefined)
-  for (const value of [undefined, "", " ", "-1", "2", "NaN", "PRIVATE"]) {
-    expect(diagnosticTraceSampleRate(value)).toBe(0)
-  }
-  expect(diagnosticTraceSampleRate("0.1")).toBe(0.1)
-  expect(diagnosticTraceSampleRate("1")).toBe(1)
+  expect(sentryOptions.tracesSampler()).toBe(1)
   expect(diagnosticEnvironment("test", "production")).toBe("test")
   expect(diagnosticEnvironment("PRIVATE", "development")).toBe("development")
   expect(sentryOptions).toMatchObject({

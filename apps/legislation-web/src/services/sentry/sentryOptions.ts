@@ -8,7 +8,7 @@ export const sentryOptions = {
   sendDefaultPii: false,
   defaultIntegrations: [],
   integrations: [integration],
-  tracesSampleRate: 0,
+  tracesSampler: () => 1,
   traceLifecycle: "static",
   streamGenAiSpans: false,
   replaysSessionSampleRate: 0,

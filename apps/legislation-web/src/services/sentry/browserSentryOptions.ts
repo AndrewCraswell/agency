@@ -1,5 +1,5 @@
 import type { BrowserOptions, browserTracingIntegration } from "@sentry/nextjs"
-import { diagnosticEnvironment, diagnosticTraceSampleRate } from "./diagnosticSettings"
+import { diagnosticEnvironment } from "./diagnosticSettings"
 import { sentryOptions } from "./sentryOptions"
 import { telemetryPropagationTarget } from "./telemetryPropagation"
 import { resolveTelemetryRoute } from "./telemetryRoutes"
@@ -8,14 +8,12 @@ export function createBrowserSentryOptions(
   environment: Readonly<{
     NODE_ENV?: string
     NEXT_PUBLIC_SENTRY_DSN?: string
-    NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE?: string
     NEXT_PUBLIC_SENTRY_ENVIRONMENT?: string
   }>,
   origin: string | undefined,
   createTracingIntegration: typeof browserTracingIntegration
 ): BrowserOptions {
   const dsn = environment.NEXT_PUBLIC_SENTRY_DSN?.trim()
-  const sampleRate = diagnosticTraceSampleRate(environment.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE)
   let target: RegExp | undefined
   if (dsn) {
     try {
@@ -32,7 +30,6 @@ export function createBrowserSentryOptions(
     initialScope: { tags: { runtime: "browser" } },
     environment: diagnosticEnvironment(environment.NEXT_PUBLIC_SENTRY_ENVIRONMENT, environment.NODE_ENV),
     defaultIntegrations: undefined,
-    tracesSampler: () => sampleRate,
     tracePropagationTargets: target ? [target, /^\/(?![\\/])/u] : [],
     integrations: (integrations) => [
       ...integrations.filter((integration) => permittedErrors.has(integration.name)),

@@ -20,8 +20,8 @@ For a production-built local preview, the observed browser origin may use loopba
 permit external HTTP origins and does not relax the edge/server configured-target policy.
 An ineligible browser origin disables propagation with a fixed warning rather than breaking application hydration.
 
-The local sampler defaults to zero and reads the explicit `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` budget.
-An incoming sampled flag cannot override it. `NEXT_PUBLIC_SENTRY_ENVIRONMENT` can distinguish an approved test/staging
+Diagnostic tracing is enabled at 100% whenever a Sentry DSN is configured, using the shared runtime sampler.
+There is no application sampling-rate setting. `NEXT_PUBLIC_SENTRY_ENVIRONMENT` can distinguish a test/staging
 build from production traffic. Public settings are build-time inputs. Metrics/logs/replay remain off; see the
 [debugging guide](../operations/telemetry-debugging.md) for configuration and collection restrictions.
 

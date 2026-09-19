@@ -44,8 +44,9 @@ Only manually authored, allowlisted diagnostic breadcrumbs are retained, up to 2
 not a separate usage event stream. Native Sentry transport buffers are limited to 32 envelopes. Flush belongs at
 bounded post-response/process lifecycle boundaries, never in the request/tool critical path.
 
-Tracing defaults to zero. Explicit sampling and environment settings, vendor disable behavior and lookup instructions
-are documented in the [debugging guide](../operations/telemetry-debugging.md).
+The user authorized diagnostic tracing by default on September 19, 2026. A configured Sentry DSN enables tracing
+at 100% across browser, Node and edge, with no application sampling-rate setting. Environment labels, vendor disable
+behavior and lookup instructions are documented in the [debugging guide](../operations/telemetry-debugging.md).
 
 ## Privacy, identity and retention
 
@@ -75,8 +76,8 @@ Collection must fit verified plan allowances; alerts or dated usage snapshots ar
 LEG-27 and the Linear delivery brief retain the account evidence and control limitations.
 
 The approved nonproduction smoke test permits at most 100 synthetic events/observations, without real customer data
-or paid model calls. Replay stays off. Production enablement still requires authorization; completing code or tests
-does not grant it.
+or paid model calls. Replay stays off. Default diagnostic tracing with the existing Sentry configuration is authorized by the user.
+Completing code or tests does not authorize additional paid services or the excluded optional signals.
 
 ## Completion
 

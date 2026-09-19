@@ -15,9 +15,9 @@ attachments and separately serialized AI child spans, not only the parent observ
 allowlisted headers, payloads and item counts. Failed projection or an unknown item type is dropped with a bounded
 local diagnostic; rejected payload values are never included in that diagnostic.
 
-Logs, metrics, traces and replay remain disabled by default. Optional usage and replay are out of the
-user-approved prototype scope; LEG-38 is canceled, not an implementation prerequisite. Diagnostic traces require
-an explicit approved sampling setting described in the [debugging guide](../operations/telemetry-debugging.md).
+Logs, metrics and replay remain disabled. Optional usage and replay are out of the
+user-approved prototype scope; LEG-38 is canceled, not an implementation prerequisite. Diagnostic traces are
+enabled whenever Sentry is configured, as described in the [debugging guide](../operations/telemetry-debugging.md).
 Replay recordings/events,
 attachments, profiles, session/feedback/check-in and unknown envelope items are currently unsupported and dropped.
 Enabling one requires its own data contract and envelope tests, not only an SDK integration.

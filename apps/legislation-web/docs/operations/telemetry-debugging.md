@@ -8,19 +8,19 @@ The narrowed Linear project scope supersedes the earlier full-coverage analytics
 
 | Setting | Behavior |
 | --- | --- |
-| `NEXT_PUBLIC_SENTRY_DSN` | Existing Sentry error destination. Blank disables this SDK sink. |
-| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | Local trace budget from `0` to `1`; default `0`. Invalid input warns and disables tracing. Incoming sampling flags cannot increase it. |
+| `NEXT_PUBLIC_SENTRY_DSN` | Existing Sentry error/trace destination. Diagnostic tracing is on at 100% when configured; blank disables this SDK sink. |
 | `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | Optional `development`, `test`, `staging` or `production` label; otherwise the runtime environment is used. |
 | `SENTRY_RELEASE` | Deployment release identity used to correlate code and errors. |
 | Existing Langfuse settings | Preserve the existing independently configured Langfuse observation policy. |
 
-Public settings require a browser rebuild, and Node configuration changes require a process restart. Do not change
-production collection or spend as part of debugging without approval. The existing approved nonproduction smoke test
+Tracing needs no separate configuration or opt-in. Public settings require a browser rebuild, and Node configuration
+changes require a process restart. Do not increase spend or enable excluded signals without approval.
+The existing approved nonproduction smoke test
 is limited to 100 synthetic events/observations, with no real customer data or paid model calls.
 
 Logs, application metrics, product-usage tracking and Session Replay remain off. There is no consent/analytics identity
 subsystem, persistent offline queue or new telemetry service. Clearing the Sentry DSN disables that sink without
-disabling Langfuse; setting trace sampling to `0` leaves configured errors available.
+disabling Langfuse. There is no application sampling-rate setting.
 
 ## Find the failure
 
@@ -45,7 +45,7 @@ proof that source-map upload or mapping succeeded.
 
 ## Follow a slow or incomplete run
 
-When diagnostic traces are explicitly enabled, open the event's trace or use the existing trace explorer. Inspect:
+Open the event's trace or use the existing trace explorer. Inspect:
 
 - The shared HTTP span: canonical route, method, status, duration and outcome. A returned streaming response ends
   the request span; HTTP 200 is acceptance, not completed research.

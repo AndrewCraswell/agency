@@ -18,7 +18,6 @@ beforeAll(() => {
     sentry: {
       dsn: "http://synthetic@127.0.0.1:1/1",
       registerEsmLoaderHooks: false,
-      tracesSampler: () => 1,
       transport: () => ({ send: async () => ({ statusCode: 200 }), flush: async () => true })
     }
   })
@@ -55,7 +54,12 @@ it("isolates concurrent requests, preserves application correlation and exposes 
       const browserId = crypto.randomUUID()
       const request = new Request(`https://app.example.test/chat`, {
         method: "POST",
-        headers: { "x-correlation-id": `public-${name}`, "x-rostra-request-id": browserId, baggage: `private=${name}` },
+        headers: {
+          "x-correlation-id": `public-${name}`,
+          "x-rostra-request-id": browserId,
+          "sentry-trace": `${name.repeat(32)}-${"c".repeat(16)}-0`,
+          baggage: `private=${name}`
+        },
         body: JSON.stringify({ sessionKey: "PRIVATE" })
       })
       let requestId: string | undefined
@@ -66,6 +70,7 @@ it("isolates concurrent requests, preserves application correlation and exposes 
         await new Promise((resolve) => setTimeout(resolve, name === "a" ? 5 : 1))
         expect(currentTelemetryCorrelation().request_id).toBe(requestId)
         expect(currentTelemetryCorrelation().browser_request_id).toBe(browserId)
+        expect(getActiveSpan()?.isRecording()).toBe(true)
         expect(safe.headers.get("x-correlation-id")).toBe(`public-${name}`)
         expect(safe.headers.get("baggage")).toBeNull()
         expect(await safe.json()).toEqual({ sessionKey: "PRIVATE" })

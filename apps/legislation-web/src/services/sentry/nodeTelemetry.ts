@@ -16,7 +16,7 @@ import { SentryAsyncLocalStorageContextManager, SentrySampler, SentrySpanProcess
 import { registerTelemetry } from "ai"
 import { PHASE_PRODUCTION_BUILD } from "next/constants"
 import { langfuseSettings } from "../langfuse/client"
-import { diagnosticEnvironment, diagnosticTraceSampleRate } from "./diagnosticSettings"
+import { diagnosticEnvironment } from "./diagnosticSettings"
 import { diagnosticTransport } from "./diagnosticTransport"
 import { SafeTracePropagator } from "./safeTracePropagator"
 import { sentryOptions } from "./sentryOptions"
@@ -231,8 +231,7 @@ export function registerNodeTelemetry(
     publicKey,
     secretKey,
     baseUrl: langfuseConfiguration?.baseUrl,
-    apiBaseUrl: environment.LEGISLATION_PUBLIC_API_BASE_URL,
-    sampleRate: diagnosticTraceSampleRate(environment.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE)
+    apiBaseUrl: environment.LEGISLATION_PUBLIC_API_BASE_URL
   }
   const key = createHash("sha256")
     .update(JSON.stringify({ ...configuration, mask: mask?.toString() }))
@@ -261,7 +260,6 @@ export function registerNodeTelemetry(
       enabled: Boolean(configuration.dsn),
       environment: configuration.environment,
       release: configuration.release,
-      tracesSampler: () => configuration.sampleRate,
       tracePropagationTargets: target ? [target] : [],
       integrations: [
         ...sentryOptions.integrations,

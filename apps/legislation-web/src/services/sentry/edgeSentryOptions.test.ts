@@ -31,7 +31,6 @@ describe("edge-owned telemetry configuration", () => {
       defaultIntegrations: [],
       enableLogs: false,
       enableMetrics: false,
-      tracesSampleRate: 0,
       streamGenAiSpans: false,
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 0,
@@ -39,8 +38,13 @@ describe("edge-owned telemetry configuration", () => {
     })
     expect(fetchOptions?.breadcrumbs).toBe(false)
     expect(
-      options.tracesSampler?.({ name: "/api/bills", attributes: {}, parentSampled: true, inheritOrSampleWith: () => 1 })
-    ).toBe(0)
+      options.tracesSampler?.({
+        name: "/api/bills",
+        attributes: {},
+        parentSampled: false,
+        inheritOrSampleWith: () => 0
+      })
+    ).toBe(1)
     expect(fetchOptions?.shouldCreateSpanForRequest?.("https://unknown.example")).toBe(false)
     expect(Array.isArray(options.integrations)).toBe(true)
   })

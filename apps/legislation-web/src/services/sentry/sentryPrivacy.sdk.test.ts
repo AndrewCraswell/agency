@@ -218,10 +218,10 @@ it("keeps shared configuration fail-closed for replay, automatic AI and optional
     streamGenAiSpans: false,
     enableLogs: false,
     enableMetrics: false,
-    tracesSampleRate: 0,
     sendDefaultPii: false,
     maxBreadcrumbs: 20,
     transportOptions: { bufferSize: 32 }
   })
   expect(sentryOptions.integrations.map((integration) => integration.name)).toContain("RostraPrivacy")
+  expect(sentryOptions.tracesSampler()).toBe(1)
 })

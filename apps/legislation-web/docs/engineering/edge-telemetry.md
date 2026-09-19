@@ -14,8 +14,8 @@ context; the application now fails explicitly rather than risk cross-request sco
 
 - Existing configured error reporting remains available through `onRequestError` and the shared
   [Sentry privacy boundary](telemetry-privacy.md).
-- The edge sampler defaults to zero and reads the explicitly approved `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`
-  budget. Incoming flags cannot bypass that decision. Logs, metrics and replay remain disabled.
+- The shared sampler enables diagnostic tracing at 100% when a Sentry DSN is configured, independent of incoming
+  sampling flags. There is no application sampling-rate setting. Logs, metrics and replay remain disabled.
 - Only the audited WinterCG fetch integration and shared privacy integration are installed. Fetch breadcrumbs and
   automatic console/request-data collection are not enabled.
 - `LEGISLATION_PUBLIC_API_BASE_URL` supplies the only permitted downstream origin for fetch spans/propagation.

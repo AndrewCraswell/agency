@@ -25,7 +25,8 @@ appropriate; do not write validators for this checklist or other prose.
 
 Use the previously approved nonproduction allowance: at most 100 synthetic events/observations, no real customer data
 and no paid model calls. Isolate the test with a release and `test` environment label. Session Replay stays off.
-Do not enable production collection, buy/upgrade a plan or permit overages.
+Diagnostic tracing with an existing Sentry configuration is enabled by default at the user's request.
+Do not enable excluded signals, buy/upgrade a plan or permit overages.
 
 Inspect the actual received error/trace and available Langfuse observation. A flush success means local delivery work
 finished, not that the vendor indexed or retained a record. Record event/trace IDs and the observed environment,
@@ -38,7 +39,7 @@ blocker. Do not mark ingestion or source mapping accepted from an in-memory fixt
 
 Use [Debugging with Sentry and Langfuse](telemetry-debugging.md) for configuration, queries and interpretation.
 The existing SDK views and concise saved-filter instructions are sufficient for LEG-60; no custom UI is required.
-Set trace sampling to zero to stop diagnostic traces, or clear the Sentry DSN to disable that sink. Browser public
+Diagnostic tracing is on whenever Sentry is configured; clear the Sentry DSN to disable that sink. Browser public
 settings require a rebuild; Node configuration changes require a restart. Langfuse remains independently configured.
 
 The [approved region, retention, access and spending limits](../engineering/telemetry-spec.md#approved-policy-limits)

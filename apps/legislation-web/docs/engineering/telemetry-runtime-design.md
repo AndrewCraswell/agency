@@ -114,7 +114,8 @@ The edge branch loads only the supported edge Sentry integration; never import N
 Langfuse's Node processor there. Do not retain `skipOpenTelemetrySetup` without supplying the required supported edge
 setup. Verify its isolation and parentage independently; the Node probe below is not evidence of edge acceptance.
 The [edge implementation](edge-telemetry.md) now delegates provider setup to the edge SDK and verifies that export
-condition separately with synthetic request-isolation and propagation cases; production collection remains gated.
+condition separately with synthetic request-isolation and propagation cases. Diagnostic tracing is now enabled
+by default with an existing Sentry DSN, per the user's September 19 follow-up; excluded optional signals remain off.
 
 ## Dependencies and implementation gates
 

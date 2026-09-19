@@ -1,5 +1,5 @@
 import type { EdgeOptions, winterCGFetchIntegration } from "@sentry/nextjs"
-import { diagnosticEnvironment, diagnosticTraceSampleRate } from "./diagnosticSettings"
+import { diagnosticEnvironment } from "./diagnosticSettings"
 import { sentryOptions } from "./sentryOptions"
 import { telemetryPropagationTarget } from "./telemetryPropagation"
 
@@ -14,7 +14,6 @@ export function createEdgeSentryOptions(
   createFetchIntegration: typeof winterCGFetchIntegration
 ): EdgeOptions {
   const dsn = environment.NEXT_PUBLIC_SENTRY_DSN?.trim()
-  const sampleRate = diagnosticTraceSampleRate(environment.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE)
   const target = telemetryPropagationTarget(environment.LEGISLATION_PUBLIC_API_BASE_URL, environment.NODE_ENV)
   return {
     ...sentryOptions,
@@ -23,7 +22,6 @@ export function createEdgeSentryOptions(
     initialScope: { tags: { runtime: "edge" } },
     environment: diagnosticEnvironment(environment.NEXT_PUBLIC_SENTRY_ENVIRONMENT, environment.NODE_ENV),
     skipOpenTelemetrySetup: false,
-    tracesSampler: () => sampleRate,
     tracePropagationTargets: target ? [target] : [],
     integrations: [
       ...sentryOptions.integrations,

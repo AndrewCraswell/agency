@@ -26,7 +26,7 @@ function fixture(dsn = "https://synthetic@o0.ingest.sentry.io/1") {
 }
 
 describe("browser SDK configuration", () => {
-  it("selects only audited integrations and keeps all optional signals off", () => {
+  it("enables diagnostic traces with audited integrations while logs, metrics and replay stay off", () => {
     const test = fixture()
     expect(test.integrations.map((integration) => integration.name)).toEqual([
       "GlobalHandlers",
@@ -40,15 +40,14 @@ describe("browser SDK configuration", () => {
       enabled: true,
       enableLogs: false,
       enableMetrics: false,
-      tracesSampleRate: 0,
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 0,
       maxBreadcrumbs: 20,
       transportOptions: { bufferSize: 32 }
     })
     expect(
-      test.options.tracesSampler?.({ name: "/", attributes: {}, parentSampled: true, inheritOrSampleWith: () => 1 })
-    ).toBe(0)
+      test.options.tracesSampler?.({ name: "/", attributes: {}, parentSampled: false, inheritOrSampleWith: () => 0 })
+    ).toBe(1)
     expect(test.tracingOptions).toMatchObject({
       instrumentPageLoad: true,
       instrumentNavigation: true,
