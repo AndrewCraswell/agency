@@ -90,6 +90,23 @@ pages, 250 unique results, cursor binding and the capped `truncated` flag. All 1
 No production query or unrelated dirty search implementation was changed. This establishes the bounded sample contract,
 not exhaustive corpus recall or live statewide search acceptance.
 
+The subsequent full `pnpm verify` completed successfully, including 240 web acceptance tests and built MCP acceptance.
+Default database skips remain separate from the 80 ingestion and 19 API/database tests exercised explicitly above.
+A separate `scripts/legislation-acceptance.test.mjs` invocation supplied the isolated loopback database and an explicitly
+synthetic Washington bill fixture. The real built MCP and API completed the positive `get_bill` read and audience/token
+exchange checks (four passes, database-failure path skipped in this mode). The preceding default invocation passed that
+failure path. This closes both local built-runtime paths, not production TLS, live Washington data or complete tool coverage.
+
+Further primary-source review of the eight held histories found an additional date issue for Sharon Shewmake:
+her [official biography](https://senatedemocrats.wa.gov/shewmake/biography/) and the
+[official historical reference, printed pages 121-122](https://leg.wa.gov/media/3uuctf3k/members-of-the-legislature-1889-2023.pdf)
+record December 9, 2022 Senate swearing-in to serve the unexpired term, rather than the retained January 9, 2023 start.
+The historical reference confirms House service and resignation but does not give the exact House resignation date.
+The [House announcement](https://housedemocrats.wa.gov/blog/2022/12/22/timmons-sworn-into-office-in-olympia/)
+confirms successor Joe Timmons was sworn in December 21. Do not infer her resignation date from either ceremony or
+merely change the erroneous prior Senate role to House service: the supplied House end date is also suspect.
+Her history remains held pending sufficient boundary evidence; no production dates were guessed or changed.
+
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |
 | [x] | Inspect production archive baseline | September 19 2026 read-only query: 16,753 bills across five sessions below; historical-import runs exist for each |
