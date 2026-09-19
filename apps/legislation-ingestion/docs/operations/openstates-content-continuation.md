@@ -36,3 +36,21 @@ start content children until their exact predecessors succeed. At 02:06 UTC the 
 running and five queued tasks. PostgreSQL used 43 of 100 connections with no lock waits older than ten seconds;
 the previous ten minutes contained 336 successful content batches and no failed batches. These are dated observations,
 not final corpus acceptance or a throughput guarantee.
+
+## Deployment drift recovery
+
+The chain canary on `20260919.1` returned a successor, but later controllers on `20260919.3` returned only
+`continuation_budget`, without `nextWork` or a successor. At 04:32 UTC the worker queue was empty despite pending
+documents. Awaited children already inherit the parent version through the SDK; fire-and-forget successors now
+explicitly pass the parent deployment as the SDK `version` option as well.
+
+Deployment `20260919.6` verified both outcomes in production: NC 1991 controller
+`run_06gbfto7m96pnotqfer89o2401` completed two children and created `run_06gbftvuueqp52cr2qo6gvb401`, observed executing
+on the same version. NC 2003E3 controller `run_06gbfto88udpgkl1ffge11gt01` returned `drained` with no successor.
+After checking for active chains, the other 35 archive scopes received one version-pinned, idempotent recovery
+controller each. Drained scopes still verify their scan and embedding state before stopping; unfinished scopes
+continue from durable checkpoints. The worker queue override remains 20 and publisher limits are unchanged.
+
+Inventory queries must use lowercase canonical session IDs (for example `session:nc:2015e1`), even when the archive
+stream uses `nc-2015E1`. Omitting that normalization undercounted the special sessions in an intermediate progress
+report; it was not evidence of deleted archive records.
