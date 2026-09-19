@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   advance: vi.fn(),
+  reconcile: vi.fn(),
   trigger: vi.fn(async () => ({ id: "continuation" })),
   key: vi.fn(async () => "stable-key"),
   end: vi.fn(async () => {}),
@@ -28,7 +29,8 @@ vi.mock("@repo/legislation-core/database/database", () => ({
 }))
 vi.mock("../../ingestion/documents/artifact-store.js", () => ({ AzureBlobArtifactStore: class {} }))
 vi.mock("../../ingestion/openstates/scraper-event-window-cycle.js", () => ({
-  advanceWashingtonEventCycle: mocks.advance
+  advanceWashingtonEventCycle: mocks.advance,
+  reconcileWashingtonEventWindow: mocks.reconcile
 }))
 
 import { washingtonScraperCandidateBuild } from "../../ingestion/openstates/scraper-activation.js"
@@ -39,9 +41,20 @@ const payload = {
   approvedBuild: washingtonScraperCandidateBuild
 }
 const definition = mocks.register.mock.calls[0]![0]
+const replayDefinition = mocks.register.mock.calls[1]![0]
 const context = { ctx: { run: { id: "test-run" }, deployment: { version: "20260919.wa" } } }
 
 describe("bounded meeting continuation task", () => {
+  it("runs retained reconciliation on the serial calendar queue without source dispatch", async () => {
+    vi.stubEnv("OPENSTATES_SCRAPER_ENABLED_STATES", "wa")
+    mocks.reconcile.mockResolvedValue({ status: "reconciled" })
+    expect(replayDefinition.queue.concurrencyLimit).toBe(1)
+    await replayDefinition.run({ ...payload, windowId: "b".repeat(64) }, context)
+    expect(mocks.reconcile).toHaveBeenCalledOnce()
+    expect(mocks.advance).not.toHaveBeenCalled()
+    expect(mocks.trigger).not.toHaveBeenCalled()
+    expect(mocks.end).toHaveBeenCalledOnce()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubEnv("OPENSTATES_SCRAPER_ENABLED_STATES", "")

@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { describe, expect, it, vi } from "vitest"
 import {
   executeWashingtonEventWindow,
+  reconcileWashingtonEventWindow,
   inspectEventWindowCycle,
   advanceWashingtonEventCycle
 } from "./scraper-event-window-cycle.js"
@@ -51,6 +52,48 @@ function fixture() {
 }
 
 describe("meeting window coordination", () => {
+  it("reconciles only a promoted exact window through the shared relationship writer", async () => {
+    const { database, input, dependencies, plan } = fixture()
+    dependencies.readReceipt.mockResolvedValue({
+      status: "promoted",
+      planId: plan.id,
+      windowId: input.windowId,
+      build: input.approvedBuild,
+      events: 0,
+      manifestPath: "manifest.json",
+      settlementPath: "settlement.json"
+    })
+    const reconcile = vi.fn(async () => ({ events: 0, billLinks: 0, organizationLinks: 0 }))
+    const replay = { ...dependencies, reconcile }
+    expect(await reconcileWashingtonEventWindow(database, input, replay)).toMatchObject({
+      status: "reconciled",
+      windowId: input.windowId
+    })
+    expect(reconcile).toHaveBeenCalledWith(database, [], { refreshReadiness: true })
+    expect(dependencies.dispatch).not.toHaveBeenCalled()
+    dependencies.readReceipt.mockResolvedValue(undefined)
+    await expect(reconcileWashingtonEventWindow(database, input, replay)).rejects.toThrow()
+    expect(reconcile).toHaveBeenCalledTimes(1)
+  })
+  it("rejects mismatched receipt counts and unknown windows before relationship writes", async () => {
+    const { database, input, dependencies, plan } = fixture()
+    dependencies.readReceipt.mockResolvedValue({
+      status: "promoted",
+      planId: plan.id,
+      windowId: input.windowId,
+      build: input.approvedBuild,
+      events: 1,
+      manifestPath: "manifest.json",
+      settlementPath: "settlement.json"
+    })
+    const reconcile = vi.fn(async () => ({ events: 0, billLinks: 0, organizationLinks: 0 }))
+    const replay = { ...dependencies, reconcile }
+    await expect(reconcileWashingtonEventWindow(database, input, replay)).rejects.toThrow(/receipt/)
+    await expect(reconcileWashingtonEventWindow(database, { ...input, windowId: "unknown" }, replay)).rejects.toThrow(
+      /Unknown/
+    )
+    expect(reconcile).not.toHaveBeenCalled()
+  })
   it("inspects real receipt identities and fails closed on a receipt from another build", async () => {
     const { database, input, dependencies, plan } = fixture()
     expect((await inspectEventWindowCycle(database, input, dependencies)).pending).toEqual(plan.windows)

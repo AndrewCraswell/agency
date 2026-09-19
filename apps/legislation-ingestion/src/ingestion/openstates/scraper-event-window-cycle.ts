@@ -5,7 +5,7 @@ import { syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
 import { and, eq } from "drizzle-orm"
 import { z } from "zod"
 import { claimBillBatchOwnership, releaseBillBatchOwnership } from "../../persistence/bill-batch-ownership.js"
-import { upsertEventSnapshots } from "../../persistence/events.js"
+import { reconcileEventSnapshotRelationships, upsertEventSnapshots } from "../../persistence/events.js"
 import { commitOwnedEmptyPromotion } from "../../persistence/promotion-receipt.js"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { dispatchCloudScraperAttempt, washingtonEventCloudRequest } from "./scraper-cloud.js"
@@ -93,6 +93,48 @@ async function readReceipt(
     .from(syncCheckpoints)
     .where(and(eq(syncCheckpoints.source, "openstates"), eq(syncCheckpoints.stream, stream)))
   return row?.cursor
+}
+
+/** Re-resolve links from a promoted, verified archive without rerunning the source scraper. */
+export async function reconcileWashingtonEventWindow(
+  database: LegislationDatabase,
+  input: {
+    store: Pick<ArtifactStore, "read">
+    planPath: string
+    windowId: string
+    approvedBuild: string
+  },
+  dependencies = {
+    readPlan: readEventWindowPlan,
+    readReceipt,
+    prepare: preparePlannedWashingtonEventWindow,
+    reconcile: reconcileEventSnapshotRelationships
+  }
+) {
+  const build = z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .parse(input.approvedBuild)
+  const plan = await dependencies.readPlan(input.store, input.planPath)
+  if (plan.scope.jurisdiction !== "wa" || plan.scope.session !== "2025-2026")
+    throw new Error("Unreviewed meeting plan scope")
+  const selected = plan.windows.find((window) => window.id === input.windowId)
+  if (!selected) throw new Error("Unknown planned meeting window")
+  const receipt = receiptContract(plan, selected.id, build).parse(
+    await dependencies.readReceipt(database, receiptStream(plan, selected.id))
+  )
+  const prepared = await dependencies.prepare({ ...input, manifestPath: receipt.manifestPath, retrievedAt: new Date() })
+  if (
+    !prepared.completeWindow ||
+    prepared.planId !== plan.id ||
+    prepared.windowId !== selected.id ||
+    prepared.snapshots.length !== receipt.events
+  ) {
+    throw new Error("Promoted archive does not match the meeting receipt")
+  }
+  // The shared writer locks rows and refuses changed event/agenda evidence before replacing links.
+  const result = await dependencies.reconcile(database, prepared.snapshots, { refreshReadiness: true })
+  return { status: "reconciled" as const, planId: plan.id, windowId: selected.id, ...result }
 }
 
 /** One bounded item per invocation; committed receipts allow callers to resume a frozen plan safely. */

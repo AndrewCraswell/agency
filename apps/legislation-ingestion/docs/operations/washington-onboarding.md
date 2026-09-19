@@ -7,6 +7,18 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+The version 35 refresh gate is verified: `run_06gbkb0fmtklbl9u8t16bm8101` completed its required import,
+and the persisted review digest matched the local state/revision-scoped digest. A second unchanged refresh,
+`run_06gbkbvfijtn3mf2i6a2c9eb01`, completed with `no_change`. This closes review-aware refresh invalidation.
+The HB 1280-1304 guarded alias apply (93473) completed; the repeat dry run returned zero candidates and zero
+held groups. The verified cleanup cursor is HB 1304; the 307 removed untouched aliases remain recoverable
+from reconciliation audit checkpoints.
+
+Retained meeting-link replay is implemented as `openstates-event-window-reconcile`. It validates the promoted
+window receipt and retained manifest, then uses the shared event relationship writer, which rejects changed
+canonical event or agenda evidence. It shares the serial calendar queue and never dispatches a scraper.
+Thirteen focused tests pass. Repository verification is running (10453); deployment and hosted replay remain open.
+
 Trigger `20260919.35` deployed successfully without promotion: deployment `szinz4le`, image
 `f897057a1300336ce8fb7bd2c04f5496793234646b3499ea87705e1281b23f32`. Refresh canary
 `run_06gbkb0fmtklbl9u8t16bm8101` is executing against the retained upstream revision. Its expected first result is
