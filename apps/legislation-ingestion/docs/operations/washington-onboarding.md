@@ -164,3 +164,24 @@ Reports: `artifacts/openstates-washington-foundation/reports/isolated-foundation
 The cloud bill-request boundary also uses the shared session/identifier profiles. Washington bill requests pass the
 same unique-ID, single-chamber and ten-item limits; Washington events remain rejected. Focused cloud tests and
 ingestion type-checking passed. This does not change hosted activation, approved deployment fingerprints or schedules.
+
+Washington content processing is now admitted to the existing extraction/OCR/embedding worker behind its existing
+explicit activation guard. Default sessions and continuation/predecessor identities share one resolver using the
+reviewed bill profiles; Washington defaults to 2025-2026, never Alaska's 34. Historical explicit sessions remain
+supported. Sixteen focused content/policy tests and ingestion type-checking passed; no hosted settings changed.
+
+The first full ten-bill House canary (HB 1000-1009) stopped after HB 1002 with `source_http_server_error`, before its
+25-minute deadline. The failed attempt is retained under
+`openstates/scrapers/d43f853796ceeeb49205f7d144790647764ce105/wa/bills/wa-frozen-house-canary-20260919/retained.json`
+in the local Washington bill store. Canonical preparation rejected it as incomplete; no partial batch was promoted.
+Fresh checks of the HB 1003 summary, roll calls and status-change endpoints returned HTTP 200, but the bounded error
+category does not establish which request originally failed. A fresh bounded retry is still required.
+
+An isolated SB 5000 content canary used the shared worker, existing provider configuration and one bill at a time.
+Two bounded passes processed all eight linked document records without extraction failures or OCR demand. Database
+inspection confirmed one `voyageai/voyage-4` bill embedding (1024 dimensions) and eight
+`openai/text-embedding-3-small` section embeddings (1536 dimensions). The second pass skipped the three existing
+vectors instead of storing them again. Retained job reports are under
+`artifacts/openstates-washington-content-canary/reports/sb5000-content-{canary,remainder}.json`.
+This proves text extraction and embedding for this bill only. Local OCR credentials were unavailable, no OCR call
+was exercised, and lexical synchronization, index usage and authenticated API/MCP retrieval remain unverified.

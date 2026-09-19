@@ -10,6 +10,19 @@ import {
 } from "./state-content-policy.js"
 
 describe("state content hosted boundaries", () => {
+  it("requires explicit Washington activation and uses one session identity for implicit and explicit continuations", () => {
+    expect(() => requireStateContentActivation("wa", undefined)).toThrow("not approved")
+    expect(() => requireStateContentActivation("wa", "nc,ak")).toThrow("not approved")
+    expect(stateContentSchedulePlan("wa:2025-2026", "wa").payload).toMatchObject({ state: "wa", session: "2025-2026" })
+    const predecessor = {
+      taskIdentifier: "openstates-content-controller",
+      status: "COMPLETED",
+      isCompleted: true,
+      payload: { state: "wa" }
+    }
+    expect(stateContentPredecessorReady(predecessor, "wa", "2025-2026")).toBe(true)
+    expect(() => stateContentPredecessorReady(predecessor, "wa", "34")).toThrow("scope mismatch")
+  })
   it("waits for an exact predecessor scope and refuses failed or unrelated handoffs", () => {
     const prior = {
       taskIdentifier: "openstates-content-controller",

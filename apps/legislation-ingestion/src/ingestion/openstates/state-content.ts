@@ -16,7 +16,7 @@ import {
   prioritizeStateContentBills
 } from "./state-content-checkpoint.js"
 import { runStateContentBills } from "./state-content-concurrency.js"
-import { stateContentScope } from "./state-content-scope.js"
+import { stateContentScope, stateContentSession } from "./state-content-scope.js"
 
 /** Canonical pending/freshness state is the durable work source, including after a missed callback.
  * Scan rounds deliberately restart: late OCR and updated bills can sort before the last cursor.
@@ -25,7 +25,7 @@ import { stateContentScope } from "./state-content-scope.js"
 export async function processStateContentBatch(
   input: DerivedBackfillExecutionInput,
   options: {
-    state: "nc" | "ak"
+    state: z.infer<typeof stateContentScope>
     session?: string
     billLimit?: number
     documentLimit?: number
@@ -54,10 +54,7 @@ export async function processStateContentBatch(
     .min(1)
     .max(10)
     .parse(options.documentLimit ?? 2)
-  const requestedSession = z
-    .string()
-    .regex(/^[A-Za-z0-9-]+$/)
-    .parse(options.session ?? (state === "nc" ? "2025" : "34"))
+  const requestedSession = stateContentSession(state, options.session)
   const session = legislativeSessionId(state, requestedSession).slice(`session:${state}:`.length)
   if (!input.config.model.apiKey) {
     throw new Error("State content processing requires an embedding provider key before starting")

@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { extractionRepairEvidence } from "../../ingestion/documents/extraction-repair-evidence.js"
 import { stateContentNextWork } from "../../ingestion/openstates/state-content-backlog.js"
-import { stateContentScope } from "../../ingestion/openstates/state-content-scope.js"
+import { stateContentScope, stateContentSession } from "../../ingestion/openstates/state-content-scope.js"
 
 export const stateContentPayload = z.strictObject({
   state: stateContentScope,
@@ -31,8 +31,7 @@ export function stateContentPredecessorReady(value: unknown, state: string, sess
       payload: stateContentControllerPayload
     })
     .parse(value)
-  const scope = (s: string, period: string | undefined) =>
-    `${s}:${period?.toLowerCase() ?? (s === "nc" ? "2025" : "34")}`
+  const scope = (s: string, period: string | undefined) => `${s}:${stateContentSession(s, period)}`
   if (scope(predecessor.payload.state, predecessor.payload.session) !== scope(state, session)) {
     throw new Error("State content predecessor scope mismatch")
   }
@@ -46,7 +45,7 @@ export function stateContentPredecessorReady(value: unknown, state: string, sess
 export function stateContentSchedulePlan(externalId: string | undefined, configured: string | undefined) {
   const identity = z
     .string()
-    .regex(/^(nc|ak):[A-Za-z0-9-]+$/)
+    .regex(/^[a-z]{2}:[A-Za-z0-9-]+$/)
     .parse(externalId)
   const [state, session] = identity.split(":")
   const payload = stateContentControllerPayload.parse({ state, session, maxContinuations: 1 })
@@ -69,7 +68,10 @@ export function requireSuccessfulStateContentResult<T>(result: T): T {
   return result
 }
 
-export function requireStateContentActivation(state: "nc" | "ak", configured: string | undefined) {
+export function requireStateContentActivation(
+  state: z.infer<typeof stateContentScope>,
+  configured: string | undefined
+) {
   const enabled =
     configured
       ?.split(",")
@@ -83,7 +85,7 @@ export function requireStateContentActivation(state: "nc" | "ak", configured: st
 
 /** Audited repairs cannot cross the explicitly selected state/session boundary. */
 export function requireStateRepairScope(
-  state: "nc" | "ak",
+  state: z.infer<typeof stateContentScope>,
   session: string | undefined,
   repairs: z.infer<typeof extractionRepairEvidence>[]
 ) {

@@ -4,6 +4,7 @@ import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { AzureDocumentIntelligenceClient } from "../../ingestion/documents/ocr-client.js"
 import { requeueVerifiedExtraction } from "../../ingestion/documents/requeue-verified-extraction.js"
+import { stateContentSession } from "../../ingestion/openstates/state-content-scope.js"
 import { processStateContentBatch } from "../../ingestion/openstates/state-content.js"
 import {
   requireStateContentActivation,
@@ -115,7 +116,7 @@ export const stateContentController = task({
     const handle = await tasks.trigger("openstates-content-controller", nextPayload, {
       // Unlike triggerAndWait, fire-and-forget triggers otherwise select the latest deployment.
       version: ctx.deployment?.version,
-      concurrencyKey: `${payload.state}:${payload.session?.toLowerCase() ?? (payload.state === "nc" ? "2025" : "34")}`,
+      concurrencyKey: `${payload.state}:${stateContentSession(payload.state, payload.session)}`,
       idempotencyKey: await idempotencyKeys.create(`state-content:continue:${ctx.run.id}`, { scope: "global" }),
       idempotencyKeyTTL: "30d",
       delay: result.nextWork.kind === "deferred" ? new Date(result.nextWork.retryAt) : undefined
