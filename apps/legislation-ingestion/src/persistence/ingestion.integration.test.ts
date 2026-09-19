@@ -49,7 +49,7 @@ import { withIngestionRun } from "../ingestion/run-context.js"
 import { validateCorpus } from "../validation/corpus.js"
 import { upsertBillAggregate, upsertBillAggregates } from "./bill-aggregates.js"
 import { linkEventOutcome } from "./event-outcomes.js"
-import { upsertEventSnapshots } from "./events.js"
+import { reconcileEventSnapshotRelationships, upsertEventSnapshots, type EventSnapshot } from "./events.js"
 
 const databaseUrl = process.env.LEGISLATION_INGESTION_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe
@@ -2191,6 +2191,65 @@ describePostgres.sequential("legislation PostgreSQL ingestion", () => {
       scanned: 1,
       skipped: 1
     })
+  })
+
+  it("reconciles retained event links idempotently and rejects changed evidence without losing links", async () => {
+    await seedBillPrerequisites()
+    const eventId = "event:integration:retained-reconciliation"
+    const snapshot: EventSnapshot = {
+      event: {
+        id: eventId,
+        jurisdictionId: "jurisdiction:wa",
+        name: "Retained hearing",
+        sourceId: "retained-reconciliation",
+        startAt: new Date("2026-01-10T18:00:00Z"),
+        status: "scheduled",
+        canonicalFactsComplete: true
+      },
+      agendaItems: [
+        {
+          agendaItem: { id: `${eventId}:agenda:1`, eventId, ordinal: 0, description: "SB 5678" },
+          amendmentIds: [],
+          billIds: [],
+          materialIds: []
+        }
+      ],
+      documents: [],
+      participants: [],
+      sessionIds: ["session:wa:2025-2026"]
+    }
+    await upsertEventSnapshots(database, [snapshot])
+    const linked: EventSnapshot = {
+      ...snapshot,
+      agendaItems: snapshot.agendaItems.map((item) => ({ ...item, billIds: ["bill:wa:2025-2026:sb:5678"] }))
+    }
+    for (let replay = 0; replay < 2; replay++) {
+      await expect(
+        reconcileEventSnapshotRelationships(database, [linked], { refreshReadiness: true })
+      ).resolves.toEqual({ events: 1, billLinks: 1, organizationLinks: 0 })
+    }
+    const readLinks = () =>
+      database
+        .select()
+        .from(schema.eventAgendaItemBills)
+        .where(eq(schema.eventAgendaItemBills.agendaItemId, `${eventId}:agenda:1`))
+    const links = await readLinks()
+    expect(links).toHaveLength(1)
+    await expect(
+      reconcileEventSnapshotRelationships(database, [
+        {
+          ...snapshot,
+          event: { ...snapshot.event, name: "Stale source title" }
+        }
+      ])
+    ).rejects.toThrow("Event changed or is missing")
+    await expect(reconcileEventSnapshotRelationships(database, [{ ...snapshot, agendaItems: [] }])).rejects.toThrow(
+      "Agenda changed"
+    )
+    expect(await readLinks()).toEqual(links)
+    await expect(
+      database.select().from(schema.eventSessions).where(eq(schema.eventSessions.eventId, eventId))
+    ).resolves.toHaveLength(1)
   })
 
   it("records committed event changes and keeps replays and rollbacks silent", async () => {

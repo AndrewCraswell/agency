@@ -7,6 +7,14 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Retained meeting replay `c24c6af` passed full `pnpm verify` (10453), including 240 API acceptance cases and
+built MCP tests. Default optional database/positive-corpus skips remain explicit. An additional isolated PostgreSQL
+test passed against `legislation_ingestion_test` on port 55461: two identical relationship replays preserve exactly
+one bill link and one session link, while changed event facts or agenda identities reject without losing links.
+The test is now part of the shared persistence integration suite. Verification including this added test is running
+as 88420. Trigger version `20260919.36` is building without promotion (46801); hosted replay is not yet dispatched.
+The latest direct receipt count is 88/90 calendar windows; bills were last observed at 72/342 committed batches.
+
 The version 35 refresh gate is verified: `run_06gbkb0fmtklbl9u8t16bm8101` completed its required import,
 and the persisted review digest matched the local state/revision-scoped digest. A second unchanged refresh,
 `run_06gbkbvfijtn3mf2i6a2c9eb01`, completed with `no_change`. This closes review-aware refresh invalidation.
