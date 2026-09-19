@@ -28,6 +28,29 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ## Production baseline (2026-09-19 05:01 UTC)
 
+### Public-read acceptance findings (2026-09-19 11:35 UTC)
+
+The frozen current-session refresh has promoted 30 batches / 300 bills (of 342 batches / 3,411 bills), according to
+the exact inventory's production checkpoint rows. Calendar inspection reports 25 of 90 windows complete. Trigger
+bill run `run_06gbir9hlo4daa7fuooqqa2a01` was executing on `20260919.22`; no overlapping replacement was started.
+
+- [x] Diagnose the SB 5000 public-detail failure: all 22 action rows lack source URLs and still have August 18 write
+  timestamps. Refreshed HB 1000 has three September 19 action rows with source URLs and reads successfully. The shared
+  normalizer supplies action provenance and both aggregate writers persist it. SB 5000 needs the pending source
+  refresh and a repeated public-read check; this is not evidence that the refreshed writer drops URLs.
+- [ ] Fix archive-to-scraper document alias duplication through shared identity handling. Authenticated HB 1000 detail
+  returns four records for two files: HTTP and HTTPS variants have identical PDF hashes and identical HTML hashes.
+  `documentRecords` hashes the literal URL; both aggregate writers reuse only exact source URLs, so protocol changes
+  evade reuse. Preserve document references, sections and embeddings; prove source equivalence before consolidating,
+  keep genuinely distinct versions separate, and verify mixed archive/scraper replay rather than only identical-input replay.
+- [ ] Resolve the pending-document OCR contract before public-read acceptance. HB 1002 detail fails with
+  `Document OCR status is unavailable`. Production has seven pending HTTPS records with null OCR status alongside
+  seven processed HTTP records. Do not label unprocessed content as OCR-not-required or remove the fail-closed check
+  merely to make the endpoint green. Verify the shared document initialization/processing path and then rerun MCP.
+
+These findings keep replay, content and public-read requirements open. Successful bill promotion is not full bill
+readiness, and the existing archive content baseline does not prove the new records are processed.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
