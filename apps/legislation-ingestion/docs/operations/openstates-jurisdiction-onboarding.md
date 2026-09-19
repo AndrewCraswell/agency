@@ -1,5 +1,8 @@
 # Open States jurisdiction onboarding queue
 
+Washington is the next user-selected onboarding target. Track current requirements and verified evidence in
+[Washington onboarding](washington-onboarding.md); the dated NC/Alaska milestones below are not current readiness claims.
+
 Current priority is the [NC/Alaska end-to-end gate](openstates-rollout-checklist.md#blocking-delivery-priority-nc-and-alaska-end-to-end-ingestion).
 NC's 2,338-record/235-batch and Alaska's 856-record/87-batch local frozen imports have recorded completion. That is not
 content/search, complete identity/event coverage or production activation. Check live processes/holds before resuming;
@@ -502,7 +505,7 @@ and configuration. No name-only identity guesses or partial-snapshot departures.
 | [ ] | 41 | Texas (TX) | Queued | Standard candidate; review before execution |
 | [ ] | 42 | Utah (UT) | Queued | Standard candidate; review before execution |
 | [ ] | 43 | Vermont (VT) | Queued | Standard candidate; review before execution |
-| [ ] | 44 | Washington (WA) | Queued | Standard candidate; review before execution |
+| [ ] | 44 | Washington (WA) | Selected; source and production baseline audited | [Acceptance checklist](washington-onboarding.md); runtime and scheduling not activated |
 | [ ] | 45 | West Virginia (WV) | Queued | Standard candidate; review before execution |
 | [ ] | 46 | Wisconsin (WI) | Queued | Standard candidate; review before execution |
 | [ ] | 47 | Wyoming (WY) | Queued | Standard candidate; review before execution |
