@@ -88,6 +88,25 @@ when an answer was delivered. A completed browser exchange, record list or tool 
 or evidence of duplicate model billing. Offline policy tests and synthetic loopback browser fixtures verify the driver,
 not production research quality.
 
+Each submitted exchange gets an independent `exchange-N.receipt.json`, even if the final export fails. The receipt
+records driver failures, Stop visibility/click failure, capture status, observed request IDs and validated server
+`x-rostra-request-id` values. A successful `exchange-N.json` retains the conversation snapshot; the receipt includes
+only newly observed assistant messages, outcomes, calls and measurements, never an earlier response's correlations.
+Unknown outcome/capture fields are `null`, not evidence of zero work or a fabricated finish reason.
+
+The default response wait is 170 seconds. After that deadline or a driver error, the runner persists a receipt,
+tries Stop for at most two seconds, then attempts one final export for at most 15 seconds before closing its owned
+browser. Export still runs if Stop is unavailable or fails. Browser shutdown has a five-second budget and a bounded
+five-second force-close fallback. `--wait-ms` and `--capture-ms` can reduce their respective defaults for local
+fixtures, not increase them. Stop uses the smaller of two seconds and the capture budget.
+Late transport observations are retained in the journal, report and final receipt; transport completion never proves
+answer completion or billing. A deadline remains a driver failure even if the final snapshot contains a completed
+answer. No uncertain generation is retried and no dependent question is sent after recovery.
+
+Run the deterministic CLI/browser and policy regressions with
+`pnpm exec vitest run --project backend tools/agent/run-scenarios.test.ts tools/agent/scenario-policy.test.ts`.
+They use only synthetic loopback HTTP/stream/download fixtures, not models, credentials or historical campaign output.
+
 ## Frozen vote fixtures
 
 Vote detail tools paginate member positions without dropping voter records. Continue with the returned `nextCursor` and

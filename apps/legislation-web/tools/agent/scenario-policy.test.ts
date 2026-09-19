@@ -54,7 +54,7 @@ const complete = {
   failedToolCalls: []
 }
 function observed(body: unknown, id = "request-one"): RequestObservation {
-  return { ...requestIdentity(body), id, status: 200, terminal: "finished", failure: null }
+  return { ...requestIdentity(body), id, serverRequestId: null, status: 200, terminal: "finished", failure: null }
 }
 function progress(): StepProgress[] {
   return authored.steps.map((step) => ({
@@ -378,6 +378,16 @@ describe("request-aware observation", () => {
       requestPattern: "multiple-generation-requests-observed",
       generationRequestIds: ["first", "second"],
       failedToolCalls: ["failed-read"]
+    })
+  })
+
+  it("keeps unobserved work unknown rather than reporting zero failed or pending calls", () => {
+    expect(summarizeExchange([observed({ messages: [] })], undefined)).toMatchObject({
+      delivery: "unknown",
+      answered: false,
+      hasAnswer: null,
+      failedToolCalls: null,
+      pendingToolCalls: null
     })
   })
 })

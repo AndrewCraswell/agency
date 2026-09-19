@@ -319,6 +319,7 @@ export function requestIdentity(body: unknown) {
 
 export type RequestObservation = ReturnType<typeof requestIdentity> & {
   id: string
+  serverRequestId: string | null
   status: number | null
   terminal: "finished" | "failed" | null
   failure: string | null
@@ -362,9 +363,9 @@ export function summarizeExchange(
       })),
     delivery: outcome?.status ?? "unknown",
     answered: outcome?.status === "completed" && outcome.hasAnswer && outcome.pendingToolCalls.length === 0,
-    hasAnswer: outcome?.hasAnswer ?? false,
-    failedToolCalls: outcome?.failedToolCalls ?? [],
-    pendingToolCalls: outcome?.pendingToolCalls ?? [],
+    hasAnswer: outcome?.hasAnswer ?? null,
+    failedToolCalls: outcome?.failedToolCalls ?? null,
+    pendingToolCalls: outcome?.pendingToolCalls ?? null,
     assessment: "unassessed" as const
   }
 }
@@ -423,6 +424,7 @@ export function inspectSnapshot(snapshot: Snapshot, previousMessageIds: Readonly
     }
   }
   return {
+    messages,
     messageIds: messages.map((message) => message.id),
     outcome,
     clarification,
