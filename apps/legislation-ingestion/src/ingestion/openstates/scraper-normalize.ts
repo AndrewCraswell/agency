@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util"
 import { childId, legislativeSessionId } from "@repo/legislation-core/domain/identifiers"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
@@ -292,7 +293,7 @@ function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdict
   }
   const seenVotes = new Set<string>()
   return bills.map((bill, index) => {
-    const sponsorships = bill.sponsorships.map((sponsor) => {
+    const observations = bill.sponsorships.map((sponsor) => {
       const reference = sponsor.person_id
       // A lookup expression is evidence, not a resolved person. Canonicalize its
       // fields so JSON whitespace/key order cannot change the observation ID.
@@ -314,10 +315,17 @@ function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdict
         )
       }
     })
-    const sponsorKeys = sponsorships.map((sponsor) => sponsor.source_observation_id)
-    if (new Set(sponsorKeys).size !== sponsorKeys.length) {
-      throw new Error("Ambiguous duplicate sponsor observation")
+    const uniqueSponsors = new Map<string, (typeof observations)[number]>()
+    for (const sponsor of observations) {
+      const previous = uniqueSponsors.get(sponsor.source_observation_id)
+      if (previous !== undefined && !isDeepStrictEqual(previous, sponsor)) {
+        throw new Error("Ambiguous duplicate sponsor observation")
+      }
+      // Repeated identical publisher rows do not create another relationship.
+      // The untouched retained archive remains the evidence for every occurrence.
+      uniqueSponsors.set(sponsor.source_observation_id, sponsor)
     }
+    const sponsorships = [...uniqueSponsors.values()]
     const official = isNc
       ? `https://www.ncleg.gov/BillLookUp/2025/${emitted[index]}`
       : isWa

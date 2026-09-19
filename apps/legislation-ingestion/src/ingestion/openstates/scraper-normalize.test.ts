@@ -294,12 +294,23 @@ describe("NC raw scraper mapping", () => {
     input.bills[0]!.actions.unshift({ description: "Passed", date: "2025-02-01", classification: ["passage"] })
     expect(normalizeNcScraperBills(input)[0]?.aggregate.actions?.[1]?.id).toBe(before)
   })
-  it("keeps sponsor observation IDs stable when a source person ID arrives and rejects duplicates", () => {
+  it("keeps sponsor IDs stable and coalesces only identical repeated observations", () => {
     const input = fixture()
     const before = normalizeNcScraperBills(input)[0]?.aggregate.sponsors?.[0]?.id
     input.bills[0]!.sponsorships[0]!.person_id = "ocd-person/11111111-1111-1111-1111-111111111111"
     expect(normalizeNcScraperBills(input)[0]?.aggregate.sponsors?.[0]?.id).toBe(before)
-    input.bills[0]!.sponsorships.push(input.bills[0]!.sponsorships[0]!)
+    const normalized = normalizeNcScraperBills(input)
+    input.bills[0]!.sponsorships.push(structuredClone(input.bills[0]!.sponsorships[0]!))
+    expect(normalizeNcScraperBills(input)).toEqual(normalized)
+    input.bills[0]!.sponsorships[1]!.primary = false
+    expect(() => normalizeNcScraperBills(input)).toThrow("duplicate sponsor")
+  })
+  it("rejects same-name observations with conflicting resolved identities", () => {
+    const input = fixture()
+    input.bills[0]!.sponsorships.push({
+      ...input.bills[0]!.sponsorships[0]!,
+      person_id: "ocd-person/11111111-1111-1111-1111-111111111111"
+    })
     expect(() => normalizeNcScraperBills(input)).toThrow("duplicate sponsor")
   })
   it("rejects incomplete scope, orphan votes, duplicate roll calls and foreign source URLs", () => {

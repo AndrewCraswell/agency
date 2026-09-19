@@ -808,3 +808,11 @@ The second hosted batch `run_06gbi2r0tkftcbf908bdmblo01` reached `FAILED` before
 `Ambiguous duplicate sponsor observation`. Do not launch an overlapping refresh or accept the failed batch as committed;
 inspect its retained sponsorships and correct normalization only if the evidence establishes an exact duplicate.
 Calendar ingestion is independent and has committed 11 of 90 windows.
+
+The failed second batch retained manifest `9ba451fba59a7982864be4c5d174aae44245fab05c6b50903e71ccf3506cb7e8`
+under run `wa-bill-1eb3fa750acdfdd87a1473cbe1f8892d`. Inspection found five exactly repeated cosponsor observations
+(Walen, Timmons, Fey, Ormsby and Hill), including identical identity and role fields. Shared normalization now coalesces
+only deeply equal observations with the same stable observation key. Conflicting fields still reject the batch, and
+the immutable source archive preserves every occurrence. Nine normalization tests and ingestion type-checking passed.
+Read-only normalization of the actual failed archive now accepts all ten requested bills, HB 1010 through HB 1019.
+Deployment and resumed hosted promotion are still required; no production records were written by this replay.
