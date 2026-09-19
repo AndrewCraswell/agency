@@ -7,6 +7,18 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+The HB 1305-1329 alias cleanup completed on its same-page retry (11394). Repeat dry run returned zero candidates,
+zero held groups and a complete page; verified cleanup cursor is now HB 1329. Removed rows remain recoverable
+from audit checkpoints. The lock retry fix is committed as `3bddc6a`; type/lint and 23 focused tests pass, with
+full verification 1014 still running. The next dry run (61040) covers HB 1330-1354: 149 candidates, no held groups,
+still verifying publisher bytes; no apply has started.
+
+Authenticated production MCP reads succeeded for meetings `wa-agenda-32344` and `wa-agenda-32345`, with the
+canonical Local Government committee. Meeting 32345 exposes the four expected bill links SB 5055, SB 5053,
+SB 5089 and SB 5018 and official publisher provenance. The unresolved SAO meeting 32331 remains hidden by the
+readiness gate (`not_found`), so its endpoint coverage is explicitly not closed. Full calendar reconciliation
+reached 52/90 completed, one executing, 37 queued, and no failed runs at the latest inspection.
+
 The read-only input-hash audit at `2026-09-19T15:23:18.468Z` passed for all 3,413 bill vectors and 92,940
 existing document-section vectors: zero missing and zero stale routed embeddings. This does not include text for
 pending documents, lexical synchronization or full search acceptance. A separate status snapshot found 19,493
