@@ -71,6 +71,16 @@ different non-null content hashes, but 2,794 groups contain an unhashed copy: ab
 of byte equivalence. Consolidation must preserve canonical references, sections and vectors and explicitly handle
 unprocessed copies. The running pinned deployment has not yet received this identity fix; rollout remains open.
 
+Corrected candidate `20260919.25` deployed successfully with 70 tasks, without global promotion:
+`https://cloud.trigger.dev/projects/v3/proj_bsjukvltatwjsyczuatb/deployments/d8pd3sl7`. The API/importer membership
+contract preflight passed. A Washington-only boundary handoff is armed as `run_06gbj0dmst6ss2745i1cegnk01`, initially
+confirmed DELAYED on that exact version. At arming, 37 bill batches were promoted and exactly one bounded batch owned
+the next slot. The handoff uses the existing global refill idempotency key for promotion count 38 with a two-minute
+delay: the old run's ordinary continuation resolves to the same dispatcher, not a parallel continuation. If it executes
+before the current owner finishes, its normal ownership check may return awaiting-in-flight; verify the old run and
+receipts before any explicit resume. No active extraction was cancelled; no NC/AK configuration or schedule changed.
+Deployment is verified, but the handoff's execution and corrected production writes are not yet verified.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
