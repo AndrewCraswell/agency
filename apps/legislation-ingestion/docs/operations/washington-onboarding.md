@@ -16,9 +16,9 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [ ] | Add Washington to shared extraction and promotion | Extend reviewed jurisdiction profiles and source policy, not a parallel ingestion engine; validate source/dispatch/build fingerprints |
 | [x] | Run isolated bounded bill extraction in both chambers | HB 1000 and SB 5000 retained successfully; this is source extraction only, not canonical promotion or hosted activation |
 | [ ] | Validate bill actions, documents and individual votes | Compare retained cases from both chambers to official pages, including substitutions, engrossments, resolutions and amendments |
-| [ ] | Import and validate people and service history | Use retained Open States people data; represent two House seats per district without dropping one or guessing seat identity; quarantine conflicts |
+| [ ] | Import and validate people and service history | Production import and replay verified for 336 people and 367 accepted terms; 20 historical conflicts remain quarantined. Current 147-member roster is complete; history acceptance remains open |
 | [x] | Validate current people/committee snapshot with reusable district capacities | Shared validator accepts 98 House members, 49 senators, 51 committees and 609 membership assertions; zero unresolved member references; source snapshot, not production import |
-| [ ] | Import committees and memberships | Resolve member dependencies; incomplete rosters cannot imply departures or complete membership coverage |
+| [x] | Import committees and memberships | Production import/replay verified for 51 committees and 609 current membership assertions. This does not establish complete committee detail profiles or historical memberships |
 | [ ] | Import meetings and agenda items | Bound event windows, preserve Pacific time, stable source IDs and cancellation evidence; validate related bills/committees |
 | [ ] | Complete document content pipeline | Extract text, OCR only when needed, preserve versions and source evidence, process eligible remaining content |
 | [ ] | Complete embeddings and search synchronization | Reuse the existing approved model and shared pipeline; verify missing/stale vectors, lexical parity and canonical mapping |
@@ -596,3 +596,25 @@ All 15 results belonged to Washington's current session; the known passage ranke
 Evidence is `semantic-pagination-implementation.json`. This is a self-retrieval/pagination check, not a held-out relevance
 evaluation or proof of deep-pagination stability under concurrent corpus changes. Seven focused tests and web type-check
 passed. Deployment and post-deployment authenticated semantic/hybrid checks remain open.
+
+## Additional authenticated relationship acceptance (2026-09-19)
+
+The full `pnpm verify` process completed successfully (session 80295), including 239 web acceptance tests,
+built MCP acceptance and the separate-audience API/MCP boundary checks. Database suites without a supplied
+disposable database and the positive disposable-corpus boundary case were explicitly skipped; this is not proof
+of those integration cases. Focused production read-only evidence above remains separate.
+
+Live authenticated `get_person` returned Adam Bernbaum with his canonical Washington district 24 term and three
+committee memberships, all with source provenance. Organization-filtered `search_events` returned the expected
+House Housing meeting `event:openstates:wa-agenda-32398` within the January 13 Pacific-day window.
+`read_record_collection(meeting-agenda)` returned its three agenda items with complete bill relationships;
+amendment and material relationships remain explicitly incomplete. Collection order is ID-based, not agenda order;
+consumers must use the supplied ordinal when presenting the agenda.
+
+`get_organization` for House Housing returned `unprocessable`: no source-complete detail profile. This is a real
+remaining acceptance gap, not a failed committee import. The shared repository committee importer deliberately sets
+`detailFactsComplete` and `childRelationsComplete` false, while marking memberships complete only after dependency
+resolution. Existing tests explicitly assert that policy for Alaska and North Carolina. Do not flip those flags simply
+to make the endpoint succeed: obtain and retain the missing profile/hierarchy facts through a shared source adapter,
+or explicitly revise the public partial-detail contract with its coverage semantics. Washington regular-sync acceptance
+remains open. No production settings or schedules were changed by these checks.
