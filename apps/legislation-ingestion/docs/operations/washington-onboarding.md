@@ -28,6 +28,12 @@ Open acceptance findings:
   on prefiling, December 2, 2024. His persisted term starts January 13; Elizabeth Scott's term ended in 2018.
   The existing shared `sponsorObservationDate` prefers first reading to prefiling and has this date regression test.
   Replay with current normalization is still required; do not assume the missing link is just stale foundation data.
+  The shared `buildScraperPersonBackfillPlan` subsequently ran in a read-only production transaction: 337 candidate
+  people, three of three null sponsor links planned, zero sponsor conflicts, 134,122 of 134,130 null vote links
+  planned, eight not-found and zero ambiguous. HB 1002 explicitly plans Shaun Scott. Snapshot digest:
+  `958cfae22c49bc0736dbd4302748b3a314341c7e0fab9baab370ab52c3a90130`. No writes were made and this changing snapshot
+  is not an apply authorization. Existing `openstates-scraper-person-reconcile` requires a fully promoted bill plan
+  before recomputing and atomically applying null-only links, then starts content processing. Preserve that gate.
 - SB 5000 remains unavailable through bill detail because canonical action provenance is not persisted. The full
   bill refresh has not reached this Senate record; verify again after its batch, preserving the fail-closed contract.
 - Washington official document URLs currently project `isOfficial: false`. The document projection's official-source
