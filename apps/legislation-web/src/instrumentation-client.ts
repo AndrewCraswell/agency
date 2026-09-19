@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/nextjs"
-import { captureRouterTransitionStart, replayIntegration } from "@sentry/nextjs"
+import { captureRouterTransitionStart } from "@sentry/nextjs"
 import { sentryOptions } from "./services/sentry/sentryOptions"
 
 export const onRouterTransitionStart = captureRouterTransitionStart
@@ -12,15 +12,6 @@ Sentry.init({
   defaultIntegrations: undefined,
   integrations: (integrations) => [
     ...integrations.filter((integration) => integration.name === "GlobalHandlers"),
-    replayIntegration({
-      maskAllText: false,
-      maskAllInputs: false,
-      blockAllMedia: false,
-      networkCaptureBodies: false,
-      networkDetailAllowUrls: [],
-      beforeAddRecordingEvent: () => null
-    })
-  ],
-  replaysSessionSampleRate: process.env.NODE_ENV === "development" ? 1 : 0.1,
-  replaysOnErrorSampleRate: 1
+    ...sentryOptions.integrations
+  ]
 })

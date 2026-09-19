@@ -291,14 +291,23 @@ describe("missing citation telemetry", () => {
     )
   })
 
-  it("does not scrub research error events and groups citations at the reporter", () => {
-    expect(sentryOptions).not.toHaveProperty("beforeSend")
-    expect(sentryOptions).not.toHaveProperty("beforeBreadcrumb")
+  it("keeps citation grouping through the export privacy boundary", () => {
     expect(sentryOptions.sendDefaultPii).toBe(false)
     createCitationFailureReporter(context)({ ...answer, text: "[1](#citation-missing)" })
     expect(captureException).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({ fingerprint: ["citation_resolution", "unmatched_reference"] })
     )
+    const projected = sentryOptions.beforeSend({
+      type: undefined,
+      fingerprint: ["citation_resolution", "unmatched_reference"],
+      exception: { values: [{ type: "Error", value: "PRIVATE research" }] },
+      tags: { operation: "citation_resolution", category: "invalid_response" }
+    })
+    expect(projected).toMatchObject({
+      fingerprint: ["citation_resolution", "unmatched_reference"],
+      tags: { operation: "citation_resolution", category: "invalid_response" }
+    })
+    expect(JSON.stringify(projected)).not.toContain("PRIVATE")
   })
 })

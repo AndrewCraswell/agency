@@ -191,6 +191,7 @@ The catalog below includes every retained document. Most product work needs only
 - [Web application telemetry specification](engineering/telemetry-spec.md)
 - [Telemetry runtime ownership and sampling](engineering/telemetry-runtime-design.md)
 - [Typed telemetry foundation](engineering/telemetry-foundation.md)
+- [Sentry export privacy boundary](engineering/telemetry-privacy.md)
 - [Telemetry event and coverage catalog](engineering/telemetry-events.md)
 - [Conversation and composer telemetry](engineering/conversation-telemetry.md)
 - [Conversation tool execution and performance telemetry](engineering/tool-execution-telemetry.md)

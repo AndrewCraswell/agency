@@ -15,6 +15,8 @@ The [runtime ownership design](telemetry-runtime-design.md) resolves pinned-SDK 
 sink-independent sampling and export isolation, with local feasibility evidence.
 The [typed foundation](telemetry-foundation.md) documents the implemented default-off contract/emitter boundary and
 its bounds; feature producers and vendor adapters remain separate delivery tasks.
+The [Sentry privacy boundary](telemetry-privacy.md) enforces per-signal projections at SDK callbacks and the final
+envelope, with optional collection and replay remaining disabled.
 The [product specification](../product/product-spec.md) continues to own product scope. Telemetry must not ship a
 planned product feature merely to fill a dashboard.
 
@@ -38,7 +40,9 @@ vendor, warehouse, collector service or new dependency without a separate approv
 
 ## Observed baseline
 
-This is a source-code baseline, not a deployment audit.
+This is the pre-implementation source-code baseline, not a deployment audit. The
+[privacy boundary](telemetry-privacy.md) now installs export filtering and removes unmasked replay; the rows below
+record the starting gaps rather than asserting the current filter configuration.
 
 | Surface | Current evidence | Required change |
 | --- | --- | --- |
