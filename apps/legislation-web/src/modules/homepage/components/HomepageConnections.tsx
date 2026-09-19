@@ -344,20 +344,20 @@ function Coverage() {
       </Table>
       <dl className={styles.summary}>
         <div>
-          <dt>Jurisdictions</dt>
-          <dd>50 states, DC and Puerto Rico</dd>
+          <dt>Coverage</dt>
+          <dd>State legislatures, Congress and federal agencies</dd>
         </div>
         <div>
-          <dt>Federal</dt>
-          <dd>Congress and agency rulemaking</dd>
+          <dt>Regulations</dt>
+          <dd>Current and historical federal regulations</dd>
         </div>
         <div>
-          <dt>Source records</dt>
-          <dd>Versions, passages and provenance</dd>
+          <dt>Evidence</dt>
+          <dd>Source-linked passages with version history</dd>
         </div>
         <div>
           <dt>Availability</dt>
-          <dd>Varies by source and session</dd>
+          <dd>Coverage expands as each source is verified</dd>
         </div>
       </dl>
     </section>
