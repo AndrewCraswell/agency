@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest"
 import { resolveAgendaBillReferences } from "../../persistence/event-bill-references.js"
 import { resolveEventOrganizationReferences } from "../../persistence/event-organization-references.js"
 import { archiveScraperAttempt } from "./scraper-archive.js"
-import { normalizeWashingtonScraperEvents, prepareWashingtonEventWindow } from "./scraper-washington-events.js"
+import { retainEventWindowPlan } from "./scraper-event-window-plan.js"
+import {
+  normalizeWashingtonScraperEvents,
+  prepareWashingtonEventWindow,
+  preparePlannedWashingtonEventWindow
+} from "./scraper-washington-events.js"
 
 const context = { start: "2025-01-13", end: "2025-01-19", retrievedAt: new Date("2026-09-19T00:00:00Z") }
 function fixture() {
@@ -110,6 +115,31 @@ it("admits complete retained windows, including empty windows, but never partial
     await expect(prepareWashingtonEventWindow(await archivedWindow([...ids], [...records]))).rejects.toThrow()
   const input = await archivedWindow(["32346"], [fixture()])
   await expect(prepareWashingtonEventWindow({ ...input, approvedBuild: "c".repeat(64) })).rejects.toThrow(/approved/)
+})
+
+it("binds even empty extractions to the exact frozen work item", async () => {
+  const input = await archivedWindow([], [])
+  const { path, plan } = await retainEventWindowPlan(input.store, {
+    jurisdiction: "wa",
+    session: "2025-2026",
+    cycle: "test",
+    start: context.start,
+    end: "2025-01-26",
+    daysPerWindow: 7
+  })
+  const prepared = await preparePlannedWashingtonEventWindow({
+    ...input,
+    planPath: path,
+    windowId: plan.windows[0]!.id
+  })
+  expect(prepared.planId).toBe(plan.id)
+  expect(prepared.snapshots).toEqual([])
+  await expect(
+    preparePlannedWashingtonEventWindow({ ...input, planPath: path, windowId: plan.windows[1]!.id })
+  ).rejects.toThrow(/does not match/)
+  await expect(preparePlannedWashingtonEventWindow({ ...input, planPath: path, windowId: "unknown" })).rejects.toThrow(
+    /not in/
+  )
 })
 
 describe("Washington shared event preparation", () => {

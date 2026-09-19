@@ -282,3 +282,15 @@ Forty focused TypeScript tests, fifty Python tests inside the pinned dependency 
 passed. Full verification encountered the unrelated `browserTelemetry.ts` route-template type error. Durable window
 planning, leases, continuation and hosted acceptance are still open; neither cloud-request support nor this local
 canary activates production jobs or schedules.
+
+## Immutable calendar planning
+
+The jurisdiction-independent event-window planner partitions inclusive dates into bounded windows, hashes the cycle,
+scope and each work item, and validates the exact partition on reload. Retention checks existing content rather than
+assuming an existing path is correct. Every fresh sync cycle has a distinct identity, allowing previously empty dates
+to be revisited. Calendar arithmetic is independent of daylight-saving offsets.
+
+Washington preparation can now bind retained evidence to a specific planned window before publication. Wrong-window
+archives and unknown work items fail, including for empty inventories. Eleven focused tests passed, as did ingestion
+type-check and lint. This is planning and preparation only: durable ownership, transactional completion receipts
+(including verified-empty windows), resumable dispatch, and hosted activation remain open.

@@ -5,7 +5,31 @@ import { normalizeOpenStatesEvent } from "./events.js"
 import { readArchivedScraperAttempt } from "./scraper-archive.js"
 import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 import { scraperEventBillReferences } from "./scraper-event-bill-references.js"
+import { readEventWindowPlan } from "./scraper-event-window-plan.js"
 import { washingtonEventWindow } from "./scraper-event-window.js"
+
+/** Bind retained extraction to the exact immutable work item before any canonical writes. */
+export async function preparePlannedWashingtonEventWindow(input: {
+  store: Pick<ArtifactStore, "read">
+  planPath: string
+  windowId: string
+  manifestPath: string
+  approvedBuild: string
+  retrievedAt: Date
+}) {
+  const plan = await readEventWindowPlan(input.store, input.planPath)
+  if (plan.scope.jurisdiction !== "wa" || plan.scope.session !== scraperBillProfiles.wa.session) {
+    throw new Error("Meeting plan is outside the reviewed Washington session")
+  }
+  const selected = plan.windows.find((entry) => entry.id === input.windowId)
+  if (!selected) throw new Error("Meeting window is not in the retained plan")
+  washingtonEventWindow.parse(selected.window)
+  const prepared = await prepareWashingtonEventWindow(input)
+  if (prepared.window.start !== selected.window.start || prepared.window.end !== selected.window.end) {
+    throw new Error("Retained extraction does not match the planned meeting window")
+  }
+  return { ...prepared, planId: plan.id, windowId: selected.id }
+}
 
 /** A successful child must cover exactly the publisher inventory, including cancellations and empty windows. */
 export async function prepareWashingtonEventWindow(input: {
