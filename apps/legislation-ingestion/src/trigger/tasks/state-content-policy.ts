@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { extractionRepairEvidence } from "../../ingestion/documents/extraction-repair-evidence.js"
+import { stateContentNextWork } from "../../ingestion/openstates/state-content-backlog.js"
 import { stateContentScope } from "../../ingestion/openstates/state-content-scope.js"
 
 export const stateContentPayload = z.strictObject({
@@ -30,7 +31,11 @@ export function stateContentSchedulePlan(externalId: string | undefined, configu
 
 const successfulStateContentResult = z.object({
   status: z.literal("succeeded"),
-  checkpoint: z.object({ scanRoundComplete: z.boolean(), ingestionComplete: z.literal(false) })
+  checkpoint: z.object({
+    scanRoundComplete: z.boolean(),
+    ingestionComplete: z.literal(false),
+    nextWork: stateContentNextWork
+  })
 })
 
 /** A recorded job failure must fail the hosted task so its retry policy can run. */
@@ -72,10 +77,12 @@ export function requireStateRepairScope(
 /** A scan boundary is not evidence that pending documents, OCR or indexing are complete. */
 export async function runStateContentContinuations(
   maxContinuations: number,
-  run: (continuation: number) => Promise<{ ok: boolean; output?: unknown }>
+  run: (continuation: number) => Promise<{ ok: boolean; output?: unknown }>,
+  now: () => number = Date.now
 ) {
   z.number().int().min(1).max(100).parse(maxContinuations)
   let scanRounds = 0
+  const startedAt = now()
   for (let continuation = 0; continuation < maxContinuations; continuation += 1) {
     const result = await run(continuation)
     if (!result.ok) {
@@ -85,11 +92,33 @@ export async function runStateContentContinuations(
     if (output.checkpoint.scanRoundComplete) {
       scanRounds += 1
     }
+    const nextWork = output.checkpoint.nextWork
+    if (nextWork.kind !== "continue") {
+      if (!output.checkpoint.scanRoundComplete) throw new Error("Cannot stop before a complete content scan")
+      return {
+        reason: nextWork.kind,
+        continuations: continuation + 1,
+        scanRounds,
+        ingestionComplete: false as const,
+        nextWork
+      }
+    }
+    // Yield between children well before the controller's four-hour deadline.
+    if (now() - startedAt >= 10 * 60_000) {
+      return {
+        reason: "time_budget",
+        continuations: continuation + 1,
+        scanRounds,
+        ingestionComplete: false as const,
+        nextWork
+      }
+    }
   }
   return {
     reason: "continuation_budget" as const,
     continuations: maxContinuations,
     scanRounds,
-    ingestionComplete: false
+    ingestionComplete: false,
+    nextWork: { kind: "continue" as const }
   }
 }

@@ -12,6 +12,7 @@ not sibling apps. W lives at `apps/legislation-web`; ignored local state remains
 | Source scope and inventory | [Coverage policy](engineering/coverage-policy.md), [sync catalog](engineering/data-sync-catalog.md) |
 | State activation and retained evidence | [Rollout checklist](operations/openstates-rollout-checklist.md), [onboarding](operations/openstates-jurisdiction-onboarding.md) |
 | Worker dispatch and budgets | [Trigger design](engineering/trigger-orchestration-design.md), [worker capacity](operations/worker-capacity.md) |
+| State archive content draining | [Content continuation](operations/openstates-content-continuation.md) |
 | Retrieval/index work | [Embedding rollout and rebuild hold](engineering/embedding-rollout-plan.md), [search maintenance](operations/search-maintenance.md) |
 | Regulatory source program | [Regulations index](regulations/README.md), [implementation map](regulations/implementation.md), [production backlog](regulations/production-backlog.md) |
 

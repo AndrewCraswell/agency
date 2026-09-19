@@ -39,7 +39,7 @@ describe("state content hosted boundaries", () => {
   it("throws recorded failures at the worker boundary and retains successful batch evidence", () => {
     const result = {
       status: "succeeded",
-      checkpoint: { scanRoundComplete: false, ingestionComplete: false },
+      checkpoint: { scanRoundComplete: false, ingestionComplete: false, nextWork: { kind: "continue" } },
       counts: { updated: 2 }
     }
     expect(requireSuccessfulStateContentResult(result)).toBe(result)
@@ -60,15 +60,66 @@ describe("state content hosted boundaries", () => {
   it("uses bounded sequential children without calling a scan round ingestion complete", async () => {
     const run = vi.fn<Parameters<typeof runStateContentContinuations>[1]>().mockResolvedValue({
       ok: true,
-      output: { status: "succeeded", checkpoint: { scanRoundComplete: true, ingestionComplete: false } }
+      output: {
+        status: "succeeded",
+        checkpoint: { scanRoundComplete: true, ingestionComplete: false, nextWork: { kind: "continue" } }
+      }
     })
     expect(await runStateContentContinuations(2, run)).toEqual({
       reason: "continuation_budget",
       continuations: 2,
       scanRounds: 2,
-      ingestionComplete: false
+      ingestionComplete: false,
+      nextWork: { kind: "continue" }
     })
     expect(run.mock.calls).toEqual([[0], [1]])
+  })
+  it.each([
+    { kind: "drained" },
+    { kind: "blocked", records: 2 },
+    { kind: "deferred", retryAt: "2026-09-19T02:00:00.000Z" }
+  ])("stops repeating a scan when backlog says $kind", async (nextWork) => {
+    const run = vi.fn().mockResolvedValue({
+      ok: true,
+      output: {
+        status: "succeeded",
+        checkpoint: { scanRoundComplete: true, ingestionComplete: false, nextWork }
+      }
+    })
+    expect(await runStateContentContinuations(100, run)).toMatchObject({
+      reason: nextWork.kind,
+      continuations: 1,
+      nextWork,
+      ingestionComplete: false
+    })
+    expect(run).toHaveBeenCalledOnce()
+  })
+  it("yields at a time budget instead of starting another potentially long child", async () => {
+    const clock = vi.fn().mockReturnValueOnce(0).mockReturnValue(600_000)
+    const run = vi.fn().mockResolvedValue({
+      ok: true,
+      output: {
+        status: "succeeded",
+        checkpoint: { scanRoundComplete: false, ingestionComplete: false, nextWork: { kind: "continue" } }
+      }
+    })
+    expect(await runStateContentContinuations(100, run, clock)).toMatchObject({
+      reason: "time_budget",
+      continuations: 1,
+      nextWork: { kind: "continue" }
+    })
+    expect(run).toHaveBeenCalledOnce()
+  })
+  it("rejects a stop claim before the scan completes", async () => {
+    await expect(
+      runStateContentContinuations(1, async () => ({
+        ok: true,
+        output: {
+          status: "succeeded",
+          checkpoint: { scanRoundComplete: false, ingestionComplete: false, nextWork: { kind: "drained" } }
+        }
+      }))
+    ).rejects.toThrow("complete content scan")
   })
   it("stops after a failed or malformed child instead of admitting more work", async () => {
     const run = vi.fn<Parameters<typeof runStateContentContinuations>[1]>().mockResolvedValue({ ok: false })

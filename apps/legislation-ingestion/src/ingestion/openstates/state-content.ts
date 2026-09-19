@@ -8,6 +8,7 @@ import type { OcrClient } from "../documents/ocr-client.js"
 import { processOcrRequiredDocuments } from "../documents/ocr-jobs.js"
 import { OCR_MAXIMUM_ATTEMPTS } from "../documents/ocr-retry.js"
 import { createJobCounts, runIngestionJob } from "../job.js"
+import { inspectStateContentBacklog } from "./state-content-backlog.js"
 import {
   advanceStateContentCheckpoint,
   readStateContentCheckpoint,
@@ -189,16 +190,21 @@ export async function processStateContentBatch(
           embeddingPassComplete: embeddings.checkpoint?.complete === true
         })
       })
+      const checkpoint = advanceStateContentCheckpoint({
+        previous,
+        discovered: discovered.map((bill) => bill.id),
+        discoveryLimit,
+        pendingEmbeddingBillIds
+      })
+      const nextWork = checkpoint.scanRoundComplete
+        ? await inspectStateContentBacklog(input, state, session)
+        : { kind: "continue" as const }
       return {
         counts,
         failures: [],
         checkpoint: {
-          ...advanceStateContentCheckpoint({
-            previous,
-            discovered: discovered.map((bill) => bill.id),
-            discoveryLimit,
-            pendingEmbeddingBillIds
-          }),
+          ...checkpoint,
+          nextWork,
           ingestionComplete: false,
           searchVerified: false,
           outcomes

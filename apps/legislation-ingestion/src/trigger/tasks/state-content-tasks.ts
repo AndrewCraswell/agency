@@ -1,5 +1,5 @@
 import { createDatabase } from "@repo/legislation-core/database/database"
-import { idempotencyKeys, schedules, task } from "@trigger.dev/sdk"
+import { idempotencyKeys, schedules, task, tasks } from "@trigger.dev/sdk"
 import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { AzureDocumentIntelligenceClient } from "../../ingestion/documents/ocr-client.js"
@@ -79,7 +79,7 @@ export const stateContentController = task({
   run: async (raw: unknown, { ctx }) => {
     const payload = stateContentControllerPayload.parse(raw)
     requireStateContentActivation(payload.state, process.env.OPENSTATES_CONTENT_ENABLED_STATES)
-    return await runStateContentContinuations(
+    const result = await runStateContentContinuations(
       payload.maxContinuations,
       async (continuation) =>
         await stateContentWorker.triggerAndWait(
@@ -97,5 +97,17 @@ export const stateContentController = task({
           }
         )
     )
+    if (result.nextWork.kind === "blocked") {
+      throw new Error(`State content requires intervention: ${result.nextWork.records} blocked documents`)
+    }
+    if (result.nextWork.kind === "drained") return { ...result, continuationRunId: null }
+    const { extractionRepairs: _repairs, ...nextPayload } = payload
+    const handle = await tasks.trigger("openstates-content-controller", nextPayload, {
+      concurrencyKey: `${payload.state}:${payload.session?.toLowerCase() ?? (payload.state === "nc" ? "2025" : "34")}`,
+      idempotencyKey: await idempotencyKeys.create(`state-content:continue:${ctx.run.id}`, { scope: "global" }),
+      idempotencyKeyTTL: "30d",
+      delay: result.nextWork.kind === "deferred" ? new Date(result.nextWork.retryAt) : undefined
+    })
+    return { ...result, continuationRunId: handle.id }
   }
 })
