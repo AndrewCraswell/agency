@@ -14,6 +14,8 @@ as exclusions. A drained scan stops without repeating another 100 rounds.
 `ingestionComplete` remains false: these decisions do not certify source coverage, document exclusions, lexical
 replication or API/MCP search acceptance. Final audit is still required.
 
-Resume only sessions whose existing controllers have finished; do not create overlapping chains. Existing deployed
-controllers retain their old behavior and must be inspected separately after deployment. Database job leases and
+Resume only sessions whose existing controllers have finished; do not create overlapping chains. For an active
+controller on an earlier deployment, set `resumeAfterRunId` on exactly one successor. It validates the predecessor's
+task and state/session, durably waits for successful completion, then drains the remaining backlog. Failed predecessors
+require investigation. Ordinary successors remove this handoff field. Database job leases and
 publisher host limits remain unchanged. Queue capacity is not proof of provider or database capacity.

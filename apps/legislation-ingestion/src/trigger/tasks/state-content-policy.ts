@@ -14,8 +14,33 @@ export const stateContentPayload = z.strictObject({
   extractionRepairs: z.array(extractionRepairEvidence).max(10).optional()
 })
 export const stateContentControllerPayload = stateContentPayload.extend({
+  resumeAfterRunId: z
+    .string()
+    .regex(/^run_[a-z0-9]+$/)
+    .optional(),
   maxContinuations: z.number().int().min(1).max(100).default(10)
 })
+
+/** An explicit handoff must never start a second chain in a different or still-active scope. */
+export function stateContentPredecessorReady(value: unknown, state: string, session: string | undefined) {
+  const predecessor = z
+    .object({
+      taskIdentifier: z.literal("openstates-content-controller"),
+      status: z.string(),
+      isCompleted: z.boolean(),
+      payload: stateContentControllerPayload
+    })
+    .parse(value)
+  const scope = (s: string, period: string | undefined) =>
+    `${s}:${period?.toLowerCase() ?? (s === "nc" ? "2025" : "34")}`
+  if (scope(predecessor.payload.state, predecessor.payload.session) !== scope(state, session)) {
+    throw new Error("State content predecessor scope mismatch")
+  }
+  if (!predecessor.isCompleted) return false
+  if (predecessor.status !== "COMPLETED")
+    throw new Error("State content predecessor failed; investigate before resuming")
+  return true
+}
 
 /** Explicit schedule identity; never silently substitute a current session for a historical one. */
 export function stateContentSchedulePlan(externalId: string | undefined, configured: string | undefined) {

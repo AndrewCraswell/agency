@@ -1,5 +1,5 @@
 import { createDatabase } from "@repo/legislation-core/database/database"
-import { idempotencyKeys, schedules, task, tasks } from "@trigger.dev/sdk"
+import { idempotencyKeys, runs, schedules, task, tasks, wait } from "@trigger.dev/sdk"
 import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { AzureDocumentIntelligenceClient } from "../../ingestion/documents/ocr-client.js"
@@ -12,6 +12,7 @@ import {
   runStateContentContinuations,
   stateContentControllerPayload,
   stateContentPayload,
+  stateContentPredecessorReady,
   stateContentSchedulePlan
 } from "./state-content-policy.js"
 
@@ -79,6 +80,14 @@ export const stateContentController = task({
   run: async (raw: unknown, { ctx }) => {
     const payload = stateContentControllerPayload.parse(raw)
     requireStateContentActivation(payload.state, process.env.OPENSTATES_CONTENT_ENABLED_STATES)
+    if (payload.resumeAfterRunId === ctx.run.id) throw new Error("State content cannot wait for itself")
+    while (
+      payload.resumeAfterRunId &&
+      !stateContentPredecessorReady(await runs.retrieve(payload.resumeAfterRunId), payload.state, payload.session)
+    ) {
+      // Durable wait releases the worker slot while the earlier controller finishes its children.
+      await wait.for({ seconds: 60 })
+    }
     const result = await runStateContentContinuations(
       payload.maxContinuations,
       async (continuation) =>
@@ -101,7 +110,7 @@ export const stateContentController = task({
       throw new Error(`State content requires intervention: ${result.nextWork.records} blocked documents`)
     }
     if (result.nextWork.kind === "drained") return { ...result, continuationRunId: null }
-    const { extractionRepairs: _repairs, ...nextPayload } = payload
+    const { extractionRepairs: _repairs, resumeAfterRunId: _predecessor, ...nextPayload } = payload
     const handle = await tasks.trigger("openstates-content-controller", nextPayload, {
       concurrencyKey: `${payload.state}:${payload.session?.toLowerCase() ?? (payload.state === "nc" ? "2025" : "34")}`,
       idempotencyKey: await idempotencyKeys.create(`state-content:continue:${ctx.run.id}`, { scope: "global" }),

@@ -5,10 +5,28 @@ import {
   requireSuccessfulStateContentResult,
   runStateContentContinuations,
   stateContentPayload,
+  stateContentPredecessorReady,
   stateContentSchedulePlan
 } from "./state-content-policy.js"
 
 describe("state content hosted boundaries", () => {
+  it("waits for an exact predecessor scope and refuses failed or unrelated handoffs", () => {
+    const prior = {
+      taskIdentifier: "openstates-content-controller",
+      status: "EXECUTING",
+      isCompleted: false,
+      payload: { state: "nc", session: "2003E3" }
+    }
+    expect(stateContentPredecessorReady(prior, "nc", "2003e3")).toBe(false)
+    expect(stateContentPredecessorReady({ ...prior, status: "COMPLETED", isCompleted: true }, "nc", "2003e3")).toBe(
+      true
+    )
+    expect(() =>
+      stateContentPredecessorReady({ ...prior, status: "FAILED", isCompleted: true }, "nc", "2003e3")
+    ).toThrow("investigate")
+    expect(() => stateContentPredecessorReady(prior, "nc", "2005")).toThrow("scope mismatch")
+    expect(() => stateContentPredecessorReady({ ...prior, taskIdentifier: "other" }, "nc", "2003e3")).toThrow()
+  })
   it("keeps extraction repairs inside the exact approved session", () => {
     const repair = {
       documentId: "document:fixture",
