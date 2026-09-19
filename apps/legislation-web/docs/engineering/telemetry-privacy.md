@@ -66,6 +66,9 @@ omitting the user object can allow server-side IP and geolocation inference. The
 **Prevent Storing of IP Addresses** control is also enabled as defense in depth.
 This does not prevent the provider from seeing transport-level
 network metadata; region, privacy terms, deletion and retention still require the separate account/policy gates.
+The live synthetic check confirmed raw IP storage was prevented, but Sentry still attached coarse transport-derived
+geography. Do not claim that SDK scrubbing makes provider records wholly anonymous or disables all vendor enrichment.
+No application address, coordinates, identity or research content is supplied to that enrichment.
 
 Envelope trace baggage and replay identity are not retained. A tunnel DSN is preserved only when it exactly matches
 the client configuration; untrusted envelope DSNs and arbitrary header values are removed. Standard client-report

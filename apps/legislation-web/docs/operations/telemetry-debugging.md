@@ -79,6 +79,18 @@ Post-response/process flush is bounded (Node defaults to five seconds), outside 
 Do not repeatedly flush in request/tool handlers. A flush result is not proof of vendor ingestion: confirm the
 synthetic event or observation in the vendor before recording delivery acceptance.
 
+## Verified synthetic lookup
+
+The September 19, 2026 nonproduction smoke used release `telemetry-debug-smoke-20260919`, synthetic content and no
+model calls. The [Sentry research trace](https://legislation.sentry.io/explore/traces/trace/44a7dde4af98b8f87ccd1f2fa3423ce0)
+and matching [Langfuse observation](https://us.cloud.langfuse.com/project/cmsw50z9p00dfad0i5wkf01jy/traces/44a7dde4af98b8f87ccd1f2fa3423ce0)
+were retrieved from the vendors. Their matching IDs in this sample do not imply that IDs are always interchangeable.
+
+Sentry's project-level IP-storage prevention is enabled, and the SDK projection retains an explicit null-IP opt-out.
+Sentry still attached coarse provider-derived geography during the check; this is a documented vendor-enrichment
+limitation, not application-emitted address data or a claim of anonymous telemetry. Existing records are not
+retroactively changed by these controls.
+
 ## Focused acceptance
 
 Reuse the existing correlation/privacy/runtime tests. Verify representative success, failure, slow-tool, cancellation
