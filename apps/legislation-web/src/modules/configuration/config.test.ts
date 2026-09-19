@@ -14,6 +14,24 @@ const workosEnvironment = {
 } as const
 
 describe("loadConfig", () => {
+  it("keeps Geocodio server credentials optional and validates the configured base URL", () => {
+    expect(loadConfig({}).geocodio).toEqual({ baseUrl: "https://api.geocod.io/v2" })
+    expect(
+      loadConfig({ GEOCODIO_API_KEY: " synthetic ", GEOCODIO_BASE_URL: "https://api.geocod.io/v2/" }).geocodio
+    ).toEqual({
+      apiKey: "synthetic",
+      baseUrl: "https://api.geocod.io/v2/"
+    })
+    expect(loadConfig({ GEOCODIO_API_KEY: " " }).geocodio.apiKey).toBeUndefined()
+    for (const baseUrl of [
+      "http://api.geocod.io/v2",
+      "https://user:password@api.geocod.io/v2",
+      "https://api.geocod.io/v2?api_key=secret",
+      "https://api.geocod.io/v2#fragment"
+    ]) {
+      expect(() => loadConfig({ GEOCODIO_BASE_URL: baseUrl })).toThrow(ConfigurationError)
+    }
+  })
   it("keeps regulatory serving closed unless organizations are explicitly configured", () => {
     expect(loadConfig({}).legalApi.allowedOrganizationIds).toEqual([])
     expect(

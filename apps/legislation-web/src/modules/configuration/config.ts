@@ -26,6 +26,13 @@ const configSchema = z
       url: z.url({ protocol: /^postgres(?:ql)?$/ })
     }),
     environment: z.enum(["development", "test", "production"]),
+    geocodio: z.object({
+      apiKey: optionalSecret,
+      baseUrl: z.url({ protocol: /^https$/ }).refine((value) => {
+        const url = new URL(value)
+        return !url.username && !url.password && !url.search && !url.hash
+      }, "Geocodio base URL must not contain credentials, a query, or a fragment")
+    }),
     logging: z.object({
       level: z.enum(["debug", "info", "warn", "error"])
     }),
@@ -185,6 +192,10 @@ export function loadConfig(environment: Readonly<Record<string, string | undefin
       url: environment.DATABASE_URL ?? "postgresql://legislation:legislation@127.0.0.1:55432/legislation"
     },
     environment: environment.NODE_ENV ?? "development",
+    geocodio: {
+      apiKey: environment.GEOCODIO_API_KEY?.trim() || undefined,
+      baseUrl: environment.GEOCODIO_BASE_URL?.trim() || "https://api.geocod.io/v2"
+    },
     logging: { level: environment.LOG_LEVEL ?? "info" },
     legalApi: {
       allowedOrganizationIds: (environment.LEGISLATION_LEGAL_API_ORGANIZATIONS ?? "")

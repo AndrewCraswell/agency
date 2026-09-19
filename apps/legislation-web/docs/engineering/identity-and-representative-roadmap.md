@@ -52,6 +52,11 @@ submits an address. After geocoding, district, office, term, person, and
 activity resolution uses local data. Raw addresses are not persisted by
 default.
 
+Development exception: the [representative diagnostic](../operations/representative-lookup.md) uses Geocodio at
+request time for current district/official discovery, then reads local profiles using exact provider identifiers.
+This user-selected paid provider replaces Census for that diagnostic only; the historical/local-geography program
+and production acceptance below remain open. Neither location nor provider responses are persisted.
+
 ## Source and authority matrix
 
 See [I's source authority and maintenance policy](../../../legislation-ingestion/docs/engineering/identity-sources.md).

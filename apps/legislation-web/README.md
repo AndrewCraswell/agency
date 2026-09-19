@@ -60,6 +60,10 @@ Standalone calendar, meeting-outcome and representative-lookup API operations we
 Address-lookup mockups do not imply an available API or activated provider. See the
 [product backlog](docs/backlog/backlog.md) and [current API acceptance](docs/operations/passage-search-delivery.md).
 
+A separate [development representative diagnostic](docs/operations/representative-lookup.md) is available at
+`/dev/representatives` with Geocodio credentials. It uses browser location with permission and matches returned
+officials to stored profiles. It does not restore the removed public API or enable production address lookup.
+
 The Bicep tree stays with W as a historical combined-runtime infrastructure reference. Its database/model credentials
 are not the target M deployment contract; storage/OCR references concern I. See
 [runtime ownership](docs/operations/development.md) before changing deployment configuration. AGENTS.md and CLAUDE.md
