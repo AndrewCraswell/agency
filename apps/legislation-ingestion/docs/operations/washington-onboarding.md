@@ -454,3 +454,10 @@ zero processed documents without sections, zero OCR-processed documents and zero
 unresolved OCR. Both bill and document-section HNSW indexes were valid and ready. These are existence/status checks,
 not proof of embedding input freshness or extraction completeness. A separate freshness audit and review of the seven
 unsupported sources remain open. The shared scope regression tests (three) and ingestion type-check passed.
+
+All seven unsupported sources belong to archive training/test bills HB 3992 and SB 7991: five House bill/amendment
+links and two Senate bill links. Fresh HTTPS GET requests at 2026-09-19T07:54:41Z returned HTTP 404 for every link,
+matching their persisted `not-found` categories. Evidence is `reports/training-document-source-status.json` in the
+archive audit store. This accounts for the two bill identities absent from the live scraper inventory without deleting
+their archive records or creating name-specific download exceptions. These seven failures are missing publisher
+resources, not evidence of OCR or embedding failure; recurring source availability remains subject to normal policy.
