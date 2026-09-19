@@ -19,8 +19,10 @@ and retained foundation replay; do not report seven holds as the production coun
 Live receipt inspection reached 61/342 promoted bill batches, with `run_06gbk661pi2694gsunn4vdp801` executing.
 Calendar receipts reached 74/90 windows, with `run_06gbk67gh6co9da85tosgak801` executing. NC 2003's existing
 controller `run_06gbk4rvcfmsbdnc1amgj61o01` was also executing. No replacement or overlapping jobs were launched.
-The next alias page after HB 1254 has 200 candidates and no held groups; its dry-run byte checks are in progress
-(90212). This does not advance the completed cleanup cursor.
+The next alias page after HB 1254 has 200 candidates and no held groups. Its dry-run byte checks completed
+(90212), and guarded apply is running as 61318 through HB 1279. This does not advance the completed cleanup
+cursor until apply completion and a zero-candidate repeat dry run. Full verification for review commit `21fbe82`
+is running as 96350; production deployment and foundation replay remain pending.
 
 Railway deployment `d2080fd2-f894-4727-8901-f236cc4a47c2` of committed fix `7a7e523` is successful.
 The final full `pnpm verify` run (25266) passed before deployment. An authenticated production MCP
