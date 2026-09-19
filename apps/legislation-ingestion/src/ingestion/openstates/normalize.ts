@@ -75,6 +75,7 @@ const voteSchema = z.object({
   motion: z.string().optional(),
   motion_classification: safeArray(z.string()),
   motion_text: z.string().optional(),
+  organization__classification: z.string().optional(),
   organization: organizationSchema.optional(),
   organization_id: z.string().optional(),
   result: z.string().optional(),
@@ -402,7 +403,21 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     const providerVoteId = nonBlank(vote.id)
     const providerOrganizationId = organizationReferenceId(vote.organization ?? vote.organization_id)
     const rollCallNumber = nonBlank(vote.identifier)
-    const voteIdentity = providerVoteId ?? rollCallNumber ?? `${vote.start_date ?? "undated"}:${voteOrdinal}`
+    // Bulk archives omit vote IDs and can reorder their arrays between releases.
+    // Scope publisher observations by their event facts, never their array position
+    // or mutable outcome/counts. Roll-call numbers can repeat across chambers/days.
+    const voteChamber = chamberFromOrganization(
+      vote.organization ?? vote.organization_id ?? vote.organization__classification
+    )
+    const voteIdentity =
+      providerVoteId ??
+      JSON.stringify({
+        date: vote.start_date ?? null,
+        organization: providerOrganizationId ?? voteChamber ?? null,
+        identifier: rollCallNumber ?? null,
+        motion: nonBlank(vote.motion_text) ?? nonBlank(vote.motion) ?? null,
+        sources: [...new Set(vote.sources.map((item) => item.url))].sort()
+      })
     const canonicalVoteId = legislativeVoteId("openstates", childId("vote", canonicalBillId, voteIdentity))
     const counts = new Map<string, number>()
     for (const count of vote.counts) {
@@ -471,7 +486,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       positions,
       vote: {
         billId: canonicalBillId,
-        chamber: chamberFromOrganization(vote.organization ?? vote.organization_id),
+        chamber: voteChamber,
         classification:
           nonBlank(vote.motion_classification[0] ?? vote.classification[0])
             ?.toLowerCase()

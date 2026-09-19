@@ -347,3 +347,21 @@ No canonical writes were performed. Archive-to-database field parity remains ope
 Washington continuations now pin `ctx.deployment.version` through the SDK's existing `version` option, matching the
 shared content worker pattern. Three task tests and ingestion type-check passed. Full verification now encounters
 unrelated syntax errors in the web app's `src/modules/conversations/telemetry.test.ts`; those edits were left untouched.
+
+## Archive vote identity correction
+
+Canonical comparison of both current-session releases exposed a shared importer defect: archive votes without IDs
+were keyed by date and array position. Reordering changed the roll call attached to 300 identities across 46 bills.
+The bulk archive's `organization__classification` field was also being discarded.
+
+The shared normalizer now preserves that chamber and derives unidentified vote identities from date, organization,
+roll-call identifier, motion and sorted source URLs, not array position or mutable outcomes/counts. Explicit publisher
+IDs remain authoritative. The complete 3,413-bill comparison produced 2,306 votes with no identity collisions and no
+canonical differences after excluding source sequence. Evidence is
+`artifacts/openstates-washington-archive-audit/reports/stable-vote-canonical-parity.json`. Fifty-eight focused archive,
+normalizer and Washington scraper tests passed. This is archive-to-archive proof, not database acceptance.
+
+Existing database rows created with ordinal identities must be inventoried and reconciled before replaying with the
+corrected normalizer; otherwise the new IDs could create additional rows. No production deployment or archive replay
+has been performed for this correction. Ambiguous unidentified repeated observations and cross-source identity
+reconciliation remain part of the database acceptance gate.
