@@ -4,7 +4,7 @@ import { LegislationError } from "../domain/errors"
 import { createLogger } from "../observability/logger"
 import type { Telemetry } from "../observability/telemetry"
 import { describeAnalytics } from "./analytics-catalog"
-import { prepareResultPage } from "./result-pages"
+import { prepareResultPage, researchResultByteLimit } from "./result-pages"
 import { createLegislationResearchTools, type LegislationQueryApi } from "./tools"
 
 const logger = createLogger({ level: "error", service: "research-test", write: () => undefined })
@@ -250,11 +250,12 @@ describe("shared research definitions", () => {
   it("rejects vote continuation after source data or selection changes", async () => {
     const detail = {
       vote: { id: "vote:us:roll-1" },
-      positions: Array.from({ length: 300 }, (_, index) => ({ sourceIdentity: String(index), text: "x".repeat(1000) }))
+      positions: Array.from({ length: 30 }, (_, index) => ({ sourceIdentity: String(index), text: "x".repeat(1000) }))
     }
     const api = { ...service(), getVote: vi.fn(async () => detail) }
     const tool = definition(api, "get_vote")
-    const first = await tool.execute({ id: "vote:us:roll-1" })
+    const measure = (data: unknown) => Buffer.byteLength(JSON.stringify({ data, attribution: "x".repeat(160000) }))
+    const first = await tool.execute({ id: "vote:us:roll-1" }, measure)
     assert.ok("structuredContent" in first)
     const data = first.structuredContent.data
     assert.ok(data && typeof data === "object" && !Array.isArray(data))
@@ -264,10 +265,59 @@ describe("shared research definitions", () => {
     delete cursor.snapshot
     scoped.upstream = `research-page:${Buffer.from(JSON.stringify(cursor)).toString("base64url")}`
     const missingSnapshot = `research-cursor:${Buffer.from(JSON.stringify(scoped)).toString("base64url")}`
-    expect(await tool.execute({ id: "vote:us:roll-1", cursor: missingSnapshot })).toHaveProperty("isError", true)
-    expect(await tool.execute({ id: "vote:us:other", cursor: data.nextCursor })).toHaveProperty("isError", true)
+    expect(await tool.execute({ id: "vote:us:roll-1", cursor: missingSnapshot }, measure)).toHaveProperty(
+      "isError",
+      true
+    )
+    expect(await tool.execute({ id: "vote:us:other", cursor: data.nextCursor }, measure)).toHaveProperty(
+      "isError",
+      true
+    )
     detail.positions.reverse()
-    expect(await tool.execute({ id: "vote:us:roll-1", cursor: data.nextCursor })).toHaveProperty("isError", true)
+    expect(await tool.execute({ id: "vote:us:roll-1", cursor: data.nextCursor }, measure)).toHaveProperty(
+      "isError",
+      true
+    )
+  })
+  it.each(["search_bills", "get_bill_text"])("applies consumer sizing to %s without losing records", async (name) => {
+    const records = Array.from({ length: 5 }, (_, index) => ({ id: String(index), text: "x".repeat(10000) }))
+    const collection = name === "get_bill_text" ? "sections" : "items"
+    const read = vi.fn(async () => ({ [collection]: records, nextCursor: null, truncated: false }))
+    const tool = definition({ ...service(), searchBills: read, getBillText: read }, name)
+    const selection = name === "get_bill_text" ? { id: "bill:us:119:hr:1" } : { query: "housing" }
+    const measure = (data: unknown) => Buffer.byteLength(JSON.stringify({ data, attribution: "x".repeat(160000) }))
+    const collected: unknown[] = []
+    let cursor: unknown
+    let pages = 0
+    do {
+      const result = await tool.execute({ ...selection, cursor }, measure)
+      assert.ok("structuredContent" in result)
+      const data = result.structuredContent.data
+      assert.ok(data && typeof data === "object" && !Array.isArray(data))
+      const items = data[collection]
+      assert.ok(Array.isArray(items))
+      expect(measure(data)).toBeLessThanOrEqual(researchResultByteLimit)
+      collected.push(...items)
+      cursor = data.nextCursor
+      expect(++pages).toBeLessThanOrEqual(records.length)
+    } while (cursor)
+    expect(collected).toEqual(records)
+    expect(pages).toBeGreaterThan(1)
+    expect(read).toHaveBeenCalledTimes(pages)
+  })
+  it("returns a non-retryable failure when a single position cannot fit the consumer budget", async () => {
+    const getVote = vi.fn(async () => ({ vote: { id: "vote:us:one" }, positions: [{ sourceIdentity: "one" }] }))
+    const result = await definition({ ...service(), getVote }, "get_vote").execute(
+      { id: "vote:us:one" },
+      () => researchResultByteLimit + 1
+    )
+    expect(result).toHaveProperty("isError", true)
+    expect(JSON.parse(result.content[0]!.text)).toMatchObject({
+      error: "payload_too_large",
+      retryable: false,
+      message: expect.stringContaining("One vote position or its attribution")
+    })
+    expect(getVote).toHaveBeenCalledOnce()
   })
   it("preserves all roll calls through local position pages and upstream continuation", async () => {
     const positions = Array.from({ length: 300 }, (_, index) => ({

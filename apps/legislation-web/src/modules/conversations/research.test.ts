@@ -16,6 +16,7 @@ import { createResearchTools, modelInputSchema, researchModelOutput } from "./re
 import { researchFailureCode } from "./researchFailure"
 import type { ResearchToolMeasurement } from "./researchMeasurement"
 import type { ResearchObservation } from "./researchMemory"
+import { resultStore } from "./resultStore"
 
 const { lookupMock, applicationQueryService, runtimeRun, analyticsObserve } = vi.hoisted(() => ({
   lookupMock: vi.fn<() => Promise<LookupAddress[]>>(async () => [{ address: "8.8.8.8", family: 4 }]),
@@ -564,6 +565,8 @@ function selectionTools(
     signal?: AbortSignal
     onContents?: Parameters<typeof createResearchTools>[9]
     onMeasurement?: (measurement: ResearchToolMeasurement) => void
+    sessionKey?: string
+    onResultSet?: Parameters<typeof createResearchTools>[7]
   } = {}
 ) {
   const unexpected = async () => {
@@ -606,10 +609,10 @@ function selectionTools(
       options.signal ?? new AbortController().signal,
       options.canResearch ?? (() => true),
       report,
-      undefined,
+      options.sessionKey,
       service,
       undefined,
-      undefined,
+      options.onResultSet,
       [],
       options.onContents,
       { evidence: [], record },
@@ -910,7 +913,7 @@ const broadTextInput = {
   mode: "lexical"
 }
 
-it("rejects enrichment overflow with actionable narrowing without dropping evidence or retrying", async () => {
+it("pages search results that overflow after enrichment without dropping evidence or retrying", async () => {
   const items = Array.from({ length: 5 }, (_, index) => ({
     id: `section:${index}`,
     documentId: `${selectionBillId}:document:${index}`,
@@ -928,57 +931,187 @@ it("rejects enrichment overflow with actionable narrowing without dropping evide
   const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
   const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
   const fixture = selectionTools({ searchBillText }, { onContents, onMeasurement })
-  await expect(callWebTool("search_bill_text", broadTextInput, fixture.tools)).rejects.toMatchObject({
-    code: "result_limit",
-    recovery: {
-      action: "narrow",
-      instruction: expect.stringContaining("limit: 1")
-    },
-    message: expect.stringContaining("coverage remains incomplete")
+  expect(
+    Buffer.byteLength(JSON.stringify({ data: { items, nextCursor: "unread-page", truncated: true } }))
+  ).toBeLessThan(researchResultByteLimit)
+  const output = await callWebTool("search_bill_text", broadTextInput, fixture.tools)
+  const pageSchema = z.object({
+    data: z.object({ items: z.array(z.unknown()), nextCursor: z.string(), truncated: z.boolean() }),
+    evidence: z.array(z.object({ content: z.object({ state: z.string() }) }))
   })
+  const first = pageSchema.parse(output)
+  expect(first.data.items.length).toBeGreaterThan(0)
+  expect(first.data.items.length).toBeLessThan(items.length)
+  expect(first.evidence.every((source) => source.content.state === "available")).toBe(true)
+  expect(Buffer.byteLength(researchModelOutput({ output }).value)).toBeLessThanOrEqual(researchResultByteLimit)
   const { classifications, ...selection } = broadTextInput
   expect(searchBillText).toHaveBeenCalledExactlyOnceWith({
     ...selection,
     billIds: undefined,
     documentClassifications: classifications
   })
-  expect(onContents).not.toHaveBeenCalled()
+  expect(onContents).toHaveBeenCalledOnce()
   expect(fixture.record).toHaveBeenCalledExactlyOnceWith({
     tool: "search_bill_text",
     input: broadTextInput,
-    failure: "result_limit"
+    data: first.data,
+    evidence: expect.any(Array)
   })
   expect(onMeasurement).toHaveBeenCalledOnce()
   const measured = onMeasurement.mock.calls[0]?.[0]
   expect(measured?.rawResultBytes).toBeLessThan(researchResultByteLimit)
-  expect(measured?.enrichedResultBytes).toBeGreaterThan(researchResultByteLimit)
-  expect(measured?.modelResultBytes).toBeGreaterThan(researchResultByteLimit)
+  expect(measured?.enrichedResultBytes).toBe(Buffer.byteLength(JSON.stringify(output)))
+  expect(measured?.modelResultBytes).toBe(Buffer.byteLength(researchModelOutput({ output }).value))
   expect(measured).toMatchObject({
-    outcome: "error",
-    failureCode: "result_limit",
-    resultCount: 5,
+    outcome: "success",
+    failureCode: null,
+    resultCount: first.data.items.length,
     hasNextPage: true,
     attemptCount: 1
   })
-  expect(fixture.report).toHaveBeenCalledWith(expect.objectContaining({ measurement: measured }))
-  const narrowed = { ...broadTextInput, limit: 1, billId: selectionBillId }
-  const output = await callWebTool("search_bill_text", narrowed, fixture.tools)
-  expect(output).toMatchObject({
-    data: { items: [items[0]], nextCursor: expect.any(String), truncated: true },
-    evidence: [
+  const collected = [...first.data.items]
+  let cursor = first.data.nextCursor
+  let pages = 1
+  while (collected.length < items.length) {
+    const output = await callWebTool("search_bill_text", { ...broadTextInput, cursor }, fixture.tools)
+    const next = pageSchema.parse(output)
+    expect(Buffer.byteLength(researchModelOutput({ output }).value)).toBeLessThanOrEqual(researchResultByteLimit)
+    collected.push(...next.data.items)
+    cursor = next.data.nextCursor
+    expect(++pages).toBeLessThanOrEqual(items.length)
+  }
+  expect(collected).toEqual(items)
+  expect(searchBillText).toHaveBeenCalledTimes(pages)
+  expect(fixture.report).not.toHaveBeenCalled()
+})
+
+it.each(["get_vote", "get_votes", "get_bill_votes"])(
+  "sizes %s for evidence, presentation and record links while preserving every position",
+  async (name) => {
+    vi.spyOn(resultStore, "persist").mockResolvedValue(undefined)
+    const details = Array.from({ length: name === "get_vote" ? 1 : 2 }, (_, voteIndex) => ({
+      vote: {
+        id: `vote:congress:house-119-1-${190 + voteIndex}`,
+        identifier: `Roll call ${190 + voteIndex}`,
+        motion: "On passage",
+        question: "On passage",
+        sourceUrl: `https://clerk.house.gov/Votes/2025${190 + voteIndex}`,
+        yesCount: 15,
+        noCount: 0
+      },
+      positions: Array.from({ length: 15 }, (_, index) => ({
+        person: {
+          id: `person:congress:member-${voteIndex}-${index}`,
+          name: `Member ${voteIndex}-${index} \u20ac`,
+          biography: ""
+        },
+        position: { sourceIdentity: `${voteIndex}-${index}`, option: "yes" }
+      }))
+    }))
+    const raw =
+      name === "get_vote"
+        ? details[0]
+        : { items: details.map((detail) => (name === "get_votes" ? { id: detail.vote.id, data: detail } : detail)) }
+    const positions = details.flatMap((detail) => detail.positions)
+    const padding = Math.floor(
+      (researchResultByteLimit - 500 - Buffer.byteLength(JSON.stringify({ data: raw }))) / positions.length
+    )
+    for (const position of positions) {
+      position.person.biography = "x".repeat(padding)
+    }
+    expect(Buffer.byteLength(JSON.stringify({ data: raw }))).toBeLessThan(researchResultByteLimit)
+    const getVote = vi.fn<LegislationQueryApi["getVote"]>(async ({ id }) => {
+      const detail = details.find((detail) => detail.vote.id === id)
+      if (!detail) {
+        throw new Error("Unknown fixture vote")
+      }
+      return detail
+    })
+    const getBillVotes = vi.fn<LegislationQueryApi["getBillVotes"]>(async () => ({ items: details }))
+    const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
+    const onResultSet = vi.fn<NonNullable<Parameters<typeof createResearchTools>[7]>>(() => "r1")
+    const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
+    const fixture = selectionTools(
+      { getVote, getBillVotes },
+      { sessionKey: crypto.randomUUID(), onContents, onResultSet, onMeasurement }
+    )
+    let input: Record<string, unknown> = { billId: selectionBillId, limit: 2 }
+    if (name === "get_vote") {
+      input = { id: details[0]?.vote.id }
+    } else if (name === "get_votes") {
+      input = { ids: details.map((detail) => detail.vote.id) }
+    }
+    let cursor: string | undefined
+    const collected: unknown[] = []
+    let pages = 0
+    do {
+      const output = await callWebTool(name, { ...input, cursor }, fixture.tools)
+      const result = z
+        .object({ data: z.json(), evidence: z.array(z.unknown()), resultHandle: z.string() })
+        .parse(output)
+      const page = z.object({ nextCursor: z.string().optional() }).parse(result.data)
+      const records =
+        name === "get_vote" ? [result.data] : z.object({ items: z.array(z.json()) }).parse(result.data).items
+      for (const record of records) {
+        const data = name === "get_votes" ? z.object({ data: z.json() }).parse(record).data : record
+        const detail = z.object({ vote: z.object({ id: z.string() }), positions: z.array(z.json()) }).parse(data)
+        expect(details.map((detail) => detail.vote.id)).toContain(detail.vote.id)
+        collected.push(...detail.positions)
+      }
+      const model = researchModelOutput({ output }).value
+      expect(Buffer.byteLength(model)).toBeLessThanOrEqual(researchResultByteLimit)
+      expect(JSON.parse(model)).toMatchObject({
+        recordLinks: expect.any(Array),
+        presentationOptions: expect.any(Array)
+      })
+      expect(result.evidence.length).toBeGreaterThan(0)
+      expect(onMeasurement.mock.calls.at(-1)?.[0]).toMatchObject({
+        rawResultBytes: Buffer.byteLength(JSON.stringify({ data: result.data })),
+        enrichedResultBytes: Buffer.byteLength(JSON.stringify(output)),
+        modelResultBytes: Buffer.byteLength(model),
+        outcome: "success",
+        attemptCount: 1
+      })
+      cursor = page.nextCursor
+      expect(++pages).toBeLessThan(10)
+    } while (cursor)
+    expect(pages).toBeGreaterThan(1)
+    expect(collected).toEqual(positions)
+    expect(onContents).toHaveBeenCalledTimes(pages)
+    expect(onResultSet).toHaveBeenCalledTimes(pages)
+    expect(resultStore.persist).toHaveBeenCalledTimes(pages)
+    expect(getVote).toHaveBeenCalledTimes(name === "get_bill_votes" ? 0 : details.length * pages)
+    expect(getBillVotes).toHaveBeenCalledTimes(name === "get_bill_votes" ? pages : 0)
+    expect(fixture.report).not.toHaveBeenCalled()
+  }
+)
+
+it("reports an indivisible vote position that exceeds the enriched budget without publishing or retrying", async () => {
+  const detail = {
+    vote: { id: "vote:congress:house-119-1-190", question: "On passage" },
+    positions: [
       {
-        recordId: items[0]?.documentId,
-        billId: selectionBillId,
-        sourceUrl: items[0]?.sourceUrl,
-        content: { state: "available", truncated: true }
+        person: { id: "person:congress:one", name: "Member", biography: "" },
+        position: { sourceIdentity: "one", option: "yes" }
       }
     ]
-  })
-  expect(Buffer.byteLength(researchModelOutput({ output }).value, "utf8")).toBeLessThan(researchResultByteLimit)
-  expect(searchBillText).toHaveBeenCalledTimes(2)
-  expect(fixture.record).toHaveBeenLastCalledWith(
-    expect.objectContaining({ input: narrowed, evidence: expect.any(Array) })
+  }
+  detail.positions[0]!.person.biography = "x".repeat(
+    researchResultByteLimit - 100 - Buffer.byteLength(JSON.stringify({ data: detail }))
   )
+  const getVote = vi.fn<LegislationQueryApi["getVote"]>(async () => detail)
+  const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
+  const onResultSet = vi.fn<NonNullable<Parameters<typeof createResearchTools>[7]>>(() => "r1")
+  const fixture = selectionTools({ getVote }, { sessionKey: crypto.randomUUID(), onContents, onResultSet })
+  await expect(callWebTool("get_vote", { id: detail.vote.id }, fixture.tools)).rejects.toMatchObject({
+    code: "result_limit",
+    message: expect.stringContaining("did not establish complete coverage")
+  })
+  expect(getVote).toHaveBeenCalledOnce()
+  expect(onContents).not.toHaveBeenCalled()
+  expect(onResultSet).not.toHaveBeenCalled()
+  expect(fixture.record).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ failure: "result_limit" }))
+  expect(fixture.report).toHaveBeenCalledOnce()
 })
 
 it("keeps raw-budget rejection measured and does not treat an oversized record as no evidence", async () => {

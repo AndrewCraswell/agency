@@ -2,7 +2,7 @@ import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
 import { normalizeLegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
-import { researchResultByteLimit } from "@repo/legislation-core/research/result-pages"
+import { researchResultByteLimit, type ResultPageMeasurement } from "@repo/legislation-core/research/result-pages"
 import { createLegislationResearchTools, type LegislationQueryApi } from "@repo/legislation-core/research/tools"
 import { dynamicTool, type ToolSet } from "ai"
 import { z } from "zod"
@@ -19,7 +19,7 @@ import type { ResearchToolMeasurement } from "./researchMeasurement"
 import type { ResearchObservation } from "./researchMemory"
 import { createResearchSelections } from "./researchSelection"
 import { isResearchTool, researchToolLabels } from "./researchTools"
-import { resultStore } from "./resultStore"
+import { createResultStore, resultStore } from "./resultStore"
 import type { createToolFailureReporter } from "./toolFailures"
 import { observeTool, recordToolMeasurement } from "./toolTelemetry"
 
@@ -350,18 +350,52 @@ export async function createResearchTools(
   signal.throwIfAborted()
   const webDefinitions = createWebResearchTools(environment, signal)
   const definitions = [...createLegislationResearchTools(queryService, logger), ...webDefinitions]
+  function projectOutput(name: string, data: unknown, resultSet?: EntityPage, preview = false) {
+    const evidence = name === "describe_analytics" ? [] : projectEvidence(data, preview)
+    const contents =
+      onContents && name !== "describe_analytics" ? projectPresentationContents(name, data, evidence, resultSet) : []
+    return {
+      contents,
+      output: {
+        data,
+        evidence,
+        ...(onContents ? { presentationOptions: contents.map(contentOptions) } : {}),
+        resultSet
+      }
+    }
+  }
+  function measureResultPage(name: string, input: unknown): ResultPageMeasurement {
+    const query = z.object({ query: z.string().optional() }).parse(input).query
+    return (data) => {
+      signal.throwIfAborted()
+      const resultSet =
+        sessionKey && name !== "describe_analytics"
+          ? createResultStore().create(sessionKey, name, data, query, async () => {
+              throw new Error("Sizing previews cannot load result pages")
+            })
+          : undefined
+      const projected = projectOutput(name, data, resultSet, true)
+      const output = {
+        ...projected.output,
+        // A UUID-sized reservation covers the shorter run-local result handle without registering a preview.
+        ...(resultSet && onResultSet ? { resultHandle: resultSet.id } : {})
+      }
+      return Buffer.byteLength(serializeResearchModelOutput(output).value, "utf8")
+    }
+  }
   async function execute(name: string, input: unknown, executionSignal = signal) {
     executionSignal.throwIfAborted()
     const webDefinition = webDefinitions.find((candidate) => candidate.name === name)
     if (webDefinition) {
       return webDefinition.execute(input)
     }
+    const measureResult = measureResultPage(name, input)
     if (queryServiceOverride) {
       const definition = definitions.find((candidate) => candidate.name === name)
       if (!definition) {
         throw new Error("Research tool is unavailable")
       }
-      return definition.execute(input)
+      return definition.execute(input, measureResult)
     }
     if (name === "describe_analytics") {
       const { createAnalyticsTelemetry } = await import("../legislation/analytics-telemetry")
@@ -372,7 +406,7 @@ export async function createResearchTools(
       if (!definition) {
         throw new ResearchFailure("dependency_unavailable", crypto.randomUUID())
       }
-      return definition.execute(input)
+      return definition.execute(input, measureResult)
     }
     const { getResearchRuntime } = await import("../search/research-runtime")
     executionSignal.throwIfAborted()
@@ -389,7 +423,7 @@ export async function createResearchTools(
       if (!definition) {
         throw new Error("Research tool is unavailable")
       }
-      return definition.execute(input)
+      return definition.execute(input, measureResult)
     }, executionSignal)
   }
   const tools: ToolSet = {}
@@ -518,17 +552,8 @@ export async function createResearchTools(
                     pageInput
                   )
                 : undefined
-            const evidence = isCatalog ? [] : projectEvidence(parsed.data.structuredContent.data)
-            const contents =
-              onContents && !isCatalog
-                ? projectPresentationContents(name, parsed.data.structuredContent.data, evidence, resultSet)
-                : []
-            const output = {
-              ...parsed.data.structuredContent,
-              evidence,
-              ...(onContents ? { presentationOptions: contents.map(contentOptions) } : {}),
-              resultSet
-            }
+            const { output, contents } = projectOutput(name, parsed.data.structuredContent.data, resultSet)
+            const { evidence } = output
             stage = "serialization"
             measureOutput(output)
             const resultHandle = resultSet ? onResultSet?.(resultSet) : undefined

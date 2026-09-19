@@ -40,6 +40,13 @@ evidence that legal duties are absent.
 
 The chat boundary enforces 180,000 UTF-8 bytes for the prepared core `structuredContent`, then separately for the
 actual model-visible tool text after evidence, presentation choices, result snapshots and record links are added.
+The shared paginator also accepts the consumer's serialized-output measurement. Chat uses the same enrichment and
+serialization for sizing and delivery across existing item pages, bill-text sections and vote-position pages.
+Oversized candidates are halved in memory until a complete page fits; this makes no additional dependency requests.
+Sizing previews do not retain result snapshots, consume citation references or publish presentation content.
+All omitted records/positions remain accessible through the existing bound continuations, with vote snapshot
+validation unchanged. An indivisible oversized record or position remains a reported, non-retryable core error.
+Unpaginated detail contracts still require explicit narrower reads; the paginator does not invent new tool inputs.
 The final serialization is also guarded. Rejected enrichment is not turned into a successful empty result, stripped
 of provenance, or retried automatically. No successful memory observation or presentation content is published for
 an oversized projection. A `result_limit` error offers an explicit `narrow` recovery: restart without a cursor at
@@ -73,7 +80,8 @@ SQLSTATE or a claim that records do not exist.
 Deterministic fixtures use the public document IDs from campaign case 091 and recreate the cursor mutation from
 case 028 using freshly generated core-bound continuations. Tests cover exact bytes at the tool boundary, first-call
 IDs, scope mismatches, stale turns, bounded recovery, reporting and model-visible failures.
-Campaign LEG-9/LEG-10 fixtures additionally cover broad PBM discovery overflow after enrichment, timeline date/null
+Campaign LEG-9/LEG-10 and LEG-81 fixtures additionally cover bounded PBM discovery after enrichment, lossless
+vote-position paging with citations and record links, indivisible oversized records, side-effect-free sizing, timeline date/null
 preservation, static catalog operation without a database connection, grounded aggregate receipts and scoped supporting
 material failures. The timeline service already normalizes timestamp and date branches to text before `COALESCE`;
 its existing integration fixture covers UTC ordering and multi-page/null cases. No new timeline implementation fix or

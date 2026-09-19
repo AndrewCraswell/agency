@@ -163,20 +163,23 @@ export function createResearchEvidenceProjector(
       }
     }
   }
-  return (data: unknown) => {
+  return (data: unknown, preview = false) => {
+    const projectionRenditions = preview ? new Map(retained) : retained
+    const projectionReferences = preview ? new Map(references) : references
+    let projectionReference = nextReference
     let hasIndexedSources = false
     const snapshots = projectResearchEvidence(data, evidenceId, (evidence, source, sources) => {
       if (!hasIndexedSources) {
         hasIndexedSources = true
         for (const context of sources) {
           for (const rendition of retainedRenditions(context)) {
-            if (retained.size < 1600 && readableSource(rendition)) {
-              retained.set(digest(JSON.stringify(rendition)), rendition)
+            if (projectionRenditions.size < 1600 && readableSource(rendition)) {
+              projectionRenditions.set(digest(JSON.stringify(rendition)), rendition)
             }
           }
         }
       }
-      const candidates = [...retained.values()].flatMap((candidate) => {
+      const candidates = [...projectionRenditions.values()].flatMap((candidate) => {
         const readable = readableSource(candidate)
         if (
           !readable ||
@@ -192,7 +195,7 @@ export function createResearchEvidenceProjector(
       if (readable) {
         return { ...evidence, readableUrl: readable.url }
       }
-      if (!reported.has(evidence.id)) {
+      if (!preview && !reported.has(evidence.id)) {
         reported.add(evidence.id)
         const sourceUrl = sourceUrlSchema.safeParse(evidence.sourceUrl)
         let reason = "no_readable_rendition"
@@ -214,13 +217,17 @@ export function createResearchEvidenceProjector(
       }
       return evidence
     })
-    return snapshots.map((evidence) => {
-      let citationRef = references.get(evidence.id)
+    const projected = snapshots.map((evidence) => {
+      let citationRef = projectionReferences.get(evidence.id)
       if (!citationRef) {
-        citationRef = `e${nextReference++}`
-        references.set(evidence.id, citationRef)
+        citationRef = `e${projectionReference++}`
+        projectionReferences.set(evidence.id, citationRef)
       }
       return { ...evidence, citationRef }
     })
+    if (!preview) {
+      nextReference = projectionReference
+    }
+    return projected
   }
 }

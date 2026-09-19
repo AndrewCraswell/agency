@@ -39,7 +39,7 @@ import {
   type RecordCollectionInput,
   type RecordResolutionInput
 } from "./record-contracts"
-import { prepareResultPage, readResultPage } from "./result-pages"
+import { prepareResultPage, readResultPage, type ResultPageMeasurement } from "./result-pages"
 
 type JSONValue = z.infer<ReturnType<typeof z.json>>
 
@@ -371,7 +371,7 @@ type ResearchToolDefinition = Readonly<{
     idempotentHint: boolean
     openWorldHint: boolean
   }>
-  execute: (input: unknown) => Promise<ResearchToolResult>
+  execute: (input: unknown, measureResult?: ResultPageMeasurement) => Promise<ResearchToolResult>
 }>
 
 export function createLegislationResearchTools(service: LegislationQueryApi, logger: Logger, telemetry?: Telemetry) {
@@ -394,7 +394,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
       definitions.push({
         ...definition,
         name,
-        execute: async (input) => {
+        execute: async (input, measureResult) => {
           const startedAt = performance.now()
           let stage = "validation"
           try {
@@ -407,7 +407,9 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
               return result
             }
             stage = "serialization"
-            const response = success(prepareResultPage(name, page.input, result.value, page.offset, page.snapshot))
+            const response = success(
+              prepareResultPage(name, page.input, result.value, page.offset, page.snapshot, measureResult)
+            )
             if ("isError" in response && response.isError) {
               telemetry?.reportFailure?.(
                 `mcp.${name}`,

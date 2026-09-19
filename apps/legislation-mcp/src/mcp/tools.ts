@@ -16,7 +16,7 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
             outputSchema: definition.outputSchema,
             ...(definition.annotations ? { annotations: definition.annotations } : {})
           },
-          definition.execute
+          (input) => definition.execute(input)
         )
       }
       return server

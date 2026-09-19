@@ -32,6 +32,19 @@ function setup(runId = "run:one", previousReferences: readonly string[] = []) {
 }
 
 describe("readable evidence sources", () => {
+  it("previews sizing without consuming citation references, retaining sources or logging rejected evidence", () => {
+    const { project, lines } = setup()
+    expect(project(document, true)[0]?.citationRef).toBe("e1")
+    expect(project(html, true)[0]?.citationRef).toBe("e1")
+    expect(lines).toEqual([])
+    const accepted = project(document)[0]
+    expect(accepted?.citationRef).toBe("e1")
+    expect(accepted?.readableUrl).toBeUndefined()
+    expect(lines).toHaveLength(1)
+    expect(project(pdf, true)[0]?.citationRef).toBe("e2")
+    expect(project(pdf)[0]?.citationRef).toBe("e2")
+  })
+
   it("reuses a short action reference across bill detail and timeline projections", () => {
     const { project, lines } = setup()
     const action = {
