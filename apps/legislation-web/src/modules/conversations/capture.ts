@@ -1,5 +1,9 @@
 import { propagateAttributes, startActiveObservation } from "@langfuse/tracing"
+import { context, trace } from "@opentelemetry/api"
+import { getIsolationScope, withIsolationScope } from "@sentry/core"
 import type { TextStreamPart, ToolSet } from "ai"
+import { currentTelemetryCorrelation, linkTelemetryTraces } from "../../services/sentry/requestTelemetry"
+import type { TelemetryCorrelation } from "../../services/sentry/telemetryCorrelation"
 import type { EvalEvent, EvalTurn } from "../evaluations/contracts"
 import { createCitationFailureReporter, type CitationTelemetryContext } from "./citationFailures.server"
 import type { ComposedAnswer } from "./compositionStream"
@@ -108,7 +112,11 @@ export function observeChatResponse(options: {
   citationTelemetry?: CitationTelemetryContext
 }) {
   const stream = Promise.withResolvers<ReadableStream<TextStreamPart<ToolSet>>>()
-  let traceId: string | null = null
+  const requestCorrelation = currentTelemetryCorrelation()
+  let correlation: TelemetryCorrelation = {
+    ...requestCorrelation,
+    parent_request_trace_id: requestCorrelation.sentry_trace_id
+  }
   const redacted = redactCredentials(options.metadata)
   const redactedMetadata = Object.fromEntries(
     Object.entries(typeof redacted === "object" && redacted !== null ? redacted : {})
@@ -122,37 +130,45 @@ export function observeChatResponse(options: {
       return serialized.length <= 200 ? [[key, serialized]] : []
     })
   )
-  const completed = propagateAttributes(
-    { sessionId: options.sessionId, traceName: "legislative-research-conversation", metadata },
-    () =>
-      startActiveObservation(
-        "legislative-research-conversation",
-        async (observation) => {
-          if (observation.traceId && !/^0+$/.test(observation.traceId)) {
-            traceId = observation.traceId
-          }
-          observation.update({ input: redactCredentials(options.input), metadata: redactedMetadata })
-          const [uiStream, captureStream] = options.start().tee()
-          stream.resolve(uiStream)
-          const raw = await collectChatStream(captureStream)
-          const composition = await options.composed
-          if (composition && options.citationTelemetry) {
-            createCitationFailureReporter(options.citationTelemetry)({
-              text: composition.text,
-              events: raw.events,
-              retainedEvidence: options.retainedEvidence,
-              termination: raw.output.termination,
-              isInterrupted: composition.isInterrupted
-            })
-          }
-          observation.update({ output: redactCredentials({ ...raw, ...(composition ? { composition } : {}) }) })
-        },
-        { asType: "agent" }
+  const completed = withIsolationScope(() =>
+    context.with(trace.deleteSpan(context.active()), () => {
+      getIsolationScope().setContext("correlation", correlation)
+      return propagateAttributes(
+        { sessionId: options.sessionId, traceName: "legislative-research-conversation", metadata },
+        () =>
+          startActiveObservation(
+            "legislative-research-conversation",
+            async (observation) => {
+              correlation = linkTelemetryTraces(
+                observation.traceId && !/^0+$/.test(observation.traceId) ? observation.traceId : undefined
+              )
+              observation.update({
+                input: redactCredentials(options.input),
+                metadata: { ...redactedMetadata, ...correlation }
+              })
+              const [uiStream, captureStream] = options.start().tee()
+              stream.resolve(uiStream)
+              const raw = await collectChatStream(captureStream)
+              const composition = await options.composed
+              if (composition && options.citationTelemetry) {
+                createCitationFailureReporter(options.citationTelemetry)({
+                  text: composition.text,
+                  events: raw.events,
+                  retainedEvidence: options.retainedEvidence,
+                  termination: raw.output.termination,
+                  isInterrupted: composition.isInterrupted
+                })
+              }
+              observation.update({ output: redactCredentials({ ...raw, ...(composition ? { composition } : {}) }) })
+            },
+            { asType: "agent" }
+          )
       )
+    })
   )
   return {
     stream: stream.promise,
-    getTraceId: () => traceId,
+    getCorrelation: () => correlation,
     completed: completed.catch((error: unknown) => {
       stream.reject(error)
       throw error

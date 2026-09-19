@@ -11,7 +11,10 @@ import { observeChatResponse } from "./capture"
 import { createCitationFailureReporter } from "./citationFailures.server"
 import { createCompositionStream } from "./compositionStream"
 
-vi.mock("@sentry/core", () => ({ captureException: vi.fn<typeof captureException>() }))
+vi.mock("@sentry/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@sentry/core")>()),
+  captureException: vi.fn<typeof captureException>()
+}))
 
 afterEach(() => vi.clearAllMocks())
 

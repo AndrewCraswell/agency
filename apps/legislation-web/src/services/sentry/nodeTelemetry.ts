@@ -12,15 +12,11 @@ import {
 } from "@opentelemetry/sdk-trace-base"
 // The SDK's node condition is CommonJS; native ESM needs its default namespace.
 import { default as Sentry, type NodeOptions } from "@sentry/nextjs"
-import {
-  SentryAsyncLocalStorageContextManager,
-  SentryPropagator,
-  SentrySampler,
-  SentrySpanProcessor
-} from "@sentry/opentelemetry"
+import { SentryAsyncLocalStorageContextManager, SentrySampler, SentrySpanProcessor } from "@sentry/opentelemetry"
 import { registerTelemetry } from "ai"
 import { PHASE_PRODUCTION_BUILD } from "next/constants"
 import { langfuseSettings } from "../langfuse/client"
+import { SafeTracePropagator } from "./safeTracePropagator"
 import { sentryOptions } from "./sentryOptions"
 import { telemetryPropagationTarget } from "./telemetryPropagation"
 
@@ -112,7 +108,7 @@ export function startNodeTelemetry(options: RuntimeOptions): RuntimeHandle {
     if (!hasContext) {
       throw new Error("A conflicting OpenTelemetry context manager is already registered")
     }
-    hasPropagator = propagation.setGlobalPropagator(new SentryPropagator())
+    hasPropagator = propagation.setGlobalPropagator(new SafeTracePropagator())
     if (!hasPropagator) {
       throw new Error("A conflicting OpenTelemetry propagator is already registered")
     }

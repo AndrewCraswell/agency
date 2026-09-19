@@ -18,6 +18,7 @@ const apiRoutes = [
   "/api/bills/[billId]/votes",
   "/api/changes",
   "/api/changes/[changeId]",
+  "/api/dev/representatives",
   "/api/document-diffs",
   "/api/documents/[documentId]",
   "/api/documents/[documentId]/sections",
@@ -104,6 +105,7 @@ export const telemetryRouteTemplates = [
   "/",
   "/conversations/[conversationId]",
   "/records/[kind]/[recordId]",
+  "/dev/representatives",
   "/chat",
   "/health",
   "/ready",
@@ -118,6 +120,7 @@ export const telemetrySurfaceSchema = z.enum([
   "home",
   "conversation",
   "record",
+  "development",
   "api",
   "health",
   "readiness",
@@ -159,6 +162,9 @@ function surfaceForRoute(route: z.infer<typeof telemetryRouteSchema>): z.infer<t
   }
   if (route === "/records/[kind]/[recordId]") {
     return "record"
+  }
+  if (route === "/dev/representatives" || route === "/api/dev/representatives") {
+    return "development"
   }
   if (route === "/health") {
     return "health"

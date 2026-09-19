@@ -166,7 +166,11 @@ describe("subscription route composition", () => {
     await expect(handleSubscriptionRequest(request).then(async (response) => await response.text())).resolves.toBe(
       "handled"
     )
-    expect(mocks.execute).toHaveBeenCalledWith(request, expect.any(Function))
+    expect(mocks.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ url: request.url, method: request.method }),
+      expect.any(Function)
+    )
+    expect(mocks.execute.mock.calls[0]?.[0].headers).toEqual(request.headers)
   })
 })
 

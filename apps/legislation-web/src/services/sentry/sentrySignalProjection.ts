@@ -11,6 +11,7 @@ import {
   type SentryPayloadPolicy
 } from "./sentryPayloadFields"
 import { TelemetryContractError } from "./telemetryContracts"
+import { telemetryCorrelationSchema } from "./telemetryCorrelation"
 import { isTelemetryEventName } from "./telemetryEvents"
 import { telemetryFields as f } from "./telemetryFields"
 import { resolveTelemetryRoute } from "./telemetryRoutes"
@@ -100,6 +101,7 @@ export function projectSentryEvent(input: unknown, policy: SentryPayloadPolicy):
   }
   const context = payloadRecord(event.contexts)
   const trace = traceContext(context.trace, policy)
+  const correlation = telemetryCorrelationSchema.safeParse(context.correlation)
   const extra = payloadRecord(event.extra)
   const safeExtra: Record<string, unknown> = projectSentryMetadata(extra, policy)
   if (extra.measurement !== undefined) {
@@ -120,7 +122,10 @@ export function projectSentryEvent(input: unknown, policy: SentryPayloadPolicy):
     platform: "javascript",
     tags: projectSentryMetadata(event.tags, policy),
     extra: safeExtra,
-    contexts: trace ? { trace } : {},
+    contexts: {
+      ...(trace ? { trace } : {}),
+      ...(correlation.success ? { correlation: correlation.data } : {})
+    },
     breadcrumbs: list(event.breadcrumbs, 20).flatMap((crumb) => {
       const projected = projectSentryBreadcrumb(crumb, policy)
       return projected ? [projected] : []

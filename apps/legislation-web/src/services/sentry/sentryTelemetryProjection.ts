@@ -9,11 +9,13 @@ import {
   type SentryPayloadPolicy
 } from "./sentryPayloadFields"
 import {
+  checkTelemetryWireSize,
   parseTelemetryContext,
   prepareTelemetryEvent,
   prepareTelemetryMetric,
   TelemetryContractError
 } from "./telemetryContracts"
+import { telemetryCorrelationSchema } from "./telemetryCorrelation"
 import { isTelemetryEventName, telemetryEvents } from "./telemetryEvents"
 import { telemetryContextSchema, telemetryFields as f } from "./telemetryFields"
 import { isTelemetryMetricName, telemetryMetrics } from "./telemetryMetrics"
@@ -57,7 +59,17 @@ export function projectSentryLog(input: Log, policy: SentryPayloadPolicy): Log {
     () => identity.data.event_id
   )
   const { attributes: eventAttributes, ...metadata } = event
-  return { level: "info", message: event.event_name, attributes: { ...metadata, ...eventAttributes } }
+  const output: Log = {
+    level: "info",
+    message: event.event_name,
+    attributes: {
+      ...metadata,
+      ...eventAttributes,
+      ...projectPayloadFields(telemetryCorrelationSchema.shape, raw)
+    }
+  }
+  checkTelemetryWireSize("event", output)
+  return output
 }
 
 export function projectSentryMetric(input: Metric, policy: SentryPayloadPolicy): Metric {

@@ -244,6 +244,25 @@ const subscriptionWebhookRoutes: readonly SubscriptionWebhookRoute[] = [
 
 const standardMethods: readonly StandardMethod[] = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
 
+it("preserves proxied chat requests and returns an independent opaque server correlation ID", async () => {
+  const browserId = crypto.randomUUID()
+  const response = await fetch(`${baseUrl}/chat`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-rostra-request-id": browserId,
+      baggage: "private=PRIVATE_CORRELATION",
+      "sentry-trace": `${"a".repeat(32)}-${"b".repeat(16)}-1`
+    },
+    body: JSON.stringify({ private: "PRIVATE_CORRELATION" }),
+    signal: AbortSignal.timeout(requestTimeoutMs)
+  })
+  expect(response.status).toBe(503)
+  expect(response.headers.get("x-rostra-request-id")).toMatch(/^[a-f0-9-]{36}$/u)
+  expect(response.headers.get("x-rostra-request-id")).not.toBe(browserId)
+  expect(await response.json()).toEqual({ error: "The conversation service is not available." })
+})
+
 let baseUrl = ""
 let nextServer: ChildProcess | undefined
 let nextServerDiagnostics: () => string = () => "Next server did not start."

@@ -43,7 +43,11 @@ it("reports one failure per call with only allowlisted scalar measurements", () 
   expect(captureException).toHaveBeenCalledExactlyOnceWith(
     expect.objectContaining({ code: "result_limit", reference: "reference-fixture" }),
     expect.objectContaining({
-      tags: expect.objectContaining({ runId: "run-fixture", toolCallId: "call-fixture", category: "result_limit" }),
+      tags: expect.objectContaining({
+        runId: "run-fixture",
+        tool_call_id: expect.stringMatching(/^[a-f0-9-]{36}$/u),
+        category: "result_limit"
+      }),
       extra: { durationMs: undefined, resultBytes: undefined, measurement }
     })
   )

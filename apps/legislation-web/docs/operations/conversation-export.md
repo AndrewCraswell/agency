@@ -8,6 +8,8 @@ The snapshot includes:
 - Browser-retained user and assistant messages, citations, presentation data, and tool parts.
 - Public conversation and telemetry session IDs, run and trace metadata, the active replay ID when available, and
   clarification answers.
+  New response metadata stores a structured `correlation` object with separate server/browser request IDs, run ID,
+  Sentry/Langfuse trace IDs and the parent request trace when observed. These IDs do not establish vendor ingestion.
 - Tool names, inputs, outputs, errors, and states that remain in the browser conversation.
 - Tool measurements when delivered by the server, matched by message/run and tool-call identity. `durationMs` measures
   the whole wrapper; `dependencyDurationMs` measures the dependency invocation, not pure database time. `resultBytes`

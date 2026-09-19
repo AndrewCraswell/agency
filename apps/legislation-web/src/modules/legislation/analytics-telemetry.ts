@@ -1,10 +1,10 @@
 import { startActiveObservation } from "@langfuse/tracing"
-import { getRequestContext } from "@repo/legislation-core/auth/request-context"
 import { normalizeLegislationError, postgresErrorCode } from "@repo/legislation-core/domain/errors"
 import { sanitizeTelemetry } from "@repo/legislation-core/observability/sanitize-telemetry"
 import type { Telemetry } from "@repo/legislation-core/observability/telemetry"
 import * as Sentry from "@sentry/core"
 import { z } from "zod"
+import { currentTelemetryCorrelation } from "../../services/sentry/requestTelemetry"
 
 export function createAnalyticsTelemetry(): Telemetry {
   const safeMetadata = (metadata: unknown) => z.record(z.string(), z.unknown()).parse(sanitizeTelemetry(metadata))
@@ -20,7 +20,7 @@ export function createAnalyticsTelemetry(): Telemetry {
               attributes: {
                 "analytics.dataset": String(metadata.dataset ?? ""),
                 "analytics.query_hash": String(metadata.queryHash ?? ""),
-                "correlation.id": getRequestContext()?.correlationId ?? ""
+                ...currentTelemetryCorrelation()
               }
             },
             async (span) => {
@@ -62,7 +62,7 @@ export function createAnalyticsTelemetry(): Telemetry {
                     rowCount: metadata.rowCount,
                     resultBytes: metadata.resultBytes
                   }),
-                  metadata: safeMetadata({ ...metadata, durationMs, correlationId: getRequestContext()?.correlationId })
+                  metadata: safeMetadata({ ...metadata, durationMs, ...currentTelemetryCorrelation() })
                 })
               }
             }
@@ -77,7 +77,7 @@ export function createAnalyticsTelemetry(): Telemetry {
           stage: String(metadata.stage),
           category,
           queryHash: String(metadata.queryHash ?? ""),
-          correlationId: getRequestContext()?.correlationId ?? "",
+          ...currentTelemetryCorrelation(),
           databaseCode: postgresErrorCode(error) ?? ""
         },
         extra: { analytics: sanitizeTelemetry(metadata) }

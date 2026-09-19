@@ -32,6 +32,7 @@ globalThis.fetch = async (input, init) => {
 }
 const Sentry = await import("@sentry/nextjs")
 const { assertEdgeTelemetryRuntime, createEdgeSentryOptions } = await import("./edgeSentryOptions.ts")
+const { withRequestTelemetry } = await import("./requestTelemetry.ts")
 assertEdgeTelemetryRuntime()
 const envelopes = []
 let sendFailures = 0
@@ -67,28 +68,35 @@ assert.ok(client)
 assert.equal(client.constructor.name, "VercelEdgeClient")
 const completed = []
 async function request(operation, traceId) {
-  await Sentry.withIsolationScope(async (scope) => {
-    scope.setTag("operation", operation)
-    scope.setUser({ email: `PRIVATE-${operation}@example.test` })
-    await Sentry.continueTrace({ sentryTrace: `${traceId}-${"c".repeat(16)}-1` }, async () => {
-      await Sentry.startSpan({ name: "/api/bills/[billId]", op: "http.server" }, async () => {
-        await new Promise((resolve) => setTimeout(resolve, operation === "record_inspection" ? 5 : 1))
-        assert.equal(Sentry.getIsolationScope().getScopeData().tags.operation, operation)
-        await fetch(`https://trusted.example.test/${operation}`)
-        await fetch(`https://untrusted.example.test/?redirect=https://trusted.example.test/${operation}`)
-        Sentry.captureRequestError(
-          new Error(`PRIVATE-${operation}`),
-          {
-            path: `/api/bills/PRIVATE-${operation}`,
-            method: "GET",
-            headers: { authorization: "synthetic-private" }
-          },
-          { routerKind: "App Router", routePath: "/api/bills/[billId]", routeType: "route" }
-        )
-        completed.push(operation)
-      })
-    })
-  })
+  await withRequestTelemetry(
+    new Request("https://trusted.example.test/api/bills", {
+      headers: {
+        "sentry-trace": `${traceId}-${"c".repeat(16)}-1`,
+        baggage: "private=PRIVATE_BAG"
+      }
+    }),
+    async (safeRequest) => {
+      const scope = Sentry.getIsolationScope()
+      scope.setTag("operation", operation)
+      scope.setUser({ email: `PRIVATE-${operation}@example.test` })
+      assert.equal(safeRequest.headers.get("baggage"), null)
+      await new Promise((resolve) => setTimeout(resolve, operation === "record_inspection" ? 5 : 1))
+      assert.equal(Sentry.getIsolationScope().getScopeData().tags.operation, operation)
+      await fetch(`https://trusted.example.test/${operation}`)
+      await fetch(`https://untrusted.example.test/?redirect=https://trusted.example.test/${operation}`)
+      Sentry.captureRequestError(
+        new Error(`PRIVATE-${operation}`),
+        {
+          path: `/api/bills/PRIVATE-${operation}`,
+          method: "GET",
+          headers: { authorization: "synthetic-private" }
+        },
+        { routerKind: "App Router", routePath: "/api/bills/[billId]", routeType: "route" }
+      )
+      completed.push(operation)
+      return new Response("fixture")
+    }
+  )
 }
 try {
   await Promise.all([request("record_inspection", "a".repeat(32)), request("reference_search", "b".repeat(32))])

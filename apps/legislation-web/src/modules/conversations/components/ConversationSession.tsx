@@ -7,6 +7,7 @@ import { DefaultChatTransport, type UIMessage } from "ai"
 import { createContext, useContext, useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import { correlatedFetch } from "../../../services/sentry/correlatedFetch"
 import {
   conversationTextMessages,
   conversationReferenceSchema,
@@ -37,6 +38,7 @@ function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string
   let isExplicitlyCancelled = false
   const transport = new DefaultChatTransport({
     api: "/chat",
+    fetch: correlatedFetch,
     prepareSendMessagesRequest: ({ id, messages, body }) => {
       isExplicitlyCancelled = false
       const metadata = z
@@ -275,7 +277,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   }
 
   async function loadResultPage(resultId: string, page: number, signal: AbortSignal) {
-    const response = await fetch("/chat", {
+    const response = await correlatedFetch("/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
       signal,
@@ -312,7 +314,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   }
 
   async function loadVoteDetails(resultId: string, recordId: string, signal: AbortSignal) {
-    const response = await fetch("/chat", {
+    const response = await correlatedFetch("/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
       signal,
@@ -333,7 +335,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   }
 
   async function loadMeetingDetails(resultId: string, recordId: string, signal: AbortSignal) {
-    const response = await fetch("/chat", {
+    const response = await correlatedFetch("/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
       signal,
@@ -360,7 +362,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
     cursor?: string,
     parentRecordId?: string
   ) {
-    const response = await fetch("/chat", {
+    const response = await correlatedFetch("/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
       signal,
@@ -412,7 +414,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
     answerRequest.current = controller
     setIsConfirmingClarification(true)
     try {
-      const result = await fetch("/chat", {
+      const result = await correlatedFetch("/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
         signal: controller.signal,
@@ -465,7 +467,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   }
 
   async function searchReferences(query: string, kind: string, signal: AbortSignal) {
-    const response = await fetch("/chat", {
+    const response = await correlatedFetch("/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
       signal,

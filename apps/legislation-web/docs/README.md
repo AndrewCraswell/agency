@@ -197,6 +197,7 @@ The catalog below includes every retained document. Most product work needs only
 - [Edge telemetry runtime](engineering/edge-telemetry.md)
 - [Browser errors, navigation and Web Vitals](engineering/browser-telemetry.md)
 - [Shared Node telemetry owner](engineering/node-telemetry.md)
+- [Request, run and vendor correlation](engineering/telemetry-correlation.md)
 - [Telemetry event and coverage catalog](engineering/telemetry-events.md)
 - [Conversation and composer telemetry](engineering/conversation-telemetry.md)
 - [Conversation tool execution and performance telemetry](engineering/tool-execution-telemetry.md)

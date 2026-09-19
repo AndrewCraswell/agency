@@ -61,7 +61,7 @@ vi.mock("../../modules/search/research-runtime", () => ({
 vi.mock("../../modules/conversations/capture", () => ({
   observeChatResponse: (options: { input: unknown; start: () => unknown }) => {
     capturedInputs.push(options.input)
-    return { stream: Promise.resolve(options.start()), completed: Promise.resolve(), getTraceId: () => null }
+    return { stream: Promise.resolve(options.start()), completed: Promise.resolve(), getCorrelation: () => ({}) }
   }
 }))
 let model: MockLanguageModelV4

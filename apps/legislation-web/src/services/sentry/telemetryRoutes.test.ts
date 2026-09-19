@@ -9,6 +9,8 @@ it.each([
   ["/conversations/private-thread?secret=hidden", "/conversations/[conversationId]", "conversation"],
   ["/records/person/private-id", "/records/[kind]/[recordId]", "record"],
   ["/chat", "/chat", "conversation"],
+  ["/dev/representatives?address=PRIVATE", "/dev/representatives", "development"],
+  ["/api/dev/representatives?address=PRIVATE", "/api/dev/representatives", "development"],
   ["/api/bills/batch/", "/api/bills/batch", "api"],
   ["/api/bills/private-bill", "/api/bills/[billId]", "api"],
   ["/api/legal/provisions/resolve", "/api/legal/provisions/resolve", "api"],
@@ -42,6 +44,14 @@ it("resolves every shipped Next route/page through the executable registry", () 
 })
 
 it("keeps operational, gated and demo routing populations distinct", () => {
+  expect(telemetryCoverageForRoute("/dev/representatives")).toMatchObject({
+    group: "development",
+    exception: "excluded_from_product_usage"
+  })
+  expect(telemetryCoverageForRoute("/api/dev/representatives")).toMatchObject({
+    group: "development",
+    exception: "excluded_from_product_usage"
+  })
   expect(telemetryCoverageForRoute("/")).toMatchObject({ owner: "web", exception: "demo_separate" })
   expect(telemetryCoverageForRoute("/health")).toMatchObject({
     group: "probe",

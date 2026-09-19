@@ -1,5 +1,6 @@
 import type { StackFrame } from "@sentry/core"
 import { z } from "zod"
+import { telemetryCorrelationSchema } from "./telemetryCorrelation"
 import { telemetryFields as f, type TelemetryScalar } from "./telemetryFields"
 import { resolveTelemetryRoute } from "./telemetryRoutes"
 
@@ -102,6 +103,7 @@ export function projectSafeModelFields(value: Readonly<Record<string, TelemetryS
 }
 
 const metadataFields = {
+  ...telemetryCorrelationSchema.shape,
   operation: sentryPayloadFields.operation,
   category: z.union([f.failure, f.toolFailure]),
   stage: f.stage,

@@ -1,4 +1,4 @@
-import { captureException, setTag, withIsolationScope } from "@sentry/nextjs"
+import { captureException, setTag } from "@sentry/nextjs"
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
@@ -49,6 +49,7 @@ import { createToolFailureReporter } from "../../modules/conversations/toolFailu
 import { digest } from "../../modules/evaluations/contracts"
 import { apiErrorResponse, readJsonBody } from "../../modules/request-handling/api/next/http"
 import { getResearchRuntime } from "../../modules/search/research-runtime"
+import { associateTelemetryRun, withRequestTelemetry } from "../../services/sentry/requestTelemetry"
 
 export const runtime = "nodejs"
 
@@ -62,7 +63,7 @@ export function GET() {
 }
 
 export async function POST(request: Request) {
-  return withIsolationScope(() => handleChatRequest(request))
+  return withRequestTelemetry(request, handleChatRequest)
 }
 
 async function handleChatRequest(request: Request) {
@@ -257,6 +258,7 @@ async function handleChatRequest(request: Request) {
     }
     let isAwaitingClarification = false
     const runId = crypto.randomUUID()
+    associateTelemetryRun(runId)
     setTag("runId", runId)
     const reportToolFailure = createToolFailureReporter(runId)
     const presentationRecords = createPresentationRecords(parsed.data.sessionKey)
@@ -377,7 +379,7 @@ async function handleChatRequest(request: Request) {
               createdAt: new Date().toISOString(),
               sessionId: parsed.data.sessionId,
               runId,
-              traceId: capture.getTraceId(),
+              correlation: capture.getCorrelation(),
               model: researchModelId,
               promptVersion: prompt.version
             }

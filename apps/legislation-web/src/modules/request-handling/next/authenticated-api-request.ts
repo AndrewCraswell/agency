@@ -1,5 +1,6 @@
 import { AuthenticationError, createWorkosAuthenticator } from "@repo/legislation-core/auth/workos"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
+import { withRequestTelemetry } from "../../../services/sentry/requestTelemetry"
 import type { LegislationConfig } from "../../configuration/config"
 import { getNextLegislationApplication } from "../../legislation/runtime/runtime"
 import type { HttpApiHandler } from "../api/http"
@@ -29,6 +30,14 @@ export async function executeAuthenticatedApiRequest(
   request: Request,
   handler: HttpApiHandler,
   dependencies: AuthenticatedApiRequestDependencies = {}
+): Promise<Response> {
+  return withRequestTelemetry(request, (safeRequest) => executeAuthenticatedRequest(safeRequest, handler, dependencies))
+}
+
+async function executeAuthenticatedRequest(
+  request: Request,
+  handler: HttpApiHandler,
+  dependencies: AuthenticatedApiRequestDependencies
 ): Promise<Response> {
   const application = (dependencies.getApplication ?? getNextLegislationApplication)()
   const execute = dependencies.execute ?? executeNextHttpApiHandler

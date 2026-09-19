@@ -161,6 +161,55 @@ function logFixture(): Log {
 }
 
 describe("allowlisted Sentry payloads", () => {
+  it("keeps validated cross-vendor references in errors, spans and logs but never metric dimensions", () => {
+    const privacy = createSentryPrivacy(policy)
+    const correlation = {
+      request_id: id,
+      browser_request_id: id,
+      run_id: id,
+      sentry_trace_id: traceId,
+      langfuse_trace_id: "c".repeat(32),
+      parent_request_trace_id: "d".repeat(32)
+    }
+    const event = privacy.beforeSend({
+      ...errorFixture(),
+      contexts: { correlation: { ...correlation, sessionKey: privateText, raw_provider_id: privateText } }
+    })
+    expect(event?.contexts?.correlation).toEqual(correlation)
+    const log = logFixture()
+    const projected = privacy.beforeSendLog({ ...log, attributes: { ...log.attributes, ...correlation } })
+    expect(projected?.attributes).toMatchObject(correlation)
+    const span = projectSentrySpan(
+      {
+        trace_id: traceId,
+        span_id: spanId,
+        start_timestamp: 1,
+        timestamp: 2,
+        data: { ...correlation, sessionKey: privateText }
+      },
+      policy
+    )
+    expect(span?.data).toEqual(correlation)
+    const metric = privacy.beforeSendMetric({
+      name: "rostra.web_vital.cls",
+      type: "distribution",
+      value: 0.01,
+      attributes: {
+        environment: "production",
+        runtime: "browser",
+        content_mode: "live",
+        route_template: "/",
+        device: "desktop",
+        navigation: "hard",
+        ...correlation
+      }
+    })
+    expect(metric).not.toBeNull()
+    for (const key of Object.keys(correlation)) {
+      expect(metric?.attributes).not.toHaveProperty(key)
+    }
+    expect(JSON.stringify([event, projected, span, metric])).not.toContain(privateText)
+  })
   it("retains actual Turbopack chunk hashes without retaining arbitrary source paths", () => {
     expect(safeCodeLocation("http://user:secret@localhost/_next/static/chunks/293gsag4bq8qh.js?token=PRIVATE")).toBe(
       "/_next/static/chunks/293gsag4bq8qh.js"
