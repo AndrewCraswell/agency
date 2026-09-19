@@ -713,3 +713,9 @@ exited zero. Corrected source-input fingerprint:
 Corrected cloud image: `sha256:ef58f4a63286c8d6d6a3c105830530c945bf9dc14d15e3eed0385bb74c38df51`.
 Full `pnpm verify` was attempted but stopped in unrelated concurrent web edits at `conversations/capture.ts:161-162`;
 this is not a clean repository-wide verification result.
+
+The corrected isolated image was deployed successfully. Automatic execution `leg-dev-openstates-candidate-r9kwz`
+ran from 09:11:54 to 09:12:24 UTC and succeeded. The shared coordinator then confirmed the committed empty-window
+receipt: one completed window, 89 pending, next window ID
+`4ea6955f88beb592bf507954d1e23362f81c147434fca7a99dfafc834eba8266`. Queue peek was empty after settlement.
+This closes the empty-week runtime defect end to end; it does not establish full-calendar completion.
