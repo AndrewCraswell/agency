@@ -59,6 +59,7 @@ const sources = [
     href: "https://openstates.org",
     description: "50 states, DC and Puerto Rico",
     categories: ["Bills", "Votes", "Committees", "People", "Meetings", "Documents"],
+    plannedCategories: [],
     status: "Varies by legislature"
   },
   {
@@ -66,6 +67,7 @@ const sources = [
     href: "https://www.congress.gov",
     description: "Federal legislation and congressional records",
     categories: ["Bills", "Amendments", "Votes", "Committees", "People", "Meetings", "Documents"],
+    plannedCategories: [],
     status: "Congressional records"
   },
   {
@@ -73,13 +75,15 @@ const sources = [
     href: "https://www.govinfo.gov",
     description: "Federal Register, annual CFR and committee directories",
     categories: ["Committees", "Documents", "Rules"],
-    status: "Coming soon"
+    plannedCategories: ["Documents", "Rules"],
+    status: "Partial coverage"
   },
   {
     name: "eCFR.gov",
     href: "https://www.ecfr.gov",
     description: "Current consolidated federal regulations",
     categories: ["Rules"],
+    plannedCategories: ["Rules"],
     status: "Coming soon"
   },
   {
@@ -87,6 +91,7 @@ const sources = [
     href: "https://www.federalregister.gov",
     description: "Rule metadata, agencies and regulatory references",
     categories: ["Documents", "Rules"],
+    plannedCategories: ["Documents", "Rules"],
     status: "Coming soon"
   },
   {
@@ -94,6 +99,7 @@ const sources = [
     href: "https://www.regulations.gov",
     description: "Dockets, comments and supporting documents",
     categories: ["Documents", "Rules"],
+    plannedCategories: ["Documents", "Rules"],
     status: "Coming soon"
   },
   {
@@ -101,6 +107,7 @@ const sources = [
     href: "https://www.fec.gov",
     description: "Campaign and committee finance filings",
     categories: ["Documents", "Funding"],
+    plannedCategories: ["Documents", "Funding"],
     status: "Coming soon"
   }
 ]
@@ -296,7 +303,11 @@ function Coverage() {
                 <TableCell className={styles.coverageCell} key={category}>
                   <CoverageMark
                     isSupported={source.categories.includes(category)}
-                    isPlanned={source.status === "Planned" || source.status === "Coming soon"}
+                    isPlanned={
+                      source.plannedCategories?.includes(category) === true ||
+                      source.status === "Planned" ||
+                      source.status === "Coming soon"
+                    }
                   />
                 </TableCell>
               ))}
