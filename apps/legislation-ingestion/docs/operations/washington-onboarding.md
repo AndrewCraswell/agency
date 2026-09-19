@@ -827,3 +827,15 @@ but window `37548bc9ec87d291f52b2fa135a85ee0e65aa6557507934ff22da00ea3a79528` re
 `wa-event-fc8e8e7b-eb2f-45a0-a045-0b0ee667b0f8`, with no retained manifest or settlement marker. No ownership was
 cleared and no duplicate calendar execution was launched. Safe recovery must establish dispatch/worker settlement,
 not assume lease age or a missing local process means a cloud request cannot still execute.
+
+The corrected second bill batch subsequently committed ten bills with zero unresolved sponsors and four unresolved
+positions, then automatically dispatched the third batch on `20260919.22`. Receipt manifest SHA-256:
+`d68971f43eaf880d39d7a61c6de22e8a28e2d8e8761f2704852c2200e43cbded`. Hosted duplicate handling is therefore verified
+for the failed batch, not merely a local replay. The latest full verification passed ingestion coverage but failed eight
+tests in the concurrently edited web vote-attribution suite; repository verification remains open.
+
+The operator reconciliation CLI now uses the same `scraperBillState` schema as hosted ingestion rather than an NC/AK-only
+enum. Its production read-only Washington dry run completed, and `--apply` without a reviewed digest failed before database
+access. The observed plan digest was `e7f2ffce3fdb1b3667fa3997c3d71bd6ca8abd8bc46a49357e8b8dbce6f7ba16`, with 169,213
+proposed positions, 567 unresolved positions and three proposed sponsors. Counts can shrink as live ingestion resolves
+relationships. No manual apply was performed; the hosted reconciliation still requires the frozen bill cycle to finish.

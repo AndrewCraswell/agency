@@ -2,6 +2,7 @@ import { createDatabase, withReadOnlyDatabase } from "@repo/legislation-core/dat
 import { Command } from "commander"
 import { sql } from "drizzle-orm"
 import { z } from "zod"
+import { scraperBillState } from "../../src/ingestion/openstates/scraper-bill-profiles.js"
 import {
   applyScraperPersonBackfillPlan,
   buildScraperPersonBackfillPlan,
@@ -16,7 +17,7 @@ const command = new Command()
   .option("--expected-plan-sha256 <hash>", "required exact plan digest when applying")
   .option("--sample <count>", "include deterministic relationship samples in a dry run", "0")
   .parse()
-const state = z.enum(["ak", "nc"]).parse(command.args[0])
+const state = scraperBillState.parse(command.args[0])
 const session = z
   .string()
   .regex(/^[A-Za-z0-9-]+$/)
