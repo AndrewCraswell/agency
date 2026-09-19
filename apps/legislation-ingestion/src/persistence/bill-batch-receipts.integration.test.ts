@@ -59,6 +59,35 @@ describePostgres.sequential("atomic bill batch receipts", () => {
     await database.delete(schema.jurisdictions).where(eq(schema.jurisdictions.id, jurisdictionId))
     await pool.end()
   })
+  it("replaces changed archive vote identities without duplicates and rolls back failed replacement", async () => {
+    const input = aggregate("archive-vote-identity")
+    const snapshot = (identity: string, motion: string) => ({
+      vote: { id: `${input.bill.id}:${identity}`, billId: input.bill.id, motion },
+      positions: [{ voteId: `${input.bill.id}:${identity}`, sourceIdentity: "recorded-name", option: "yes" }]
+    })
+    const ordinal = snapshot("ordinal", "Passage")
+    const stable = snapshot("stable", "Passage")
+    await upsertBillAggregates(database, [{ ...input, votes: [ordinal] }])
+    for (let replay = 0; replay < 2; replay++) {
+      await upsertBillAggregates(database, [{ ...input, votes: [stable] }])
+      const rows = await database.select().from(schema.votes).where(eq(schema.votes.billId, input.bill.id))
+      expect(rows.map((row) => row.id)).toEqual([stable.vote.id])
+      expect(
+        await database.select().from(schema.votePositions).where(eq(schema.votePositions.voteId, ordinal.vote.id))
+      ).toEqual([])
+      expect(
+        await database.select().from(schema.votePositions).where(eq(schema.votePositions.voteId, stable.vote.id))
+      ).toHaveLength(1)
+    }
+    await expect(upsertBillAggregates(database, [{ ...input, votes: [ordinal, ordinal] }])).rejects.toThrow()
+    expect(
+      (await database.select().from(schema.votes).where(eq(schema.votes.billId, input.bill.id))).map((row) => row.id)
+    ).toEqual([stable.vote.id])
+    expect(
+      await database.select().from(schema.votePositions).where(eq(schema.votePositions.voteId, stable.vote.id))
+    ).toHaveLength(1)
+  })
+
   it("commits empty-work receipts only under ownership and rejects conflicting replay", async () => {
     const owner = { source, stream: "ownership:empty-window", token: "empty-token" }
     const receipt = {

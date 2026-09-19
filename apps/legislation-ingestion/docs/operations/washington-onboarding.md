@@ -365,3 +365,18 @@ Existing database rows created with ordinal identities must be inventoried and r
 corrected normalizer; otherwise the new IDs could create additional rows. No production deployment or archive replay
 has been performed for this correction. Ambiguous unidentified repeated observations and cross-source identity
 reconciliation remain part of the database acceptance gate.
+
+### Database replay preflight
+
+Read-only production inspection found exactly 2,306 current-session Washington votes, all matching the identities
+from the retained August archive, with no extra or missing IDs. Motions and yes/no counts match. All 2,306 still carry
+raw `pass`/`fail` outcomes rather than the canonical vocabulary, and lack the archive-supplied chamber and date.
+The corrected normalizer supplies those facts. No Washington votes have meeting outcome/evidence references in the
+queried database. Reports are `production-vote-identity-inventory.json` and `production-vote-field-inventory.json` in
+the archive audit store. Production was not mutated.
+
+Inspection confirmed that the existing shared aggregate writer replaces each supplied bill vote snapshot within its
+transaction, cascading removal of old positions. Therefore a separate identity migration is not required for this
+snapshot writer. A real isolated PostgreSQL regression verifies replacement, a duplicate-free second replay, and
+rollback of both votes and positions when a replacement fails; all 15 receipt integration tests passed. Production
+refresh still needs an explicitly bounded snapshot replay and post-write comparison, including resolved-link handling.
