@@ -101,7 +101,7 @@ const sources = [
     href: "https://www.fec.gov",
     description: "Campaign and committee finance filings",
     categories: ["Documents", "Funding"],
-    status: "Planned"
+    status: "Coming soon"
   }
 ]
 
