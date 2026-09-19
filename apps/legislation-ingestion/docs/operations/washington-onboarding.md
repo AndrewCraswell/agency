@@ -13,10 +13,10 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [x] | Reconcile the complete published archive inventory | All five catalog sessions have retained archives with verified stored checksums; refreshed current-session release compared across all 3,413 bills. This proves inventory coverage, not historical database field parity |
 | [x] | Review pinned scraper and live source access | Pinned revision `d43f853796ceeeb49205f7d144790647764ce105` has bill and event scrapers; both 2025 and 2026 official bill inventory requests returned HTTP 200 without credentials |
 | [x] | Freeze bounded current-session bill inventory | Both annual XML sources retained and replayed; 3,411 unique bills in 342 disjoint batches, with validated exclusions and source hashes |
-| [ ] | Add Washington to shared extraction and promotion | Extend reviewed jurisdiction profiles and source policy, not a parallel ingestion engine; validate source/dispatch/build fingerprints |
+| [x] | Add Washington to shared extraction and promotion | Shared reviewed profiles, source policy and fingerprint checks are implemented; version-pinned hosted bill batches and event windows have promoted successfully. Full inventory acceptance remains separate |
 | [x] | Run isolated bounded bill extraction in both chambers | HB 1000 and SB 5000 retained successfully; this is source extraction only, not canonical promotion or hosted activation |
 | [ ] | Validate bill actions, documents and individual votes | Compare retained cases from both chambers to official pages, including substitutions, engrossments, resolutions and amendments |
-| [ ] | Import and validate people and service history | Production import and replay verified for 336 people and 367 accepted terms; 20 historical conflicts remain quarantined. Current 147-member roster is complete; history acceptance remains open |
+| [ ] | Import and validate people and service history | Production import and replay verified for 337 people and 376 accepted terms; 12 historical conflicts remain quarantined as of the Liias review. Current 147-member roster is complete; history acceptance remains open |
 | [x] | Validate current people/committee snapshot with reusable district capacities | Shared validator accepts 98 House members, 49 senators, 51 committees and 609 membership assertions; zero unresolved member references; source snapshot, not production import |
 | [x] | Import committees and memberships | Production import/replay verified for 51 committees and 609 current membership assertions. This does not establish complete committee detail profiles or historical memberships |
 | [ ] | Import meetings and agenda items | Bound event windows, preserve Pacific time, stable source IDs and cancellation evidence; validate related bills/committees |
@@ -937,3 +937,18 @@ import and replay preserved all fourteen terms for the seven reviewed people. Au
 Holy's historical House term with journal provenance, current Senate term and four current committee memberships.
 The focused review/import/quarantine suite passed all 24 tests. Full repository verification is still running; this
 cohort check does not establish full-session or statewide acceptance.
+
+Marko Liias's duplicate one-day Senate assertion is now replaced with documented House service from January 7, 2008
+to January 21, 2014. The [2008 House journal](https://lawfilesext.leg.wa.gov/law/Journals/2008/HJ_2008_001.htm)
+records the appointment, the [proofed 2014 House journal page 71](https://leg.wa.gov/media/2r3mko3g/2014housejournal.pdf)
+records immediate resignation, and the [2023 legislative historical reference](https://leg.wa.gov/media/3uuctf3k/members-of-the-legislature-1889-2023.pdf)
+distinguishes January 21 Senate appointment from January 22 swearing-in. The supplied Senate start is preserved.
+Full preparation/import now yields 337 people, 376 terms, eight applied reviews and 12 held histories. Production
+replay preserves all sixteen terms for the eight reviewed people. Authenticated MCP returns Liias's House/Senate
+terms and the corrected House source evidence. All 24 focused tests passed.
+
+The full `pnpm verify` run ended unsuccessfully in ingestion coverage: 2,007 tests passed and one regulatory
+`table-passages.test.ts:418` test timed out at 30 seconds. Its isolated rerun passed in 15.08 seconds without changes.
+This does not make the full suite green; later web/Python/database/acceptance gates remain unproven. No unrelated
+regulatory tests, timeout limits or web search changes were modified. Calendar receipts subsequently reached 16/90,
+with another hosted window executing and bill continuations still active on `20260919.22`.

@@ -178,5 +178,36 @@
         "reason": "The 2013 first-day House journal records Holy as the sixth-district representative and the members' oath on January 14. The January 14, 2019 official announcement identifies his first Senate term after three House terms. Replace the reversed, duplicate Senate assertion with that House service; retain the supplied January 13, 2019 end immediately before the documented Senate transition."
       }
     ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Marko-Liias-3aa56ec5-a087-40b1-960a-acb9426ccb2a.yml",
+    "sourceSha256": "ec547e40711e32ad5dbc1b21a5807844ad0258d7074d72584f92b23310c20008",
+    "personId": "ocd-person/3aa56ec5-a087-40b1-960a-acb9426ccb2a",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "21",
+          "start_date": "2014-01-22",
+          "end_date": "2014-01-22"
+        },
+        "after": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "21",
+          "start_date": "2008-01-07",
+          "end_date": "2014-01-21"
+        },
+        "evidenceUrls": [
+          "https://lawfilesext.leg.wa.gov/law/Journals/2008/HJ_2008_001.htm",
+          "https://leg.wa.gov/media/2r3mko3g/2014housejournal.pdf",
+          "https://leg.wa.gov/media/3uuctf3k/members-of-the-legislature-1889-2023.pdf"
+        ],
+        "reason": "The 2008 House journal records the January 7 appointment to district 21, position 2. The proofed 2014 House journal page 71 records immediate resignation on January 21. The 2023 Members of the Legislature reference confirms Senate appointment January 21 and swearing-in January 22. Replace the duplicate one-day Senate assertion with the documented House service and preserve the supplied Senate swearing-in start."
+      }
+    ]
   }
 ]
