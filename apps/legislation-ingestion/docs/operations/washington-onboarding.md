@@ -5,6 +5,39 @@ document/OCR, embedding and search pipelines. Do not activate schedules until th
 Initial extraction concurrency is one; retain the existing global content-worker ceiling and publisher limits while
 North Carolina drains. No new provider, database or embedding model is approved by this onboarding.
 
+### Authenticated bill, vote and document acceptance
+
+The post-activation-fix full `pnpm verify` run completed successfully (session 69406). Its default positive
+database-backed MCP test remains skipped without a supplied corpus; the separate disposable-corpus acceptance below
+is the positive database evidence. No unrelated search worktree changes were staged.
+
+Authenticated production MCP returned HB 1002 and HB 1480. HB 1002's February 10, 2026 final-passage vote contains
+98 positions mapped to 98 distinct canonical people, with no unmapped positions. An independent fresh fetch of
+`https://wslwebservices.leg.wa.gov/legislationservice.asmx/GetRollCalls?billNumber=1002&biennium=2025-26` matched all
+98 source names and vote choices with no missing or extra positions: 70 yes, 24 no, four excused (canonical `other`).
+This validates source-name/choice fidelity and complete person linkage, not an independent biographical review of
+each linked person. Exact HTML version `bill:wa:2025-2026:hb:1002:document:c8e3ff0f54f1cd51440519c4` returned two
+nonempty sections with canonical document/section URLs and no additional page. This is existing extracted content,
+not evidence that the refreshed statewide content backlog or OCR acceptance is finished.
+
+Open acceptance findings:
+
+- HB 1002 still has one unlinked sponsor (`Scott`), while the later HB 1480 refresh links Shaun Scott. Reconcile
+  relationships through the shared import/replay path after foundation refresh; do not add a name-specific SQL fix.
+- SB 5000 remains unavailable through bill detail because canonical action provenance is not persisted. The full
+  bill refresh has not reached this Senate record; verify again after its batch, preserving the fail-closed contract.
+- Washington official document URLs currently project `isOfficial: false`. The document projection's official-source
+  classifier recognizes federal sources only. Resolve the shared provenance policy and tests rather than patching
+  this single bill or treating successful retrieval as fully correct provenance.
+
+At this inspection the calendar chain had completed 62/90 windows and dispatched
+`run_06gbjva0oeetsjinkbmp2kbo01`. Bill dispatch `run_06gbjv2702micvrg12t8lonj01` completed and launched
+`run_06gbjv3hcgbd3j4jbi2r0jh001`. Both NC recovery controllers listed below were executing on version 33.
+The HB 1205-1229 alias dry run finished with 307 eligible candidates and no held groups; its apply process is in
+progress (session 41002). Do not advance the completed deletion cursor beyond HB 1204 until apply finishes and
+the same-page zero-candidate check passes. Each deletion rechecks downloaded bytes and dependencies and retains
+the removed row in the reconciliation audit checkpoint for recovery.
+
 ### Cross-state content activation recovery
 
 Hosted inspection found older North Carolina content controllers on `20260919.6` failed when their global enabled-state
