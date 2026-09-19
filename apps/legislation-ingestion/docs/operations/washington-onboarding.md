@@ -509,3 +509,23 @@ immutable receipt was a no-op. Evidence is `reports/production-canary.json` in t
 This is a bounded production canary, not full calendar coverage, cancellation coverage for this particular day,
 or proof that every agenda bill relationship resolves. The prior isolated multi-day fixture covers cancellation behavior.
 Hosted execution, complete planned windows, authenticated retrieval and recurring synchronization remain open.
+
+## Authenticated MCP smoke findings
+
+The connected production MCP returned Washington active people, lexical bill search, lexical passage search, all eleven
+canary meetings and House Housing meeting detail on September 19. Meeting date filters require UTC ISO timestamps
+(`Z`); date-only and offset timestamps were rejected by the deployed tool schema. Passage results retained canonical
+Washington bill/document/section identities and source URLs. This is positive authenticated retrieval evidence, not a
+complete API/MCP acceptance pass.
+
+Two acceptance failures remain actionable:
+
+- Semantic and hybrid passage searches for `affordable housing development`, scoped to Washington's 2025-2026 session,
+  returned retryable `dependency_unavailable` errors after approximately 15.7 and 31.2 seconds, respectively.
+- House Housing meeting `event:openstates:wa-agenda-32398` returns three agenda items with `billIds: null`.
+  The API intentionally hides relationships unless `billRelationsComplete` is true. The shared agenda bill resolver
+  currently resolves identifiers without updating that completeness assertion, and the Washington adapter supplies
+  explicit bill references without establishing source completeness. Fix must distinguish fully resolved explicit
+  references from malformed/missing source references, rather than unconditionally setting the flag or guessing from prose.
+
+Do not activate recurring Washington synchronization until these and the remaining ingestion gates pass.
