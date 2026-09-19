@@ -120,6 +120,19 @@ an unresolved Scott sponsor, which remains within the full-cycle person-reconcil
 The latest full `pnpm verify` completed unsuccessfully in web coverage: 2,636 tests passed and 18 failed across eight
 files. The complete repository verification gate remains open; no test bypass or timeout relaxation was introduced.
 
+The same alias-repair CLI now accepts `--session-id`, `--limit` (default 10, maximum 25 bills) and an exclusive
+`--after-bill-id` cursor instead of an explicit pair. It selects provisional pairs through a shared, state-independent
+planner and reports held groups rather than choosing among ambiguous or processed copies. Each selected pair still
+requires a fresh sequential download and locked transactional verification; selection alone never permits deletion.
+Dry-run remains the default. Only a successfully finished page prints `pageComplete` and `nextBillId`; resume with
+that cursor, or rerun the same page after interruption. Previously committed removals are no longer candidates and
+their audit snapshots remain intact. Held groups require separate review even when a page completes.
+
+Example from the ingestion package: `node --env-file=../legislation-web/.env --import tsx
+tools/openstates/reconcile-document-alias.ts --session-id session:wa:2025-2026 --limit 5 --database-env DATABASE_URL`.
+Add `--apply` only to apply the freshly verified repairs. This operator does not introduce a Washington-only cleanup
+engine, extra embeddings, parallel publisher requests or a new recurring schedule.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled

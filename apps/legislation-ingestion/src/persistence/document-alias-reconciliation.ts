@@ -21,6 +21,34 @@ type AliasRow = Pick<
   | "ocrPageCount"
 >
 
+/** Provisional candidates: application still requires fresh bytes and locked revalidation. */
+export function planUntouchedDocumentAliases(rows: readonly AliasRow[]) {
+  const groups = new Map<string, AliasRow[]>()
+  for (const row of rows) {
+    const url = URL.parse(row.sourceUrl)
+    if (!url || !["http:", "https:"].includes(url.protocol)) continue
+    const key = JSON.stringify([row.billId, row.classification, documentTransportUrl(url).href])
+    const group = groups.get(key) ?? []
+    group.push(row)
+    groups.set(key, group)
+  }
+  const candidates: { billId: string; keepId: string; removeId: string; sourceUrl: string }[] = []
+  const held: string[][] = []
+  for (const group of groups.values()) {
+    if (group.length < 2) continue
+    const keep = group.find((row) => row.processingStatus === "processed")
+    const remove = group.find((row) => row.processingStatus === "pending")
+    try {
+      if (group.length !== 2 || !keep || !remove) throw new Error("Ambiguous or processed copies")
+      assertUntouchedDocumentAlias(keep, remove, keep.contentHash ?? "")
+      candidates.push({ billId: keep.billId, keepId: keep.id, removeId: remove.id, sourceUrl: keep.sourceUrl })
+    } catch {
+      held.push(group.map((row) => row.id).sort())
+    }
+  }
+  return { candidates: candidates.sort((a, b) => a.removeId.localeCompare(b.removeId)), held }
+}
+
 /** Only an untouched pending alias may be removed; a fresh byte hash proves current content equivalence. */
 export function assertUntouchedDocumentAlias(keep: AliasRow, remove: AliasRow, downloadedHash: string) {
   if (

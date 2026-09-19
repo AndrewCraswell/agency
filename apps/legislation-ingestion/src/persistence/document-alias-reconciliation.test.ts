@@ -1,5 +1,5 @@
 import { expect, it } from "vitest"
-import { assertUntouchedDocumentAlias } from "./document-alias-reconciliation.js"
+import { assertUntouchedDocumentAlias, planUntouchedDocumentAliases } from "./document-alias-reconciliation.js"
 
 const pending = {
   id: "new",
@@ -24,6 +24,39 @@ const keep = {
   processingStatus: "processed",
   contentHash: hash
 }
+it("plans within bill and collection boundaries", () => {
+  const result = planUntouchedDocumentAliases([
+    pending,
+    keep,
+    { ...pending, id: "other", billId: "other" },
+    { ...pending, id: "amendment", classification: "amendment" }
+  ])
+  expect(result.candidates).toEqual([
+    { billId: keep.billId, keepId: "old", removeId: "new", sourceUrl: keep.sourceUrl }
+  ])
+  expect(result.held).toEqual([])
+})
+it("holds processed copies, attempted copies and ambiguous groups", () => {
+  for (const rows of [
+    [keep, { ...pending, processingStatus: "processed" }],
+    [keep, { ...pending, processingAttempts: 1 }],
+    [keep, pending, { ...pending, id: "third" }],
+    [{ ...keep, contentHash: null }, pending]
+  ]) {
+    const result = planUntouchedDocumentAliases(rows)
+    expect(result.candidates).toEqual([])
+    expect(result.held).toHaveLength(1)
+  }
+})
+it("does not alias unsupported URLs or identical source URLs", () => {
+  expect(
+    planUntouchedDocumentAliases([
+      { ...keep, sourceUrl: "ftp://example.gov/file" },
+      { ...pending, sourceUrl: "ftp://example.gov/file" }
+    ]).candidates
+  ).toEqual([])
+  expect(planUntouchedDocumentAliases([{ ...keep, sourceUrl: pending.sourceUrl }, pending]).held).toHaveLength(1)
+})
 it("accepts only freshly verified untouched transport aliases", () => {
   expect(() => assertUntouchedDocumentAlias(keep, pending, hash)).not.toThrow()
 })
