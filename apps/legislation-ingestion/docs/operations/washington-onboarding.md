@@ -7,6 +7,31 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Host-reference fix `41af79f` passed full `pnpm verify` (86708), including 240 API acceptance cases and built MCP
+acceptance; optional database and positive-corpus skips remain explicit. It has not been deployed.
+
+Read-only inspection of all 90 retained archives identified exactly six missing publisher host identities for the
+32 official-agenda records. None currently has an accepted numeric identity mapping:
+
+| Publisher reference suffix (prefix `waCommitteeId:2025-26:`) | Code | Held agendas | Source host |
+| --- | --- | ---: | --- |
+| `other:21488` | I900 | 18 | SAO audit-hearing body, also named JLARC I-900 Subcommittee |
+| `other:18059` | TAX | 7 | Citizen Commission for Performance Measurement of Tax Preferences |
+| `other:-141` | SLC | 3 | Statute Law Committee |
+| `joint:18048` | ADJLEC | 1 | Aging and Disability Issues joint committee |
+| `other:-12` | LEAP | 2 | Legislative Evaluation and Accountability Program |
+| `joint:35341` | empty | 1 | Joint Select Committee on Civic Health |
+
+The two SAO names share exact publisher identity `other:21488`; do not create two organizations from their names.
+Organization summary projection requires verified classification, active state and provenance; a meeting observation
+alone does not supply all those facts. Supplemental imports must reuse entity persistence, preserve existing rosters,
+and keep detail/child/membership completeness false unless independently established.
+
+Bill worker `run_06gbkk4g2pgkbdret7blq51601` is terminal `FAILED` with `source_timeout` (extractor exit 1).
+Committed receipts remain 84/342 and there is no current ownership lease. Local publisher API and document requests
+also timed out. No replacement has been dispatched: verify source recovery and settled worker state before resuming
+the exact pending batch `8202e6af1d3e59f4ebb2a1616eedb58c3f00c87449bc3d8216d264d1806c1f5d`.
+
 The Washington event adapter now preserves signed, biennium/agency-scoped publisher host IDs for `Other` and
 `Agency` records instead of dropping them. It reuses the existing shared unique-identity resolver; no organizations
 are created and no code-only alias is admitted for these categories. Eighteen focused tests pass, including
