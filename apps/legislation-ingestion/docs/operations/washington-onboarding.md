@@ -897,3 +897,19 @@ Production import and replay subsequently succeeded. For the four reviewed peopl
 the second import preserved the exact term IDs, dates and source URLs. The three current-only fallback terms were
 replaced by accepted House/Senate histories, rather than retained as extra copies. This verifies the reviewed cohort,
 not the remaining 16 held histories or the entire session's vote links.
+
+## Calendar ownership recovery and hosted continuation
+
+The interrupted local calendar ownership was released only after additional runtime evidence: the original PID was
+absent; the visible candidate queue was empty during inspection; all earlier candidate executions after the held claim
+were successful; and the sole execution active during inspection (`leg-dev-openstates-candidate-r45jq`) subsequently
+settled bill attempt `wa-bill-002dd3ebe2e7d219f3f5001f3cdbec6b`, not the orphaned event attempt. The NC/AK worker still
+uses `openstates-scraper-dispatch`, separate from the candidate queue. The old event attempt still had neither a retained
+manifest nor a settlement marker. This recovery did not use expiry alone. Token-matched release succeeded without
+deleting any queue messages or cancelling any workers. Evidence: `artifacts/openstates-washington-hosted/calendar-orphan-recovery-evidence.json`.
+
+One idempotent hosted `openstates-event-windows` continuation was submitted as `run_06gbifvoqsr2cthvmfanofr501`, pinned to
+`20260919.22` and the unchanged frozen 90-window plan. It resumes from committed receipts (13 at recovery), rather than a
+caller-supplied next offset. Further continuations are hosted and version-pinned, not dependent on a long-lived local
+operator. No recurring schedule or concurrency increase was introduced. Submission alone does not prove the next window
+was promoted; its receipt remains a verification gate.
