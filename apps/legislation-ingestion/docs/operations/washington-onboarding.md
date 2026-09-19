@@ -79,7 +79,10 @@ the next slot. The handoff uses the existing global refill idempotency key for p
 delay: the old run's ordinary continuation resolves to the same dispatcher, not a parallel continuation. If it executes
 before the current owner finishes, its normal ownership check may return awaiting-in-flight; verify the old run and
 receipts before any explicit resume. No active extraction was cancelled; no NC/AK configuration or schedule changed.
-Deployment is verified, but the handoff's execution and corrected production writes are not yet verified.
+The handoff subsequently completed and dispatched `run_06gbj0tii21vi6vtkve2thjc01`, verified EXECUTING on
+`20260919.25`. Production had 38 promoted batches and exactly one active owner for that child's batch
+`3c9bd59e7175d8dbefa61cf5eb4e00321153a5f631e7fd22ea1e07700493a1bb`. The version switch is verified; inspect its
+completed receipt and persisted documents before claiming corrected production writes. Global promotion remains off.
 
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
