@@ -83,8 +83,12 @@ The full ingestion database project also ran against the isolated database: 80 p
 tests skipped because their separate connections were not configured. Those skips are not accepted as passing tests.
 Additional isolated API/database checks passed 18/19 tests. The supporting-material lexical pagination fixture failed
 at `schema.integration.test.ts:784`: its first equal-score page returned material 1100 instead of expected 1099 at
-the boundary. This is an open deterministic-pagination acceptance issue, not a production-data finding. The unrelated
-dirty search implementation remains untouched; no broad search acceptance is claimed from these checks.
+the boundary. Investigation confirmed the documented query intentionally samples by section ID before ranking material
+IDs. Unpadded section suffix 99 falls outside the fixed 250-section sample; material 1250 belongs inside it. The stale
+fixture expected a material-ID sample instead. The corrected test checks exact sampled membership across all three
+pages, 250 unique results, cursor binding and the capped `truncated` flag. All 19 isolated API/database checks now pass.
+No production query or unrelated dirty search implementation was changed. This establishes the bounded sample contract,
+not exhaustive corpus recall or live statewide search acceptance.
 
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |

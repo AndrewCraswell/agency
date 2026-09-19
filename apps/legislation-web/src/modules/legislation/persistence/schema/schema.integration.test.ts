@@ -781,9 +781,18 @@ describePostgres.sequential("legislation PostgreSQL serving", () => {
       if (firstCursor === null) {
         throw new Error("Expected a cursor for the first bounded material search page")
       }
-      expect(firstPage.data.map((item) => item.recordId)).toEqual(
-        Array.from({ length: 100 }, (_, index) => candidateId(index))
-      )
+      // The fixed source sample is ordered by section ID, not material ID. With
+      // unpadded section suffixes, 99 sorts after 250 and is outside the sample.
+      // Equal-score material ranking happens only after that bounded selection.
+      const sampledMaterialIds = Array.from({ length: 251 }, (_, index) => String(index))
+        .sort()
+        .slice(0, 250)
+        .map(Number)
+        .sort((left, right) => left - right)
+        .map(candidateId)
+      expect(sampledMaterialIds).not.toContain(candidateId(99))
+      expect(sampledMaterialIds).toContain(candidateId(250))
+      expect(firstPage.data.map((item) => item.recordId)).toEqual(sampledMaterialIds.slice(0, 100))
       expect(firstPage.data.map((item) => item.rank)).toEqual(Array.from({ length: 100 }, (_, index) => index + 1))
       expect(firstPage).toMatchObject({
         links: { next: `/api/search/supporting-materials?cursor=${firstCursor}` },
@@ -830,9 +839,7 @@ describePostgres.sequential("legislation PostgreSQL serving", () => {
       })
       expect(secondResponse.status).toBe(200)
       const secondPage = supportingMaterialSearchPageSchema.parse(await secondResponse.json())
-      expect(secondPage.data.map((item) => item.recordId)).toEqual(
-        Array.from({ length: 100 }, (_, index) => candidateId(index + 100))
-      )
+      expect(secondPage.data.map((item) => item.recordId)).toEqual(sampledMaterialIds.slice(100, 200))
       expect(secondPage.data.map((item) => item.rank)).toEqual(Array.from({ length: 100 }, (_, index) => index + 101))
       const secondCursor = secondPage.meta.nextCursor
       if (secondCursor === null) {
@@ -846,9 +853,10 @@ describePostgres.sequential("legislation PostgreSQL serving", () => {
       })
       expect(thirdResponse.status).toBe(200)
       const thirdPage = supportingMaterialSearchPageSchema.parse(await thirdResponse.json())
-      expect(thirdPage.data.map((item) => item.recordId)).toEqual(
-        Array.from({ length: 50 }, (_, index) => candidateId(index + 200))
-      )
+      expect(thirdPage.data.map((item) => item.recordId)).toEqual(sampledMaterialIds.slice(200))
+      const allIds = [...firstPage.data, ...secondPage.data, ...thirdPage.data].map((item) => item.recordId)
+      expect(allIds).toEqual(sampledMaterialIds)
+      expect(new Set(allIds).size).toBe(250)
       expect(thirdPage.data.map((item) => item.rank)).toEqual(Array.from({ length: 50 }, (_, index) => index + 201))
       expect(thirdPage).toMatchObject({ links: { next: null }, meta: { nextCursor: null, truncated: true } })
 
