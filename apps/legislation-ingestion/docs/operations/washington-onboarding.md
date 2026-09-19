@@ -7,6 +7,17 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Read-only inspection of the five older Open States UUID meetings confirms all five lack publisher-local date,
+source URL, retrieval/update timestamps, and any upstream identifier beyond their Open States UUID. Their event
+times fall on September 15-16, 2026. No matching UUID was found in the scoped retained Washington foundation,
+meeting-canary or event-window JSON artifacts; this is not proof that no other retained copy exists.
+The next identity-check route is an upstream event response with explicit publisher references, not a name/time join.
+Using the production-configured `OPENSTATES_API_KEY` through the existing client returned HTTP 401 from
+`https://v3.openstates.org/events`. The retrieved credential was nonempty, not masked, not a recognized placeholder,
+and had no surrounding whitespace. A credential refresh was requested without exposing its value.
+No meeting was merged/deleted and no credential was changed. This API authorization gate is separate from the
+publisher-maintenance timeout affecting the direct Washington scraper.
+
 Brad Hawkins has a partial, exact-file-hash-bound review correcting the House start from January 1 to
 January 14, 2013. The official first-day House journal contains his district 12 election certification and the
 members' oath. Visually inspected member-history PDF page 51 (printed 45) confirms House service in 2013/2015
