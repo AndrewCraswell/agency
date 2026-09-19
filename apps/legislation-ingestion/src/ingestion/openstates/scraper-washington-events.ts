@@ -87,7 +87,8 @@ const host = z.object({
   // Publisher identities are signed: joint committees include negative IDs.
   id: z.string().regex(/^-?[1-9][0-9]*$/),
   agency: z.enum(["House", "Senate", "Joint", "Agency", "Other"]),
-  code: z.string().regex(/^[A-Z0-9&]+$/),
+  // Some publisher hosts have no abbreviation. Their ID/name remain evidence, not a fabricated roster link.
+  code: z.string().regex(/^[A-Z0-9&]*$/),
   name: z.string().trim().min(1)
 })
 const recordSchema = z
@@ -182,7 +183,7 @@ export function normalizeWashingtonScraperEvents(
     result.event.sessionRelationsComplete = true
     result.sessionIds = [legislativeSessionId("wa", scraperBillProfiles.wa.session)]
     result.organizationReferences = hosts.flatMap((entry) =>
-      entry.agency === "House" || entry.agency === "Senate"
+      (entry.agency === "House" || entry.agency === "Senate") && entry.code.length > 0
         ? [`waCommittee:${entry.agency.toLowerCase()}:${entry.code}`]
         : []
     )

@@ -38,6 +38,26 @@ function fixture() {
   }
 }
 
+it.each(["Joint", "House", "Senate"])(
+  "retains %s hosts without abbreviations without inventing organization links",
+  (agency) => {
+    const raw = fixture()
+    raw.extras.committees[0]!.agency = agency
+    raw.extras.committees[0]!.code = ""
+    const [snapshot] = normalizeWashingtonScraperEvents([raw], context)
+    expect(snapshot?.organizationReferences).toEqual([])
+    expect(snapshot?.event.organizationRelationsComplete).toBe(false)
+    expect(snapshot?.event.sourceId).toBe("32346")
+    expect(snapshot?.event.sourceIsOfficial).toBe(true)
+  }
+)
+
+it("still rejects malformed nonempty abbreviations", () => {
+  const raw = fixture()
+  raw.extras.committees[0]!.code = "invalid/code"
+  expect(() => normalizeWashingtonScraperEvents([raw], context)).toThrow()
+})
+
 async function archivedWindow(ids: string[], records: unknown[]) {
   const objects = new Map<string, Uint8Array>()
   const store = {

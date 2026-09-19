@@ -156,6 +156,17 @@ The newer full verification failed in ingestion coverage (2,044 passed, five fai
 test and four retained-regulatory-audit tests timed out, with a cleanup error after timeout. Both files passed all
 15 tests unchanged in isolation. The full verification gate is still not green.
 
+The source-timeout bill retry completed on `20260919.25`, promoted ten bills with zero unresolved sponsors/positions,
+and dispatched refill `run_06gbj8fs24mib17ffidd8lm501`. Calendar investigation identified a different failure in
+`run_06gbioel1j482m4asi0nnoiv01`: the complete retained June 25–July 1 window includes agenda 33418 whose publisher
+host has ID 35341 but an empty abbreviation. The normalizer incorrectly required a nonempty code even for hosts it
+does not map to a chamber committee. The source adapter now permits an empty abbreviation and never constructs an
+organization reference from it, including for House/Senate hosts. It preserves the source host evidence and marks
+organization coverage incomplete instead of inventing a mapping. Malformed nonempty codes remain rejected.
+Eighteen focused event/window tests, types and lint passed. Reprocessing the exact retained window read-only now
+validates both agendas (33418 and 33394, with two and five items); both honestly retain incomplete organization
+relations. Deployment and the resumed hosted calendar receipt remain required before closing this failure.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
