@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
-import { applyReviewedPeopleRoles } from "./people-role-review.js"
+import { applyReviewedPeopleRoles, peopleRoleReviewDigest } from "./people-role-review.js"
 
 const role = {
   type: "upper",
@@ -36,6 +36,17 @@ const review = {
 const apply = (data: unknown = [review], input = file) => applyReviewedPeopleRoles(input, "wa", review.revision, data)
 
 describe("source-bound people role reviews", () => {
+  it("fingerprints relevant review changes without invalidating unrelated states or revisions", () => {
+    const digest = (data: unknown) => peopleRoleReviewDigest("wa", review.revision, data)
+    expect(digest([review])).not.toBe(digest([]))
+    const unrelated = { ...review, state: "nc" }
+    expect(digest([review, unrelated])).toBe(digest([unrelated, review]))
+    expect(digest([review, unrelated])).toBe(digest([review]))
+    expect(digest([{ ...review, revision: "b".repeat(40) }])).toBe(digest([]))
+    expect(digest([{ ...review, changes: [{ ...review.changes[0], reason: "New verified evidence" }] }])).not.toBe(
+      digest([review])
+    )
+  })
   it("corrects only exact reviewed roles without mutating immutable input or metadata", () => {
     const result = apply()
     expect(JSON.parse(result.file.content)).toEqual({

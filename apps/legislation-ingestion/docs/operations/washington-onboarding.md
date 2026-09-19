@@ -7,6 +7,17 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+The version 34 foundation replay completed with 337 people, 381 terms, 13 applied reviews and seven historical
+holds. Direct production read-back confirmed Dufault's undated fallback was replaced by exactly two canonical
+terms: January 14, 2019-January 8, 2023, and January 13, 2025 onward. A second identical retained replay was
+dispatched as `run_06gbk9eih3vtv6t2gqcvd8bl01` after confirming no foundation task was active, to verify no duplicates.
+
+The generic refresh invalidation fix is implemented locally: the people checkpoint stores a deterministic digest
+of reviews scoped to state and upstream revision; refresh cannot skip when that digest is missing or changed.
+Unrelated states/revisions do not change the digest. This preserves the existing source revision and supplementary
+committee inventory checks. Nineteen focused tests pass; full verification is running as 20720. Deploy this change
+without global promotion, then verify one required refresh followed by `no_change` for unchanged inputs.
+
 The HB 1255-1279 guarded alias apply completed (61318), removing 200 untouched duplicate rows. A repeat dry run
 from the same HB 1254 boundary returned zero candidates, zero held groups, and a complete page. The verified
 cleanup cursor is now `bill:wa:2025-2026:hb:1279`; audit checkpoints retain removed rows for recovery.

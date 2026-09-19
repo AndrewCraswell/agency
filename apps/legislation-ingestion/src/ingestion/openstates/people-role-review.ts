@@ -30,6 +30,17 @@ const review = z.strictObject({
     .min(1)
 })
 
+/** Scope refresh invalidation to the reviewed jurisdiction and immutable upstream revision. */
+export function peopleRoleReviewDigest(state: string, revision: string, data: unknown = reviewedRoles) {
+  const selected = z
+    .array(review)
+    .parse(data)
+    .filter((entry) => entry.state === state && entry.revision === revision)
+    .map((entry) => JSON.stringify(entry))
+    .sort()
+  return createHash("sha256").update(JSON.stringify(selected)).digest("hex")
+}
+
 /** Trusted reviewed data only; no names, date guesses, or source-supplied overrides. */
 export function applyReviewedPeopleRoles(
   file: PeopleRepositoryFile,

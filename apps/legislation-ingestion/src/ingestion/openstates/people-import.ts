@@ -12,7 +12,7 @@ import {
   validatePeopleRepositorySnapshot,
   type PeopleRepositoryFile
 } from "./people-repository.js"
-import { applyReviewedPeopleRoles } from "./people-role-review.js"
+import { applyReviewedPeopleRoles, peopleRoleReviewDigest } from "./people-role-review.js"
 import { planPeopleLegislativeTerms } from "./people-term-plan.js"
 
 const personSchema = z.object({
@@ -281,6 +281,7 @@ export async function importPeopleRepository(
       stream: `${state}-people-history`,
       cursor: {
         revision,
+        reviewDigest: peopleRoleReviewDigest(state, revision),
         retrievedAt: retrievedAt.toISOString(),
         complete: result.status === "validated",
         quarantine: result.quarantine,

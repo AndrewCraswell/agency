@@ -79,7 +79,15 @@ export const openStatesFoundationRefresh = schemaTask({
         )
       )
       const inventory = await acquireFoundationCommitteeInventory(payload.state, store)
-      if (foundationSourcesUnchanged(payload.revision, checkpoints[0]?.cursor, checkpoints[1]?.cursor, inventory)) {
+      if (
+        foundationSourcesUnchanged(
+          payload.state,
+          payload.revision,
+          checkpoints[0]?.cursor,
+          checkpoints[1]?.cursor,
+          inventory
+        )
+      ) {
         return { status: "no_change" as const, state: payload.state, revision: payload.revision }
       }
       const files = await downloadPeopleRepositoryRevision(payload.revision, fetch, process.env.GITHUB_TOKEN)

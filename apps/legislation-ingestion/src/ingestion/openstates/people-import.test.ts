@@ -174,7 +174,10 @@ describe("people history import", () => {
         preserveUnobservedPeople: true,
         protectTermHistory: true,
         replaceOrganizations: false,
-        checkpoint: expect.objectContaining({ stream: "nc-people-history" })
+        checkpoint: expect.objectContaining({
+          stream: "nc-people-history",
+          cursor: expect.objectContaining({ reviewDigest: expect.stringMatching(/^[a-f0-9]{64}$/) })
+        })
       })
     )
   })

@@ -1,5 +1,6 @@
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { readBounded } from "../http-client.js"
+import { peopleRoleReviewDigest } from "./people-role-review.js"
 import { scraperBillProfiles, type ScraperBillState } from "./scraper-bill-profiles.js"
 import {
   retainWashingtonCommitteeInventory,
@@ -24,12 +25,14 @@ export async function acquireFoundationCommitteeInventory(
 }
 
 export function foundationSourcesUnchanged(
+  state: ScraperBillState,
   revision: string,
   peopleCursor: Record<string, unknown> | undefined,
   committeeCursor: Record<string, unknown> | undefined,
   inventory: Awaited<ReturnType<typeof acquireFoundationCommitteeInventory>>
 ) {
   if (peopleCursor?.revision !== revision || committeeCursor?.revision !== revision) return false
+  if (peopleCursor.reviewDigest !== peopleRoleReviewDigest(state, revision)) return false
   if (!inventory) return true
   const previous = committeeCursor.officialInventory
   return (
