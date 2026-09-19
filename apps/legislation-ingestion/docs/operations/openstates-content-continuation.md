@@ -4,6 +4,9 @@ Archive imports and content completion are separate gates. The content controlle
 batches for an exact state/session. At its child-count budget or after ten minutes between children, it submits one
 idempotent successor using the same state/session and batch limits. Extraction repairs are not replayed by successors.
 The two-hour worker limit leaves headroom inside the four-hour controller limit even for a slow final child.
+Children and successors are locked to the parent deployment version. A later deployment cannot silently replace
+the continuation contract halfway through a chain. To adopt a newer version, use an explicit handoff after the old
+chain drains or is deliberately stopped; deploying alone does not upgrade existing chains.
 
 After a full bill scan and all carried embedding work, the worker checks canonical document state using the indexed
 jurisdiction/session bill scope. Due extraction/OCR continues; future retries use a delayed successor. In-flight

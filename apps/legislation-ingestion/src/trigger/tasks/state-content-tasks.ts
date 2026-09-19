@@ -100,6 +100,7 @@ export const stateContentController = task({
             extractionRepairs: continuation === 0 ? payload.extractionRepairs : undefined
           },
           {
+            // triggerAndWait already pins the child to the current worker version.
             idempotencyKey: await idempotencyKeys.create(`${ctx.run.id}:${payload.state}:${continuation}`, {
               scope: "global"
             })
@@ -112,6 +113,8 @@ export const stateContentController = task({
     if (result.nextWork.kind === "drained") return { ...result, continuationRunId: null }
     const { extractionRepairs: _repairs, resumeAfterRunId: _predecessor, ...nextPayload } = payload
     const handle = await tasks.trigger("openstates-content-controller", nextPayload, {
+      // Unlike triggerAndWait, fire-and-forget triggers otherwise select the latest deployment.
+      version: ctx.deployment?.version,
       concurrencyKey: `${payload.state}:${payload.session?.toLowerCase() ?? (payload.state === "nc" ? "2025" : "34")}`,
       idempotencyKey: await idempotencyKeys.create(`state-content:continue:${ctx.run.id}`, { scope: "global" }),
       idempotencyKeyTTL: "30d",
