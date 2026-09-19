@@ -254,6 +254,12 @@ Cleanup after HB 1129 stopped partway through its 219 candidates with PostgreSQL
 lock timeout. The process exited unsuccessfully without a completed cursor. Prior per-pair commits are retained and
 the interrupted pair rolled back; retry the same HB 1129 cursor, not a later page. A same-page retry has been started.
 
+After agency-code import, authenticated MCP `get_event(event:openstates:wa-agenda-33382)` succeeds with the canonical
+Joint Transportation Committee organization and seven agenda items. The multi-window relationship replay remains
+active. A separate preexisting UUID-based event (`event:openstates:ocd-event-7a560f01-8d56-4819-b9e8-6c43e70fd4e9`,
+September 16, 2026) has no source URL and incomplete organization relations. Audit it against the later calendar
+window before asserting duplicate-free event coverage; do not merge by title/date or delete it without identity evidence.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
