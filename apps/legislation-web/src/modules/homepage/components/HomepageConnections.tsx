@@ -73,21 +73,21 @@ const sources = [
     href: "https://www.govinfo.gov",
     description: "Federal Register, annual CFR and committee directories",
     categories: ["Committees", "Documents", "Rules"],
-    status: "Active backfill"
+    status: "Coming soon"
   },
   {
     name: "eCFR.gov",
     href: "https://www.ecfr.gov",
     description: "Current consolidated federal regulations",
     categories: ["Rules"],
-    status: "Active backfill"
+    status: "Coming soon"
   },
   {
     name: "FederalRegister.gov",
     href: "https://www.federalregister.gov",
     description: "Rule metadata, agencies and regulatory references",
     categories: ["Documents", "Rules"],
-    status: "Metadata sync"
+    status: "Coming soon"
   },
   {
     name: "Regulations.gov",
@@ -296,7 +296,7 @@ function Coverage() {
                 <TableCell className={styles.coverageCell} key={category}>
                   <CoverageMark
                     isSupported={source.categories.includes(category)}
-                    isPlanned={source.status === "Planned"}
+                    isPlanned={source.status === "Planned" || source.status === "Coming soon"}
                   />
                 </TableCell>
               ))}
