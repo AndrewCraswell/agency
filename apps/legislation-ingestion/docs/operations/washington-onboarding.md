@@ -41,10 +41,24 @@ Open acceptance findings:
 At this inspection the calendar chain had completed 62/90 windows and dispatched
 `run_06gbjva0oeetsjinkbmp2kbo01`. Bill dispatch `run_06gbjv2702micvrg12t8lonj01` completed and launched
 `run_06gbjv3hcgbd3j4jbi2r0jh001`. Both NC recovery controllers listed below were executing on version 33.
-The HB 1205-1229 alias dry run finished with 307 eligible candidates and no held groups; its apply process is in
-progress (session 41002). Do not advance the completed deletion cursor beyond HB 1204 until apply finishes and
-the same-page zero-candidate check passes. Each deletion rechecks downloaded bytes and dependencies and retains
-the removed row in the reconciliation audit checkpoint for recovery.
+The HB 1205-1229 alias apply completed successfully (session 41002), removing 307 untouched duplicate rows after
+fresh byte/dependency checks. A repeat dry run returned zero candidates and zero held groups with a complete page.
+The completed deletion cursor is now HB 1229. Removed rows remain in reconciliation audit checkpoints for recovery.
+The next 25-bill page is dry-run only until its byte checks complete.
+
+NC recovery controllers both completed their time budgets without failure and handed off: NC 2003 continued as
+`run_06gbk2hf9a6decp4oar5d7sk01`, and NC 2011 as `run_06gbk2kfehj8trbat5lgmnvt01`. Their outputs explicitly keep
+`ingestionComplete: false`. The calendar chain reached 64/90 windows and continued as
+`run_06gbk0fr45vp4vlbf5qaclh301`; bill batch work continued as `run_06gbjvqml531gc5qlmogap6o01`.
+
+Provenance fix `7a7e523` has a clean committed-source deployment snapshot prepared, excluding all untracked files
+and unrelated staged search changes. Full verification is running (session 25266; web coverage passed). Railway
+CLI read-back confirms web service `786fbca7-8798-4357-9b45-f0ba092a9750`, project
+`2378281c-c1c7-4530-8525-5f313741d19b`, production environment `9657912c-7bf8-4ec7-a9c5-387bf3df790d`, repository-root
+Docker context, `apps/legislation-web/Dockerfile`, and `/ready`. The preceding successful deployment is
+`9a75c51a-6745-4996-89a3-8aac97c0f2ad`. No deployment of the fix has been submitted yet; wait for the verification
+verdict and recheck for intervening releases before uploading. Railway MCP authentication is unavailable, while
+CLI access succeeds; no credentials or service configuration were changed.
 
 ### Cross-state content activation recovery
 
