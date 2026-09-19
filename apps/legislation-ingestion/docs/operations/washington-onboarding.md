@@ -7,6 +7,21 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+The next historical review removes Dufault's duplicate 2019-2023 role through the existing exact-fingerprint
+review data, without changing engine logic. The official 2023 House Journal, PDF pages 11 and 15 (printed 7 and
+11), identifies Sandlin's District 15 Position 2 election and the January 9 members' oath. Both pages were visually
+checked. Retained research PDF SHA256: `c38f5ac23e6dd739e036ffad5af04e91c4d5598f4986634b514242841b0ef29d`.
+Local replay of the full retained pair now yields 337 people, 381 terms, 13 applied reviews, seven historical holds,
+and zero coverage issues; the single-person replay yields exactly two terms without quarantine. All 24 focused
+people review/import/quarantine tests pass. Production still has the previous review set until verified deployment
+and retained foundation replay; do not report seven holds as the production count yet.
+
+Live receipt inspection reached 61/342 promoted bill batches, with `run_06gbk661pi2694gsunn4vdp801` executing.
+Calendar receipts reached 74/90 windows, with `run_06gbk67gh6co9da85tosgak801` executing. NC 2003's existing
+controller `run_06gbk4rvcfmsbdnc1amgj61o01` was also executing. No replacement or overlapping jobs were launched.
+The next alias page after HB 1254 has 200 candidates and no held groups; its dry-run byte checks are in progress
+(90212). This does not advance the completed cleanup cursor.
+
 Railway deployment `d2080fd2-f894-4727-8901-f236cc4a47c2` of committed fix `7a7e523` is successful.
 The final full `pnpm verify` run (25266) passed before deployment. An authenticated production MCP
 `get_bill_text` recheck for HB 1002's exact HTML document returned both nonempty sections with

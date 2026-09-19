@@ -2,6 +2,30 @@
   {
     "state": "wa",
     "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Jeremie-Dufault-2dce9967-a2fc-4211-9b1a-bce3b4f32a09.yml",
+    "sourceSha256": "0c5739fa24f27ce484be7307d1050b9227932b0bf3f5b92248b9d6458457b1a5",
+    "personId": "ocd-person/2dce9967-a2fc-4211-9b1a-bce3b4f32a09",
+    "changes": [
+      {
+        "before": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "15",
+          "start_date": "2019-01-14",
+          "end_date": "2023-01-09"
+        },
+        "after": null,
+        "evidenceUrls": [
+          "https://leg.wa.gov/media/n4sln43p/2023housejournalvol1.pdf",
+          "https://content.govdelivery.com/accounts/WALEGHRCSANDLIN/bulletins/3460f9c"
+        ],
+        "reason": "The 2023 House Journal, first day January 9, printed pages 7 and 11, lists Bryan Sandlin elected to District 15 Position 2 and records the members' oath. Remove the overlapping duplicate assertion extending Dufault's previous term through the new session's first day. Preserve the separate source role ending January 8 and the independent current role; do not invent a replacement term."
+      }
+    ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
     "path": "data/wa/retired/Bill-Ramos-b6f7474d-cf29-42de-9190-08ea9d000779.yml",
     "sourceSha256": "f007185cc55b0ee39fa65dc0f6325fac3850994c8f9134cfe284ce6ce7246b7e",
     "personId": "ocd-person/b6f7474d-cf29-42de-9190-08ea9d000779",
