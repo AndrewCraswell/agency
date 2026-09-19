@@ -2,10 +2,11 @@ import { createHash } from "node:crypto"
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { sql } from "drizzle-orm"
 import { z } from "zod"
+import { scraperBillState, type ScraperBillState } from "./scraper-bill-profiles.js"
 import { createScraperPersonResolver, loadScraperPersonCandidates } from "./scraper-person-resolution.js"
 import { scraperVoteChamberFromEvidence } from "./scraper-vote-chamber.js"
 
-const stateSchema = z.enum(["ak", "nc"])
+const stateSchema = scraperBillState
 const sessionSchema = z.string().regex(/^[A-Za-z0-9-]+$/)
 type Chamber = "legislature" | "lower" | "upper" | "unicameral"
 
@@ -34,7 +35,7 @@ export interface ScraperPersonBackfillPlan {
     sourceName: string
     sourcePersonId: string
   }[]
-  state: "ak" | "nc"
+  state: ScraperBillState
   session: string
   summary: {
     candidates: number
@@ -105,6 +106,7 @@ export async function buildScraperPersonBackfillPlan(
     order by sponsor.id
   `)
   const positionRows = await database.execute<{
+    chamber: string | null
     name: string | null
     motion: string
     observed_date: string | null
@@ -113,7 +115,7 @@ export async function buildScraperPersonBackfillPlan(
     source_url: string | null
     vote_id: string
   }>(sql`
-    select position.vote_id, position.source_identity, vote.source_url, vote.motion,
+    select position.vote_id, position.source_identity, vote.source_url, vote.motion, vote.chamber,
       totals.position_count, position.source_name as name,
       coalesce(vote.held_date, vote.held_at::date)::text as observed_date
     from legislation.bills bill
@@ -143,6 +145,7 @@ export async function buildScraperPersonBackfillPlan(
   for (const row of positionRows.rows) {
     positionCounts.total += 1
     const rowChamber = scraperVoteChamberFromEvidence({
+      canonicalChamber: row.chamber,
       motion: row.motion,
       positionCount: row.position_count,
       session,

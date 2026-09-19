@@ -6,6 +6,29 @@ import {
 } from "./openstates-person-reconciliation.js"
 
 describe("Open States person reconciliation task", () => {
+  it("continues Washington through the same exact-cycle reconciliation contract", () => {
+    const payload = openStatesPersonReconciliationPayload.parse({
+      state: "wa",
+      session: "2025-2026",
+      inventoryId: "a".repeat(64),
+      planPath: "openstates/scraper-plans/wa/2025-2026/wa-bills-cycle/plan.json"
+    })
+    expect(() =>
+      assertCompletedPersonReconciliationCycle(payload, {
+        inventoryId: payload.inventoryId,
+        promotionComplete: true
+      })
+    ).not.toThrow()
+    expect(() =>
+      assertCompletedPersonReconciliationCycle(
+        { ...payload, session: "2023-2024" },
+        {
+          inventoryId: payload.inventoryId,
+          promotionComplete: true
+        }
+      )
+    ).toThrow(/state and session/)
+  })
   it("binds one exact state session to one immutable inventory", () => {
     expect(
       openStatesPersonReconciliationPayload.parse({

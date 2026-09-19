@@ -1,3 +1,5 @@
+import type { ScraperBillState } from "./scraper-bill-profiles.js"
+
 export type ScraperVoteChamber = "legislature" | "lower" | "upper"
 
 function chamberFromCode(value: string | null): ScraperVoteChamber | undefined {
@@ -8,11 +10,13 @@ function chamberFromCode(value: string | null): ScraperVoteChamber | undefined {
 
 /** Derive a roll call's chamber only from its admitted official publisher URL. */
 export function scraperVoteChamberFromSourceUrl(
-  state: "ak" | "nc",
+  state: ScraperBillState,
   session: string,
   sourceUrl: string | null
 ): ScraperVoteChamber | undefined {
   if (sourceUrl === null) return undefined
+  // Washington's GetRollCalls URL covers both chambers; it is not chamber evidence.
+  if (state === "wa") return undefined
   let url: URL
   try {
     url = new URL(sourceUrl)
@@ -32,12 +36,20 @@ export function scraperVoteChamberFromSourceUrl(
 
 /** Classify Alaska journal tallies before falling back to the journal page chamber. */
 export function scraperVoteChamberFromEvidence(input: {
+  canonicalChamber?: string | null
   motion: string
   positionCount: number
   session: string
   sourceUrl: string | null
-  state: "ak" | "nc"
+  state: ScraperBillState
 }): ScraperVoteChamber | undefined {
+  if (
+    input.canonicalChamber === "lower" ||
+    input.canonicalChamber === "upper" ||
+    input.canonicalChamber === "legislature"
+  ) {
+    return input.canonicalChamber
+  }
   if (input.state === "ak") {
     if (/\bHOUSE VOTE\b/i.test(input.motion)) return "lower"
     if (/\bSENATE VOTE\b/i.test(input.motion)) return "upper"

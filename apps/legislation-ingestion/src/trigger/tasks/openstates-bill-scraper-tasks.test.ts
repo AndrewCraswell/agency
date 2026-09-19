@@ -1,6 +1,11 @@
 import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
 import {
+  scraperBuildFor,
+  approvedScraperBuildInputsSha256,
+  washingtonScraperCandidateBuild
+} from "../../ingestion/openstates/scraper-activation.js"
+import {
   assertBillPlanState,
   attemptId,
   billBatchConcurrencyKey,
@@ -26,7 +31,7 @@ describe("hosted Open States bill scraper task contract", () => {
     expect(source).not.toContain("OPENSTATES_API_KEY")
   })
 
-  it("accepts only the two explicitly activated current sessions", () => {
+  it("accepts reviewed current sessions without implying schedule activation", () => {
     expect(openStatesBillPlanPayload.parse({ state: "ak" })).toEqual({ state: "ak" })
     expect(openStatesBillPlanPayload.parse({ state: "ak", refreshDate: "2026-09-17" })).toEqual({
       state: "ak",
@@ -44,6 +49,14 @@ describe("hosted Open States bill scraper task contract", () => {
       "does not match"
     )
     expect(assertBillPlanState("ak", "openstates/scraper-plans/ak/34/ak-bills-cycle/plan.json")).toContain("/ak/34/")
+    expect(openStatesBillPlanPayload.parse({ state: "wa" })).toEqual({ state: "wa" })
+    expect(assertBillPlanState("wa", "openstates/scraper-plans/wa/2025-2026/wa-bills-cycle/plan.json")).toContain(
+      "/wa/2025-2026/"
+    )
+    expect(() => assertBillPlanState("wa", "openstates/scraper-plans/wa/2023-2024/wa-bills-cycle/plan.json")).toThrow()
+    expect(scraperBuildFor("wa")).toBe(washingtonScraperCandidateBuild)
+    expect(scraperBuildFor("nc")).toBe(approvedScraperBuildInputsSha256)
+    expect(scraperBuildFor("ak")).toBe(approvedScraperBuildInputsSha256)
   })
 
   it("uses a fresh bounded extraction identity for each task attempt", () => {

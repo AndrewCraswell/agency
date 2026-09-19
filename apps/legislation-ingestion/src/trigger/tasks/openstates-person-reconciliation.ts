@@ -5,6 +5,7 @@ import { z } from "zod"
 import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { requireScraperActivation } from "../../ingestion/openstates/scraper-activation.js"
+import { scraperBillState, scraperBillPlanPath } from "../../ingestion/openstates/scraper-bill-profiles.js"
 import { inspectScraperBillCycle } from "../../ingestion/openstates/scraper-cycle.js"
 import {
   applyScraperPersonBackfillPlan,
@@ -13,14 +14,12 @@ import {
 } from "../../ingestion/openstates/scraper-person-backfill.js"
 
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/)
-const planPathSchema = z
-  .string()
-  .regex(/^openstates\/scraper-plans\/(?:ak\/34|nc\/2025)\/[A-Za-z0-9][A-Za-z0-9-]{0,100}\/plan\.json$/)
+const planPathSchema = scraperBillPlanPath
 export const openStatesPersonReconciliationPayload = z.strictObject({
   inventoryId: digestSchema,
   planPath: planPathSchema,
   session: z.string().regex(/^[A-Za-z0-9-]+$/),
-  state: z.enum(["ak", "nc"])
+  state: scraperBillState
 })
 
 export function assertCompletedPersonReconciliationCycle(

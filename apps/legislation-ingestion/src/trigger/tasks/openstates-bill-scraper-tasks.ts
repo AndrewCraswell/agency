@@ -4,21 +4,22 @@ import { idempotencyKeys, schedules, task, tasks } from "@trigger.dev/sdk"
 import { z } from "zod"
 import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
-import {
-  approvedScraperBuildInputsSha256,
-  requireScraperActivation
-} from "../../ingestion/openstates/scraper-activation.js"
+import { scraperBuildFor, requireScraperActivation } from "../../ingestion/openstates/scraper-activation.js"
 import { readScraperBillPlan } from "../../ingestion/openstates/scraper-batches.js"
 import { acquireStateBillPlan } from "../../ingestion/openstates/scraper-bill-plan-acquisition.js"
+import {
+  scraperBillState,
+  scraperBillPlanPath,
+  scraperBillProfiles,
+  type ScraperBillState
+} from "../../ingestion/openstates/scraper-bill-profiles.js"
 import { billCloudRequest, dispatchCloudScraperAttempt } from "../../ingestion/openstates/scraper-cloud.js"
 import { inspectScraperBillCycle } from "../../ingestion/openstates/scraper-cycle.js"
 import { executeScraperBillBatch } from "../../ingestion/openstates/scraper-execution.js"
 import { scraperQueueFor } from "../../ingestion/openstates/scraper-queue.js"
 
-const stateSchema = z.enum(["ak", "nc"])
-const planPathSchema = z
-  .string()
-  .regex(/^openstates\/scraper-plans\/(?:ak\/34|nc\/2025)\/[A-Za-z0-9][A-Za-z0-9-]{0,100}\/plan\.json$/)
+const stateSchema = scraperBillState
+const planPathSchema = scraperBillPlanPath
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/)
 const dispatchWidth = 2
 
@@ -40,22 +41,22 @@ export const openStatesBillPlanPayload = z.strictObject({
 export const openStatesBillDispatchPayload = z.strictObject({ state: stateSchema, planPath: planPathSchema })
 export const openStatesBillCloudPayload = openStatesBillDispatchPayload.extend({ batchId: digestSchema.optional() })
 
-function stateConcurrencyKey(state: "ak" | "nc") {
+function stateConcurrencyKey(state: ScraperBillState) {
   return `production:openstates-scraper:bills:${state}`
 }
 
-export function billBatchConcurrencyKey(state: "ak" | "nc", batchId: string) {
+export function billBatchConcurrencyKey(state: ScraperBillState, batchId: string) {
   return `${stateConcurrencyKey(state)}:${digestSchema.parse(batchId)}`
 }
 
-export function attemptId(state: "ak" | "nc", triggerRunId: string, attemptNumber: number) {
+export function attemptId(state: ScraperBillState, triggerRunId: string, attemptNumber: number) {
   const attempt = z.number().int().positive().parse(attemptNumber)
   return `${state}-bill-${createHash("sha256").update(`${triggerRunId}:${attempt}`).digest("hex").slice(0, 32)}`
 }
 
-export function assertBillPlanState(state: "ak" | "nc", planPath: string) {
+export function assertBillPlanState(state: ScraperBillState, planPath: string) {
   const path = planPathSchema.parse(planPath)
-  const expected = state === "ak" ? "openstates/scraper-plans/ak/34/" : "openstates/scraper-plans/nc/2025/"
+  const expected = `openstates/scraper-plans/${state}/${scraperBillProfiles[state].session}/`
   if (!path.startsWith(expected)) throw new Error("Frozen bill plan does not match requested state")
   return path
 }
@@ -124,7 +125,7 @@ export const openStatesBillScraperDispatch = task({
     } finally {
       await pool.end()
     }
-    const selected = selectAvailableBillBatches(state)
+    const selected = selectAvailableBillBatches(state, payload.state === "wa" ? 1 : dispatchWidth)
     if (selected.length === 0) {
       return {
         status: state.promotionComplete ? ("cycle_promoted" as const) : ("awaiting_in_flight_batches" as const),
@@ -195,7 +196,7 @@ export const openStatesBillScraperCloud = task({
         planPath: payload.planPath,
         batchId: selected,
         runId,
-        approvedBuildInputsSha256: approvedScraperBuildInputsSha256,
+        approvedBuildInputsSha256: scraperBuildFor(payload.state),
         extractAndArchive: async (request) => {
           const paths = await dispatchCloudScraperAttempt({
             store,
@@ -245,7 +246,7 @@ async function refillBillScraper(
 }
 
 async function dispatchStateContent(
-  state: "ak" | "nc",
+  state: ScraperBillState,
   session: string,
   inventoryId: string,
   planPath: string,

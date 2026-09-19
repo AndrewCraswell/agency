@@ -2,6 +2,20 @@ import { describe, expect, it } from "vitest"
 import { scraperVoteChamberFromEvidence, scraperVoteChamberFromSourceUrl } from "./scraper-vote-chamber.js"
 
 describe("scraper vote chamber evidence", () => {
+  it("uses the canonical source-derived chamber for Washington, never its shared roll-call URL", () => {
+    const input = {
+      state: "wa" as const,
+      session: "2025-2026",
+      motion: "Third Reading",
+      positionCount: 49,
+      sourceUrl:
+        "https://wslwebservices.leg.wa.gov/LegislationService.asmx/GetRollCalls?billNumber=5000&biennium=2025-26"
+    }
+    expect(scraperVoteChamberFromEvidence(input)).toBeUndefined()
+    expect(scraperVoteChamberFromEvidence({ ...input, canonicalChamber: "upper" })).toBe("upper")
+    expect(scraperVoteChamberFromEvidence({ ...input, canonicalChamber: "lower" })).toBe("lower")
+    expect(scraperVoteChamberFromEvidence({ ...input, canonicalChamber: "unknown" })).toBeUndefined()
+  })
   it("derives Alaska chambers from official journal URLs", () => {
     expect(
       scraperVoteChamberFromSourceUrl(

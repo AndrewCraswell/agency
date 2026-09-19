@@ -730,3 +730,16 @@ Eight event preparation tests passed, including malformed signed IDs and the inc
 Hosted bill and meeting tasks now use the same explicit jurisdiction queue resolver. Twenty focused routing/task tests
 passed, including candidate isolation and failure before dispatch when an explicit routing table omits a state.
 The routing change is local until the Trigger deployment is updated; production NC/AK routing was not changed.
+
+The corrected January 8-14 retry (`leg-dev-openstates-candidate-5q46n`) succeeded and committed the second window.
+A sequential operator invocation of the shared cycle then committed the third window and continues toward the remaining
+87 windows, stopping on any failure. Each iteration re-reads the immutable plan and committed receipts; it does not
+advance on extraction success alone. This finite backfill is not the regular Washington sync schedule.
+
+Washington bill orchestration now reuses the existing bill plan, dispatch, extraction, person reconciliation and content
+controller chain. Reviewed states/session paths are derived from the shared bill profiles rather than separate task
+regexes. Washington selects its candidate fingerprint and one bill-batch dispatch slot; NC/AK retain their existing
+fingerprint and width. Washington is deliberately absent from managed bill schedule identities until acceptance.
+Person reconciliation now reads the canonical source-derived vote chamber: Washington's shared `GetRollCalls` URL
+does not establish which chamber voted, so missing chamber evidence stays unresolved. No guessed chamber or voter
+identity was introduced. These task changes still require a pinned Trigger deployment and hosted execution proof.
