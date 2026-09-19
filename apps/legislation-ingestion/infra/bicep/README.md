@@ -27,3 +27,10 @@ For an isolated candidate, reuse this template with a distinct `jobName` and `di
 `maxExecutions=1`. Create the queue first and inspect a deployment what-if before applying. Verify the existing job's
 image and queue remain unchanged after deployment. The candidate must use the same pinned build, retained-source
 validation and canonical-promotion boundaries; a successful extraction is not permission to activate regular syncing.
+
+Hosted bill and meeting tasks share one queue resolver. Without `OPENSTATES_SCRAPER_QUEUE_ROUTES`, they use
+`OPENSTATES_SCRAPER_QUEUE`. To isolate a candidate while retaining existing states, set an explicit JSON routing table,
+for example `{"nc":"openstates-scraper-dispatch","ak":"openstates-scraper-dispatch","wa":"openstates-scraper-canary"}`.
+When the table exists, every dispatched jurisdiction must have a route; missing or malformed routes fail before dispatch
+instead of falling back to a potentially incompatible worker. Queue selection does not replace build-fingerprint
+validation or the separate activation gate. Deploy task code before configuring this table.

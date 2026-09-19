@@ -46,6 +46,7 @@ describe("bounded meeting continuation task", () => {
     vi.clearAllMocks()
     vi.stubEnv("OPENSTATES_SCRAPER_ENABLED_STATES", "")
     vi.stubEnv("OPENSTATES_SCRAPER_QUEUE", "test-queue")
+    vi.stubEnv("OPENSTATES_SCRAPER_QUEUE_ROUTES", undefined)
     mocks.config.mockReturnValue({
       azure: { storageAccount: "testaccount", stateSourceContainer: "sources" },
       database: {}
@@ -58,6 +59,7 @@ describe("bounded meeting continuation task", () => {
   })
   it("closes the pool and dispatches only the exact receipt-derived continuation", async () => {
     vi.stubEnv("OPENSTATES_SCRAPER_ENABLED_STATES", "wa")
+    vi.stubEnv("OPENSTATES_SCRAPER_QUEUE_ROUTES", '{"wa":"candidate-queue","nc":"test-queue","ak":"test-queue"}')
     mocks.advance.mockResolvedValue({
       status: "pending",
       planId: "plan",
@@ -68,6 +70,10 @@ describe("bounded meeting continuation task", () => {
     expect(definition.queue.concurrencyLimit).toBe(1)
     expect(definition.retry.maxAttempts).toBe(1)
     await definition.run(payload, context)
+    expect(mocks.advance).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ queueName: "candidate-queue" })
+    )
     expect(mocks.end).toHaveBeenCalledOnce()
     expect(mocks.key).toHaveBeenCalledWith("event-windows:plan:window", { scope: "global" })
     expect(mocks.trigger).toHaveBeenCalledWith("openstates-event-windows", payload, {
@@ -75,6 +81,13 @@ describe("bounded meeting continuation task", () => {
       version: "20260919.wa",
       idempotencyKey: "stable-key"
     })
+  })
+  it("rejects an omitted route before opening a database or dispatching work", async () => {
+    vi.stubEnv("OPENSTATES_SCRAPER_ENABLED_STATES", "wa")
+    vi.stubEnv("OPENSTATES_SCRAPER_QUEUE_ROUTES", '{"nc":"test-queue"}')
+    await expect(definition.run(payload, context)).rejects.toThrow(/Missing.*wa/)
+    expect(mocks.advance).not.toHaveBeenCalled()
+    expect(mocks.end).not.toHaveBeenCalled()
   })
   it("does not continue after completion or failure and always closes an opened pool", async () => {
     vi.stubEnv("OPENSTATES_SCRAPER_ENABLED_STATES", "wa")

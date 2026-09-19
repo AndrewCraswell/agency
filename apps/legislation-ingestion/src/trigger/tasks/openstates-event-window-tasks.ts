@@ -9,6 +9,7 @@ import {
   washingtonScraperCandidateBuild
 } from "../../ingestion/openstates/scraper-activation.js"
 import { advanceWashingtonEventCycle } from "../../ingestion/openstates/scraper-event-window-cycle.js"
+import { scraperQueueFor } from "../../ingestion/openstates/scraper-queue.js"
 
 const payloadSchema = z.strictObject({
   planPath: z.string().regex(/^openstates\/event-window-plans\/wa\/2025-2026\/[a-f0-9]{64}\/plan\.json$/),
@@ -26,10 +27,7 @@ export const openStatesEventWindows = task({
     requireScraperActivation("wa", process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
     const config = loadConfig()
     if (!config.azure.storageAccount) throw new Error("Hosted scraper requires Azure Storage")
-    const queueName = z
-      .string()
-      .regex(/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/)
-      .parse(process.env.OPENSTATES_SCRAPER_QUEUE)
+    const queueName = scraperQueueFor("wa")
     const store = new AzureBlobArtifactStore(config.azure.storageAccount, config.azure.stateSourceContainer)
     const { database, pool } = createDatabase({ ...config.database, maxConnections: 2 })
     let result: Awaited<ReturnType<typeof advanceWashingtonEventCycle>>

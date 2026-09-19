@@ -17,6 +17,7 @@ import {
 } from "../../ingestion/openstates/scraper-event-cycle.js"
 import { acquireAlaskaEventPlan } from "../../ingestion/openstates/scraper-event-plan.js"
 import { executeNorthCarolinaEventCloudCycle } from "../../ingestion/openstates/scraper-nc-event-cycle.js"
+import { scraperQueueFor } from "../../ingestion/openstates/scraper-queue.js"
 
 const payloadSchema = z.strictObject({
   planPath: z.string().regex(/^openstates\/scraper-plans\/ak\/events\/[A-Za-z0-9/_.-]+\.json$/),
@@ -96,10 +97,7 @@ export const openStatesNorthCarolinaEventsCloud = task({
   run: async (_raw: unknown, { ctx }) => {
     requireScraperActivation("nc", process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
     const config = loadConfig()
-    const queueName = z
-      .string()
-      .regex(/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/)
-      .parse(process.env.OPENSTATES_SCRAPER_QUEUE)
+    const queueName = scraperQueueFor("nc")
     if (!config.azure.storageAccount) throw new Error("Hosted scraper requires Azure Storage")
     const store = new AzureBlobArtifactStore(config.azure.storageAccount, config.azure.stateSourceContainer)
     const { database, pool } = createDatabase({ ...config.database, maxConnections: 2 })
@@ -185,10 +183,7 @@ export const openStatesAlaskaEventsCloud = task({
     const payload = payloadSchema.parse(raw)
     requireAlaskaScraperActivation(process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
     const config = loadConfig()
-    const queueName = z
-      .string()
-      .regex(/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/)
-      .parse(process.env.OPENSTATES_SCRAPER_QUEUE)
+    const queueName = scraperQueueFor("ak")
     if (!config.azure.storageAccount) throw new Error("Hosted scraper requires Azure Storage")
     const store = new AzureBlobArtifactStore(config.azure.storageAccount, config.azure.stateSourceContainer)
     const { database, pool } = createDatabase({ ...config.database, maxConnections: 2 })

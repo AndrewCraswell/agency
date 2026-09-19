@@ -13,6 +13,7 @@ import { acquireStateBillPlan } from "../../ingestion/openstates/scraper-bill-pl
 import { billCloudRequest, dispatchCloudScraperAttempt } from "../../ingestion/openstates/scraper-cloud.js"
 import { inspectScraperBillCycle } from "../../ingestion/openstates/scraper-cycle.js"
 import { executeScraperBillBatch } from "../../ingestion/openstates/scraper-execution.js"
+import { scraperQueueFor } from "../../ingestion/openstates/scraper-queue.js"
 
 const stateSchema = z.enum(["ak", "nc"])
 const planPathSchema = z
@@ -57,13 +58,6 @@ export function assertBillPlanState(state: "ak" | "nc", planPath: string) {
   const expected = state === "ak" ? "openstates/scraper-plans/ak/34/" : "openstates/scraper-plans/nc/2025/"
   if (!path.startsWith(expected)) throw new Error("Frozen bill plan does not match requested state")
   return path
-}
-
-function queueName() {
-  return z
-    .string()
-    .regex(/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/)
-    .parse(process.env.OPENSTATES_SCRAPER_QUEUE)
 }
 
 /** Manual, unscheduled entry point. Freeze publisher discovery before dispatching any extraction. */
@@ -166,7 +160,7 @@ export const openStatesBillScraperCloud = task({
     const config = loadConfig()
     if (!config.azure.storageAccount) throw new Error("Hosted scraper requires Azure Storage")
     const storageAccount = config.azure.storageAccount
-    const storageQueue = queueName()
+    const storageQueue = scraperQueueFor(payload.state)
     const store = new AzureBlobArtifactStore(storageAccount, config.azure.stateSourceContainer)
     const { database, pool } = createDatabase({ ...config.database, maxConnections: 2 })
     let result: Awaited<ReturnType<typeof executeScraperBillBatch>> | undefined
