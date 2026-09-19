@@ -28,6 +28,14 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ## Production baseline (2026-09-19 05:01 UTC)
 
+Verification follow-up: the full run passed types, lint and unused-code checks but stopped at the state extraction
+repair CLI test's aggregate 30-second timeout. Its five sequential subprocess checks have been separated into four
+independent scenarios, retaining the 20-second subprocess limit and every dispatch-safety assertion. The focused
+four-test pass took 31.46 seconds in aggregate, confirming that the former whole-test deadline was too short for
+the combined work. No production timeout, dispatch guard or retry policy changed. A fresh full verification is running.
+Hosted inspection now shows 23 of 90 meeting windows complete, with `run_06gbin30ov8g477gekk9vnru01` and bill run
+`run_06gbin27acprifok97bfbbv001` executing on candidate `20260919.22`; no replacement work was launched.
+
 Orwall review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) records her district
 and January 12 oath; her [official biography](https://senatedemocrats.wa.gov/orwall/biography/) confirms fifteen House
 years before Senate appointment, and [King County's report](https://content.govdelivery.com/accounts/WAKING/bulletins/3c7ea39)
