@@ -173,6 +173,14 @@ remain recoverable from audit snapshots. Authenticated HB 1054 detail succeeds w
 reached 40 committed batches with a new active owner. Calendar fix commit `909c726` is building as an unpromoted
 `20260919.27` candidate after the deployed API/importer contract preflight passed; it is not yet calendar acceptance.
 
+Candidate `20260919.27` subsequently deployed successfully with 70 tasks at
+`https://cloud.trigger.dev/projects/v3/proj_bsjukvltatwjsyczuatb/deployments/ftizb4ax`, without global promotion.
+The failed calendar run was reconfirmed terminal, its exact ownership receipt marked released, and recent calendar
+runs contained no nonterminal work. A single idempotent recovery `run_06gbjaod81nqn5ipmdrijfic01` was dispatched and
+verified EXECUTING on the corrected version. No recurring schedule was created. Confirm its receipt and subsequent
+continuation before closing the calendar failure. Cleanup after HB 1054 is processing a bounded 25-bill page with
+154 provisional pairs; its completed cursor must be observed before advancing to another page.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
