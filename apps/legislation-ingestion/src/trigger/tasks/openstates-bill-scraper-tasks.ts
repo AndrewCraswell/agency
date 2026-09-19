@@ -65,7 +65,7 @@ export function assertBillPlanState(state: ScraperBillState, planPath: string) {
 export const openStatesBillScraperPlan = task({
   id: "openstates-bill-scraper-plan",
   maxDuration: 120,
-  run: async (raw: unknown) => {
+  run: async (raw: unknown, { ctx }) => {
     const { state, refreshDate } = openStatesBillPlanPayload.parse(raw)
     requireScraperActivation(state, process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
     const config = loadConfig()
@@ -76,7 +76,7 @@ export const openStatesBillScraperPlan = task({
     const handle = await tasks.trigger(
       "openstates-bill-scraper-dispatch",
       { state, planPath: inventory.planPath },
-      { concurrencyKey: stateConcurrencyKey(state), idempotencyKey: key }
+      { concurrencyKey: stateConcurrencyKey(state), idempotencyKey: key, version: ctx.deployment?.version }
     )
     return { ...inventory, status: "dispatched" as const, dispatchRunId: handle.id }
   }
@@ -111,7 +111,7 @@ export const openStatesBillScraperSchedule = schedules.task({
 export const openStatesBillScraperDispatch = task({
   id: "openstates-bill-scraper-dispatch",
   maxDuration: 60,
-  run: async (raw: unknown) => {
+  run: async (raw: unknown, { ctx }) => {
     const payload = openStatesBillDispatchPayload.parse(raw)
     requireScraperActivation(payload.state, process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
     assertBillPlanState(payload.state, payload.planPath)
@@ -140,7 +140,11 @@ export const openStatesBillScraperDispatch = task({
         const handle = await tasks.trigger(
           "openstates-bill-scraper-cloud",
           { ...payload, batchId: batch.id },
-          { concurrencyKey: billBatchConcurrencyKey(payload.state, batch.id), idempotencyKey: key }
+          {
+            concurrencyKey: billBatchConcurrencyKey(payload.state, batch.id),
+            idempotencyKey: key,
+            version: ctx.deployment?.version
+          }
         )
         return { batchId: batch.id, runId: handle.id }
       })
@@ -180,7 +184,8 @@ export const openStatesBillScraperCloud = task({
             plan.session,
             inventoryId,
             payload.planPath,
-            before.promotedBatches
+            before.promotedBatches,
+            ctx.deployment?.version
           )
         }
         return {
@@ -210,14 +215,22 @@ export const openStatesBillScraperCloud = task({
         }
       })
       const after = await inspectScraperBillCycle(database, store, payload.planPath)
-      if (!after.promotionComplete) return await refillBillScraper(payload, inventoryId, after.promotedBatches, result)
+      if (!after.promotionComplete)
+        return await refillBillScraper(payload, inventoryId, after.promotedBatches, result, ctx.deployment?.version)
     } finally {
       await pool.end()
     }
     const plan = await readScraperBillPlan(store, payload.planPath)
     return {
       ...result,
-      ...(await dispatchStateContent(payload.state, plan.session, inventoryId, payload.planPath)),
+      ...(await dispatchStateContent(
+        payload.state,
+        plan.session,
+        inventoryId,
+        payload.planPath,
+        undefined,
+        ctx.deployment?.version
+      )),
       pending: 0
     }
   }
@@ -227,7 +240,8 @@ async function refillBillScraper(
   payload: z.infer<typeof openStatesBillCloudPayload>,
   inventoryId: string,
   promotedBatches: number,
-  result: Awaited<ReturnType<typeof executeScraperBillBatch>>
+  result: Awaited<ReturnType<typeof executeScraperBillBatch>>,
+  version?: string
 ) {
   const key = await idempotencyKeys.create(`${payload.state}-bills:${inventoryId}:refill:${promotedBatches}`, {
     scope: "global"
@@ -235,7 +249,7 @@ async function refillBillScraper(
   const refill = await tasks.trigger(
     "openstates-bill-scraper-dispatch",
     { state: payload.state, planPath: payload.planPath },
-    { concurrencyKey: stateConcurrencyKey(payload.state), idempotencyKey: key }
+    { concurrencyKey: stateConcurrencyKey(payload.state), idempotencyKey: key, version }
   )
   return {
     ...result,
@@ -250,13 +264,14 @@ async function dispatchStateContent(
   session: string,
   inventoryId: string,
   planPath: string,
-  completed?: number
+  completed?: number,
+  version?: string
 ) {
   const key = await idempotencyKeys.create(`${state}-bills:people:${inventoryId}`, { scope: "global" })
   const handle = await tasks.trigger(
     "openstates-scraper-person-reconcile",
     { state, session, inventoryId, planPath },
-    { concurrencyKey: stateConcurrencyKey(state), idempotencyKey: key }
+    { concurrencyKey: stateConcurrencyKey(state), idempotencyKey: key, version }
   )
   return {
     status: "cycle_promoted" as const,

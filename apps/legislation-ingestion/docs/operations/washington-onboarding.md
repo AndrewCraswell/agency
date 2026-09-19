@@ -743,3 +743,14 @@ fingerprint and width. Washington is deliberately absent from managed bill sched
 Person reconciliation now reads the canonical source-derived vote chamber: Washington's shared `GetRollCalls` URL
 does not establish which chamber voted, so missing chamber evidence stays unresolved. No guessed chamber or voter
 identity was introduced. These task changes still require a pinned Trigger deployment and hosted execution proof.
+
+Trigger deployment `20260919.18` (`h58tuci9`) built successfully with 70 tasks using `--skip-promotion`; it was not made
+current and was not used to launch Washington work. Preflight confirmed the deployed API accepts the importer membership
+contract. Read-only environment checks showed activation `ak,nc`, default queue `openstates-scraper-dispatch`, and no
+per-state route table. Those values were not changed during this deployment.
+
+Rollout review found bill continuations were not consistently pinned to the initiating deployment. Plan-to-dispatch,
+dispatch-to-worker, refill, person reconciliation and the content handoff now preserve that version. Executable task tests
+verify candidate-version propagation and the single Washington dispatch slot; 11 focused tests and ingestion type-checking
+passed. A corrected unpromoted deployment is required before hosted bill acceptance. The latest full repository verify
+finished with 11 failures in unrelated web tests; it is not a clean completion result.

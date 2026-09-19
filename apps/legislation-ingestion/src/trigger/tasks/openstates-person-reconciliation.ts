@@ -42,7 +42,7 @@ export function assertCompletedPersonReconciliationCycle(
 export const openStatesPersonReconciliation = task({
   id: "openstates-scraper-person-reconcile",
   maxDuration: 600,
-  run: async (raw: unknown) => {
+  run: async (raw: unknown, { ctx }) => {
     const payload = openStatesPersonReconciliationPayload.parse(raw)
     requireScraperActivation(payload.state, process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
     const config = loadConfig()
@@ -65,7 +65,7 @@ export const openStatesPersonReconciliation = task({
       const content = await tasks.trigger(
         "openstates-content-controller",
         { state: payload.state, session: payload.session, billConcurrency: 2, billLimit: 8, maxContinuations: 10 },
-        { concurrencyKey: `${payload.state}:${payload.session}`, idempotencyKey: key }
+        { concurrencyKey: `${payload.state}:${payload.session}`, idempotencyKey: key, version: ctx.deployment?.version }
       )
       return { status: "reconciled" as const, ...payload, ...reconciliation, contentRunId: content.id }
     } finally {
