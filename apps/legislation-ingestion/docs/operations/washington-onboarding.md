@@ -294,3 +294,19 @@ Washington preparation can now bind retained evidence to a specific planned wind
 archives and unknown work items fail, including for empty inventories. Eleven focused tests passed, as did ingestion
 type-check and lint. This is planning and preparation only: durable ownership, transactional completion receipts
 (including verified-empty windows), resumable dispatch, and hosted activation remain open.
+
+## Owned window execution and empty receipts
+
+The Washington window coordinator now uses existing batch ownership, cloud dispatch and canonical event persistence.
+Each work item checks its immutable receipt before admission and again after acquiring ownership, binds retained
+extraction to the plan, and commits either canonical rows plus a receipt or an owned empty-work receipt. New cycles
+cannot overlap unresolved ownership from an earlier cycle. Verified-empty windows never delete canonical events.
+
+Shared cloud dispatch now treats connection loss during submission or result observation as uncertain shutdown,
+preserving ownership for all callers. This closes a gap where a queued scraper could outlive an observation error.
+Invalid requests and credential failures before submission still fail without dispatching work.
+
+Fourteen focused coordinator/dispatch/NC regression tests and fourteen real isolated PostgreSQL receipt tests passed.
+Ingestion type-check passed. The PostgreSQL checks include concurrent identical empty receipts, missing ownership,
+and conflicting replay. Hosted execution has not been activated; continuation task wiring, production acceptance,
+and the other Washington coverage/content/readiness gates remain open.

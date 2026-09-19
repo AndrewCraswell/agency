@@ -7,6 +7,7 @@ import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { upsertBillAggregates } from "./bill-aggregates.js"
 import { assertBillBatchOwnership, claimBillBatchOwnership, releaseBillBatchOwnership } from "./bill-batch-ownership.js"
+import { commitOwnedEmptyPromotion } from "./promotion-receipt.js"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 if (databaseUrl && new URL(databaseUrl).pathname !== "/legislation_test") {
@@ -58,6 +59,41 @@ describePostgres.sequential("atomic bill batch receipts", () => {
     await database.delete(schema.jurisdictions).where(eq(schema.jurisdictions.id, jurisdictionId))
     await pool.end()
   })
+  it("commits empty-work receipts only under ownership and rejects conflicting replay", async () => {
+    const owner = { source, stream: "ownership:empty-window", token: "empty-token" }
+    const receipt = {
+      source,
+      stream: "empty-window",
+      cursor: { status: "promoted", events: 0, manifestPath: "verified-empty.json" }
+    }
+    await expect(commitOwnedEmptyPromotion(database, owner, receipt)).rejects.toThrow()
+    expect(
+      await database
+        .select()
+        .from(schema.syncCheckpoints)
+        .where(and(eq(schema.syncCheckpoints.source, source), eq(schema.syncCheckpoints.stream, receipt.stream)))
+    ).toHaveLength(0)
+    expect(await claimBillBatchOwnership(database, owner, 60)).toBe(true)
+    await Promise.all([
+      commitOwnedEmptyPromotion(database, owner, receipt),
+      commitOwnedEmptyPromotion(database, owner, receipt)
+    ])
+    await releaseBillBatchOwnership(database, owner)
+    await commitOwnedEmptyPromotion(database, owner, receipt)
+    await expect(
+      commitOwnedEmptyPromotion(database, owner, {
+        ...receipt,
+        cursor: { ...receipt.cursor, manifestPath: "other.json" }
+      })
+    ).rejects.toThrow(/conflicts/)
+    expect(
+      await database
+        .select()
+        .from(schema.syncCheckpoints)
+        .where(and(eq(schema.syncCheckpoints.source, source), eq(schema.syncCheckpoints.stream, receipt.stream)))
+    ).toHaveLength(1)
+  })
+
   it("admits disjoint batches together while rejecting duplicate, conflicting-cycle and session claims", async () => {
     const group = { stream: "ownership:parallel-test", cohort: "a".repeat(64) }
     const first = { source, stream: `${group.stream}:${group.cohort}:first`, token: "worker-first" }

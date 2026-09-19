@@ -34,6 +34,34 @@ const request = () => alaskaEventCloudRequest(["H:L&C:2025-01-22T13:30:00-09:00"
 const credential = { getToken: vi.fn(async () => ({ token: "token" })) }
 
 describe("cloud scraper dispatch", () => {
+  it("retains ownership on uncertain submission and result observation failures", async () => {
+    for (const failSubmission of [true, false]) {
+      const store = {
+        exists: async () => {
+          throw new Error("storage disconnected")
+        },
+        read: async () => new Uint8Array()
+      }
+      await expect(
+        dispatchCloudScraperAttempt(
+          {
+            store,
+            runId: "uncertain-run",
+            request: request(),
+            storageAccount: "testaccount",
+            queueName: "scrapers"
+          },
+          {
+            credential,
+            fetch: async () => {
+              if (failSubmission) throw new Error("connection lost after upload")
+              return new Response(null, { status: 201 })
+            }
+          }
+        )
+      ).rejects.toBeInstanceOf(ScraperWorkerStopUnconfirmedError)
+    }
+  })
   it("uses the shared Washington bill profile without admitting unsupported meetings or mixed batches", () => {
     const washington = billCloudRequest("wa", ["HB 1000", "HB 1001"])
     expect(washington).toMatchObject({ jurisdiction: "wa", domain: "bills", session: "2025-2026" })

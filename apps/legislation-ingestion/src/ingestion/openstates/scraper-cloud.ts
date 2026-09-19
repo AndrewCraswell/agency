@@ -131,36 +131,44 @@ export async function dispatchCloudScraperAttempt(
     throw new Error("Azure Storage credential did not issue a token")
   }
   const payload = Buffer.from(JSON.stringify({ run_id: runId, request })).toString("base64")
-  const response = await requestFetch(`https://${account}.queue.core.windows.net/${queue}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token.token}`,
-      "Content-Type": "application/xml",
-      "x-ms-date": new Date().toUTCString(),
-      "x-ms-version": "2023-11-03"
-    },
-    body: `<QueueMessage><MessageText>${payload}</MessageText></QueueMessage>`
-  })
-  if (!response.ok) {
-    throw new Error(`Cloud scraper dispatch failed with status ${response.status}`)
-  }
-  const paths = scraperCloudPaths(runId, request)
-  const deadline = now() + maxWaitSeconds * 1000
-  do {
-    if (await input.store.exists(paths.settlementPath)) {
-      const settlement: unknown = JSON.parse(Buffer.from(await input.store.read(paths.settlementPath)).toString("utf8"))
-      const settled = settlementSchema.parse(settlement)
-      if (settled.runId !== runId || settled.manifestPath !== paths.manifestPath) {
-        throw new Error("Cloud scraper settlement identity mismatch")
-      }
-      if (!(await input.store.exists(paths.manifestPath))) {
-        throw new Error("Cloud scraper settled without a retained manifest")
-      }
-      return paths
+  try {
+    const response = await requestFetch(`https://${account}.queue.core.windows.net/${queue}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token.token}`,
+        "Content-Type": "application/xml",
+        "x-ms-date": new Date().toUTCString(),
+        "x-ms-version": "2023-11-03"
+      },
+      body: `<QueueMessage><MessageText>${payload}</MessageText></QueueMessage>`
+    })
+    if (!response.ok) {
+      throw new Error(`Cloud scraper dispatch failed with status ${response.status}`)
     }
-    await sleep(5_000)
-  } while (now() < deadline)
-  throw new ScraperWorkerStopUnconfirmedError()
+    const paths = scraperCloudPaths(runId, request)
+    const deadline = now() + maxWaitSeconds * 1000
+    do {
+      if (await input.store.exists(paths.settlementPath)) {
+        const settlement: unknown = JSON.parse(
+          Buffer.from(await input.store.read(paths.settlementPath)).toString("utf8")
+        )
+        const settled = settlementSchema.parse(settlement)
+        if (settled.runId !== runId || settled.manifestPath !== paths.manifestPath) {
+          throw new Error("Cloud scraper settlement identity mismatch")
+        }
+        if (!(await input.store.exists(paths.manifestPath))) {
+          throw new Error("Cloud scraper settled without a retained manifest")
+        }
+        return paths
+      }
+      await sleep(5_000)
+    } while (now() < deadline)
+    throw new ScraperWorkerStopUnconfirmedError()
+  } catch (error) {
+    // Once submission starts, a network/storage failure cannot prove that no worker is running.
+    if (error instanceof ScraperWorkerStopUnconfirmedError) throw error
+    throw new ScraperWorkerStopUnconfirmedError({ cause: error })
+  }
 }
 
 export function alaskaEventCloudRequest(eventKeys: string[]): CloudScraperRequest {
@@ -183,6 +191,18 @@ export function northCarolinaEventCloudRequest(): CloudScraperRequest {
     timeout_seconds: 1500,
     revision,
     bill_ids: null
+  })
+}
+
+export function washingtonEventCloudRequest(window: z.input<typeof washingtonEventWindow>): CloudScraperRequest {
+  return requestSchema.parse({
+    jurisdiction: "wa",
+    domain: "events",
+    session: scraperBillProfiles.wa.session,
+    timeout_seconds: 1500,
+    revision,
+    bill_ids: null,
+    event_window: washingtonEventWindow.parse(window)
   })
 }
 

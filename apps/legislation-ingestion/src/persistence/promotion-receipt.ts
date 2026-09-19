@@ -1,6 +1,23 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
 import { and, eq, sql } from "drizzle-orm"
+import { assertBillBatchOwnership, type BillBatchOwnership } from "./bill-batch-ownership.js"
+
+/** Record verified work with no canonical rows. The caller must validate retained source completeness first. */
+export async function commitOwnedEmptyPromotion(
+  database: LegislationDatabase,
+  ownership: BillBatchOwnership,
+  receipt: { source: string; stream: string; cursor: Record<string, unknown> }
+) {
+  if (receipt.source === ownership.source && receipt.stream === ownership.stream) {
+    throw new Error("Empty promotion requires a separate immutable receipt")
+  }
+  await database.transaction(async (transaction) => {
+    if (await promotionAlreadyCommitted(transaction, receipt)) return
+    await assertBillBatchOwnership(transaction, ownership)
+    await transaction.insert(syncCheckpoints).values({ ...receipt, updatedAt: new Date() })
+  })
+}
 
 /** Serialize admission and return true only for an identical committed receipt. Hold through commit. */
 export async function promotionAlreadyCommitted(
