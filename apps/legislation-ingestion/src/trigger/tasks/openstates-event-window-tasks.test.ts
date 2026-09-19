@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
   config: vi.fn(),
   register: vi.fn<
     (definition: {
-      run: (raw: unknown, context: { ctx: { run: { id: string } } }) => Promise<unknown>
+      run: (
+        raw: unknown,
+        context: { ctx: { run: { id: string }; deployment?: { version: string } } }
+      ) => Promise<unknown>
       queue: { concurrencyLimit: number }
       retry: { maxAttempts: number }
     }) => unknown
@@ -36,7 +39,7 @@ const payload = {
   approvedBuild: washingtonScraperCandidateBuild
 }
 const definition = mocks.register.mock.calls[0]![0]
-const context = { ctx: { run: { id: "test-run" } } }
+const context = { ctx: { run: { id: "test-run" }, deployment: { version: "20260919.wa" } } }
 
 describe("bounded meeting continuation task", () => {
   beforeEach(() => {
@@ -69,6 +72,7 @@ describe("bounded meeting continuation task", () => {
     expect(mocks.key).toHaveBeenCalledWith("event-windows:plan:window", { scope: "global" })
     expect(mocks.trigger).toHaveBeenCalledWith("openstates-event-windows", payload, {
       concurrencyKey: "production:openstates-scraper:events:wa",
+      version: "20260919.wa",
       idempotencyKey: "stable-key"
     })
   })

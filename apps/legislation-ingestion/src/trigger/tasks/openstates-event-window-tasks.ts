@@ -49,6 +49,7 @@ export const openStatesEventWindows = task({
       scope: "global"
     })
     const continuation = await tasks.trigger("openstates-event-windows", payload, {
+      version: ctx.deployment?.version,
       concurrencyKey: "production:openstates-scraper:events:wa",
       idempotencyKey: key
     })

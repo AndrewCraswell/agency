@@ -324,3 +324,26 @@ candidate; existing NC/AK build approval is unchanged. This code is not evidence
 Nine coordinator/activation tests and three registered-task execution tests passed, including disabled activation,
 receipt-less success rejection, completion replay, failure cleanup and exact continuation dispatch. Hosted deployment,
 runtime approval and end-to-end acceptance remain required before enabling regular Washington sync.
+
+## Live archive and runtime audit (September 19)
+
+Azure authentication succeeded. The existing event job remains pinned to image digest
+`cd41549d55377efdd0ce8637bda9800f74b546d2791cb0dc083d132776938369`; it has not been replaced with the Washington
+candidate. The five most recent returned executions succeeded. No job, queue, schedule or activation settings changed.
+
+The signed-in [publisher catalog](https://open.pluralpolicy.com/data/session-json/) lists exactly the five Washington
+sessions already retained in `state-sources`, from 2017-2018 through 2025-2026. All five retained source objects were
+read and their SHA-256 and byte counts matched their stored metadata. The four older catalog URLs match retained
+provenance. The current-session catalog URL changed to the August 24 release, while our retained archive was acquired
+August 17. The new archive was acquired only into `artifacts/openstates-washington-archive-audit`, hash
+`e137e5c6b580da502be19f3ca5f09c6aac5f89d32d3fa834a0a091bf940b3945`, with 3,413 records and 97,348,364 bytes.
+
+Comparison found no added or removed bill identities. Differences were confined to document/vote arrays; recursively
+ignoring array order produced no differences for any bill. This is diagnostic evidence of reordering, not proof that
+ordered relations have equivalent semantics or that database content is current. Reports are
+`reports/current-session-record-parity.json` and `reports/current-session-order-insensitive-parity.json` in that store.
+No canonical writes were performed. Archive-to-database field parity remains open.
+
+Washington continuations now pin `ctx.deployment.version` through the SDK's existing `version` option, matching the
+shared content worker pattern. Three task tests and ingestion type-check passed. Full verification now encounters
+unrelated syntax errors in the web app's `src/modules/conversations/telemetry.test.ts`; those edits were left untouched.
