@@ -2,8 +2,9 @@
 
 Implementation design for LEG-25, September 18, 2026. This resolves the runtime design in the
 [telemetry specification](telemetry-spec.md); it does not approve production collection or a new dependency.
-The parent specification records the later approved US/free-trial/retention policy and bounded nonproduction canary;
-actual controls and entitlements remain unverified.
+The parent specification records the approved US/retention policy, Sentry free/trial restriction, existing Langfuse
+Core $29/month base exception and bounded nonproduction canary. No additional paid telemetry or overages are approved;
+the verified Core plan/usage snapshot does not establish enforceable caps or implementation readiness.
 Implement through the existing foundation tasks, with the full [acceptance gate](../operations/telemetry-acceptance.md).
 
 ## Pinned interfaces and current ownership

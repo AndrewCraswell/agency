@@ -2,7 +2,7 @@
 
 Status: implementation contract proposed September 18, 2026; policy and accountability approved September 19, 2026 UTC
 as recorded below. Scope: Rostra's `legislation-web` browser, Next.js server/edge runtimes, HTTP API and their dependency
-boundaries. This document does not enable collection, approve a paid vendor plan or claim production coverage.
+boundaries. This document does not enable collection, approve a new paid vendor plan or claim production coverage.
 "Full coverage" means every shipped workflow has usage, outcome,
 performance and failure visibility, not recording every click or collecting research content.
 
@@ -175,14 +175,23 @@ Andrew Craswell approved US Sentry and the following maximum retention on Septem
 | Errors | 90 days |
 | Aggregate `traceMetric` | 396 days only after verifying absence of user, workspace, session and trace IDs, including pseudonyms, and all research content |
 
-The usage ceiling does not override its storage class: usage held in logs remains limited to 30 days. Application
-Metrics are not the longer-lived aggregate `traceMetric` class. If identifier/content exclusion cannot be proved,
-the 396-day exception is unavailable; disable that aggregate signal until compliant handling is verified.
+The usage ceiling does not override its storage class: usage held in logs remains limited to 30 days. An internal
+`traceMetric` retention field alone does not prove a representation is separate from Application Metrics or
+non-identifying. Verify the actual retained aggregate before applying the 396-day exception; if identifier/content
+exclusion cannot be proved, disable that path until compliant handling is verified.
 
-Free/trial only: no paid telemetry, overages, purchases or upgrades are authorized. Collection must fit verified free
-entitlements with enforced limits; trial expiration or exhausted allowance disables affected collection, not automatic
-conversion or billing. US region, actual retention/deletion settings, masking, access controls, free entitlements and
-no-overage enforcement remain unverified. Shorter supported retention is acceptable with documented reporting limits.
+Sentry remains free/trial only. The sole approved paid exception is keeping the existing Langfuse Core **$29/month
+base**; no additional paid telemetry, overages, new purchases or upgrades are authorized. Previously hypothetical paid
+plans are not approved. The manager verified the actual Core plan and displayed usage of 17,858 for the September 18
+to October 18, 2026 period after authenticating billing. This is a dated usage snapshot, not a remaining-allowance
+calculation or evidence of a hard spending cap.
+
+Collection must fit verified Sentry free/trial entitlements or the existing Langfuse Core included allowance, with
+controls preventing additional charges. Billing alerts are not hard caps. Trial expiration or exhausted allowance
+must stop affected collection before additional billing, not trigger automatic conversion or an upgrade.
+Before collection, recheck the approved US region and verify actual retention/deletion settings, masking, access
+controls, remaining included allowances and no-overage enforcement. Shorter supported retention is acceptable with
+documented reporting limits.
 Unsupported required controls block that signal, not a best-effort promise or permission to buy support.
 
 Engineering/on-call gets operational access; product gets aggregate usage; content-bearing Langfuse and replay access
@@ -197,7 +206,8 @@ Andrew Craswell is the user-confirmed accountable owner for platform, web, resea
 and budget. This confirms the role ownership of the current coverage catalog, not implementation assignment of every
 issue to Andrew. Individual implementation assignees and acceptance evidence remain separate.
 
-The region, retention, pseudonymous usage and free/trial budget decisions above are approved policy. Remaining gates
+The region, retention, pseudonymous usage and budget decisions above, including the existing Langfuse Core base
+exception, are approved policy. Remaining gates
 include lawful-basis/consent controls, verified vendor capabilities/settings, query feasibility, replay masking, runtime
 isolation and sampling acceptance. Other defaults and thresholds remain proposals, not contractual SLOs.
 

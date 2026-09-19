@@ -99,8 +99,9 @@ Initial alert policy, subject to on-call approval:
 - **Ticket:** p95 latency exceeds its approved target for 30 minutes with >=100 measurements, or the comparable
   release cohort is >20% slower with >=200 measurements in both cohorts. Small samples show insufficient data.
 - **Ticket:** telemetry canary missing for 10 minutes, drop/rejection rate >1% for 15 minutes with >=100 emissions,
-  or usage reaches 80% of a verified free allowance. Paid budget is zero; stop before any billable overage or trial
-  conversion rather than treating an alert as spending authorization.
+  or usage reaches 80% of a verified Sentry free/trial or Langfuse Core included allowance. Only the existing Core
+  $29/month base is approved; stop before additional charges, overages or trial conversion. Alerts are not hard caps
+  and never establish spending authorization or no-overage enforcement.
 - **Privacy incident:** any confirmed prohibited content in an exported payload stops the affected signal immediately
   and invokes incident/deletion handling. Do not resend the payload to another diagnostic system.
 
@@ -128,11 +129,18 @@ Head sampling cannot recover a discarded successful/slow/error trace later. Erro
 missing linked traces are expected and must be labeled. Raising sampling for a canary is time-bounded and must not
 override consent. Keep vendor-default log/AI/replay integrations explicit so an SDK upgrade cannot expand collection.
 
-Budget is free/trial only: no paid telemetry, overages, purchases, upgrades or paid model calls for the canary.
-Before any external collection, verify free entitlements, remaining allowances, trial expiry, US Sentry configuration
-and controls preventing billable usage; stop if those cannot be proved. The retention maxima in the parent specification
-are ceilings, not evidence that the account supports or enforces them. Aggregate `traceMetric` retention up to 396 days
-requires verified removal of user/workspace/session/trace IDs and research content; Application Metrics stay at 30 days.
+Sentry is free/trial only. Keeping the existing Langfuse Core $29/month base is the sole paid exception; no additional
+paid telemetry, overages, purchases, upgrades or paid model calls for the canary are authorized. Hypothetical paid plans
+remain unapproved. The manager verified Core and displayed usage of 17,858 for September 18 to October 18, 2026;
+that dated snapshot is neither a remaining-allowance calculation nor proof of a hard cap.
+
+Before any external collection, verify remaining Sentry free/trial and Langfuse Core included allowances, trial expiry
+and controls preventing additional charges; recheck US Sentry configuration. Stop if compliant limits cannot be proved:
+billing alerts do not enforce a hard cap. The retention maxima in the parent specification are ceilings, not evidence
+that the account supports or enforces them. Aggregate `traceMetric` retention up to 396 days requires verified absence
+of user/workspace/session/trace IDs and research content; the internal field name alone does not prove a separate or
+non-identifying storage class. Application Metrics stay at 30 days; the 396-day aggregate exception cannot be applied
+to that class merely because an internal retention field has a different name.
 
 Estimate signal volume and egress offline first. Include logs/metrics duplication, each destination, Langfuse and
 headroom. A representative production day and production traffic-growth forecast remain future acceptance work,
@@ -143,10 +151,11 @@ not permission to exceed the currently authorized synthetic canary.
 After instrumentation and masking readiness, at most **100 application telemetry events/observations total plus one
 synthetic replay lasting at most two minutes** may be sent. Account for every application event/observation across
 signals and destinations, including retries/duplicate exports, within the shared cap; the replay is the sole separately
-bounded artifact. Establish stop controls and remaining free allowance before sending anything.
+bounded artifact. Establish stop controls and remaining approved included allowances before sending anything.
 
-Use synthetic data only, no real customer data or paid model calls. No paid telemetry, overages, automatic upgrades
-or production enablement. If readiness, masking, free entitlements or no-overage enforcement remain unverified, do not
+Use synthetic data only, no real customer data or paid model calls. No additional paid telemetry beyond the existing
+Langfuse Core $29/month base, overages, purchases, upgrades or production enablement. If readiness, masking, remaining
+approved allowances or enforceable no-overage controls remain unverified, do not
 start. Approval of this small validation exercise is not completed canary evidence or full rollout acceptance.
 
 Overhead acceptance against telemetry-off baseline on the same build/device/network:
@@ -165,12 +174,12 @@ If a budget fails, reduce payloads/sampling or defer the signal; do not silently
 
 | Gate | Deliverable and evidence |
 | --- | --- |
-| 1. Approve collection | Named accountability, US region, retention/pseudonym policy and free/trial-only ceiling are approved; field catalog, actual consent/identity/retention/masking controls, entitlements, query feasibility and no-overage enforcement still require evidence |
+| 1. Approve collection | Named accountability, US region, retention/pseudonym policy, Sentry free/trial and existing Langfuse Core $29/month base are approved; no additional paid telemetry or overages. Field catalog, actual consent/identity/retention/masking controls, remaining allowances, query feasibility and no-overage enforcement still require evidence |
 | 2. Wire foundations | One provider per runtime, destination-filtered Sentry/Langfuse exports, browser-to-server correlation, concurrent-request isolation and safe failure handling |
 | 3. Cover current surfaces | Every shipped catalog row mapped to its producer, meaningful actions, terminal states, metrics, query and verification evidence; API-only routes explicitly included |
 | 4. Validate reports | Synthetic known-count dataset proves deduplication, metric denominators, percentiles, consent cohorts and proposed funnel/retention queries; expected values documented |
 | 5. Nonproduction canary | Only after readiness: the 100-event/observation total and one synthetic replay of at most two minutes above; retain actual ingest, masking, quota and stop evidence |
-| 6. Production and expansion | Not authorized by this policy approval; obtain separate authorization after all relevant gates pass, without paid collection or overages; remaining shipped rows must pass and the catalog must track feature changes |
+| 6. Production and expansion | Not authorized by this policy approval; obtain separate authorization after all relevant gates pass, without additional paid collection beyond the existing Core base or overages; remaining shipped rows must pass and the catalog must track feature changes |
 
 Implementation tests cover executable event contracts and emitters, not this prose:
 
