@@ -893,3 +893,7 @@ service: [Gildon](https://chrisgildon.src.wastateleg.org/about/),
 [Frame](https://senatedemocrats.wa.gov/frame/biography/). The supplied legitimate roles and their dates are unchanged;
 no general rule converts a conflicting role into another chamber or guesses a boundary. Full retained-archive replay
 now yields 337 people, 372 terms, 16 quarantines and no current-roster coverage issues. All 24 focused tests pass.
+Production import and replay subsequently succeeded. For the four reviewed people, eight canonical terms now exist;
+the second import preserved the exact term IDs, dates and source URLs. The three current-only fallback terms were
+replaced by accepted House/Senate histories, rather than retained as extra copies. This verifies the reviewed cohort,
+not the remaining 16 held histories or the entire session's vote links.
