@@ -94,7 +94,7 @@ const sources = [
     href: "https://www.regulations.gov",
     description: "Dockets, comments and supporting documents",
     categories: ["Documents", "Rules"],
-    status: "Planned enrichment"
+    status: "Coming soon"
   },
   {
     name: "FEC.gov",
