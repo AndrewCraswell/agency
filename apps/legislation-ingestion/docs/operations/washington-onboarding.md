@@ -415,3 +415,19 @@ the final global comparison still require confirmation. Runtime evidence and the
 `artifacts/openstates-washington-archive-audit`; the before-state is `reports/production-vote-refresh-plan.json`.
 Old vote rows/positions are atomically replaced; their complete before-state is retained there. Placeholder person
 records themselves are not deleted, but the replacement positions do not assert unsupported person matches.
+
+## Historical-role source review
+
+The quarantines are not all parser failures. The pinned Chris Gildon YAML contains an upper-chamber role for
+2019-01-14 through 2021-01-10 overlapping his lower-chamber role. His
+[official biography](https://chrisgildon.src.wastateleg.org/about/) explicitly places his first two legislative years
+in the House and his Senate service starting in 2021, contradicting that extra upper-chamber interval.
+
+Jeff Holy's YAML contains a second upper-chamber interval beginning 2019-01-14 and ending 2019-01-13. His
+[official January 2019 announcement](https://jeffholy.src.wastateleg.org/senator-jeff-holy-takes-oath-office-olympia/)
+confirms his first Senate term began January 14, 2019, after three House terms. His
+[official January 2013 newsletter](https://jeffholy.src.wastateleg.org/holy_jan2213_enewsletter/)
+explicitly dates his House swearing-in to January 14, 2013. These establish source errors and missing House history;
+they are not permission to reverse dates mechanically or infer all term boundaries. Reviewed correction evidence must
+remain separate from the shared importer, bind the exact source identity/hash, and pass the same period validation.
+No historical-role corrections have been applied from this review yet.
