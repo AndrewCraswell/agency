@@ -282,6 +282,12 @@ if (role === "web") {
     }
     const environment = {
       NODE_ENV: "production",
+      NEXT_PUBLIC_SENTRY_DSN: "",
+      SENTRY_DSN: "",
+      SENTRY_AUTH_TOKEN: "",
+      LANGFUSE_PUBLIC_KEY: "",
+      LANGFUSE_SECRET_KEY: "",
+      OPENROUTER_API_KEY: "",
       AUTH_MODE: "workos",
       WORKOS_ISSUER: issuer,
       WORKOS_JWKS_URL: `${issuer}/jwks`,

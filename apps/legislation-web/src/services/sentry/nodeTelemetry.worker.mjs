@@ -1,8 +1,8 @@
 import assert from "node:assert/strict"
 import { context, createContextKey, trace, TraceFlags } from "@opentelemetry/api"
 import { BasicTracerProvider } from "@opentelemetry/sdk-trace-base"
-// oxlint-disable-next-line import/default -- Exercise the SDK's actual CommonJS node export through native ESM.
-import Sentry from "@sentry/nextjs"
+// Exercise the SDK's actual CommonJS node export through native ESM.
+import { default as Sentry } from "@sentry/nextjs"
 import { SentryAsyncLocalStorageContextManager } from "@sentry/opentelemetry"
 import { startNodeTelemetry, registerNodeTelemetry } from "./nodeTelemetry.ts"
 
@@ -14,7 +14,20 @@ const sentryEnabled = !["langfuse", "disabled"].includes(mode)
 const langfuseEnabled = ["both", "recording", "langfuse"].includes(mode)
 const rate = ["both", "sentry"].includes(mode) ? 1 : 0
 
-if (mode === "registration") {
+if (mode === "unsafe_target") {
+  const runtime = registerNodeTelemetry(
+    {
+      NODE_ENV: "production",
+      NEXT_PUBLIC_SENTRY_DSN: "http://synthetic@127.0.0.1:1/1",
+      LEGISLATION_PUBLIC_API_BASE_URL: "http://127.0.0.1:3000"
+    },
+    undefined
+  )
+  assert.ok(runtime)
+  assert.deepEqual(Sentry.getClient().getOptions().tracePropagationTargets, [])
+  await runtime.shutdown()
+  process.stdout.write(`${JSON.stringify({ mode, passed: true })}\n`)
+} else if (mode === "registration") {
   assert.equal(registerNodeTelemetry({ NEXT_PHASE: "phase-production-build" }, undefined), undefined)
   assert.throws(() => registerNodeTelemetry({ LANGFUSE_PUBLIC_KEY: "incomplete" }, undefined), /both public and secret/)
   const runtime = registerNodeTelemetry({ NODE_ENV: "test" }, undefined)

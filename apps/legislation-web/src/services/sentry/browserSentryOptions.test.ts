@@ -116,6 +116,16 @@ describe("browser SDK configuration", () => {
     const tracing = vi.fn<typeof browserTracingIntegration>(() => ({ name: "BrowserTracing" }))
     const environment = { NODE_ENV: "production", NEXT_PUBLIC_SENTRY_DSN: "http://synthetic@127.0.0.1:43990/1" }
     expect(createBrowserSentryOptions(environment, "http://127.0.0.1:3027", tracing).enabled).toBe(true)
-    expect(() => createBrowserSentryOptions(environment, "http://external.example.test", tracing)).toThrow("HTTPS")
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    try {
+      const options = createBrowserSentryOptions(environment, "http://external.example.test", tracing)
+      expect(options.enabled).toBe(true)
+      expect(options.tracePropagationTargets).toEqual([])
+      expect(warning).toHaveBeenCalledWith(
+        "Browser telemetry trace propagation is disabled: page origin is not eligible"
+      )
+    } finally {
+      warning.mockRestore()
+    }
   })
 })

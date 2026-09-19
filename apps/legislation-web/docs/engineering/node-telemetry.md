@@ -28,6 +28,12 @@ Production-build registration is explicitly skipped.
 The Sentry SDK remains the sole ESM-loader-hook owner. Application HTTP instrumentation retains request isolation,
 disables body/session/breadcrumb capture and uses explicit first-party propagation targets. No automatic AI content
 integration is added. Existing Langfuse AI SDK integration is registered once by the owner.
+An ineligible propagation URL disables propagation with a fixed local warning; it does not take down an otherwise
+valid application. Built acceptance explicitly clears provider/telemetry credentials so a developer's local `.env`
+cannot turn synthetic HTTP tests into vendor traffic or paid model calls.
+Explicitly blank optional OpenRouter/Langfuse credentials normalize to absent, consistently with the chat availability
+and telemetry initialization guards. This lets the harness override local dotenv values without failing unrelated
+HTTP application configuration.
 
 ## Sink behavior
 

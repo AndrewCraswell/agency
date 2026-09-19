@@ -52,6 +52,21 @@ describe("loadConfig", () => {
     )
   })
 
+  it("treats explicitly blank optional provider credentials as disabled", () => {
+    const config = loadConfig({ OPENROUTER_API_KEY: "", LANGFUSE_PUBLIC_KEY: " ", LANGFUSE_SECRET_KEY: "\t" })
+    expect(config.model.apiKey).toBeUndefined()
+    expect(config.observability.langfusePublicKey).toBeUndefined()
+    expect(config.observability.langfuseSecretKey).toBeUndefined()
+    const configured = loadConfig({
+      OPENROUTER_API_KEY: " synthetic-key ",
+      LANGFUSE_PUBLIC_KEY: " public ",
+      LANGFUSE_SECRET_KEY: " secret "
+    })
+    expect(configured.model.apiKey).toBe("synthetic-key")
+    expect(configured.observability.langfusePublicKey).toBe("public")
+    expect(configured.observability.langfuseSecretKey).toBe("secret")
+  })
+
   it("keeps ranked passage search off unless its separate database and generation are explicit", () => {
     expect(loadConfig({ PASSAGE_SEARCH_DATABASE_URL: "postgresql://search.example/passages" }).passageSearch).toEqual({
       enabled: false

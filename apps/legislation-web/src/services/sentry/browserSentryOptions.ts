@@ -9,9 +9,14 @@ export function createBrowserSentryOptions(
   createTracingIntegration: typeof browserTracingIntegration
 ): BrowserOptions {
   const dsn = environment.NEXT_PUBLIC_SENTRY_DSN?.trim()
-  const target = dsn
-    ? telemetryPropagationTarget(origin, environment.NODE_ENV, { allowLocalHttpInProduction: true })
-    : undefined
+  let target: RegExp | undefined
+  if (dsn) {
+    try {
+      target = telemetryPropagationTarget(origin, environment.NODE_ENV, { allowLocalHttpInProduction: true })
+    } catch {
+      console.warn("Browser telemetry trace propagation is disabled: page origin is not eligible")
+    }
+  }
   const permittedErrors = new Set(["GlobalHandlers", "BrowserApiErrors", "Dedupe", "LinkedErrors"])
   return {
     ...sentryOptions,

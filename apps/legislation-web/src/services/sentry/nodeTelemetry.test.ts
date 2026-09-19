@@ -17,6 +17,7 @@ it.each([
   "registration",
   "conflict",
   "context_conflict",
+  "unsafe_target",
   "timeout"
 ])(
   "verifies the isolated shared Node runtime in %s mode",

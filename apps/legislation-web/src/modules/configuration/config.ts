@@ -193,14 +193,14 @@ export function loadConfig(environment: Readonly<Record<string, string | undefin
         .filter(Boolean)
     },
     model: {
-      apiKey: environment.OPENROUTER_API_KEY,
+      apiKey: environment.OPENROUTER_API_KEY?.trim() || undefined,
       baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
       researchAnswerModel: environment.RESEARCH_ANSWER_MODEL
     },
     observability: {
       langfuseBaseUrl: environment.LANGFUSE_BASE_URL ?? "https://cloud.langfuse.com",
-      langfusePublicKey: environment.LANGFUSE_PUBLIC_KEY,
-      langfuseSecretKey: environment.LANGFUSE_SECRET_KEY
+      langfusePublicKey: environment.LANGFUSE_PUBLIC_KEY?.trim() || undefined,
+      langfuseSecretKey: environment.LANGFUSE_SECRET_KEY?.trim() || undefined
     },
     passageSearch,
     security: {

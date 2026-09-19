@@ -18,6 +18,7 @@ third-party URLs containing an embedded allowed URL do not match. Cross-origin p
 remain part of the separate cross-runtime acceptance contract.
 For a production-built local preview, the observed browser origin may use loopback HTTP; this exception does not
 permit external HTTP origins and does not relax the edge/server configured-target policy.
+An ineligible browser origin disables propagation with a fixed warning rather than breaking application hydration.
 
 The local sampler returns zero, including when an incoming sampled flag is present. Metrics/logs/replay remain off
 in the shared configuration. The implementation adds no production sampling flag or automatic consent decision.

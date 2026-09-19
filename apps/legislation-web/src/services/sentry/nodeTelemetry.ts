@@ -10,8 +10,8 @@ import {
   type Span,
   type SpanProcessor
 } from "@opentelemetry/sdk-trace-base"
-// oxlint-disable-next-line import/default -- The SDK's node condition is CommonJS; native ESM needs its default namespace.
-import Sentry, { type NodeOptions } from "@sentry/nextjs"
+// The SDK's node condition is CommonJS; native ESM needs its default namespace.
+import { default as Sentry, type NodeOptions } from "@sentry/nextjs"
 import {
   SentryAsyncLocalStorageContextManager,
   SentryPropagator,
@@ -246,9 +246,14 @@ export function registerNodeTelemetry(
     }
     return owner.handle
   }
-  const target = configuration.dsn
-    ? telemetryPropagationTarget(configuration.apiBaseUrl, environment.NODE_ENV)
-    : undefined
+  let target: RegExp | undefined
+  if (configuration.dsn) {
+    try {
+      target = telemetryPropagationTarget(configuration.apiBaseUrl, environment.NODE_ENV)
+    } catch {
+      console.warn("Node telemetry trace propagation is disabled: first-party URL is not eligible")
+    }
+  }
   const handle = startNodeTelemetry({
     sentry: {
       dsn: configuration.dsn,

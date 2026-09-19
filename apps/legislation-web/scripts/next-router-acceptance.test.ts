@@ -257,6 +257,12 @@ beforeAll(async () => {
     LEGISLATION_PUBLIC_API_BASE_URL: baseUrl,
     LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 11).toString("base64"),
     NEXT_TELEMETRY_DISABLED: "1",
+    NEXT_PUBLIC_SENTRY_DSN: "",
+    SENTRY_DSN: "",
+    SENTRY_AUTH_TOKEN: "",
+    LANGFUSE_PUBLIC_KEY: "",
+    LANGFUSE_SECRET_KEY: "",
+    OPENROUTER_API_KEY: "",
     NODE_ENV: "production"
   }
 
