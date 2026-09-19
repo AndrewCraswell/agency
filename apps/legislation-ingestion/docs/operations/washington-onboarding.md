@@ -786,3 +786,13 @@ use the prefiling date for sponsorship tenure. A shared, evidence-based sponsors
 in both paths, with tests for prefiling, ordinary introductions and unresolved/ambiguous identities. Do not change vote
 dates, invent tenure boundaries, or add a Scott-specific exception. This diagnosis has not yet changed canonical mappings.
 Read-only evidence: `artifacts/openstates-washington-hosted/first-batch-people.json`.
+
+The shared sponsorship-date selector now prefers explicit introduction, then classified first reading/introduction,
+before an undifferentiated earliest action. Both aggregate ingestion and persisted reconciliation use it. Seventeen
+focused tests and ingestion type-checking passed. Read-only replay of the retained ten-bill batch now leaves zero
+unresolved sponsors while preserving the same four unresolved Ramos positions; evidence is
+`artifacts/openstates-washington-hosted/first-batch-people-corrected.json`. No canonical corrections were written.
+The reconciliation sponsor query initially exceeded the diagnostic 30-second statement budget; restricting its
+indexed action lookup to bills with unresolved sponsors let that query finish. The subsequent existing vote-position
+query then exceeded the same budget and still needs performance diagnosis. Full verification was started again and
+is not yet a clean completion result. The active hosted chain remains pinned to `20260919.20`, without this new fix.

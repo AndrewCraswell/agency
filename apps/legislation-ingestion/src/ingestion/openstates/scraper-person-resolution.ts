@@ -2,6 +2,7 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { legislativeTerms, people, personAliases } from "@repo/legislation-core/database/schema/schema"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { eq, inArray } from "drizzle-orm"
+import { sponsorObservationDate } from "./sponsor-observation-date.js"
 
 type Chamber = "legislature" | "lower" | "upper" | "unicameral"
 
@@ -240,12 +241,18 @@ export async function resolveScraperAggregatePeople(
       continue
     }
     const context = { allowChamberHistoryFallback: true, chamber, sessionEndDate, sessionStartDate }
-    const billDate =
-      dateValue(aggregate.bill.introducedAt) ??
+    const firstActionDate = (classification?: string) =>
       aggregate.actions
-        ?.map((action) => dateValue(action.actionDate ?? action.actionAt))
+        ?.filter((action) => classification === undefined || action.classification?.includes(classification))
+        .map((action) => dateValue(action.actionDate ?? action.actionAt))
         .filter((value): value is string => value !== undefined)
         .sort()[0]
+    const billDate = sponsorObservationDate({
+      introducedDate: dateValue(aggregate.bill.introducedAt),
+      firstReadingDate: firstActionDate("reading-1"),
+      firstIntroductionDate: firstActionDate("introduction"),
+      firstActionDate: firstActionDate()
+    })
     resolved.push({
       ...aggregate,
       sponsors: aggregate.sponsors?.map((sponsor) => {

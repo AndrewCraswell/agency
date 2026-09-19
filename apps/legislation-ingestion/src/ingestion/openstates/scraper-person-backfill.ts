@@ -5,6 +5,7 @@ import { z } from "zod"
 import { scraperBillState, type ScraperBillState } from "./scraper-bill-profiles.js"
 import { createScraperPersonResolver, loadScraperPersonCandidates } from "./scraper-person-resolution.js"
 import { scraperVoteChamberFromEvidence } from "./scraper-vote-chamber.js"
+import { sponsorObservationDate } from "./sponsor-observation-date.js"
 
 const stateSchema = scraperBillState
 const sessionSchema = z.string().regex(/^[A-Za-z0-9-]+$/)
@@ -88,17 +89,29 @@ export async function buildScraperPersonBackfillPlan(
     id: string
     name: string
     observed_date: string | null
+    first_reading_date: string | null
+    first_introduction_date: string | null
+    introduced_date: string | null
   }>(sql`
     with session_bills as materialized (
-      select id, chamber from legislation.bills where session_id = ${sessionId}
+      select bill.id, bill.chamber, bill.introduced_at from legislation.bills bill
+      where bill.session_id = ${sessionId}
+        and exists (select 1 from legislation.bill_sponsors sponsor
+          where sponsor.bill_id = bill.id and sponsor.person_id is null)
     ), first_actions as (
-      select action.bill_id, min(coalesce(action.action_date, action.action_at::date)) as observed_date
-      from legislation.bill_actions action
-      join session_bills bill on bill.id = action.bill_id
-      group by action.bill_id
+      select bill.id as bill_id, dates.* from session_bills bill
+      cross join lateral (
+        select min(coalesce(action.action_date, action.action_at::date)) as observed_date,
+          min(coalesce(action.action_date, action.action_at::date))
+            filter (where 'reading-1' = any(action.classification)) as first_reading_date,
+          min(coalesce(action.action_date, action.action_at::date))
+            filter (where 'introduction' = any(action.classification)) as first_introduction_date
+        from legislation.bill_actions action where action.bill_id = bill.id
+      ) dates
     )
     select sponsor.id, sponsor.bill_id, bill.chamber, sponsor.classification, sponsor.name,
-      first_action.observed_date::text
+      first_action.observed_date::text, first_action.first_reading_date::text,
+      first_action.first_introduction_date::text, bill.introduced_at::text as introduced_date
     from session_bills bill
     join legislation.bill_sponsors sponsor on sponsor.bill_id = bill.id
     left join first_actions first_action on first_action.bill_id = bill.id
@@ -188,7 +201,12 @@ export async function buildScraperPersonBackfillPlan(
       allowUniqueCrossChamberFallback: true,
       chamber: rowChamber,
       name: row.name,
-      observedDate: row.observed_date ?? undefined
+      observedDate: sponsorObservationDate({
+        introducedDate: row.introduced_date,
+        firstReadingDate: row.first_reading_date,
+        firstIntroductionDate: row.first_introduction_date,
+        firstActionDate: row.observed_date
+      })
     })
     if (result.status === "resolved") {
       candidateSponsors.push({
