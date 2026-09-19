@@ -443,7 +443,8 @@ describe("vote attribution evidence-to-synthesis boundary", () => {
       // Exact equality protects motion, target-bearing prose, dates, disposition, nulls and partial flags.
       expect(observed.data).toEqual(request.output)
       for (const evidence of observed.evidence) {
-        expect(evidence.id).toMatch(/^e[1-9][0-9]*$/)
+        // Model citation anchors use stable evidence identity, not the internal run-local citationRef.
+        expect(evidence.id).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-a[a-f0-9]{3}-[a-f0-9]{12}$/)
         expect(evidence.citation).toMatch(new RegExp(`^\\[[1-9][0-9]*\\]\\(#citation-${evidence.id}\\)$`))
       }
     })
