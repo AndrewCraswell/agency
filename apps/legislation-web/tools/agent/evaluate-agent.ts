@@ -4,7 +4,8 @@ import path from "node:path"
 import { parseArgs } from "node:util"
 import { z } from "zod"
 import { createResearchModel, researchAgentLimits } from "../../src/modules/conversations/agent"
-import { getResearchPrompt } from "../../src/modules/conversations/prompt"
+import { composeResearchInstructions } from "../../src/modules/conversations/composition"
+import { getResearchPrompt, researchDateContext } from "../../src/modules/conversations/prompt"
 import {
   assertSafeArtifact,
   datasetSchema,
@@ -55,6 +56,7 @@ const promptSnapshotSchema = z.object({
 })
 const frozenManifestSchema = z.object({
   runId: z.string(),
+  startedAt: z.iso.datetime(),
   runContract: z.literal(runContract),
   inputContract: z.literal(evaluationInputContract),
   config: experimentSchema,
@@ -319,7 +321,7 @@ async function main() {
     runContract,
     inputContract: evaluationInputContract,
     synced,
-    startedAt: new Date().toISOString(),
+    startedAt: frozen?.startedAt ?? new Date().toISOString(),
     revision,
     dirtyDiffHash: digest(trackedDiff),
     sources,
@@ -375,9 +377,19 @@ async function main() {
             throw new Error("Pinned prompt missing.")
           }
           const unitId = `${candidate.id}-${item.id}-${repeat}`
+          const instructions = composeResearchInstructions(
+            prompt.prompt,
+            researchDateContext(new Date(manifest.startedAt))
+          )
           const observed = await journal.stage(
             `${unitId}-candidate`,
-            { caseHash: digest(item), candidate, promptHash: digest(prompt.prompt), sources },
+            {
+              caseHash: digest(item),
+              candidate,
+              promptHash: digest(prompt.prompt),
+              instructionsHash: digest(instructions),
+              sources
+            },
             candidateCheckpointSchema,
             () =>
               observeEval(
@@ -400,7 +412,7 @@ async function main() {
                       ...candidate,
                       reasoning: candidate.reasoning === undefined ? { effort: "low" } : candidate.reasoning
                     }),
-                    instructions: prompt.prompt,
+                    instructions,
                     budget,
                     signal: controller.signal
                   })

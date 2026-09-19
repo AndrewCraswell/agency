@@ -90,8 +90,13 @@ then uses the same shared byte-bounded pages.
 `evals/agent-experiment.json` specifies candidates with explicit model IDs and numeric Langfuse prompt versions, repeats,
 the evaluator model, `evaluate`, and shared call/input-character limits. Set `evaluate: true` or pass `--judge` to run separate judge and
 critic calls on frozen outputs. They do not rewrite answers. Candidate order is interleaved per case and recorded via the
-run ID; each repeat produces a new generation. Reasoning is currently fixed at low for all configurations and provider
-fallbacks are disabled, matching chat.
+run ID; each repeat produces a new generation. Candidate reasoning defaults to low unless `candidates[].reasoning` is specified; use `{"effort":"high"}` to match
+chat's configured reasoning. Judge and critic reasoning remains low. Candidate instructions combine the pinned hosted
+prompt with the same application composition rules as chat and trusted date context derived from the persisted run
+start time. Resume reuses that time; the exact composed instruction hash participates in the candidate checkpoint.
+Retained provider metadata is scrubbed of credential fields and reasoning payloads before result artifacts or
+evaluation observations are written. Supplied usage counters and costs remain available; reasoning-token counts
+are measurements, not retained reasoning text.
 
 `maximumModelCalls` is enforced before every candidate model step and each evaluator call. It includes judge/critic
 calls, not just user tasks. The input-character limit rejects oversized inputs rather than silently truncating evidence.

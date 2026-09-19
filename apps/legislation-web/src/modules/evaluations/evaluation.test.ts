@@ -65,6 +65,7 @@ function streamStep(
     tool?: { name: string; input: unknown }
     usage?: Awaited<ReturnType<LanguageModelV4["doGenerate"]>>["usage"]
     isInterrupted?: boolean
+    providerMetadata?: Awaited<ReturnType<LanguageModelV4["doGenerate"]>>["providerMetadata"]
   } = {}
 ): Awaited<ReturnType<LanguageModelV4["doStream"]>> {
   return {
@@ -95,7 +96,7 @@ function streamStep(
             inputTokens: { total: 12, noCache: 7, cacheRead: 3, cacheWrite: 2 },
             outputTokens: { total: 6, text: 4, reasoning: 2 }
           },
-          providerMetadata: {
+          providerMetadata: options.providerMetadata ?? {
             openrouter: {
               provider: "test-provider",
               usage: {
@@ -356,6 +357,42 @@ describe("evaluation contracts", () => {
 })
 
 describe("shared SDK execution", () => {
+  it("excludes provider reasoning and credentials from retained results and telemetry while preserving usage", async () => {
+    const model = new MockLanguageModelV4({
+      doStream: [
+        streamStep({
+          providerMetadata: {
+            openrouter: {
+              provider: "test-provider",
+              reasoning_details: [{ type: "reasoning.encrypted", data: "private-reasoning-fixture" }],
+              headers: { authorization: "private-credential-fixture" },
+              usage: { cost: 0.125, completionTokensDetails: { reasoningTokens: 2 } }
+            }
+          }
+        })
+      ]
+    })
+    const result = await executeCase({
+      item: sample(),
+      model,
+      instructions: "Pinned",
+      budget: createCallBudget(1, 180000),
+      signal: new AbortController().signal
+    })
+    expect(result.turns[0]?.responses[0]?.providerMetadata).toEqual({
+      openrouter: {
+        provider: "test-provider",
+        usage: { cost: 0.125, completionTokensDetails: { reasoningTokens: 2 } }
+      }
+    })
+    expect(result.costUsd).toBe(0.125)
+    expect(result.turns[0]?.outputTokenDetails.reasoningTokens).toBe(2)
+    expect(JSON.stringify(result)).not.toMatch(/private-reasoning-fixture|private-credential-fixture|reasoning_details/)
+    expect(JSON.stringify(observations.map((observation) => observation.update.mock.calls))).not.toMatch(
+      /private-reasoning-fixture|private-credential-fixture|reasoning_details/
+    )
+  })
+
   it.each([true, false])(
     "distinguishes a captured tool error from a coverage gap (captured: %s)",
     async (isCaptured) => {

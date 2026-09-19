@@ -3,6 +3,7 @@ import { getActiveSpanId, propagateAttributes, startActiveObservation } from "@l
 import { z } from "zod"
 import { createLangfuseClient, langfuseSettings, type LangfuseEnvironment } from "../../services/langfuse/client"
 import { startLangfuseTelemetry } from "../../services/langfuse/telemetry"
+import { redactCredentials } from "../conversations/redactCredentials"
 import { assertSafeArtifact, datasetSchema, digest, type EvalCase, type EvalScore } from "./contracts"
 
 export function createEvalLangfuse(environment: LangfuseEnvironment) {
@@ -180,7 +181,7 @@ export function createEvalLangfuse(environment: LangfuseEnvironment) {
         },
         task: async () => {
           observationId = getActiveSpanId()
-          return options.output
+          return redactCredentials(options.output)
         }
       })
       const result = published.itemResults[0]

@@ -404,3 +404,7 @@ export const compositionInstructions = [
   "RESEARCH AND REFERENCE RULES",
   ...compositionRules
 ].join("\n\n")
+
+export function composeResearchInstructions(prompt: string, dateContext: string) {
+  return `${prompt}\n\n${compositionInstructions}\n\n${dateContext}`
+}

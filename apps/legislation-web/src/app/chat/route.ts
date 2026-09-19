@@ -26,7 +26,7 @@ import {
 import { clarificationStore } from "../../modules/conversations/clarificationStore"
 import { createClarificationTool } from "../../modules/conversations/clarificationTool"
 import { createCitationPresentation } from "../../modules/conversations/components/citationPresentation"
-import { compositionInstructions } from "../../modules/conversations/composition"
+import { composeResearchInstructions, compositionInstructions } from "../../modules/conversations/composition"
 import { createPresentationRecords } from "../../modules/conversations/compositionRecords"
 import { createCompositionStream, type ComposedAnswer } from "../../modules/conversations/compositionStream"
 import { entityPageRequestSchema, ResultExpiredError } from "../../modules/conversations/entityResults"
@@ -323,7 +323,7 @@ async function handleChatRequest(request: Request) {
           sessionId: parsed.data.sessionId,
           captureId: runId,
           model: createResearchModel(process.env.OPENROUTER_API_KEY),
-          instructions: `${prompt.prompt}\n\n${compositionInstructions}\n\n${dateContext}`,
+          instructions: composeResearchInstructions(prompt.prompt, dateContext),
           tools,
           messages,
           onChunk: ({ chunk }) => {

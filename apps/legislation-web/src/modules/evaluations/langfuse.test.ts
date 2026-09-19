@@ -182,6 +182,26 @@ describe("frozen experiment publication", () => {
     expect(runExperiment).not.toHaveBeenCalled()
   })
 
+  it("excludes reasoning payloads when publishing saved output without changing answers or usage", async () => {
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(Response.json({ id: "score" })))
+    await createEvalLangfuse(environment).publishResult({
+      ...upload,
+      output: {
+        ...upload.output,
+        providerMetadata: {
+          openrouter: {
+            reasoning_details: [{ type: "reasoning.encrypted", data: "private-reasoning-fixture" }],
+            usage: { reasoningTokens: 2, cost: 0.125 }
+          }
+        }
+      }
+    })
+    expect(await runExperiment.mock.calls[0]?.[0].task(item)).toEqual({
+      ...upload.output,
+      providerMetadata: { openrouter: { usage: { reasoningTokens: 2, cost: 0.125 } } }
+    })
+  })
+
   it.each([{ itemResults: [] }, { itemResults: [{ traceId: "unlinked-trace" }] }])(
     "surfaces SDK-skipped items or failed dataset links",
     async ({ itemResults }) => {

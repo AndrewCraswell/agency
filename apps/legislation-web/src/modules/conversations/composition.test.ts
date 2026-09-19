@@ -4,6 +4,7 @@ import { conversationTextMessages } from "./chatRequest"
 import {
   answerCatalog,
   answerPlainText,
+  composeResearchInstructions,
   compositionInstructions,
   presentationBlockSchema,
   presentationHistoryText,
@@ -53,6 +54,14 @@ const message: UIMessage = {
 }
 
 describe("composition contracts", () => {
+  it("composes the same pinned prompt, application rules and date context for chat and evaluations", () => {
+    const prompt = "Pinned research instructions."
+    const dateContext = "TRUSTED REQUEST DATE CONTEXT\n2026-09-19"
+    expect(composeResearchInstructions(prompt, dateContext)).toBe(
+      [prompt, compositionInstructions, dateContext].join("\n\n")
+    )
+  })
+
   it("uses friendly session names in bill snapshots without changing source IDs", () => {
     const id = "session:ca:20232024"
     const input = {

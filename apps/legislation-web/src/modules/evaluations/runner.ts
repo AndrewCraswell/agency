@@ -8,6 +8,7 @@ import { clarificationRequestSchema } from "../conversations/clarification"
 import { createClarificationStore } from "../conversations/clarificationStore"
 import { createClarificationTool } from "../conversations/clarificationTool"
 import { createCitationPresentation } from "../conversations/components/citationPresentation"
+import { redactCredentials } from "../conversations/redactCredentials"
 import { createResearchTools } from "../conversations/research"
 import { checkRun } from "./checks"
 import {
@@ -210,7 +211,7 @@ export async function executeCase(options: {
                   generationId: chunk.response.id?.startsWith("gen-") ? chunk.response.id : null,
                   modelId: chunk.response.modelId,
                   providerMetadata: evalTurnSchema.shape.responses.element.shape.providerMetadata.parse(
-                    JSON.parse(canonicalJson(chunk.providerMetadata))
+                    JSON.parse(canonicalJson(redactCredentials(chunk.providerMetadata)))
                   ),
                   costUsd: cost.success ? cost.data.usage.cost : null,
                   ...usageCounters(chunk.usage)
