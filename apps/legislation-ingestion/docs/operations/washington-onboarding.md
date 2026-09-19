@@ -7,6 +7,11 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+The HB 1255-1279 guarded alias apply completed (61318), removing 200 untouched duplicate rows. A repeat dry run
+from the same HB 1254 boundary returned zero candidates, zero held groups, and a complete page. The verified
+cleanup cursor is now `bill:wa:2025-2026:hb:1279`; audit checkpoints retain removed rows for recovery.
+Foundation replay `run_06gbk8ib6q2hlr5pdrveq6su01` was confirmed executing on version `20260919.34`.
+
 Full `pnpm verify` for `21fbe82` completed successfully (96350); default database suites still skip without explicit
 test database configuration, and the default positive-corpus acceptance remains skipped. The deployed API/importer
 contract check also passed. Trigger version `20260919.34`, deployment `747c0aam`, image
