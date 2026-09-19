@@ -5,7 +5,7 @@ import type { ArtifactStore } from "../documents/artifact-store.js"
 import { northCarolinaCommitteeIdentifiers } from "./committee-identifiers.js"
 import { normalizeOpenStatesEvent } from "./events.js"
 import { normalizeOpenStatesBill } from "./normalize.js"
-import { readArchivedScraperAttempt } from "./scraper-archive.js"
+import { assertSuccessfulScraperAttempt, readArchivedScraperAttempt } from "./scraper-archive.js"
 import { assertScraperBillBatchScope, readScraperBillPlan } from "./scraper-batches.js"
 import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 import { readScraperBillDispatch } from "./scraper-dispatch.js"
@@ -83,8 +83,8 @@ export async function prepareArchivedNcScraperEvents(input: {
   if (attempt.build_inputs_sha256 !== approved) {
     throw new Error("Scraper build is not approved for corrected meeting facts")
   }
+  assertSuccessfulScraperAttempt(attempt)
   if (
-    attempt.status !== "extracted" ||
     attempt.request.jurisdiction !== "nc" ||
     attempt.request.domain !== "events" ||
     attempt.request.session !== null ||
@@ -237,8 +237,8 @@ function normalizeVerifiedArchive(
   if (attempt.build_inputs_sha256 !== approved) {
     throw new Error("Scraper build is not approved for corrected vote clocks")
   }
+  assertSuccessfulScraperAttempt(attempt)
   if (
-    attempt.status !== "extracted" ||
     attempt.request.domain !== "bills" ||
     attempt.request.session !== scraperBillProfiles[attempt.request.jurisdiction].session ||
     !attempt.request.bill_ids

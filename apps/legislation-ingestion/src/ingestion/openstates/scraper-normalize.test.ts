@@ -226,7 +226,9 @@ describe("NC raw scraper mapping", () => {
         manifestPath,
         Buffer.from(JSON.stringify({ runId: "verified-clock", attempt: { ...retainedAttempt, ...changes } }))
       )
-      await expect(normalizeArchivedScraperBills(request)).rejects.toThrow(/not approved|not a completed/)
+      await expect(normalizeArchivedScraperBills(request)).rejects.toThrow(
+        /not approved|extraction failed: subprocess_failure/
+      )
     }
     objects.set(manifestPath, Buffer.from(JSON.stringify({ runId: "verified-clock", attempt: retainedAttempt })))
     objects.set(manifestPath.replace("retained.json", "files/_data/nc/vote_event_fixture.json"), Buffer.from("{}"))

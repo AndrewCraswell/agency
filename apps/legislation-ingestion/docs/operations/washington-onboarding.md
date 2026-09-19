@@ -223,6 +223,22 @@ name matching. Its historical publisher ID 35341 remains retained evidence; no n
 membership was fabricated. Washington's official member site also announces intermittent September 19 maintenance;
 this is possible source-timeout context, not proof of the specific failure's cause.
 
+HB 1105–1129 cleanup completed all 217 verified untouched-alias removals; independent read-only replay returned zero
+candidates and zero held groups. The completed cursor is `bill:wa:2025-2026:hb:1129`; audit snapshots retain removed
+metadata. Calendar receipts reached 29/90 and dispatched `run_06gbjbmjt61lojble52d911101`. The HB 1400–1409 retry
+remains verified EXECUTING on `20260919.28`; no replacement or overlapping extraction was submitted.
+
+The shared retained-attempt admission path now reports validated status, failure reason and exit code before bill
+or meeting normalization. For example, `source_timeout` no longer becomes only a generic incomplete-extraction error.
+Washington, Alaska and North Carolina adapters share this guard; source scope/build checks remain mandatory, and
+failed or partial output is never promoted. No new retry allowance or schedule is introduced. All 51 focused
+archive/normalizer/event tests, ingestion types and focused lint passed; hosted rollout remains pending.
+
+The latest full verification ended with two regulatory suite-hook failures and 23 failed tests, including repeated
+parser subprocess timeouts. Local inspection found a separate Next.js process using approximately 12 GB and another
+regulatory qualification process. They were not stopped or modified; their presence is resource-pressure evidence,
+not proof that they caused every failure. Repository-wide acceptance remains open.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled

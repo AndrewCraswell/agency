@@ -2,7 +2,7 @@ import { legislativeSessionId } from "@repo/legislation-core/domain/identifiers"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { normalizeOpenStatesEvent } from "./events.js"
-import { readArchivedScraperAttempt } from "./scraper-archive.js"
+import { assertSuccessfulScraperAttempt, readArchivedScraperAttempt } from "./scraper-archive.js"
 import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 import { scraperEventBillReferences } from "./scraper-event-bill-references.js"
 import { readEventWindowPlan } from "./scraper-event-window-plan.js"
@@ -44,13 +44,13 @@ export async function prepareWashingtonEventWindow(input: {
   const archive = await readArchivedScraperAttempt(input.store, input.manifestPath)
   const attempt = archive.attempt
   if (
-    attempt.status !== "extracted" ||
     attempt.build_inputs_sha256 !== input.approvedBuild ||
     attempt.request.jurisdiction !== "wa" ||
     attempt.request.domain !== "events"
   ) {
     throw new Error("Washington meeting window is not an approved successful extraction")
   }
+  assertSuccessfulScraperAttempt(attempt)
   const window = washingtonEventWindow.parse(attempt.request.event_window)
   const report = z
     .object({

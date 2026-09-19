@@ -1,7 +1,25 @@
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import type { ArtifactStore } from "../documents/artifact-store.js"
-import { archiveScraperAttempt, readArchivedScraperAttempt } from "./scraper-archive.js"
+import { archiveScraperAttempt, assertSuccessfulScraperAttempt, readArchivedScraperAttempt } from "./scraper-archive.js"
+
+it.each([
+  { status: "failed", reason: "source_timeout", exit_code: 1 },
+  { status: "failed", reason: "source_http_rate_limited", exit_code: 1 },
+  { status: "timed_out", reason: "execution_deadline", exit_code: null },
+  { status: "rejected", reason: "source_validation_failure", exit_code: 1 }
+] as const)("surfaces the retained failure reason without permitting promotion: $reason", (attempt) => {
+  expect(() => assertSuccessfulScraperAttempt(attempt)).toThrow(
+    `Scraper extraction ${attempt.status}: ${attempt.reason} (exit ${attempt.exit_code ?? "unknown"})`
+  )
+})
+
+it("does not infer a failure reason when absent and admits validated extraction success", () => {
+  expect(() => assertSuccessfulScraperAttempt({ status: "failed", reason: null, exit_code: null })).toThrow(
+    "Scraper extraction failed: unspecified_failure (exit unknown)"
+  )
+  expect(() => assertSuccessfulScraperAttempt({ status: "extracted", reason: null, exit_code: 0 })).not.toThrow()
+})
 
 class Store implements ArtifactStore {
   objects = new Map<string, Uint8Array>()

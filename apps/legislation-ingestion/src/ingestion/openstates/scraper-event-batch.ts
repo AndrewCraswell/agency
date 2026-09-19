@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { normalizeOpenStatesEvent } from "./events.js"
-import { readArchivedScraperAttempt } from "./scraper-archive.js"
+import { assertSuccessfulScraperAttempt, readArchivedScraperAttempt } from "./scraper-archive.js"
 import { scraperEventBillReferences } from "./scraper-event-bill-references.js"
 
 const eventSchema = z
@@ -85,7 +85,6 @@ export async function prepareAlaskaEventBatch(
   const archive = await readArchivedScraperAttempt(store, manifestPath)
   const { attempt } = archive
   if (
-    attempt.status !== "extracted" ||
     attempt.build_inputs_sha256 !== approvedBuild ||
     attempt.request.jurisdiction !== "ak" ||
     attempt.request.domain !== "events" ||
@@ -93,6 +92,7 @@ export async function prepareAlaskaEventBatch(
   ) {
     throw new Error("Alaska event batch is not an approved successful extraction")
   }
+  assertSuccessfulScraperAttempt(attempt)
   const selected = attempt.request.event_keys ?? []
   const reportRecord = archive.records.find((record) => record.path === "_data/ak/meeting_partition.json")
   const report = z

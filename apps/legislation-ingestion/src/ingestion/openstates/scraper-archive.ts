@@ -132,6 +132,17 @@ const resultSchema = z
   })
 const retainedSchema = z.strictObject({ runId: runIdSchema, attempt: resultSchema })
 
+/** Report the validated runtime reason without exposing arbitrary subprocess output or accepting partial data. */
+export function assertSuccessfulScraperAttempt(
+  attempt: Pick<z.infer<typeof resultSchema>, "status" | "reason" | "exit_code">
+) {
+  if (attempt.status !== "extracted") {
+    throw new Error(
+      `Scraper extraction ${attempt.status}: ${attempt.reason ?? "unspecified_failure"} (exit ${attempt.exit_code ?? "unknown"})`
+    )
+  }
+}
+
 function digest(bytes: Uint8Array) {
   return createHash("sha256").update(bytes).digest("hex")
 }
