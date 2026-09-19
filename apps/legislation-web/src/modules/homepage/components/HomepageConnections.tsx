@@ -71,16 +71,30 @@ const sources = [
   {
     name: "GovInfo.gov",
     href: "https://www.govinfo.gov",
-    description: "Federal publications and committee directories",
+    description: "Federal Register, annual CFR and committee directories",
     categories: ["Committees", "Documents", "Rules"],
-    status: "Published collections"
+    status: "Active backfill"
+  },
+  {
+    name: "eCFR.gov",
+    href: "https://www.ecfr.gov",
+    description: "Current consolidated federal regulations",
+    categories: ["Rules"],
+    status: "Active backfill"
+  },
+  {
+    name: "FederalRegister.gov",
+    href: "https://www.federalregister.gov",
+    description: "Rule metadata, agencies and regulatory references",
+    categories: ["Documents", "Rules"],
+    status: "Metadata sync"
   },
   {
     name: "Regulations.gov",
     href: "https://www.regulations.gov",
-    description: "Federal rulemaking documents and comments",
+    description: "Dockets, comments and supporting documents",
     categories: ["Documents", "Rules"],
-    status: "Selected dockets"
+    status: "Planned enrichment"
   },
   {
     name: "FEC.gov",
