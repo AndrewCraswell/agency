@@ -560,3 +560,15 @@ and pagination. Computed distance ordering prevents use of the global nearest-ne
 Numeric `.offset(0)` was found to be omitted by the ORM and its typed API does not accept SQL offsets, so that approach
 was removed. Five generated-query tests cover the path. Actual generated-query execution,
 broader correctness/pagination checks, full verification and deployment remain pending; statewide search is unchanged.
+
+The actual generated query was executed in a production read-only transaction. Bill scope, second-page scope,
+conflicting jurisdiction and document scope all passed: three lookahead rows for matching scopes, zero rows for the
+conflicting jurisdiction, no overlap between the two returned page prefixes, and all records mapped to HB 2266.
+Combined EXPLAIN ANALYZE plus query times were 1,045 / 669 / 545 / 531 ms respectively. The synthetic vector tests
+execution and filter behavior, not semantic relevance. Evidence: `reports/semantic-generated-query.json`.
+
+The whole-session exact-ranking alternative did not pass: its bounded read timed out at 15,584 ms (57014).
+Evidence: `reports/semantic-session-plan.json`. Do not extend the explicit-parent exact path to whole sessions based
+on the successful small-parent benchmark. Statewide semantic acceptance requires a different measured strategy.
+The verification run started before the query edit captured intermediate failing query assertions; those five focused
+tests subsequently passed after correction. A fresh full verification is required against the final code.
