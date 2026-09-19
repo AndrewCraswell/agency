@@ -7,6 +7,18 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Full `pnpm verify` for `6e604d2` completed successfully (10729), including 240 API acceptance cases and
+built MCP checks. Its optional database and positive-corpus skips are not production acceptance evidence.
+Docker `legislation-wa-acceptance` was confirmed running on loopback port 55461. An explicit isolated
+`LEGISLATION_INGESTION_TEST_DATABASE_URL` run passed all 30 ingestion persistence integration tests, including
+retained event relationship replay and changed-evidence rejection. No production database was used.
+
+The separate API database suite against disposable `legislation_test` passed 31 tests, failed one and skipped 14.
+The failure is outside Washington ingestion: `subscription-repository.test.ts` expects a duplicate active
+subscription to map to `category: conflict`, but a Drizzle-wrapped PostgreSQL `23505` on
+`subscriptions_exact_active_uidx` escapes unchanged. This additional suite is not green; record this separate
+API defect without changing unrelated subscription code as part of state onboarding.
+
 Read-only inspection of the five older Open States UUID meetings confirms all five lack publisher-local date,
 source URL, retrieval/update timestamps, and any upstream identifier beyond their Open States UUID. Their event
 times fall on September 15-16, 2026. No matching UUID was found in the scoped retained Washington foundation,
@@ -29,7 +41,7 @@ https://leg.wa.gov/media/s4zhym3d/2017senatejournal.pdf.
 
 Eight focused review tests pass. Full retained-pair preparation still produces 337 people, 383 terms,
 14 accepted reviews, six structural holds and zero coverage issues: Hawkins remains quarantined for overlapping
-roles. Full verification for this partial review is running as 10729. The January 2025 Senate end also needs
+roles. Full verification for this partial review passed as 10729. The January 2025 Senate end also needs
 independent verification; county office commencement alone must not be substituted for a Senate resignation date.
 
 Washington's official website publishes a September 19 scheduled-maintenance notice (7 AM-7 PM), consistent
