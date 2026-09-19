@@ -556,6 +556,7 @@ PostgreSQL 57014) and completed a bill-restricted exact-vector query in 532 ms. 
 latency. Plans are retained in `reports/semantic-selectivity-plan.json` in the archive audit store.
 
 The shared query builder now has an explicit bill/document-scoped exact-ranking path with all filters before ranking
-and pagination. A SQL `OFFSET 0` boundary prevents inlining into a global graph scan; numeric `.offset(0)` was found
-to be omitted by the ORM and is not sufficient. Five generated-query tests pass. Actual generated-query execution,
+and pagination. Computed distance ordering prevents use of the global nearest-neighbor index for this exact path.
+Numeric `.offset(0)` was found to be omitted by the ORM and its typed API does not accept SQL offsets, so that approach
+was removed. Five generated-query tests cover the path. Actual generated-query execution,
 broader correctness/pagination checks, full verification and deployment remain pending; statewide search is unchanged.

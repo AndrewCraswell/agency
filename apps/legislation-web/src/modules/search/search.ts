@@ -1212,8 +1212,8 @@ export function buildSemanticPassageSearchQuery(
   const filters = passageFilters(input)
   // Explicit parents are a small relational population. Rank that population
   // exactly instead of fetching a global ANN window and discarding most of it.
-  // OFFSET 0 preserves the subquery boundary so the planner cannot turn this
-  // back into an unfiltered HNSW scan. Keep all requested filters inside it.
+  // A computed distance ordering prevents a global HNSW scan from replacing
+  // the exact filtered ranking. Keep all requested filters inside the scope.
   if (input.billIds?.length || input.documentIds?.length) {
     const scoped = database.$with("scoped_passage_embeddings").as(
       database
@@ -1230,9 +1230,8 @@ export function buildSemanticPassageSearchQuery(
             ...filters
           )
         )
-        .offset(sql`0`)
     )
-    const scopedDistance = sql<number>`${scoped.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
+    const scopedDistance = sql<number>`(${scoped.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}) + 0`
     const ranked = database.$with("ranked_scoped_passages").as(
       database
         .select({ sectionId: scoped.sectionId, distance: scopedDistance.as("distance") })
