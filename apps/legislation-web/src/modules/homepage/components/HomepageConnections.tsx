@@ -68,7 +68,7 @@ const sources = [
     name: "Open States",
     href: "https://openstates.org",
     description: "50 states, DC and Puerto Rico",
-    categories: ["Bills", "Votes", "Committees", "People", "Meetings", "Documents"],
+    categories: ["Bills", "Amendments", "Votes", "Committees", "People", "Meetings", "Documents"],
     plannedCategories: [],
     scope: "50 states, DC and Puerto Rico",
     status: "Available"
@@ -417,7 +417,19 @@ export function HomepageConnections({
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <p>Rostra is a research tool, not legal advice.</p>
-          <p>&copy; {new Date().getFullYear()} Rostra</p>
+          <p>
+            Built with <span aria-hidden="true">&#x2615;</span>
+            <span className="sr-only">coffee</span> and zero <span aria-hidden="true">&#x1F4A4;</span>
+            <span className="sr-only">sleep</span> by{" "}
+            <a
+              href="https://www.linkedin.com/in/andrewcraswell/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-4"
+            >
+              Andrew Craswell
+            </a>
+          </p>
         </div>
       </footer>
     </>
