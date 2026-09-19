@@ -36,6 +36,19 @@ it("maps explicit Washington joint committee URL codes only to legislative commi
   }
 })
 
+it.each([
+  ["https://leg.wa.gov/about-the-legislature/legislative-agencies/jlarc", "JLARC"],
+  ["https://leg.wa.gov/about-the-legislature/legislative-agencies/leb", "LEB"],
+  ["https://leg.wa.gov/JTC/Pages/default.aspx", "JTC"]
+])("maps joint roster agency codes from %s without inferring the committee from its name", (url, code) => {
+  expect(washingtonCommitteeIdentifiers([{ url }], "legislature")).toEqual({ [`waCommittee:joint:${code}`]: url })
+  expect(washingtonCommitteeIdentifiers([{ url }], "upper")).toEqual({})
+  expect(washingtonCommitteeIdentifiers([{ url }], "lower")).toEqual({})
+  for (const invalid of [url + "?other=1", url + "#fragment", url.replace("leg.wa.gov", "example.org")]) {
+    expect(washingtonCommitteeIdentifiers([{ url: invalid }], "legislature")).toEqual({})
+  }
+})
+
 it("retains both session identities independently from homepage selection", () => {
   expect(
     alaskaCommitteeIdentifiers(

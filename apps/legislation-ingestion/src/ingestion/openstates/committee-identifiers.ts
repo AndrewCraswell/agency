@@ -17,7 +17,14 @@ export function washingtonCommitteeIdentifiers(input: unknown, chamber: string |
         parsed.pathname
       ) ?? /^\/(House|Senate)\/Committees\/([A-Z0-9]+)\/?$/.exec(parsed.pathname)
     const sourceAgency = match?.[1]?.toLowerCase()
-    const sourceChamber = sourceAgency?.startsWith("house") ? "house" : sourceAgency
+    // Joint committees can be hosted as legislative agencies; the retained roster supplies the chamber.
+    const jointMatch =
+      /^\/about-the-legislature\/legislative-agencies\/([a-z0-9]+)\/?$/.exec(parsed.pathname) ??
+      /^\/([A-Za-z0-9]+)\/Pages\/default\.aspx$/.exec(parsed.pathname)
+    const sourceChamber = sourceAgency?.startsWith("house")
+      ? "house"
+      : (sourceAgency ?? (jointMatch ? "joint" : undefined))
+    const code = match?.[2] ?? jointMatch?.[1]
     const expectedChamber = sourceChamber === "house" ? "lower" : sourceChamber === "senate" ? "upper" : "legislature"
     if (
       parsed.origin !== "https://leg.wa.gov" ||
@@ -25,11 +32,11 @@ export function washingtonCommitteeIdentifiers(input: unknown, chamber: string |
       parsed.password ||
       parsed.search ||
       parsed.hash ||
-      !match ||
+      !code ||
       chamber !== expectedChamber
     )
       continue
-    result[`waCommittee:${sourceChamber}:${match[2]!.toUpperCase()}`] = url
+    result[`waCommittee:${sourceChamber}:${code.toUpperCase()}`] = url
   }
   return result
 }

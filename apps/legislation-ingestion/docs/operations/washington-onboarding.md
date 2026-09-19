@@ -239,6 +239,21 @@ parser subprocess timeouts. Local inspection found a separate Next.js process us
 regulatory qualification process. They were not stopped or modified; their presence is resource-pressure evidence,
 not proof that they caused every failure. Repository-wide acceptance remains open.
 
+Read-only inventory now reports 41 promoted bill batches and one active owner, confirming progress after the
+HB 1400–1409 retry. The calendar receipt inventory contains 46 completed windows. Relationship replay is processing
+only those committed immutable windows sequentially through the existing source-bound preparation and transactional
+reconciler; it is not re-scraping or replacing source facts. Completion of all selected windows remains unverified.
+
+Additional explicit publisher URL forms (`/about-the-legislature/legislative-agencies/<code>` and
+`/<code>/Pages/default.aspx`) now map legislative-chamber committee rosters to joint references. No organization-name
+exception was added. Retained-roster preparation now identifies all 17 joint committees among the same 51 organizations;
+production committee import and replay succeeded. Fifteen focused identity/import/resolver tests, types and lint passed.
+The hosted adapter rollout and complete public-read replay remain pending; empty-code and absent-roster hosts remain held.
+
+Cleanup after HB 1129 stopped partway through its 219 candidates with PostgreSQL `55P03`, a three-second parent-bill
+lock timeout. The process exited unsuccessfully without a completed cursor. Prior per-pair commits are retained and
+the interrupted pair rolled back; retry the same HB 1129 cursor, not a later page. A same-page retry has been started.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
