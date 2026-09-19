@@ -754,3 +754,24 @@ dispatch-to-worker, refill, person reconciliation and the content handoff now pr
 verify candidate-version propagation and the single Washington dispatch slot; 11 focused tests and ingestion type-checking
 passed. A corrected unpromoted deployment is required before hosted bill acceptance. The latest full repository verify
 finished with 11 failures in unrelated web tests; it is not a clean completion result.
+
+## Pinned hosted refresh acceptance (2026-09-19)
+
+Corrected Trigger deployment `20260919.20` (`5p62ev6y`) succeeded with 70 tasks and `--skip-promotion`.
+Manual task admission now includes `ak,nc,wa`. The explicit queue routes preserve `ak` and `nc` on
+`openstates-scraper-dispatch` and place `wa` on `openstates-scraper-canary`; both settings were read back.
+No Washington recurring schedule was created and the candidate was not promoted to the current deployment.
+
+Idempotent plan run `run_06gbi1tbrfes91pl7p1kt3ho01` completed with 3,411 publisher bills in 342 batches.
+Its immutable inventory ID is `093b6b38e2ef0dbb94458f1a3048605297487bc46085f42cf402bcd28c168517`.
+The first cloud run, `run_06gbi1vi29hstv3sipflnaif01`, completed with a committed promotion receipt for ten bills.
+The retained manifest hash is `626887fe44b97513d02c7bc74adeb4f50449d4ad34ac0d29b38437a459517956`.
+That receipt reports one unresolved sponsor and four unresolved vote positions; those are open identity-resolution
+gaps, not successful mappings. The session is explicitly incomplete.
+
+The shared continuation automatically dispatched `run_06gbi2q67uvl17p7sat5umg801`, then cloud run
+`run_06gbi2r0tkftcbf908bdmblo01`. Both retained version `20260919.20`; the latter was observed executing.
+This establishes the hosted promotion-to-refill path, not full-session completion or downstream content readiness.
+The separate receipt-driven calendar operator has committed eight of 90 windows and remains active.
+Final person reconciliation, document extraction/OCR, embeddings, search synchronization, replay validation and
+authenticated retrieval still require session-wide acceptance before recurring syncing is enabled.
