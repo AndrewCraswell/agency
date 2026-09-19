@@ -666,3 +666,27 @@ and queue `openstates-scraper-dispatch`. The canary has no database credentials 
 This proves hosted House extraction, identity-based queue/blob access, retention, settlement and deterministic normalization;
 it does not prove Senate/vote extraction, hosted event windows, canonical promotion, full-session refresh or regular syncing.
 The canary queue has no automatic scaler; future canaries require explicit one-off executions.
+
+Two further one-off executions passed using that same immutable image and isolated queue:
+
+| Lane | Execution | UTC start/end | Verified retained result |
+| --- | --- | --- | --- |
+| Senate SB 5000 | `leg-dev-openstates-scraper-havvz40` | 08:51:45 / 08:52:33 | Eight files; 22 actions, eight document links, two roll calls and 98 positions |
+| January 13 meeting window | `leg-dev-openstates-scraper-sf0abnk` | 08:53:42 / 08:54:24 | Sixteen files; exactly 11 meetings matching the complete window inventory |
+
+Both Azure executions reached `Succeeded`, their shared queue settlements were observed, and repeated shared
+normalization/preparation was identical. Source-input fingerprints and every retained file hash were checked by the
+existing archive reader. Neither canary wrote canonical records. Reports are
+`artifacts/openstates-washington-hosted/{senate-canary,meetings-canary}.json`.
+Manifest hashes are `7c6c74b110519a2174769c57402458d122605cb3a1af82b10af93ad558e1435f` (Senate) and
+`c622c44195bd175f5ac3034f1330b9749b9599fc7b81efae9e4f0b4ccb4cefab` (meetings).
+
+The promotion path's shared person resolver was then run in a production **read-only** transaction. It resolved
+97 of 98 Senate positions. One `Ramos` yes position remains unresolved, with its original source identity preserved;
+see `senate-people.json` in that report directory. The retained Bill Ramos history contains an upper-chamber 2019-2025
+role overlapping his lower-chamber role, so whole-person quarantine excludes him from the accepted resolver population.
+This is not authorization to loosen tenure checks or insert a guessed voter ID. Official
+[Senate Resolution 8659](https://lawfilesext.leg.wa.gov/biennium/2025-26/Pdf/Bills/Senate%20Resolutions/8659-.pdf)
+states House service from 2019 to 2025, Senate service beginning January 2025, and death on April 19, 2025.
+The retained source also ends his current Senate role on April 23. A source-backed, replayable history adjudication
+remains required; no person-specific engine rule or production correction was applied in these checks.
