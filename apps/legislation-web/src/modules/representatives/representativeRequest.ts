@@ -28,7 +28,9 @@ export function createRepresentativeRequestHandler({ environment, getLookup, now
           "Use the representative lookup endpoint without query parameters."
         )
       }
-      if (request.headers.get("origin") !== url.origin || request.headers.get("sec-fetch-site") === "cross-site") {
+      const host = request.headers.get("host") ?? url.host
+      const expectedOrigin = `${url.protocol}//${host}`
+      if (request.headers.get("origin") !== expectedOrigin || request.headers.get("sec-fetch-site") === "cross-site") {
         throw new LegislationError("forbidden", "Representative lookup must be requested from this app.")
       }
       if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") {

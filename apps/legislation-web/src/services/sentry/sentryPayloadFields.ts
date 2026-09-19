@@ -1,8 +1,9 @@
 import type { StackFrame } from "@sentry/core"
 import { z } from "zod"
 import { telemetryCorrelationSchema } from "./telemetryCorrelation"
+import { telemetryEvents } from "./telemetryEvents"
 import { telemetryFields as f, type TelemetryScalar } from "./telemetryFields"
-import { resolveTelemetryRoute } from "./telemetryRoutes"
+import { resolveTelemetryRoute, telemetryRouteSchema } from "./telemetryRoutes"
 
 export const sentryPayloadFields = {
   eventId: z.string().regex(/^[a-f0-9]{32}$/u),
@@ -27,7 +28,9 @@ export const sentryPayloadFields = {
     "conversation_export",
     "react_boundary",
     "clarification_submit",
-    "research_suggestions"
+    "research_suggestions",
+    "http_api",
+    "chat_restore"
   ]),
   spanOperation: z.enum([
     "app.operation",
@@ -104,9 +107,20 @@ export function projectSafeModelFields(value: Readonly<Record<string, TelemetryS
 
 const metadataFields = {
   ...telemetryCorrelationSchema.shape,
+  retry_of_operation_id: f.id,
   operation: sentryPayloadFields.operation,
   category: z.union([f.failure, f.toolFailure]),
   stage: f.stage,
+  dependency: f.dependency,
+  origin: f.origin,
+  reason: telemetryEvents["composer.submit_blocked"].attributes.shape.reason,
+  milestone: telemetryEvents["conversation.milestone"].attributes.shape.milestone,
+  phase: f.phase,
+  firstContentMs: f.duration,
+  firstModelTextMs: f.duration,
+  hasAnswer: f.boolean,
+  failureCode: f.toolFailure,
+  toolCount: f.count,
   tool: f.tool,
   tool_name: f.tool,
   runtime: f.runtime,
@@ -141,6 +155,7 @@ const metadataFields = {
   "analytics.join_count": f.count,
   "analytics.result_bytes": f.count,
   "gen_ai.request.model": f.token,
+  "gen_ai.tool.name": f.tool,
   "gen_ai.response.model": f.token,
   "gen_ai.system": f.token,
   "gen_ai.provider.name": f.token,
@@ -153,6 +168,27 @@ export function projectSentryMetadata(value: unknown, policy: SentryPayloadPolic
   return projectSafeModelFields(projectPayloadFields(metadataFields, value), policy)
 }
 
+const diagnosticNames = z.enum([
+  "legislative-research-conversation",
+  "legislative-research-suggestions",
+  "research.tool",
+  "analytics.validate",
+  "analytics.compile",
+  "analytics.execute",
+  "analytics.project"
+])
+
+export function safeSpanName(value: unknown, fallback: string) {
+  if (typeof value !== "string") {
+    return fallback
+  }
+  const tool = value.startsWith("execute_tool ") ? f.tool.safeParse(value.slice("execute_tool ".length)) : undefined
+  if (tool?.success) {
+    return `execute_tool ${tool.data}`
+  }
+  return readPayloadField(diagnosticNames, value) ?? readPayloadField(telemetryRouteSchema, value) ?? fallback
+}
+
 export function safeCodeLocation(value: unknown): string | undefined {
   if (typeof value !== "string" || value.length > 2048) {
     return undefined
@@ -161,6 +197,10 @@ export function safeCodeLocation(value: unknown): string | undefined {
   const asset = /(?:^|\/)(_next\/static\/chunks\/(?:[a-f0-9]{8,64}|[a-z0-9_-]{13})\.(?:js|mjs))$/u.exec(path)?.[1]
   if (asset) {
     return `/${asset}`
+  }
+  const serverChunk = /(?:^|\/)(\.next\/server\/chunks\/(?:ssr\/)?(?:_[a-z0-9]{7}\._|[0-9]{1,8})\.js)$/u.exec(path)?.[1]
+  if (serverChunk) {
+    return `app:///${serverChunk}`
   }
   const compiled = /(?:^|\/)\.next\/server\/app\/(.+)\/(page|route)\.js$/u.exec(path)
   if (compiled?.[1] && compiled[2]) {

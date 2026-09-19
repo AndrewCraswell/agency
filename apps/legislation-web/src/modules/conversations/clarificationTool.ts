@@ -1,7 +1,9 @@
 import { dynamicTool } from "ai"
 import { z } from "zod"
+import { diagnosticBreadcrumb } from "../../services/sentry/diagnosticBreadcrumb"
 import { clarificationInputSchema } from "./clarification"
 import { clarificationStore } from "./clarificationStore"
+import { observeTool } from "./toolTelemetry"
 
 const inputSchema = z.object({
   kind: z.enum(["text", "single", "multiple"]),
@@ -41,23 +43,29 @@ export function createClarificationTool(
     description:
       "Pause to ask one research-scope question when missing jurisdiction, period, or comparison preference materially changes the answer. Never request secrets, approvals, personal data, or fabricated record choices. Use text, single or multiple choice. This is not a mandatory onboarding step. Do not call other tools in the same step.",
     inputSchema,
-    execute: async (input) => {
-      signal.throwIfAborted()
-      const parsed = inputSchema.parse(input)
-      const question = clarificationInputSchema.parse({
-        kind: parsed.kind,
-        question: parsed.question,
-        description: parsed.description ?? undefined,
-        allowSkip: parsed.allowSkip,
-        ...(parsed.kind !== "text" && {
-          allowFreeText: parsed.allowFreeText,
-          options: parsed.options?.map((option) => ({ ...option, description: option.description ?? undefined }))
-        }),
-        ...(parsed.kind === "multiple" && { minSelections: parsed.minSelections, maxSelections: parsed.maxSelections })
+    execute: async (input) =>
+      observeTool("ask_clarification", async (span) => {
+        signal.throwIfAborted()
+        const parsed = inputSchema.parse(input)
+        const question = clarificationInputSchema.parse({
+          kind: parsed.kind,
+          question: parsed.question,
+          description: parsed.description ?? undefined,
+          allowSkip: parsed.allowSkip,
+          ...(parsed.kind !== "text" && {
+            allowFreeText: parsed.allowFreeText,
+            options: parsed.options?.map((option) => ({ ...option, description: option.description ?? undefined }))
+          }),
+          ...(parsed.kind === "multiple" && {
+            minSelections: parsed.minSelections,
+            maxSelections: parsed.maxSelections
+          })
+        })
+        const clarification = store.create(sessionKey, question)
+        onPending()
+        span.setAttributes({ tool_name: "ask_clarification", outcome: "success" })
+        diagnosticBreadcrumb("research.tool_finished", { tool_name: "ask_clarification", outcome: "success" })
+        return { clarification }
       })
-      const clarification = store.create(sessionKey, question)
-      onPending()
-      return { clarification }
-    }
   })
 }

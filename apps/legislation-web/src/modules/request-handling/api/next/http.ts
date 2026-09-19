@@ -136,7 +136,7 @@ export function apiErrorResponse(request: Request, error: unknown, options: Json
     }
   }
   if (statusForError(category) >= 500 && !request.signal.aborted) {
-    captureException(error, { tags: { operation: "http_api", category, reference: correlation } })
+    captureException(error, { tags: { operation: "http_api", category } })
   }
   return jsonResponse(request, statusForError(category), body, { correlationId: correlation, headers })
 }

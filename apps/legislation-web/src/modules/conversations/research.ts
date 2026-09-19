@@ -21,6 +21,7 @@ import { createResearchSelections } from "./researchSelection"
 import { isResearchTool, researchToolLabels } from "./researchTools"
 import { resultStore } from "./resultStore"
 import type { createToolFailureReporter } from "./toolFailures"
+import { observeTool, recordToolMeasurement } from "./toolTelemetry"
 
 const resultSchema = z.object({ structuredContent: z.object({ data: z.json() }) })
 const failureSchema = z.object({ error: z.string(), message: z.string().optional() })
@@ -403,189 +404,199 @@ export async function createResearchTools(
       description: definition.description ?? researchToolLabels[name],
       inputSchema: modelInputSchema(definition.inputSchema),
       toModelOutput: researchModelOutput,
-      execute: async (input, { toolCallId }) => {
-        const reference = crypto.randomUUID()
-        const startedAtIso = new Date().toISOString()
-        const startedAt = performance.now()
-        let resultBytes: number | undefined
-        let dependencyDurationMs: number | null = null
-        let enrichedResultBytes: number | null = null
-        let modelResultBytes: number | null = null
-        let counts: Pick<ResearchToolMeasurement, "resultCount" | "hasNextPage"> = {
-          resultCount: null,
-          hasNextPage: null
-        }
-        function measurement(
-          outcome: ResearchToolMeasurement["outcome"],
-          failureCode: ResearchToolMeasurement["failureCode"]
-        ): ResearchToolMeasurement {
-          return {
-            runId,
-            toolCallId,
-            toolName: name,
-            startedAt: startedAtIso,
-            finishedAt: new Date().toISOString(),
-            durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
-            dependencyDurationMs,
-            rawResultBytes: resultBytes ?? null,
-            enrichedResultBytes,
-            modelResultBytes,
-            ...counts,
-            outcome,
-            failureCode,
-            attemptCount: 1,
-            internalRetryCount: null,
-            retryOfToolCallId: null
+      execute: async (input, { toolCallId }) =>
+        observeTool(name, async (span) => {
+          const reference = crypto.randomUUID()
+          span.setAttributes({ run_id: runId, tool_name: name, tool_call_id: reference })
+          const startedAtIso = new Date().toISOString()
+          const startedAt = performance.now()
+          let resultBytes: number | undefined
+          let dependencyDurationMs: number | null = null
+          let enrichedResultBytes: number | null = null
+          let modelResultBytes: number | null = null
+          let stage: "validation" | "dependency" | "enrichment" | "serialization" = "validation"
+          let counts: Pick<ResearchToolMeasurement, "resultCount" | "hasNextPage"> = {
+            resultCount: null,
+            hasNextPage: null
           }
-        }
-        function measureOutput(output: unknown) {
-          enrichedResultBytes = Buffer.byteLength(JSON.stringify(output), "utf8")
-          modelResultBytes = Buffer.byteLength(serializeResearchModelOutput(output).value, "utf8")
-          if (modelResultBytes > researchResultByteLimit) {
-            throw new ResearchFailure("result_limit", reference)
-          }
-        }
-        function publishMeasurement(value: ResearchToolMeasurement) {
-          try {
-            onMeasurement?.(value)
-          } catch {
-            logger.warn("Research tool measurement was not recorded", { tool: name, toolCallId, runId })
-          }
-        }
-        let selectionInput: Record<string, unknown> | undefined
-        try {
-          signal.throwIfAborted()
-          if (!canResearch()) {
-            throw new ResearchFailure("interrupted", reference)
-          }
-          calls++
-          if (calls > researchAgentLimits.calls) {
-            throw new ResearchFailure("step_limit", reference)
-          }
-          const pageInput = z.record(z.string(), z.unknown()).parse(definition.inputSchema.parse(input))
-          selectionInput = pageInput
-          selections.validate(name, pageInput, reference)
-          const dependencyStartedAt = performance.now()
-          const result = await execute(name, pageInput).finally(() => {
-            dependencyDurationMs = Math.max(0, Math.round(performance.now() - dependencyStartedAt))
-          })
-          signal.throwIfAborted()
-          if ("isError" in result && result.isError && "content" in result) {
-            const content = result.content[0]
-            const failure = content?.type === "text" ? failureSchema.safeParse(JSON.parse(content.text)) : undefined
-            let code = researchFailureCode(failure?.success ? failure.data.error : undefined)
-            if (failure?.success && /timed out/i.test(failure.data.message ?? "")) {
-              code = "timeout"
+          function measurement(
+            outcome: ResearchToolMeasurement["outcome"],
+            failureCode: ResearchToolMeasurement["failureCode"]
+          ): ResearchToolMeasurement {
+            return {
+              runId,
+              toolCallId,
+              toolName: name,
+              startedAt: startedAtIso,
+              finishedAt: new Date().toISOString(),
+              durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+              dependencyDurationMs,
+              rawResultBytes: resultBytes ?? null,
+              enrichedResultBytes,
+              modelResultBytes,
+              ...counts,
+              outcome,
+              failureCode,
+              attemptCount: 1,
+              internalRetryCount: null,
+              retryOfToolCallId: null
             }
-            throw new ResearchFailure(code, reference)
           }
-          const parsed = resultSchema.safeParse(result)
-          if (!parsed.success) {
-            throw new ResearchFailure("invalid_response", reference)
+          function measureOutput(output: unknown) {
+            enrichedResultBytes = Buffer.byteLength(JSON.stringify(output), "utf8")
+            modelResultBytes = Buffer.byteLength(serializeResearchModelOutput(output).value, "utf8")
+            if (modelResultBytes > researchResultByteLimit) {
+              throw new ResearchFailure("result_limit", reference)
+            }
           }
-          resultBytes = Buffer.byteLength(JSON.stringify(parsed.data.structuredContent), "utf8")
-          counts = resultMeasurements(parsed.data.structuredContent.data)
-          if (resultBytes > researchResultByteLimit) {
-            throw new ResearchFailure("result_limit", reference)
+          function publishMeasurement(value: ResearchToolMeasurement) {
+            recordToolMeasurement(span, value, reference, stage)
+            try {
+              onMeasurement?.(value)
+            } catch {
+              logger.warn("Research tool measurement was not recorded", { tool: name, toolCallId, runId })
+            }
           }
-          const isCatalog = name === "describe_analytics"
-          const resultSet =
-            sessionKey && !isCatalog
-              ? resultStore.create(
-                  sessionKey,
-                  name,
-                  parsed.data.structuredContent.data,
-                  typeof pageInput.query === "string" ? pageInput.query : undefined,
-                  async (cursor, pageSignal) => {
-                    const nextResult = await execute(name, { ...pageInput, cursor }, pageSignal)
-                    pageSignal.throwIfAborted()
-                    if ("isError" in nextResult && nextResult.isError) {
-                      throw new ResearchFailure("dependency_unavailable", crypto.randomUUID())
-                    }
-                    const page = resultSchema.parse(nextResult)
-                    if (Buffer.byteLength(JSON.stringify(page.structuredContent), "utf8") > researchResultByteLimit) {
-                      throw new ResearchFailure("result_limit", crypto.randomUUID())
-                    }
-                    return page.structuredContent.data
-                  },
-                  pageInput
-                )
-              : undefined
-          const evidence = isCatalog ? [] : projectEvidence(parsed.data.structuredContent.data)
-          const contents =
-            onContents && !isCatalog
-              ? projectPresentationContents(name, parsed.data.structuredContent.data, evidence, resultSet)
-              : []
-          const output = {
-            ...parsed.data.structuredContent,
-            evidence,
-            ...(onContents ? { presentationOptions: contents.map(contentOptions) } : {}),
-            resultSet
+          let selectionInput: Record<string, unknown> | undefined
+          try {
+            signal.throwIfAborted()
+            if (!canResearch()) {
+              throw new ResearchFailure("interrupted", reference)
+            }
+            calls++
+            if (calls > researchAgentLimits.calls) {
+              throw new ResearchFailure("step_limit", reference)
+            }
+            const pageInput = z.record(z.string(), z.unknown()).parse(definition.inputSchema.parse(input))
+            selectionInput = pageInput
+            selections.validate(name, pageInput, reference)
+            stage = "dependency"
+            const dependencyStartedAt = performance.now()
+            const result = await execute(name, pageInput).finally(() => {
+              dependencyDurationMs = Math.max(0, Math.round(performance.now() - dependencyStartedAt))
+            })
+            signal.throwIfAborted()
+            if ("isError" in result && result.isError && "content" in result) {
+              const content = result.content[0]
+              const failure = content?.type === "text" ? failureSchema.safeParse(JSON.parse(content.text)) : undefined
+              let code = researchFailureCode(failure?.success ? failure.data.error : undefined)
+              if (failure?.success && /timed out/i.test(failure.data.message ?? "")) {
+                code = "timeout"
+              }
+              throw new ResearchFailure(code, reference)
+            }
+            const parsed = resultSchema.safeParse(result)
+            if (!parsed.success) {
+              throw new ResearchFailure("invalid_response", reference)
+            }
+            resultBytes = Buffer.byteLength(JSON.stringify(parsed.data.structuredContent), "utf8")
+            counts = resultMeasurements(parsed.data.structuredContent.data)
+            if (resultBytes > researchResultByteLimit) {
+              throw new ResearchFailure("result_limit", reference)
+            }
+            stage = "enrichment"
+            const isCatalog = name === "describe_analytics"
+            const resultSet =
+              sessionKey && !isCatalog
+                ? resultStore.create(
+                    sessionKey,
+                    name,
+                    parsed.data.structuredContent.data,
+                    typeof pageInput.query === "string" ? pageInput.query : undefined,
+                    async (cursor, pageSignal) => {
+                      const nextResult = await execute(name, { ...pageInput, cursor }, pageSignal)
+                      pageSignal.throwIfAborted()
+                      if ("isError" in nextResult && nextResult.isError) {
+                        throw new ResearchFailure("dependency_unavailable", crypto.randomUUID())
+                      }
+                      const page = resultSchema.parse(nextResult)
+                      if (Buffer.byteLength(JSON.stringify(page.structuredContent), "utf8") > researchResultByteLimit) {
+                        throw new ResearchFailure("result_limit", crypto.randomUUID())
+                      }
+                      return page.structuredContent.data
+                    },
+                    pageInput
+                  )
+                : undefined
+            const evidence = isCatalog ? [] : projectEvidence(parsed.data.structuredContent.data)
+            const contents =
+              onContents && !isCatalog
+                ? projectPresentationContents(name, parsed.data.structuredContent.data, evidence, resultSet)
+                : []
+            const output = {
+              ...parsed.data.structuredContent,
+              evidence,
+              ...(onContents ? { presentationOptions: contents.map(contentOptions) } : {}),
+              resultSet
+            }
+            stage = "serialization"
+            measureOutput(output)
+            const resultHandle = resultSet ? onResultSet?.(resultSet) : undefined
+            const finalOutput = {
+              ...output,
+              ...(typeof resultHandle === "string" ? { resultHandle } : {})
+            }
+            measureOutput(finalOutput)
+            if (!isCatalog) {
+              selections.register(parsed.data.structuredContent.data, reference)
+            }
+            if (resultSet) {
+              stage = "enrichment"
+              await resultStore.persist(resultSet.id)
+            }
+            if (!isCatalog) {
+              onContents?.(contents)
+              memory?.record({ tool: name, input: pageInput, data: parsed.data.structuredContent.data, evidence })
+            }
+            publishMeasurement(measurement("success", null))
+            return finalOutput
+          } catch (error) {
+            const normalized = normalizeLegislationError(error)
+            let failure =
+              error instanceof ResearchFailure
+                ? error
+                : new ResearchFailure(
+                    normalized.details?.reason === "timeout" ? "timeout" : researchFailureCode(normalized.category),
+                    reference
+                  )
+            if (signal.aborted) {
+              const isTimeout = signal.reason instanceof Error && signal.reason.name === "TimeoutError"
+              failure = new ResearchFailure(isTimeout ? "timeout" : "interrupted", reference)
+            } else if (error instanceof z.ZodError) {
+              failure = new ResearchFailure("invalid_request", reference)
+            }
+            let recovery: ResearchFailure["recovery"]
+            if (failure.code === "result_limit") {
+              recovery = researchLimitRecovery(name)
+            } else if (selectionInput) {
+              recovery = selections.recover(name, selectionInput, failure.code)
+            }
+            if (recovery) {
+              failure = new ResearchFailure(failure.code, failure.reference, recovery)
+            }
+            memory?.record({ tool: name, input, failure: failure.code })
+            const failedMeasurement = measurement("error", failure.code)
+            publishMeasurement(failedMeasurement)
+            failureReporter({
+              toolCallId,
+              toolName: name,
+              error: failure,
+              durationMs: failedMeasurement.durationMs,
+              resultBytes,
+              measurement: failedMeasurement,
+              telemetryId: reference,
+              stage
+            })
+            logger.warn("Research tool failed", {
+              tool: name,
+              category: failure.code,
+              reference,
+              resultBytes,
+              durationMs: Math.round(performance.now() - startedAt)
+            })
+            throw failure
           }
-          measureOutput(output)
-          const resultHandle = resultSet ? onResultSet?.(resultSet) : undefined
-          const finalOutput = {
-            ...output,
-            ...(typeof resultHandle === "string" ? { resultHandle } : {})
-          }
-          measureOutput(finalOutput)
-          if (!isCatalog) {
-            selections.register(parsed.data.structuredContent.data, reference)
-          }
-          if (resultSet) {
-            await resultStore.persist(resultSet.id)
-          }
-          if (!isCatalog) {
-            onContents?.(contents)
-            memory?.record({ tool: name, input: pageInput, data: parsed.data.structuredContent.data, evidence })
-          }
-          publishMeasurement(measurement("success", null))
-          return finalOutput
-        } catch (error) {
-          const normalized = normalizeLegislationError(error)
-          let failure =
-            error instanceof ResearchFailure
-              ? error
-              : new ResearchFailure(
-                  normalized.details?.reason === "timeout" ? "timeout" : researchFailureCode(normalized.category),
-                  reference
-                )
-          if (signal.aborted) {
-            const isTimeout = signal.reason instanceof Error && signal.reason.name === "TimeoutError"
-            failure = new ResearchFailure(isTimeout ? "timeout" : "interrupted", reference)
-          } else if (error instanceof z.ZodError) {
-            failure = new ResearchFailure("invalid_request", reference)
-          }
-          let recovery: ResearchFailure["recovery"]
-          if (failure.code === "result_limit") {
-            recovery = researchLimitRecovery(name)
-          } else if (selectionInput) {
-            recovery = selections.recover(name, selectionInput, failure.code)
-          }
-          if (recovery) {
-            failure = new ResearchFailure(failure.code, failure.reference, recovery)
-          }
-          memory?.record({ tool: name, input, failure: failure.code })
-          const failedMeasurement = measurement("error", failure.code)
-          publishMeasurement(failedMeasurement)
-          failureReporter({
-            toolCallId,
-            toolName: name,
-            error: failure,
-            durationMs: failedMeasurement.durationMs,
-            resultBytes,
-            measurement: failedMeasurement
-          })
-          logger.warn("Research tool failed", {
-            tool: name,
-            category: failure.code,
-            reference,
-            resultBytes,
-            durationMs: Math.round(performance.now() - startedAt)
-          })
-          throw failure
-        }
-      }
+        })
     })
   }
   return tools

@@ -10,7 +10,6 @@ import { after } from "next/server"
 import { z } from "zod"
 import {
   createResearchModel,
-  researchAgentLimits,
   researchModelId,
   researchReasoningEffort,
   runResearchAgent
@@ -49,7 +48,11 @@ import { createToolFailureReporter } from "../../modules/conversations/toolFailu
 import { digest } from "../../modules/evaluations/contracts"
 import { apiErrorResponse, readJsonBody } from "../../modules/request-handling/api/next/http"
 import { getResearchRuntime } from "../../modules/search/research-runtime"
-import { associateTelemetryRun, withRequestTelemetry } from "../../services/sentry/requestTelemetry"
+import {
+  associateTelemetryRun,
+  setRequestOperation,
+  withRequestTelemetry
+} from "../../services/sentry/requestTelemetry"
 
 export const runtime = "nodejs"
 
@@ -67,6 +70,7 @@ export async function POST(request: Request) {
 }
 
 async function handleChatRequest(request: Request) {
+  setRequestOperation("research")
   if (!chatIsAvailable(process.env)) {
     return Response.json({ error: "The conversation service is not available." }, { status: 503 })
   }
@@ -77,6 +81,7 @@ async function handleChatRequest(request: Request) {
     const body = await readJsonBody(request, 256 * 1024)
     const referenceSearch = referenceSearchSchema.safeParse(body)
     if (referenceSearch.success) {
+      setRequestOperation("reference_search")
       try {
         const references = await searchReferences(
           referenceSearch.data,
@@ -92,6 +97,7 @@ async function handleChatRequest(request: Request) {
     }
     const recordRequest = recordDetailRequestSchema.safeParse(body)
     if (recordRequest.success) {
+      setRequestOperation("record_inspection")
       const { sessionKey, resultId, recordId, cursor, parentRecordId } = recordRequest.data
       let record
       try {
@@ -167,6 +173,7 @@ async function handleChatRequest(request: Request) {
     }
     const pageRequest = entityPageRequestSchema.safeParse(body)
     if (pageRequest.success) {
+      setRequestOperation("result_pagination")
       try {
         const page = await resultStore.page(
           pageRequest.data.sessionKey,
@@ -196,6 +203,7 @@ async function handleChatRequest(request: Request) {
     }
     const clarificationAnswer = clarificationAnswerRequestSchema.safeParse(body)
     if (clarificationAnswer.success) {
+      setRequestOperation("clarification")
       try {
         const response = clarificationStore.answer(
           clarificationAnswer.data.sessionKey,
@@ -219,7 +227,7 @@ async function handleChatRequest(request: Request) {
     setTag("sessionId", parsed.data.sessionId)
     const acceptedAt = new Date()
     const dateContext = researchDateContext(acceptedAt)
-    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(researchAgentLimits.timeoutMs)])
+    const signal = request.signal
     let references
     try {
       await Promise.all(
@@ -367,7 +375,11 @@ async function handleChatRequest(request: Request) {
     })
     after(async () => {
       await captured
-      await flushChatTelemetry()
+      try {
+        await flushChatTelemetry()
+      } catch {
+        console.warn("Conversation telemetry flush did not complete")
+      }
     })
     const userMessage = parsed.data.messages.at(-1)
     const responseStream = toUIMessageStream({

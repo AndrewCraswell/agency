@@ -6,7 +6,6 @@ export const researchAgentLimits = {
   researchSteps: 8,
   steps: 9,
   calls: 24,
-  timeoutMs: 120000,
   outputTokens: 8192
 }
 export const researchModelId = "openai/gpt-5.6-luna-20260709"

@@ -8,6 +8,7 @@ import {
   associateTelemetryRun,
   currentTelemetryCorrelation,
   linkTelemetryTraces,
+  setRequestOperation,
   withRequestTelemetry
 } from "./requestTelemetry"
 
@@ -24,6 +25,29 @@ beforeAll(() => {
 })
 afterAll(async () => {
   await runtime.shutdown()
+})
+
+it("records safe HTTP diagnostics without treating client rejection as a server failure", async () => {
+  let span: ReturnType<typeof getActiveSpan>
+  const response = await withRequestTelemetry(
+    new Request("https://app.example.test/chat?private=PRIVATE"),
+    async () => {
+      span = getActiveSpan()
+      setRequestOperation("reference_search")
+      return new Response("rejected", { status: 400 })
+    }
+  )
+  invariant(span)
+  expect(response.status).toBe(400)
+  expect(spanToJSON(span).data).toMatchObject({
+    operation: "reference_search",
+    route_template: "/chat",
+    "http.request.method": "GET",
+    "http.response.status_code": 400,
+    outcome: "rejected",
+    durationMs: expect.any(Number)
+  })
+  expect(JSON.stringify(spanToJSON(span))).not.toContain("PRIVATE")
 })
 it("isolates concurrent requests, preserves application correlation and exposes only safe IDs", async () => {
   const calls = await Promise.all(

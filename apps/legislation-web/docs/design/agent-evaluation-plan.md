@@ -24,8 +24,9 @@ Release decisions require all three. Do not trade fabricated evidence against im
 
 ## 2. Current implementation and implications
 
-- `src/app/chat/route.ts` hardcodes a Luna model and low reasoning effort. It uses eight model steps, 4096 output tokens,
-  and a 120-second timeout; the research wrapper permits 24 attempted research executions.
+- `src/modules/conversations/agent.ts` selects Luna with high reasoning for chat. It allows eight tool-capable model
+  steps plus a final synthesis step and 8192 output tokens; the research wrapper permits 24 attempted research executions.
+  Chat and evaluation research turns have no application-wide time deadline; caller cancellation and per-tool deadlines remain.
 - `src/modules/conversations/prompt.ts` loads `legislative-research` using the moving `production` label. Experiments must resolve and pin
   a numeric version and text digest once at run start. Historical model aliases also need resolved identifiers.
 - Prior tool results are not replayed in chat history. Follow-up evaluation must reproduce that restriction, fresh

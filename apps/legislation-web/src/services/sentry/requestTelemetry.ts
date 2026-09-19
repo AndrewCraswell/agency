@@ -1,11 +1,13 @@
 import { continueTrace, getActiveSpan, getIsolationScope, startSpan, withIsolationScope } from "@sentry/core"
 import { z } from "zod"
+import { diagnosticBreadcrumb } from "./diagnosticBreadcrumb"
 import {
   createCorrelationDiagnostics,
   sanitizeTelemetryHeaders,
   telemetryCorrelationSchema,
   type TelemetryCorrelation
 } from "./telemetryCorrelation"
+import { telemetryFields } from "./telemetryFields"
 import { resolveTelemetryRoute } from "./telemetryRoutes"
 
 const report = createCorrelationDiagnostics()
@@ -26,6 +28,11 @@ export function associateTelemetryRun(runId: string) {
   const correlation = { ...current, run_id: run.data }
   getIsolationScope().setContext("correlation", correlation)
   return correlation
+}
+
+export function setRequestOperation(operation: z.infer<typeof telemetryFields.operation>) {
+  getIsolationScope().setTag("operation", operation)
+  getActiveSpan()?.setAttribute("operation", operation)
 }
 
 export function linkTelemetryTraces(langfuseTraceId: string | undefined) {
@@ -87,22 +94,57 @@ export async function withRequestTelemetry(
   requests.set(request, correlation)
   return withIsolationScope(async (scope) => {
     scope.setContext("correlation", correlation)
+    const route = resolveTelemetryRoute(new URL(request.url).pathname)
+    const method = telemetryFields.method.safeParse(request.method)
+    scope.setTag("route_template", route.route_template)
     return continueTrace({ sentryTrace: safe.sentryTrace, baggage: undefined }, async () => {
       return startSpan(
         {
-          name: resolveTelemetryRoute(new URL(request.url).pathname).route_template,
-          op: "http.server"
+          name: route.route_template,
+          op: "http.server",
+          attributes: {
+            ...route,
+            ...correlation,
+            "http.request.method": method.success ? method.data : "OTHER"
+          }
         },
-        async () => {
+        async (span) => {
+          const startedAt = performance.now()
           const traceId = getActiveSpan()?.spanContext().traceId
           const context = telemetryCorrelationSchema.safeParse({ ...correlation, sentry_trace_id: traceId })
           if (context.success) {
             scope.setContext("correlation", context.data)
           }
-          const response = await operation(request)
-          const headers = new Headers(response.headers)
-          headers.set("x-rostra-request-id", requestId)
-          return new Response(response.body, { status: response.status, statusText: response.statusText, headers })
+          let status: number | undefined
+          let outcome: "succeeded" | "failed" | "cancelled" | "rejected" = "failed"
+          try {
+            const response = await operation(request)
+            status = response.status
+            outcome = status >= 500 ? "failed" : "succeeded"
+            if (status >= 400 && status < 500) {
+              outcome = "rejected"
+            }
+            span.setAttribute("http.response.status_code", status)
+            span.setStatus({ code: status >= 500 ? 2 : 1 })
+            const headers = new Headers(response.headers)
+            headers.set("x-rostra-request-id", requestId)
+            return new Response(response.body, { status, statusText: response.statusText, headers })
+          } finally {
+            if (request.signal.aborted) {
+              outcome = "cancelled"
+            }
+            const data = {
+              ...route,
+              ...currentTelemetryCorrelation(),
+              operation: scope.getScopeData().tags.operation,
+              "http.request.method": method.success ? method.data : "OTHER",
+              "http.response.status_code": status,
+              durationMs: Math.max(0, performance.now() - startedAt),
+              outcome
+            }
+            span.setAttributes({ outcome, durationMs: data.durationMs })
+            diagnosticBreadcrumb("api.request_finished", data)
+          }
         }
       )
     })

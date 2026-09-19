@@ -74,8 +74,60 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllEnvs()
   vi.clearAllMocks()
+  vi.restoreAllMocks()
   stored.clear()
   capturedInputs.length = 0
+})
+
+it("does not schedule a run deadline and preserves request cancellation", async () => {
+  vi.stubEnv("NODE_ENV", "development")
+  vi.stubEnv("OPENROUTER_API_KEY", "fixture")
+  const timeout = vi.spyOn(AbortSignal, "timeout")
+  const controller = new AbortController()
+  const started = Promise.withResolvers<AbortSignal | undefined>()
+  const release = Promise.withResolvers<void>()
+  model = new MockLanguageModelV4({
+    doStream: async ({ abortSignal }) => {
+      started.resolve(abortSignal)
+      await release.promise
+      return {
+        stream: new ReadableStream({
+          start(stream) {
+            stream.enqueue({ type: "stream-start", warnings: [] })
+            stream.enqueue({
+              type: "finish",
+              finishReason: { unified: "stop", raw: "stop" },
+              usage: {
+                inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+                outputTokens: { total: 0, text: 0, reasoning: 0 }
+              }
+            })
+            stream.close()
+          }
+        })
+      }
+    }
+  })
+  const response = await POST(
+    new Request("http://localhost:3000/chat", {
+      method: "POST",
+      headers: { origin: "http://localhost:3000", "content-type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        sessionKey: "11111111-1111-4111-8111-111111111111",
+        sessionId: "cancellable-research",
+        messages: [{ id: "question", role: "user", parts: [{ type: "text", text: "Research recent votes." }] }]
+      })
+    })
+  )
+  const body = response.text()
+  const signal = await started.promise
+  expect(timeout).not.toHaveBeenCalled()
+  expect(signal?.aborted).toBe(false)
+  controller.abort()
+  expect(signal?.aborted).toBe(true)
+  release.resolve()
+  await body
 })
 
 it("streams an explicit incomplete answer and persists its interruption without rewriting the finish reason", async () => {

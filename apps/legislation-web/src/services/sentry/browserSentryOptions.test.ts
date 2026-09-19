@@ -43,7 +43,8 @@ describe("browser SDK configuration", () => {
       tracesSampleRate: 0,
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 0,
-      maxBreadcrumbs: 0
+      maxBreadcrumbs: 20,
+      transportOptions: { bufferSize: 32 }
     })
     expect(
       test.options.tracesSampler?.({ name: "/", attributes: {}, parentSampled: true, inheritOrSampleWith: () => 1 })

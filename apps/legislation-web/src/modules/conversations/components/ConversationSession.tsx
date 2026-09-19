@@ -2,12 +2,14 @@
 
 import { Chat, useChat } from "@ai-sdk/react"
 import { useDebouncedValue } from "@mantine/hooks"
+import { withActiveSpan } from "@sentry/core"
 import { captureException } from "@sentry/nextjs"
 import { DefaultChatTransport, type UIMessage } from "ai"
 import { createContext, useContext, useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import { correlatedFetch } from "../../../services/sentry/correlatedFetch"
+import { diagnosticBreadcrumb } from "../../../services/sentry/diagnosticBreadcrumb"
 import {
   conversationTextMessages,
   conversationReferenceSchema,
@@ -16,6 +18,7 @@ import {
 } from "../chatRequest"
 import { clarificationResponseSchema, type ClarificationResponse } from "../clarification"
 import { composerDraftText, composerMessageMetadata, composerReferences, type ComposerDraft } from "../composerDraft"
+import { createConversationDiagnostics } from "../conversationDiagnostics"
 import {
   developmentConversationKey,
   parseDevelopmentConversation,
@@ -36,11 +39,34 @@ import { messageResponseOutcome, responseIsIncomplete } from "../responseOutcome
 function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string) {
   const sessionKey = snapshot?.sessionKey ?? ownerKey ?? crypto.randomUUID()
   let isExplicitlyCancelled = false
+  let isRetry = false
+  const diagnostics = createConversationDiagnostics()
   const transport = new DefaultChatTransport({
     api: "/chat",
-    fetch: correlatedFetch,
-    prepareSendMessagesRequest: ({ id, messages, body }) => {
+    fetch: async (input, init) => {
+      const attempt = diagnostics.begin(isRetry)
+      const headers = new Headers(
+        init?.headers ?? (typeof input === "object" && "headers" in input ? input.headers : undefined)
+      )
+      headers.set("x-rostra-request-id", attempt.id)
+      try {
+        const response = await withActiveSpan(attempt.span, () => correlatedFetch(input, { ...init, headers }))
+        diagnostics.response(response, attempt.id)
+        return response
+      } catch (error) {
+        let outcome: "cancelled" | "unknown" | "failed" = "failed"
+        if (isExplicitlyCancelled) {
+          outcome = "cancelled"
+        } else if (init?.signal?.aborted) {
+          outcome = "unknown"
+        }
+        diagnostics.finish(outcome, attempt.id)
+        throw error
+      }
+    },
+    prepareSendMessagesRequest: ({ id, messages, body, trigger }) => {
       isExplicitlyCancelled = false
+      isRetry = trigger === "regenerate-message"
       const metadata = z
         .object({ references: z.array(conversationReferenceSchema).max(12) })
         .safeParse(messages.findLast((message) => message.role === "user")?.metadata)
@@ -87,16 +113,33 @@ function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string
           }
         }
       })
+      const finished = chat.messages.find((current) => current.id === message.id) ?? message
+      diagnostics.link(finished.metadata)
+      diagnostics.finish(messageResponseOutcome(finished).status)
     },
     onError: (error) => {
-      captureException(error, { tags: { operation: "chat_transport", sessionId: chat.id } })
+      const last = chat.messages.at(-1)
+      const outcome = last?.role === "assistant" ? messageResponseOutcome(last).status : "failed"
+      diagnostics.finish(outcome)
+      captureException(error, {
+        tags: { operation: "chat_transport" },
+        contexts: { correlation: diagnostics.correlation() }
+      })
     }
   })
   return {
     chat,
     sessionKey,
+    diagnostics,
     markCancelled: () => {
       isExplicitlyCancelled = true
+      const last = chat.messages.at(-1)
+      if (last?.role === "assistant" && messageResponseOutcome(last).status === "completed") {
+        diagnostics.link(last.metadata)
+        diagnostics.finish("completed")
+      } else {
+        diagnostics.stop()
+      }
     }
   }
 }
@@ -152,6 +195,14 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   const [checkpointDraft] = useDebouncedValue(draft, 250)
 
   useEffect(() => {
+    const last = messages.at(-1)
+    if (status === "streaming" && last?.role === "assistant" && messageResponseOutcome(last).hasAnswer) {
+      session.diagnostics.link(last.metadata)
+      session.diagnostics.firstContent()
+    }
+  }, [messages, status, session])
+
+  useEffect(() => {
     if (process.env.NODE_ENV !== "development" || hasRestoredConversation.current) {
       return
     }
@@ -174,7 +225,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
         }
       } catch (error) {
         if (!isCancelled) {
-          captureException(error)
+          captureException(error, { tags: { operation: "chat_restore" } })
           setHasReloadRecoveryError(true)
         }
       } finally {
@@ -437,6 +488,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
         throw new Error("Clarification confirmation did not match the question")
       }
       setClarificationAnswers((answers) => ({ ...answers, [accepted.requestId]: accepted }))
+      diagnosticBreadcrumb("conversation.clarification_finished", { outcome: "succeeded", origin: "browser" })
       const originalReferences = z
         .object({ references: z.array(conversationReferenceSchema).max(12) })
         .safeParse(chat.messages.findLast((message) => message.role === "user")?.metadata)
@@ -451,6 +503,10 @@ export function ConversationSession({ children }: ConversationSessionProps) {
         { body: { clarificationId: accepted.requestId } }
       )
     } catch (error) {
+      diagnosticBreadcrumb("conversation.clarification_finished", {
+        outcome: controller.signal.aborted ? "cancelled" : "failed",
+        origin: "browser"
+      })
       if (
         !controller.signal.aborted &&
         !(error instanceof Error && error.message === "Clarification was not confirmed")

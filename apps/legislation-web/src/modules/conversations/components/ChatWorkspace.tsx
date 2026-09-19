@@ -15,6 +15,7 @@ import {
 import { AppShell } from "../../../components/shell/AppShell"
 import { Button } from "../../../components/ui/button"
 import { cn } from "../../../components/ui/utils"
+import { diagnosticBreadcrumb } from "../../../services/sentry/diagnosticBreadcrumb"
 import type { StagedReference } from "../chatRequest"
 import { isClarificationSubmission } from "../chatRequest"
 import {
@@ -142,6 +143,19 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
       composerReferences(draft, references).length > 12 ||
       isNavigating.current
     ) {
+      let reason = "empty"
+      if (!isAvailable) {
+        reason = "unavailable"
+      } else if (isRestoringConversation) {
+        reason = "restoring"
+      } else if (isBusy) {
+        reason = "busy"
+      } else if (isNavigating.current) {
+        reason = "navigating"
+      } else if (composerReferences(draft, references).length > 12) {
+        reason = "reference_limit"
+      }
+      diagnosticBreadcrumb("composer.submit_blocked", { reason, origin: "browser" })
       return
     }
     if (!isConversation) {
@@ -151,6 +165,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
       return
     }
     if (!hasSession) {
+      diagnosticBreadcrumb("composer.submit_blocked", { reason: "session_mismatch", origin: "browser" })
       return
     }
     void sendMessage({

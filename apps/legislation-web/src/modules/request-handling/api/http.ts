@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import { getRequestContext } from "@repo/legislation-core/auth/request-context"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger, errorContext } from "@repo/legislation-core/observability/logger"
+import { captureException } from "@sentry/core"
 import { toPublicApiError } from "./error-mapping"
 
 const apiLogger = createLogger({ level: "error", service: "legislation-api" })
@@ -139,6 +140,14 @@ export function sendApiError(request: IncomingMessage, response: ServerResponse,
   }
   const body = apiError(request, publicError)
   const status = body.status
+  if (typeof status === "number" && status >= 500 && !request.aborted) {
+    captureException(error, {
+      tags: {
+        operation: "http_api",
+        category: publicError instanceof LegislationError ? publicError.category : "internal"
+      }
+    })
+  }
   const { status: _status, ...errorBody } = body
   if (
     publicError instanceof LegislationError &&

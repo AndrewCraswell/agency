@@ -211,6 +211,10 @@ describe("allowlisted Sentry payloads", () => {
     expect(JSON.stringify([event, projected, span, metric])).not.toContain(privateText)
   })
   it("retains actual Turbopack chunk hashes without retaining arbitrary source paths", () => {
+    expect(safeCodeLocation("D:\\private-user\\app\\.next\\server\\chunks\\_1udjw9f._.js")).toBe(
+      "app:///.next/server/chunks/_1udjw9f._.js"
+    )
+    expect(safeCodeLocation("D:\\private-user\\app\\.next\\server\\chunks\\private-name.js")).toBeUndefined()
     expect(safeCodeLocation("http://user:secret@localhost/_next/static/chunks/293gsag4bq8qh.js?token=PRIVATE")).toBe(
       "/_next/static/chunks/293gsag4bq8qh.js"
     )
@@ -218,6 +222,19 @@ describe("allowlisted Sentry payloads", () => {
       "/_next/static/chunks/0-z3mje-s-poc.js"
     )
     expect(safeCodeLocation("http://localhost/_next/static/chunks/PRIVATE_RESEARCH.js")).toBeUndefined()
+  })
+  it("preserves only known diagnostic trace names", () => {
+    const privacy = createSentryPrivacy()
+    for (const [name, expected] of [
+      ["legislative-research-conversation", "legislative-research-conversation"],
+      ["research.tool", "research.tool"],
+      ["execute_tool get_bill", "execute_tool get_bill"],
+      ["execute_tool PRIVATE", "/_unmatched"]
+    ] as const) {
+      expect(
+        privacy.beforeSendTransaction({ type: "transaction", transaction: name, start_timestamp: 1 })?.transaction
+      ).toBe(expected)
+    }
   })
   it("rejects malformed event roots instead of fabricating error events", () => {
     const onDiagnostic = spy()

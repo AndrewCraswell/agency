@@ -15,5 +15,6 @@ export const sentryOptions = {
   replaysOnErrorSampleRate: 0,
   enableLogs: false,
   enableMetrics: false,
-  maxBreadcrumbs: 0
+  maxBreadcrumbs: 20,
+  transportOptions: { bufferSize: 32 }
 } satisfies Parameters<typeof init>[0]

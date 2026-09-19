@@ -1,7 +1,8 @@
 import { propagateAttributes, startActiveObservation } from "@langfuse/tracing"
 import { context, trace } from "@opentelemetry/api"
-import { getIsolationScope, withIsolationScope } from "@sentry/core"
+import { getActiveSpan, getIsolationScope, withIsolationScope } from "@sentry/core"
 import type { TextStreamPart, ToolSet } from "ai"
+import { diagnosticBreadcrumb } from "../../services/sentry/diagnosticBreadcrumb"
 import { currentTelemetryCorrelation, linkTelemetryTraces } from "../../services/sentry/requestTelemetry"
 import type { TelemetryCorrelation } from "../../services/sentry/telemetryCorrelation"
 import type { EvalEvent, EvalTurn } from "../evaluations/contracts"
@@ -9,6 +10,7 @@ import { createCitationFailureReporter, type CitationTelemetryContext } from "./
 import type { ComposedAnswer } from "./compositionStream"
 import type { EvidenceSnapshot } from "./evidence"
 import { redactCredentials } from "./redactCredentials"
+import { classifyResponse } from "./responseOutcome"
 
 export async function collectChatStream(stream: ReadableStream<TextStreamPart<ToolSet>>) {
   const started = performance.now()
@@ -139,6 +141,7 @@ export function observeChatResponse(options: {
           startActiveObservation(
             "legislative-research-conversation",
             async (observation) => {
+              const startedAt = performance.now()
               correlation = linkTelemetryTraces(
                 observation.traceId && !/^0+$/.test(observation.traceId) ? observation.traceId : undefined
               )
@@ -146,10 +149,35 @@ export function observeChatResponse(options: {
                 input: redactCredentials(options.input),
                 metadata: { ...redactedMetadata, ...correlation }
               })
+              diagnosticBreadcrumb("conversation.accepted", { ...correlation, origin: "server" })
               const [uiStream, captureStream] = options.start().tee()
               stream.resolve(uiStream)
               const raw = await collectChatStream(captureStream)
               const composition = await options.composed
+              const outcome =
+                composition?.outcome ??
+                classifyResponse({
+                  hasAnswer: Boolean(raw.output.text.trim()),
+                  hasClarification: raw.output.termination === "clarification",
+                  finishReason: raw.output.termination,
+                  isError: raw.output.termination === "error",
+                  isInterrupted: raw.output.termination === "abort"
+                })
+              const diagnostic = {
+                ...correlation,
+                origin: "server",
+                outcome: outcome.status,
+                durationMs: Math.max(0, performance.now() - startedAt),
+                ...(raw.output.firstTextMs === null ? {} : { firstModelTextMs: raw.output.firstTextMs }),
+                toolCount: raw.events.filter((event) => event.type === "call").length
+              }
+              getActiveSpan()?.setAttributes(diagnostic)
+              if (outcome.status === "completed" || outcome.status === "clarification") {
+                getActiveSpan()?.setStatus({ code: 1 })
+              } else if (outcome.status === "failed") {
+                getActiveSpan()?.setStatus({ code: 2 })
+              }
+              diagnosticBreadcrumb("conversation.finished", diagnostic)
               if (composition && options.citationTelemetry) {
                 createCitationFailureReporter(options.citationTelemetry)({
                   text: composition.text,

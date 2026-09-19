@@ -3,7 +3,7 @@ import { createLogger } from "@repo/legislation-core/observability/logger"
 import { createLegislationResearchTools } from "@repo/legislation-core/research/tools"
 import type { LanguageModel, LanguageModelUsage, ModelMessage } from "ai"
 import { z } from "zod"
-import { researchAgentLimits, runResearchAgent } from "../conversations/agent"
+import { runResearchAgent } from "../conversations/agent"
 import { clarificationRequestSchema } from "../conversations/clarification"
 import { createClarificationStore } from "../conversations/clarificationStore"
 import { createClarificationTool } from "../conversations/clarificationTool"
@@ -133,7 +133,7 @@ export async function executeCase(options: {
             input: { messages: structuredClone(messages), instructions: options.instructions, turnCriteria },
             metadata: { caseId: item.id, turn, turnCriteria }
           })
-          const signal = AbortSignal.any([options.signal, AbortSignal.timeout(researchAgentLimits.timeoutMs)])
+          const signal = options.signal
           let pending = false
           let step = 0
           let text = ""

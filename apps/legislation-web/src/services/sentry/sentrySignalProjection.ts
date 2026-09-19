@@ -7,6 +7,7 @@ import {
   projectStackFrame,
   readPayloadField,
   safeCodeLocation,
+  safeSpanName,
   sentryPayloadFields as p,
   type SentryPayloadPolicy
 } from "./sentryPayloadFields"
@@ -68,7 +69,7 @@ export function projectSentrySpan(value: unknown, policy: SentryPayloadPolicy): 
   return {
     ...identity.data,
     op,
-    description: op,
+    description: safeSpanName(input.description, op),
     status: readPayloadField(p.status, input.status),
     data: projectSentryMetadata(input.data, policy)
   }
@@ -119,8 +120,15 @@ export function projectSentryEvent(input: unknown, policy: SentryPayloadPolicy):
     environment: readPayloadField(f.environment, event.environment),
     release: readPayloadField(p.release, policy.release),
     level: readPayloadField(p.level, event.level),
-    platform: "javascript",
-    tags: projectSentryMetadata(event.tags, policy),
+    platform: readPayloadField(z.enum(["node", "javascript"]), event.platform) ?? "javascript",
+    user: { ip_address: null },
+    tags: projectSentryMetadata(
+      {
+        ...payloadRecord(event.tags),
+        ...(correlation.success ? correlation.data : {})
+      },
+      policy
+    ),
     extra: safeExtra,
     contexts: {
       ...(trace ? { trace } : {}),
@@ -139,11 +147,13 @@ export function projectSentryEvent(input: unknown, policy: SentryPayloadPolicy):
     return {
       ...base,
       type: "transaction",
-      transaction:
+      transaction: safeSpanName(
+        event.transaction,
         typeof event.transaction === "string"
           ? resolveTelemetryRoute(event.transaction.replace(/^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) /u, ""))
               .route_template
-          : "/_unmatched",
+          : "/_unmatched"
+      ),
       transaction_info: { source: "route" },
       start_timestamp: readPayloadField(p.timestamp, event.start_timestamp),
       spans

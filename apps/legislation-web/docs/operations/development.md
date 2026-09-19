@@ -93,8 +93,10 @@ and source freshness, legal effective dates and incomplete same-day coverage are
 route tests verify the actual model input and unchanged user cutoffs across midnight and timezone offsets for prose and
 clarification streams. These deterministic fixtures establish context delivery, not live-model semantic accuracy.
 
-Current per-run bounds: 30-second registry tool calls, 120-second total run deadline, eight model
-steps, 24 tool calls, and 180,000 bytes of structured data per model-visible tool result. Research serialization omits
+Chat and evaluation research turns have no application-wide elapsed-time deadline. Explicit cancellation still stops
+the run. Per-operation deadlines remain in place, including 30-second registry tool calls and database statement limits.
+Current per-run bounds: eight tool-capable model steps plus a final synthesis step, 24 tool calls, and 180,000 bytes
+per model-visible tool result. Research serialization omits
 internal embedding and search-index fields. The shared chat/MCP bill discovery contract returns snippets, identifiers, sources, and child
 metadata instead of full summaries and embedded document bodies. Research tools must retrieve relevant passages using
 `search_bill_text` or read a selected version using `get_bill_text` before making substantive claims about provisions.

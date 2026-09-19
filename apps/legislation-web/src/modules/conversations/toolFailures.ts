@@ -12,12 +12,14 @@ type ToolFailure = Readonly<{
   durationMs?: number
   resultBytes?: number
   measurement?: ResearchToolMeasurement
+  telemetryId?: string
+  stage?: "validation" | "dependency" | "enrichment" | "serialization"
 }>
 
 export function createToolFailureReporter(runId: string) {
   const reported = new Set<string>()
   const ids = createOpaqueTelemetryIds(createCorrelationDiagnostics())
-  return ({ toolCallId, toolName, error, durationMs, resultBytes, measurement }: ToolFailure) => {
+  return ({ toolCallId, toolName, error, durationMs, resultBytes, measurement, telemetryId, stage }: ToolFailure) => {
     if (reported.has(toolCallId)) {
       return
     }
@@ -36,7 +38,8 @@ export function createToolFailureReporter(runId: string) {
         category: failure.code,
         reference: failure.reference,
         runId,
-        tool_call_id: ids.get(toolCallId)
+        tool_call_id: telemetryId ?? ids.get(toolCallId),
+        stage: stage ?? (failure.code === "invalid_request" ? "validation" : undefined)
       },
       extra: {
         durationMs,

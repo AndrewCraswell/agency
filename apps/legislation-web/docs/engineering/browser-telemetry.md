@@ -20,8 +20,14 @@ For a production-built local preview, the observed browser origin may use loopba
 permit external HTTP origins and does not relax the edge/server configured-target policy.
 An ineligible browser origin disables propagation with a fixed warning rather than breaking application hydration.
 
-The local sampler returns zero, including when an incoming sampled flag is present. Metrics/logs/replay remain off
-in the shared configuration. The implementation adds no production sampling flag or automatic consent decision.
+The local sampler defaults to zero and reads the explicit `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` budget.
+An incoming sampled flag cannot override it. `NEXT_PUBLIC_SENTRY_ENVIRONMENT` can distinguish an approved test/staging
+build from production traffic. Public settings are build-time inputs. Metrics/logs/replay remain off; see the
+[debugging guide](../operations/telemetry-debugging.md) for configuration and collection restrictions.
+
+The existing SDK fetch transport retains a maximum of 32 pending envelopes and reports at most ten local delivery-loss
+warnings per client. It does not create a custom queue or retry loop. Only manually authored, privacy-projected
+diagnostic breadcrumbs are retained (maximum 20), attached to errors rather than emitted as usage analytics.
 
 ## Native Web Vitals
 

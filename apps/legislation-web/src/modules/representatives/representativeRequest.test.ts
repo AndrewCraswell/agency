@@ -49,6 +49,31 @@ describe("development representative endpoint", () => {
     expect(lookup).toHaveBeenCalledWith({ latitude: 38.889, longitude: -77.009 }, expect.any(AbortSignal))
   })
 
+  it.each(["localhost:3000", "127.0.0.1:3000", "[::1]:3000"])(
+    "accepts the browser-facing host %s when the server URL uses localhost",
+    async (host) => {
+      const { handle, lookup } = setup()
+      const input = request(undefined, `http://${host}`)
+      input.headers.set("host", host)
+      input.headers.set("sec-fetch-site", "same-origin")
+      expect((await handle(input)).status).toBe(200)
+      expect(lookup).toHaveBeenCalledOnce()
+    }
+  )
+
+  it.each([
+    { origin: "http://localhost:3000", site: "same-origin" },
+    { origin: "http://127.0.0.1:3001", site: "same-origin" },
+    { origin: "http://127.0.0.1:3000", site: "cross-site" }
+  ])("rejects a mismatched origin or cross-site request: $origin / $site", async ({ origin, site }) => {
+    const { handle, getLookup } = setup()
+    const input = request(undefined, origin)
+    input.headers.set("host", "127.0.0.1:3000")
+    input.headers.set("sec-fetch-site", site)
+    expect((await handle(input)).status).toBe(403)
+    expect(getLookup).not.toHaveBeenCalled()
+  })
+
   it("rejects cross-origin requests and invalid input before a billable lookup", async () => {
     const { handle, getLookup } = setup()
     expect((await handle(request({}, "https://attacker.example"))).status).toBe(403)

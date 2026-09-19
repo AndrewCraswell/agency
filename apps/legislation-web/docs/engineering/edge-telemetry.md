@@ -14,8 +14,8 @@ context; the application now fails explicitly rather than risk cross-request sco
 
 - Existing configured error reporting remains available through `onRequestError` and the shared
   [Sentry privacy boundary](telemetry-privacy.md).
-- The edge sampler explicitly returns zero until an approved collection policy replaces it. An incoming sampled
-  header cannot bypass that local decision. Logs, metrics and replay remain disabled.
+- The edge sampler defaults to zero and reads the explicitly approved `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`
+  budget. Incoming flags cannot bypass that decision. Logs, metrics and replay remain disabled.
 - Only the audited WinterCG fetch integration and shared privacy integration are installed. Fetch breadcrumbs and
   automatic console/request-data collection are not enabled.
 - `LEGISLATION_PUBLIC_API_BASE_URL` supplies the only permitted downstream origin for fetch spans/propagation.
@@ -26,6 +26,9 @@ context; the application now fails explicitly rather than risk cross-request sco
 
 The SDK's own platform-compatible context implementation may use APIs supported by the edge runtime. This is distinct
 from importing the Node telemetry SDK into application edge code.
+The edge SDK retains its own transport, with the shared 32-envelope buffer setting and native drop reports.
+Unlike Node/browser, this SDK export does not expose a transport factory for the local warning wrapper; no private
+SDK import or substitute transport is used. Its drop report cannot independently diagnose a vendor outage.
 
 ## Synthetic acceptance
 

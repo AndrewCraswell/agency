@@ -16,6 +16,8 @@ import { SentryAsyncLocalStorageContextManager, SentrySampler, SentrySpanProcess
 import { registerTelemetry } from "ai"
 import { PHASE_PRODUCTION_BUILD } from "next/constants"
 import { langfuseSettings } from "../langfuse/client"
+import { diagnosticEnvironment, diagnosticTraceSampleRate } from "./diagnosticSettings"
+import { diagnosticTransport } from "./diagnosticTransport"
 import { SafeTracePropagator } from "./safeTracePropagator"
 import { sentryOptions } from "./sentryOptions"
 import { telemetryPropagationTarget } from "./telemetryPropagation"
@@ -116,6 +118,8 @@ export function startNodeTelemetry(options: RuntimeOptions): RuntimeHandle {
       ...sentryOptions,
       enabled: Boolean(options.sentry?.dsn),
       registerEsmLoaderHooks: true,
+      initialScope: { tags: { runtime: "node" } },
+      transport: diagnosticTransport(Sentry.makeNodeTransport),
       ...options.sentry,
       skipOpenTelemetrySetup: true,
       traceLifecycle: "static",
@@ -222,12 +226,13 @@ export function registerNodeTelemetry(
   const langfuseConfiguration = publicKey && secretKey ? langfuseSettings(environment) : undefined
   const configuration = {
     dsn: environment.NEXT_PUBLIC_SENTRY_DSN?.trim(),
-    environment: environment.NODE_ENV,
+    environment: diagnosticEnvironment(environment.NEXT_PUBLIC_SENTRY_ENVIRONMENT, environment.NODE_ENV),
     release: environment.SENTRY_RELEASE,
     publicKey,
     secretKey,
     baseUrl: langfuseConfiguration?.baseUrl,
-    apiBaseUrl: environment.LEGISLATION_PUBLIC_API_BASE_URL
+    apiBaseUrl: environment.LEGISLATION_PUBLIC_API_BASE_URL,
+    sampleRate: diagnosticTraceSampleRate(environment.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE)
   }
   const key = createHash("sha256")
     .update(JSON.stringify({ ...configuration, mask: mask?.toString() }))
@@ -256,7 +261,7 @@ export function registerNodeTelemetry(
       enabled: Boolean(configuration.dsn),
       environment: configuration.environment,
       release: configuration.release,
-      tracesSampler: () => 0,
+      tracesSampler: () => configuration.sampleRate,
       tracePropagationTargets: target ? [target] : [],
       integrations: [
         ...sentryOptions.integrations,
@@ -267,6 +272,7 @@ export function registerNodeTelemetry(
           ignoreIncomingRequestBody: () => true,
           maxIncomingRequestBodySize: "none"
         }),
+        Sentry.postgresIntegration(),
         Sentry.nativeNodeFetchIntegration({ breadcrumbs: false })
       ]
     },

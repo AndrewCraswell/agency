@@ -94,6 +94,10 @@ it("filters real SDK error, log and metric envelopes after SDK metadata is added
     expect(await client.flush(2000)).toBe(true)
     const items = envelopes.flatMap<Envelope[1][number]>((envelope) => envelope[1])
     expect(items.map(([header]) => header.type)).toEqual(expect.arrayContaining(["event", "log", "trace_metric"]))
+    expect(items.find(([header]) => header.type === "event")?.[1]).toMatchObject({
+      platform: "node",
+      user: { ip_address: null }
+    })
     expect(JSON.stringify(envelopes)).not.toMatch(/PRIVATE_RESEARCH|alice@|Bearer|secret-value/)
     expect(JSON.stringify(envelopes)).toContain("fixture-release")
     expect(JSON.stringify(envelopes)).toContain("conversation.submitted")
@@ -216,7 +220,8 @@ it("keeps shared configuration fail-closed for replay, automatic AI and optional
     enableMetrics: false,
     tracesSampleRate: 0,
     sendDefaultPii: false,
-    maxBreadcrumbs: 0
+    maxBreadcrumbs: 20,
+    transportOptions: { bufferSize: 32 }
   })
   expect(sentryOptions.integrations.map((integration) => integration.name)).toContain("RostraPrivacy")
 })

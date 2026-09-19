@@ -26,7 +26,9 @@ Langfuse credentials fail with a fixed message; neither credential values nor th
 Production-build registration is explicitly skipped.
 
 The Sentry SDK remains the sole ESM-loader-hook owner. Application HTTP instrumentation retains request isolation,
-disables body/session/breadcrumb capture and uses explicit first-party propagation targets. No automatic AI content
+disables automatic body/session/breadcrumb capture and uses explicit first-party propagation targets. The native
+PostgreSQL integration supplies database dependency spans; SQL and connection metadata are removed at export.
+No automatic AI content
 integration is added. Existing Langfuse AI SDK integration is registered once by the owner.
 An ineligible propagation URL disables propagation with a fixed local warning; it does not take down an otherwise
 valid application. Built acceptance explicitly clears provider/telemetry credentials so a developer's local `.env`
@@ -42,7 +44,10 @@ Sentry declines export, the provider records locally without setting the origina
 originally sampled spans; Langfuse receives detached, sink-local sampled snapshots through its own eligibility filter.
 Snapshot attributes, events, links and status are detached because Langfuse masks its input in place.
 
-The application sampler remains zero until an approved policy replaces it. Existing configured Langfuse observation
+The application sampler defaults to zero. An explicitly approved `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` value
+sets the local budget independently of incoming flags; invalid values warn and disable tracing. The optional
+`NEXT_PUBLIC_SENTRY_ENVIRONMENT` label uses the same approved environment names across runtimes.
+Existing configured Langfuse observation
 behavior is preserved; this is not permission to expand its collection. Sentry's
 [privacy boundary](telemetry-privacy.md) filters its own envelopes independently. Neither sink's raw content is copied
 into the other's payload, and the original OpenTelemetry span is not mutated by Langfuse masking.
@@ -59,6 +64,9 @@ is still pending. Registration is released only once the actual shutdown finishe
 
 Only registrations successfully acquired by this owner are released on startup failure/shutdown. Vendor flush remains
 outside the user-response critical path through the application's existing post-response lifecycle.
+The application reports a failed post-response flush locally, not through a recursively failing telemetry sink.
+The native Sentry transport uses a 32-envelope buffer and its own rate-limit/network behavior. At most ten safe local
+delivery-loss warnings are emitted per client; there is no persistent offline queue or custom retry machinery.
 
 ## Verification
 

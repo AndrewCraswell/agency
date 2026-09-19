@@ -4,6 +4,7 @@ import {
   payloadRecord,
   projectSentryMetadata,
   readPayloadField,
+  safeSpanName,
   sentryPayloadFields as p,
   type SentryPayloadPolicy
 } from "./sentryPayloadFields"
@@ -175,7 +176,11 @@ export function createSentryPrivacy(options: PrivacyOptions = {}) {
               }
               const decoded = decodeSentryAttributes(entry.attributes)
               const op = readPayloadField(p.spanOperation, decoded["sentry.op"]) ?? "app.operation"
-              return { ...span, name: op, attributes: encodeSentryAttributes(projectSentryMetadata(decoded, policy)) }
+              return {
+                ...span,
+                name: safeSpanName(entry.name, op),
+                attributes: encodeSentryAttributes(projectSentryMetadata(decoded, policy))
+              }
             })
             return projected ? [projected] : []
           })
