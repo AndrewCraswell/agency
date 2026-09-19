@@ -10,6 +10,8 @@ Legislation workspace documentation: [web](../apps/legislation-web/docs/README.m
 and [core](../packages/legislation-core/docs/README.md). See
 [runtime setup](../apps/legislation-web/docs/operations/development.md) for local credentials after the move and
 [verification](../apps/legislation-web/docs/operations/testing.md#full-verification) for `pnpm verify:legislation`.
+The proposed [web telemetry specification](../apps/legislation-web/docs/engineering/telemetry-spec.md) covers usage,
+performance, reliability, privacy and rollout acceptance across Rostra.
 
 | Page                             | What it covers                                                                                                                                              |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
