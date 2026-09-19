@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DERIVED_SUPPORTING_MATERIAL_BATCH_SIZE } from "../../ingestion/backfill/derived.js"
+import { DERIVED_SUPPORTING_MATERIAL_BATCH_SIZE } from "../../ingestion/backfill/derived-policy.js"
 import {
   createFullEmbeddingSyncStages,
   createDerivedLeaseHandoffResult,

@@ -59,8 +59,8 @@ import {
 } from "../ingestion/govinfo/committee-directory-sync.js"
 import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../ingestion/http-client.js"
+import { createJobCounts } from "../ingestion/job-result.js"
 import {
-  createJobCounts,
   JobAlreadyRunningError,
   JOB_EXIT_CODE,
   recoverInterruptedIngestionJob,

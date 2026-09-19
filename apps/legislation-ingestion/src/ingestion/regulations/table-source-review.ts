@@ -2,7 +2,7 @@ import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { regulatoryParserContract } from "@repo/legislation-core/legal-text/parser-contract"
 import { storedLegalSourceBlocks } from "@repo/legislation-core/legal-text/reader-text"
 import { provisionContent, regulatoryStorageContract } from "@repo/legislation-core/legal-text/storage-contract"
-import { load } from "cheerio"
+import { load } from "cheerio/slim"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 

@@ -7,7 +7,8 @@ import {
   formatSynchronizationIdentity,
   type SynchronizationIdentity
 } from "../../trigger/identities.js"
-import { createJobCounts, runIngestionJob, type JobResult } from "../job.js"
+import { createJobCounts } from "../job-result.js"
+import { runIngestionJob, type JobResult } from "../job.js"
 import {
   executeSynchronization,
   type SynchronizationExecutionDependencies,

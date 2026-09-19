@@ -2,7 +2,8 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { jurisdictions, legislativeSessions, syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
 import { and, eq, inArray } from "drizzle-orm"
 import { z } from "zod"
-import { createJobCounts, type JobCounts } from "./job.js"
+import { createJobCounts } from "./job-result.js"
+import type { JobCounts } from "./job.js"
 
 const canonicalFoundationSourceSchema = z
   .object({

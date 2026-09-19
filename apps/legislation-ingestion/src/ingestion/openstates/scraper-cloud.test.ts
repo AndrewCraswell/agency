@@ -9,6 +9,10 @@ import {
 } from "./scraper-cloud.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
+vi.mock("@azure/identity", () => {
+  throw new Error("Injected scraper credentials must not load the default credential chain")
+})
+
 class Store implements ArtifactStore {
   readonly values = new Map<string, Uint8Array>()
   async exists(path: string) {

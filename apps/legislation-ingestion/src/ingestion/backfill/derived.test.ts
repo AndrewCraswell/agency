@@ -1,7 +1,8 @@
 import { createDatabase } from "@repo/legislation-core/database/database"
 import { afterAll, describe, expect, it, vi } from "vitest"
 import { loadConfig } from "../../config/config.js"
-import { createJobCounts, type JobResult, type runIngestionJob } from "../job.js"
+import { createJobCounts } from "../job-result.js"
+import type { JobResult, runIngestionJob } from "../job.js"
 import {
   drainBillDocuments,
   drainEmbeddings,

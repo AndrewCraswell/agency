@@ -4,7 +4,7 @@ import { z } from "zod"
 import { loadConfig } from "../../config/config.js"
 import { executeGovInfoCommitteeSynchronization } from "../../ingestion/govinfo/committee-directory-sync.js"
 import { createGovInfoProviderRequestAdmission } from "../../ingestion/provider-request-admission.js"
-import { requireSuccessfulSynchronizationResult } from "./synchronization-executor.js"
+import { requireSuccessfulSynchronizationResult } from "./synchronization-policy.js"
 
 export const committeeDirectoryBackfillPayload = z.strictObject({ congress: z.number().int().min(105).max(118) })
 

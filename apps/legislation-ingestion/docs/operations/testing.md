@@ -19,6 +19,24 @@ Use [C database setup](../../../../packages/legislation-core/docs/operations/dev
 database resources. A skipped real-database suite is not acceptance. The single final legislation gate and its root
 command are documented in [W verification](../../../legislation-web/docs/operations/testing.md#full-verification).
 
+## Import profiling
+
+Vitest's `--experimental.importDurations.print --experimental.importDurations.limit=30` reports module self and
+inclusive import times. Use one worker and no coverage for diagnosis, retaining test isolation. To measure collection
+without executing tests or hooks, add `--testNamePattern '^__IMPORT_PROFILE_ONLY__$'` to the normal test command.
+Skipped tests in that run are a profiling technique, not behavioral verification. Cumulative import times across
+workers are not wall time; do not sum inclusive parent and child durations.
+
+Keep cloud and orchestration dependencies behind their execution boundaries. Local artifact operations do not load
+Azure SDKs; blob clients initialize on the first valid cloud operation, and default credentials initialize on the
+first token request. Injected OCR/scraper credentials bypass the default credential chain. CLI planning and input
+validation do not load Trigger dispatch code. XML-only table readers use `cheerio/slim`; HTML readers retain the
+default parser. Preserve the real tokenizer, parser, transport and provider-error regressions when optimizing imports.
+
+Import pure synchronization policy, document shard policy, derived limits and job-result helpers from their focused
+modules rather than runtime executors. Their colocated tests must not need the database or worker SDK. Keep runtime
+dispatch and persistence tests alongside those boundaries; moving helpers is not a reason to remove that coverage.
+
 ## Database guards
 
 These are the current source guards, not interchangeable aliases. Supply URLs through the trusted local process

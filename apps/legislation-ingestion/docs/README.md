@@ -8,7 +8,7 @@ not sibling apps. W lives at `apps/legislation-web`; ignored local state remains
 
 | Need | Canonical page |
 | --- | --- |
-| Commands and isolated worker settings | [README](../README.md), [development](operations/development.md), [testing](operations/testing.md) |
+| Commands, import profiling and isolated worker settings | [README](../README.md), [development](operations/development.md), [testing](operations/testing.md) |
 | Source scope and inventory | [Coverage policy](engineering/coverage-policy.md), [sync catalog](engineering/data-sync-catalog.md) |
 | State activation and retained evidence | [Rollout checklist](operations/openstates-rollout-checklist.md), [onboarding](operations/openstates-jurisdiction-onboarding.md) |
 | Worker dispatch and budgets | [Trigger design](engineering/trigger-orchestration-design.md), [worker capacity](operations/worker-capacity.md) |

@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
-import { configure, envvars, tasks } from "@trigger.dev/sdk"
 import { Command } from "commander"
 import { z } from "zod"
 import {
@@ -57,6 +56,7 @@ if (options.apply !== true) {
   if (!accessToken) {
     throw new Error("TRIGGER_SECRET_KEY or TRIGGER_DEV_API_KEY is required with --apply")
   }
+  const { configure, envvars, tasks } = await import("@trigger.dev/sdk")
   configure({ accessToken })
   const activation = await envvars.retrieve(project, "prod", "OPENSTATES_CONTENT_ENABLED_STATES")
   requireStateContentActivation(payload.state, activation.value)

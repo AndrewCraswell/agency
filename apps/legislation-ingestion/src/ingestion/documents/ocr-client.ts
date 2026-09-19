@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises"
-import { DefaultAzureCredential } from "@azure/identity"
+import { createLazyAzureCredential } from "../azure-credential.js"
 import type { OcrPageSpan } from "./ocr-page-mapping.js"
 
 const cognitiveServicesScope = "https://cognitiveservices.azure.com/.default"
@@ -60,7 +60,7 @@ export class AzureDocumentIntelligenceClient implements OcrClient {
     }> = {}
   ) {
     this.#endpoint = normalizeEndpoint(endpoint)
-    this.#credential = options.credential ?? new DefaultAzureCredential()
+    this.#credential = options.credential ?? createLazyAzureCredential()
     this.#fetch = options.fetch ?? fetch
     this.#pollIntervalMs = options.pollIntervalMs ?? 1_000
     this.#timeoutMs = options.timeoutMs ?? 10 * 60_000

@@ -4,7 +4,8 @@ import { replaceEntitySnapshot } from "../../persistence/entities.js"
 import { CongressClient } from "../congress/client.js"
 import { hydrateCongressMemberSnapshot } from "../congress/member-details.js"
 import { RetryingHttpClient } from "../http-client.js"
-import { createJobCounts, runIngestionJob, type JobResult } from "../job.js"
+import { createJobCounts } from "../job-result.js"
+import { runIngestionJob, type JobResult } from "../job.js"
 
 interface CongressEntityClient {
   getMember(bioguideId: string): Promise<unknown>

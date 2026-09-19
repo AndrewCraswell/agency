@@ -1,5 +1,5 @@
-import { DefaultAzureCredential } from "@azure/identity"
 import { z } from "zod"
+import { createLazyAzureCredential } from "../azure-credential.js"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
@@ -110,7 +110,7 @@ export async function dispatchCloudScraperAttempt(
     .min(1)
     .max(1800)
     .parse(input.maxWaitSeconds ?? 1800)
-  const credential = dependencies.credential ?? new DefaultAzureCredential()
+  const credential = dependencies.credential ?? createLazyAzureCredential()
   const requestFetch = dependencies.fetch ?? fetch
   const sleep =
     dependencies.sleep ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)))

@@ -3,7 +3,8 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { ingestionLocks, ingestionRuns, syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
 import { and, eq, lt, lte, sql } from "drizzle-orm"
 import { isDeferredIngestionError } from "./deferred.js"
-import { ingestionErrorSummary, sanitizeIngestionMessage } from "./errors.js"
+import { ingestionErrorSummary } from "./errors.js"
+import { createJobCounts, ingestionFailureSummary } from "./job-result.js"
 import { withIngestionRun } from "./run-context.js"
 
 const DEFAULT_JOB_LEASE_DURATION_MINUTES = 5
@@ -44,22 +45,6 @@ export interface JobResult {
 }
 
 type JobOperationResult = Omit<JobResult, "correlationId" | "operation" | "runId" | "source" | "status">
-
-export function ingestionFailureSummary(
-  failures: ReadonlyArray<Readonly<{ identifier?: string; message: string }>>
-): string | null {
-  return (
-    failures
-      .slice(0, 20)
-      .map((failure) =>
-        sanitizeIngestionMessage(
-          failure.identifier === undefined ? failure.message : `${failure.identifier}: ${failure.message}`
-        )
-      )
-      .join("; ")
-      .slice(0, 8000) || null
-  )
-}
 
 export class JobAlreadyRunningError extends Error {
   readonly operation: string
@@ -228,10 +213,6 @@ export async function recoverRetriedIngestionJob(
       .returning({ id: ingestionRuns.id })
     return { releasedLease: true, runIds: recovered.map((run) => run.id), startedAt: ownedRun.startedAt }
   })
-}
-
-export function createJobCounts(overrides: Partial<JobCounts> = {}): JobCounts {
-  return { discovered: 0, failed: 0, inserted: 0, read: 0, skipped: 0, unchanged: 0, updated: 0, ...overrides }
 }
 
 export async function runIngestionJob(

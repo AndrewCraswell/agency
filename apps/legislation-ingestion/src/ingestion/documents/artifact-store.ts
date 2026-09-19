@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto"
 import { constants } from "node:fs"
 import { access, copyFile, link, lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { extname, resolve, sep } from "node:path"
-import { DefaultAzureCredential } from "@azure/identity"
-import { BlobServiceClient } from "@azure/storage-blob"
+import type { BlobServiceClient } from "@azure/storage-blob"
+import { createLazyAzureCredential } from "../azure-credential.js"
 
 export interface ArtifactStore {
   exists(path: string): Promise<boolean>
@@ -106,19 +106,33 @@ export class LocalArtifactStore implements FileArtifactStore {
 }
 
 export class AzureBlobArtifactStore implements FileArtifactStore {
-  readonly #container: ReturnType<BlobServiceClient["getContainerClient"]>
+  readonly #accountName: string
+  readonly #containerName: string
+  #container: Promise<ReturnType<BlobServiceClient["getContainerClient"]>> | undefined
 
   constructor(accountName: string, containerName: string) {
-    const service = new BlobServiceClient(`https://${accountName}.blob.core.windows.net`, new DefaultAzureCredential())
-    this.#container = service.getContainerClient(containerName)
+    this.#accountName = accountName
+    this.#containerName = containerName
+  }
+
+  async #blob(path: string) {
+    const normalized = normalizeBlobPath(path)
+    this.#container ??= import("@azure/storage-blob").then(({ BlobServiceClient }) => {
+      const service = new BlobServiceClient(
+        `https://${this.#accountName}.blob.core.windows.net`,
+        createLazyAzureCredential()
+      )
+      return service.getContainerClient(this.#containerName)
+    })
+    return (await this.#container).getBlockBlobClient(normalized)
   }
 
   async exists(path: string): Promise<boolean> {
-    return this.#container.getBlockBlobClient(normalizeBlobPath(path)).exists()
+    return (await this.#blob(path)).exists()
   }
 
   async put(path: string, bytes: Uint8Array): Promise<boolean> {
-    const blob = this.#container.getBlockBlobClient(normalizeBlobPath(path))
+    const blob = await this.#blob(path)
     try {
       await blob.uploadData(bytes, { conditions: { ifNoneMatch: "*" } })
       return true
@@ -132,7 +146,8 @@ export class AzureBlobArtifactStore implements FileArtifactStore {
 
   async read(path: string): Promise<Uint8Array> {
     try {
-      return new Uint8Array(await this.#container.getBlockBlobClient(normalizeBlobPath(path)).downloadToBuffer())
+      const blob = await this.#blob(path)
+      return new Uint8Array(await blob.downloadToBuffer())
     } catch (error) {
       if (isMissingArtifactError(error)) {
         throw new ArtifactNotFoundError(path, { cause: error })
@@ -144,7 +159,7 @@ export class AzureBlobArtifactStore implements FileArtifactStore {
   async putFile(path: string, localPath: string): Promise<boolean> {
     const source = await lstat(localPath)
     if (!source.isFile() || source.isSymbolicLink()) throw new Error("Artifact source must be a regular file")
-    const blob = this.#container.getBlockBlobClient(normalizeBlobPath(path))
+    const blob = await this.#blob(path)
     try {
       await blob.uploadFile(localPath, { conditions: { ifNoneMatch: "*" } })
       return true
@@ -159,7 +174,8 @@ export class AzureBlobArtifactStore implements FileArtifactStore {
     await mkdir(resolve(target, ".."), { recursive: true })
     const temporary = `${target}.${randomUUID()}.partial`
     try {
-      await this.#container.getBlockBlobClient(normalizeBlobPath(path)).downloadToFile(temporary, 0, undefined, {
+      const blob = await this.#blob(path)
+      await blob.downloadToFile(temporary, 0, undefined, {
         conditions: { ifMatch: "*" }
       })
       await link(temporary, target)

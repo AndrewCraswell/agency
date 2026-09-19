@@ -7,7 +7,8 @@ import type { ArtifactStore } from "../documents/artifact-store.js"
 import type { OcrClient } from "../documents/ocr-client.js"
 import { processOcrRequiredDocuments } from "../documents/ocr-jobs.js"
 import { OCR_MAXIMUM_ATTEMPTS } from "../documents/ocr-retry.js"
-import { createJobCounts, runIngestionJob } from "../job.js"
+import { createJobCounts } from "../job-result.js"
+import { runIngestionJob } from "../job.js"
 import { inspectStateContentBacklog } from "./state-content-backlog.js"
 import {
   advanceStateContentCheckpoint,

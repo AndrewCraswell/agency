@@ -17,7 +17,8 @@ import {
 } from "@repo/legislation-core/domain/civic-foundation"
 import { and, eq } from "drizzle-orm"
 import { parseCanonicalFoundationContentHash } from "./canonical-foundation.js"
-import { createJobCounts, type JobCounts } from "./job.js"
+import { createJobCounts } from "./job-result.js"
+import type { JobCounts } from "./job.js"
 
 export const canonicalCivicFoundationCheckpointSource = "canonical-civic-foundation"
 export const canonicalCivicFoundationCheckpointStream = "people-organizations-terms-memberships"

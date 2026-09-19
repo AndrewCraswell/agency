@@ -34,7 +34,14 @@ import {
   type EmbeddingClient,
   type EmbeddingJobResult
 } from "../embeddings/jobs.js"
-import { createJobCounts, runIngestionJob, type JobCounts, type JobResult } from "../job.js"
+import { createJobCounts } from "../job-result.js"
+import { runIngestionJob, type JobCounts, type JobResult } from "../job.js"
+import {
+  DERIVED_DOCUMENT_WORKER_MAX_DURATION_SECONDS,
+  EMBEDDING_JOB_KINDS,
+  type DerivedBackfillKind,
+  type EmbeddingJobKind
+} from "./derived-policy.js"
 
 const MAX_REPORTED_FAILURES = 20
 // A bounded document batch can spend more than 15 minutes inside a slow
@@ -49,19 +56,7 @@ const DERIVED_JOB_LEASE_DURATION_MINUTES = 30
 // handoff without changing bill-document or embedding leases.
 const SUPPORTING_MATERIAL_JOB_LEASE_DURATION_MINUTES = 60
 
-/**
- * A document continuation is deliberately longer than ordinary sync work, but
- * is still bounded. The same window guards recovery of claims left behind by a
- * hard-killed Trigger worker: another lane must never reclaim them while the
- * original worker could still be making publisher calls.
- */
-export const DERIVED_DOCUMENT_WORKER_MAX_DURATION_SECONDS = 14_400
-export const DERIVED_DOCUMENT_BATCH_SIZE = 100
-export const DERIVED_SUPPORTING_MATERIAL_BATCH_SIZE = 25
 const DOCUMENT_INTERRUPTION_RECOVERY_MARGIN_MS = 5 * 60 * 1000
-
-export const DERIVED_BACKFILL_KINDS = ["bill-documents", "supporting-materials", "embeddings"] as const
-export type DerivedBackfillKind = (typeof DERIVED_BACKFILL_KINDS)[number]
 
 type ProcessingStatus = "failed" | "pending" | "unsupported"
 
@@ -116,9 +111,6 @@ export type DerivedBackfillRequest =
   | Readonly<{ kind: "bill-documents"; options?: BillDocumentDrainOptions }>
   | Readonly<{ kind: "supporting-materials"; options?: SupportingMaterialDrainOptions }>
   | Readonly<{ kind: "embeddings"; options?: EmbeddingDrainOptions }>
-
-export const EMBEDDING_JOB_KINDS = ["amendments", "bills", "materials", "sections"] as const
-export type EmbeddingJobKind = (typeof EMBEDDING_JOB_KINDS)[number]
 
 export interface DerivedBackfillDependencies {
   artifactStore?: ArtifactStore

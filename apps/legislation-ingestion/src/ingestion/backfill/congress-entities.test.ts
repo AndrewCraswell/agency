@@ -1,7 +1,8 @@
 import { createDatabase } from "@repo/legislation-core/database/database"
 import { afterAll, describe, expect, it, vi } from "vitest"
 import { loadConfig } from "../../config/config.js"
-import { createJobCounts, runIngestionJob as runIngestionJobType } from "../job.js"
+import { createJobCounts } from "../job-result.js"
+import { runIngestionJob as runIngestionJobType } from "../job.js"
 import { executeCongressEntityRangeBackfill } from "./congress-entities.js"
 
 const config = loadConfig({ NODE_ENV: "test" })

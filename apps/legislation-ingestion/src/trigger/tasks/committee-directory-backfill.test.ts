@@ -2,7 +2,8 @@ import { createDatabase } from "@repo/legislation-core/database/database"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { loadConfig } from "../../config/config.js"
 import { executeGovInfoCommitteeSynchronization } from "../../ingestion/govinfo/committee-directory-sync.js"
-import { createJobCounts, type JobResult } from "../../ingestion/job.js"
+import { createJobCounts } from "../../ingestion/job-result.js"
+import type { JobResult } from "../../ingestion/job.js"
 import { committeeDirectoryBackfillPayload, runCommitteeDirectoryBackfill } from "./committee-directory-backfill.js"
 
 vi.mock("@repo/legislation-core/database/database", async (original) => ({

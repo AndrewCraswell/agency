@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { createJobCounts, type JobResult } from "../../ingestion/job.js"
+import { createJobCounts } from "../../ingestion/job-result.js"
+import type { JobResult } from "../../ingestion/job.js"
 import {
   recurringGovInfoBillDocumentDispatch,
   recurringOpenStatesBillDocumentDispatch,
   requireSuccessfulSynchronizationResult
-} from "./synchronization-executor.js"
+} from "./synchronization-policy.js"
 import { createSynchronizationWorkerDispatchIntent } from "./worker-contract.js"
 
 function jobResult(status: JobResult["status"]): JobResult {

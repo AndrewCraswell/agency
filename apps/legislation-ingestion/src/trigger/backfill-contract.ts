@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { DOCUMENT_BACKFILL_SHARD_COUNT } from "../ingestion/documents/jobs.js"
+import { DOCUMENT_BACKFILL_SHARD_COUNT } from "../ingestion/documents/shard-policy.js"
 import { supportedOpenStatesJurisdictions } from "../ingestion/openstates/coverage.js"
 
 export const backfillPhases = [

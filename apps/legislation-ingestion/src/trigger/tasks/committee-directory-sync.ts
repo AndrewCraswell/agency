@@ -4,7 +4,7 @@ import { loadConfig } from "../../config/config.js"
 import { executeGovInfoCommitteeSynchronization } from "../../ingestion/govinfo/committee-directory-sync.js"
 import { JobAlreadyRunningError } from "../../ingestion/job.js"
 import { createGovInfoProviderRequestAdmission } from "../../ingestion/provider-request-admission.js"
-import { requireSuccessfulSynchronizationResult } from "./synchronization-executor.js"
+import { requireSuccessfulSynchronizationResult } from "./synchronization-policy.js"
 
 /** New directory editions are infrequent; poll daily without replaying historical Congresses. */
 export const committeeDirectorySync = schedules.task({

@@ -1,6 +1,6 @@
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { buildLegalTextProjection, storedLegalSourceBlocks } from "@repo/legislation-core/legal-text/reader-text"
-import { load } from "cheerio"
+import { load } from "cheerio/slim"
 import { XMLValidator } from "fast-xml-parser"
 import invariant from "tiny-invariant"
 import { z } from "zod"

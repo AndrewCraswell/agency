@@ -2,10 +2,9 @@ import { createHash } from "node:crypto"
 import { mapConcurrent } from "@repo/legislation-core/concurrency/map-concurrent"
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { billDocuments, bills } from "@repo/legislation-core/database/schema/schema"
-import { jurisdictionId } from "@repo/legislation-core/domain/identifiers"
 import { and, asc, eq, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm"
-import { createJobCounts, type JobCounts } from "../job.js"
-import { supportedOpenStatesJurisdictions } from "../openstates/coverage.js"
+import { createJobCounts } from "../job-result.js"
+import type { JobCounts } from "../job.js"
 import { artifactPath, type ArtifactStore } from "./artifact-store.js"
 import { detectDocumentContentType, downloadDocument } from "./download.js"
 import { DocumentHostLeaseDeferredError, type DocumentHostLimiter } from "./host-limiter.js"
@@ -17,6 +16,12 @@ import {
   persistProcessedDocument,
   type DocumentFailureCategory
 } from "./process.js"
+import {
+  DOCUMENT_BACKFILL_SHARD_COUNT,
+  documentBackfillCanonicalJurisdictionIds,
+  unknownDocumentBackfillLaneCount,
+  unknownDocumentBackfillLaneStart
+} from "./shard-policy.js"
 
 // All batches in a process share PDF.js and its native memory budget. A limiter
 // per batch permits concurrent bill pipelines to bypass the worker-wide bound.
@@ -26,45 +31,6 @@ const MAX_REPORTED_FAILURES = 20
 const MAX_UPDATE_BATCH_SIZE = 1000
 const RETRY_BASE_DELAY_MS = 5 * 60 * 1000
 const RETRY_MAX_DELAY_MS = 6 * 60 * 60 * 1000
-
-/**
- * The 64 document lanes reserve one distinct lane for every canonical state,
- * district, territory, and federal jurisdiction presently in the corpus.
- * This keeps a large publisher such as California from sharing a worker with
- * another known jurisdiction. Unknown future jurisdictions use only the
- * remaining lanes, so they cannot collide with the reserved canonical lanes.
- */
-export const DOCUMENT_BACKFILL_SHARD_COUNT = 64
-const canonicalDocumentBackfillJurisdictionIds = [
-  ...supportedOpenStatesJurisdictions.map((code) => jurisdictionId(code)),
-  jurisdictionId("us")
-] as const
-const unknownDocumentBackfillLaneStart = canonicalDocumentBackfillJurisdictionIds.length
-const unknownDocumentBackfillLaneCount = DOCUMENT_BACKFILL_SHARD_COUNT - unknownDocumentBackfillLaneStart
-
-if (unknownDocumentBackfillLaneCount < 1) {
-  throw new Error("Document backfill lanes must reserve capacity for unknown jurisdictions")
-}
-
-const documentBackfillLaneByJurisdictionId = new Map(
-  canonicalDocumentBackfillJurisdictionIds.map((id, lane) => [id, lane])
-)
-
-/** Canonical jurisdiction IDs with dedicated 64-lane document workers. */
-export const documentBackfillCanonicalJurisdictionIds = [...canonicalDocumentBackfillJurisdictionIds]
-
-/**
- * Resolves the deterministic 64-lane assignment used by document backfills.
- * The SQL predicate below uses PostgreSQL's hash for unknown values; both
- * paths deliberately constrain unknown jurisdictions to the unreserved range.
- */
-export function documentBackfillJurisdictionLane(jurisdiction: string): number {
-  const knownLane = documentBackfillLaneByJurisdictionId.get(jurisdiction)
-  if (knownLane !== undefined) {
-    return knownLane
-  }
-  return unknownDocumentBackfillLaneStart + (stableStringHash(jurisdiction) % unknownDocumentBackfillLaneCount)
-}
 
 export const DOCUMENT_REMEDIATION_COHORTS = [
   "alaska-pdf-label",
@@ -1556,7 +1522,7 @@ function documentJurisdictionShardSelection(shardCount: number, shardIndex: numb
     return undefined
   }
   if (shardCount === DOCUMENT_BACKFILL_SHARD_COUNT) {
-    const knownLanes = canonicalDocumentBackfillJurisdictionIds.map(
+    const knownLanes = documentBackfillCanonicalJurisdictionIds.map(
       (jurisdiction, lane) => sql`when ${bills.jurisdictionId} = ${jurisdiction} then ${lane}`
     )
     return sql`exists (
@@ -1617,14 +1583,6 @@ function documentIdPartitionSelection(partitionCount: number | undefined, partit
   return sql`(
     ((hashtextextended(${billDocuments.id}, 0) % ${partitionCount}) + ${partitionCount}) % ${partitionCount}
   ) = ${partitionIndex}`
-}
-
-function stableStringHash(value: string): number {
-  let hash = 0
-  for (const character of value) {
-    hash = (hash * 31 + character.charCodeAt(0)) % 2_147_483_647
-  }
-  return hash
 }
 
 function documentDeferralAt(documentId: string, from = new Date()): Date {

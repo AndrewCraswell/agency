@@ -4,7 +4,8 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { and, eq } from "drizzle-orm"
 import { upsertBillAggregates } from "../../persistence/bill-aggregates.js"
-import { createJobCounts, type JobCounts } from "../job.js"
+import { createJobCounts } from "../job-result.js"
+import type { JobCounts } from "../job.js"
 import { normalizeOpenStatesBill, type NormalizationDiagnostic, type OpenStatesContext } from "./normalize.js"
 
 export interface OpenStatesImportResult {

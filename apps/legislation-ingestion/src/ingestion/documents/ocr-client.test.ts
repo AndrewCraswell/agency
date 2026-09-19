@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 import { AzureDocumentIntelligenceClient, AzureDocumentIntelligenceError } from "./ocr-client.js"
 
+vi.mock("@azure/identity", () => {
+  throw new Error("Injected OCR credentials must not load the default credential chain")
+})
+
 const credential = { getToken: async () => ({ token: "test-token" }) }
 
 describe("AzureDocumentIntelligenceClient", () => {

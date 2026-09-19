@@ -11,14 +11,13 @@ import {
   listOpenStatesHistoricalArchives
 } from "../../ingestion/backfill/backfill.js"
 import {
-  createDerivedDocumentHostLimiter,
   DERIVED_BACKFILL_KINDS,
   DERIVED_DOCUMENT_BATCH_SIZE,
   DERIVED_DOCUMENT_WORKER_MAX_DURATION_SECONDS,
   DERIVED_SUPPORTING_MATERIAL_BATCH_SIZE,
-  EMBEDDING_JOB_KINDS,
-  executeDerivedBackfill
-} from "../../ingestion/backfill/derived.js"
+  EMBEDDING_JOB_KINDS
+} from "../../ingestion/backfill/derived-policy.js"
+import { createDerivedDocumentHostLimiter, executeDerivedBackfill } from "../../ingestion/backfill/derived.js"
 import { requeueInterruptedDocuments } from "../../ingestion/documents/jobs.js"
 import {
   nextSupportingMaterialBackfillAttempt,

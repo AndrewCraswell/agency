@@ -18,12 +18,15 @@ import {
   runCongressWave,
   type CongressWaveChildResult
 } from "../../ingestion/congress/wave.js"
-import { DOCUMENT_BACKFILL_SHARD_COUNT, documentBackfillJurisdictionLane } from "../../ingestion/documents/jobs.js"
+import {
+  DOCUMENT_BACKFILL_SHARD_COUNT,
+  documentBackfillJurisdictionLane
+} from "../../ingestion/documents/shard-policy.js"
 import { RetryingHttpClient } from "../../ingestion/http-client.js"
 import { ingestionJobHandoffRetryAt, JobAlreadyRunningError } from "../../ingestion/job.js"
 import { executeSynchronization } from "../../ingestion/synchronization/synchronize.js"
 import { parseSynchronizationIdentity } from "../identities.js"
-import { requireSuccessfulSynchronizationResult } from "./synchronization-executor.js"
+import { requireSuccessfulSynchronizationResult } from "./synchronization-policy.js"
 
 const congressWaveCoordinatorQueue = queue({ concurrencyLimit: 1, name: "congress-wave-coordinator" })
 const congressWaveChildQueue = queue({
