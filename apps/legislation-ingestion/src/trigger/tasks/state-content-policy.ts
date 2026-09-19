@@ -77,8 +77,12 @@ export function requireStateContentActivation(
       ?.split(",")
       .map((value) => value.trim())
       .filter(Boolean) ?? []
-  const approved = z.array(stateContentScope).parse(enabled)
-  if (!approved.includes(state)) {
+  // The environment is shared across deployed versions. Another deployment may
+  // support a newly enabled jurisdiction; that must not disable this worker's
+  // existing jurisdictions. Only the requested state requires local support.
+  const requested = stateContentScope.parse(state)
+  const approved = z.array(z.string().regex(/^[a-z]{2}$/)).parse(enabled)
+  if (!approved.includes(requested)) {
     throw new Error(`State content activation is not approved for ${state}`)
   }
 }

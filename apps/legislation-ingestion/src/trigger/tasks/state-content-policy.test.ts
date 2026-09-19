@@ -84,7 +84,10 @@ describe("state content hosted boundaries", () => {
   it("requires explicit activation and rejects other jurisdictions or extra payload fields", () => {
     expect(() => requireStateContentActivation("nc", undefined)).toThrow("not approved")
     expect(() => requireStateContentActivation("ak", "nc")).toThrow("not approved")
-    expect(() => requireStateContentActivation("nc", "nc,ca")).toThrow(/Invalid option/)
+    expect(() => requireStateContentActivation("nc", "nc,ca")).not.toThrow()
+    expect(() => requireStateContentActivation("nc", "ca")).toThrow("not approved")
+    expect(() => requireStateContentActivation("nc", "nc,invalid")).toThrow()
+    expect(() => stateContentPayload.parse({ state: "ca" })).toThrow(/Invalid option/)
     expect(() => requireStateContentActivation("ak", "nc, ak")).not.toThrow()
     expect(() => stateContentPayload.parse({ state: "nc", databaseUrl: "override" })).toThrow(/Unrecognized key/)
   })

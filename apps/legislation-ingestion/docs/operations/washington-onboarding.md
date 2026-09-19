@@ -5,6 +5,17 @@ document/OCR, embedding and search pipelines. Do not activate schedules until th
 Initial extraction concurrency is one; retain the existing global content-worker ceiling and publisher limits while
 North Carolina drains. No new provider, database or embedding model is approved by this onboarding.
 
+### Cross-state content activation recovery
+
+Hosted inspection found older North Carolina content controllers on `20260919.6` failed when their global enabled-state
+list included Washington, which that deployment did not recognize. Examples include `run_06gbi9e2t4qo7rlnh8m7nnk601`
+(2003) and `run_06gbi9bahmdgdai04atf5ic301` (2011). The shared activation guard now validates each configured entry's
+two-letter shape while requiring local implementation support and explicit enablement for the requested state only.
+An unrelated future-state entry cannot disable NC/AK, and unsupported requested states still fail payload validation.
+Seventeen focused policy/task tests passed. This fix requires deployment and deliberate resumption of terminal failed
+NC scopes after checking current ownership; immutable old workers are not repaired by a local code change. No NC run
+was restarted or cancelled during this inspection.
+
 ## Requirements and evidence
 
 ### Shared committee reference resolution
