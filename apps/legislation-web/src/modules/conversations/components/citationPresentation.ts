@@ -17,9 +17,10 @@ type CitationReference = Readonly<{
 }>
 
 const markdownParser = unified().use(remarkParse).use(Object.values(defaultRemarkPlugins))
+const malformedCitation = /\[\d+\]\(#citation-(?:e[1-9][0-9]{0,30}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\]/i
 
 function normalizeMalformedCitations(markdown: string) {
-  if (!/\[\d+\]\(#citation-e[1-9][0-9]{0,30}\]/.test(markdown)) {
+  if (!malformedCitation.test(markdown)) {
     return markdown
   }
   const tree = markdownParser.parse(markdown)
@@ -33,7 +34,7 @@ function normalizeMalformedCitations(markdown: string) {
       }
       // Repair only the observed wrong closing delimiter, inside Markdown prose.
       // Missing or ambiguous exact IDs still flow through the unavailable-citation renderer.
-      for (const match of markdown.slice(start, end).matchAll(/\[\d+\]\(#citation-e[1-9][0-9]{0,30}\]/g)) {
+      for (const match of markdown.slice(start, end).matchAll(new RegExp(malformedCitation.source, "gi"))) {
         const offset = start + match.index
         const prefix = markdown.slice(0, offset)
         if (prefix.endsWith("!") || (prefix.match(/\\+$/)?.[0].length ?? 0) % 2 === 1) {
@@ -96,6 +97,17 @@ function normalizedSourceUrl(value: string | null | undefined) {
   return parsed.success ? new URL(parsed.data).href : undefined
 }
 
+function uuidIdentity(value: string) {
+  return /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(value)
+    ? value.replaceAll("-", "").toLowerCase()
+    : undefined
+}
+
+function registerReference(references: Map<string, EvidenceSnapshot | null>, key: string, source: EvidenceSnapshot) {
+  const existing = references.get(key)
+  references.set(key, existing === null || (existing && existing.id !== source.id) ? null : source)
+}
+
 export function createCitationPresentation(
   answerId: string,
   text: string,
@@ -104,33 +116,30 @@ export function createCitationPresentation(
 ) {
   const byId = new Map(evidence.map((source) => [source.id, source]))
   const byReference = new Map<string, EvidenceSnapshot | null>(byId)
+  const byUuid = new Map<string, EvidenceSnapshot | null>()
   const byUrl = new Map<string, EvidenceSnapshot | null>()
   for (const source of byId.values()) {
     if (source.citationRef) {
-      const existing = byReference.get(source.citationRef)
-      if (existing === null || (existing && existing.id !== source.id)) {
-        byReference.set(source.citationRef, null)
-      } else {
-        byReference.set(source.citationRef, source)
-      }
+      registerReference(byReference, source.citationRef, source)
+    }
+    const uuid = uuidIdentity(source.id)
+    if (uuid !== undefined) {
+      registerReference(byUuid, uuid, source)
     }
     for (const value of [source.sourceUrl, evidenceSourceUrl(source)]) {
       const url = normalizedSourceUrl(value)
       if (!url) {
         continue
       }
-      const existing = byUrl.get(url)
-      if (existing === null || (existing && existing.id !== source.id)) {
-        byUrl.set(url, null)
-      } else {
-        byUrl.set(url, source)
-      }
+      registerReference(byUrl, url, source)
     }
   }
 
   function resolveEvidence(href: string | undefined) {
     if (href?.startsWith("#citation-")) {
-      return byReference.get(href.slice("#citation-".length))
+      const id = href.slice("#citation-".length)
+      const uuid = uuidIdentity(id)
+      return uuid === undefined ? byReference.get(id) : byUuid.get(uuid)
     }
     const url = normalizedSourceUrl(href)
     return url ? byUrl.get(url) : undefined

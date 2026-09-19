@@ -4,6 +4,7 @@ packages:
 # Flat node_modules so depending on @repo/storybook-config transitively provides
 # the whole Storybook stack (addons resolve from the app dir).
 nodeLinker: hoisted
+verifyDepsBeforeRun: error
 # circuit-json and @tscircuit/props import Zod schemas at runtime without a
 # compatible runtime dependency. Keep them on the Zod 3 API used by the
 # tscircuit core instead of resolving the workspace's unrelated Zod 4 install.

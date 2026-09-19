@@ -80,8 +80,9 @@ outcome and summary measurements; detailed stage context belongs on spans so the
 still hold. Started/requested events can be sampled as diagnostic detail if canonical outcome counters remain
 unsampled and reports disclose that pending-call reconstruction then requires a sampled trace.
 
-Preserve normalized `not_processed`, `result_limit`, `invalid_request`, `invalid_cursor`, `timeout`,
+Preserve normalized `precondition_failed`, `result_limit`, `invalid_request`, `invalid_cursor`, `timeout`,
 `dependency_unavailable`, `not_found`, `forbidden`, `invalid_response`, `step_limit`, `interrupted`, `internal`.
+Generic conflict/precondition failures do not establish record existence or a processing state.
 Record failure stage separately. A dependency can succeed and output validation/serialization can fail; tool success
 requires successful model-facing preparation. A payload rejection may retain attempted byte counts, never a claim of
 delivered bytes or complete coverage. An empty result is not a failure; missing counts are not empty results.

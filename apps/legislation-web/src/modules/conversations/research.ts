@@ -11,7 +11,7 @@ import { researchAgentLimits } from "./agent"
 import { chatIsAvailable } from "./chatRequest"
 import { recordMentionHref } from "./composition"
 import { entityPageSchema, type EntityPage } from "./entityResults"
-import { evidenceSnapshotSchema, sourceUrlSchema, type EvidenceSnapshot } from "./evidence"
+import { evidenceSnapshotSchema, projectModelEvidence, sourceUrlSchema, type EvidenceSnapshot } from "./evidence"
 import { createResearchEvidenceProjector } from "./evidenceSource.server"
 import { contentOptions, projectPresentationContents, type PresentationContent } from "./presentationContent"
 import { ResearchFailure, researchFailureCode, researchLimitRecovery } from "./researchFailure"
@@ -256,11 +256,7 @@ function serializeResearchModelOutput(output: unknown) {
         ? { resultSet: { ...page.data, id: result.resultHandle } }
         : {}),
       ...(recordLinks.length > 0 ? { recordLinks } : {}),
-      evidence: result.evidence.map(({ citationRef, ...source }, index) => ({
-        ...source,
-        id: citationRef,
-        citation: `[${index + 1}](#citation-${citationRef})`
-      }))
+      evidence: result.evidence.map(projectModelEvidence)
     })
   }
 }

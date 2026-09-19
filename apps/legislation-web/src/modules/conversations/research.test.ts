@@ -112,7 +112,9 @@ it("returns web search citations without presenting snippets as collected text",
       body: JSON.stringify({ query: "public policy", limit: 5, sources: ["web"], timeout: 25000 })
     })
   )
-  expect(researchModelOutput({ output: result }).value).toContain("#citation-e1")
+  const source = z.object({ evidence: z.tuple([z.object({ id: z.string() })]) }).parse(result).evidence[0]
+  expect(researchModelOutput({ output: result }).value).toContain(`#citation-${source.id}`)
+  expect(researchModelOutput({ output: result }).value).not.toContain("(#citation-e1)")
   expect(JSON.stringify(result)).not.toContain("fixture-secret")
 })
 
@@ -278,14 +280,15 @@ it("preserves web provenance without treating search snippets as collected page 
 
 it.each([
   ["payload_too_large", "result_limit"],
-  ["conflict", "not_processed"],
-  ["precondition_failed", "not_processed"],
+  ["conflict", "precondition_failed"],
+  ["precondition_failed", "precondition_failed"],
   ["unprocessable", "invalid_request"]
 ])("preserves actionable failure category %s", (input, expected) => {
   expect(researchFailureCode(input)).toBe(expected)
 })
 
 it("passes copy-ready evidence citations through the actual SDK tool-result boundary", async () => {
+  const evidenceId = "11111111-1111-4111-8111-111111111111"
   const output = {
     data: { id: "bill:ca:20232024:ab:2652" },
     presentationOptions: [
@@ -293,12 +296,12 @@ it("passes copy-ready evidence citations through the actual SDK tool-result boun
         contentId: "33333333-3333-4333-8333-333333333333",
         components: ["CitationCard", "PassageQuote"],
         label: "Bill record",
-        evidenceId: "e7"
+        evidenceId
       }
     ],
     evidence: [
       {
-        id: "stable-snapshot-id",
+        id: evidenceId,
         citationRef: "e7",
         title: "Bill record",
         origin: "canonical",
@@ -317,7 +320,11 @@ it("passes copy-ready evidence citations through the actual SDK tool-result boun
             controller.enqueue({ type: "stream-start", warnings: [] })
             if (hasToolResult) {
               controller.enqueue({ type: "text-start", id: "answer" })
-              controller.enqueue({ type: "text-delta", id: "answer", delta: "Bill record [1](#citation-e7)." })
+              controller.enqueue({
+                type: "text-delta",
+                id: "answer",
+                delta: `Bill record [1](#citation-${evidenceId}).`
+              })
               controller.enqueue({ type: "text-end", id: "answer" })
             } else {
               controller.enqueue({ type: "tool-call", toolCallId: "read-bill", toolName: "get_bill", input: "{}" })
@@ -357,12 +364,47 @@ it("passes copy-ready evidence citations through the actual SDK tool-result boun
   }
   expect(toolOutputs).toEqual([output])
   const prompt = JSON.stringify(model.doStreamCalls[1]?.prompt)
-  expect(prompt).toContain("#citation-e7")
+  expect(prompt).toContain(`#citation-${evidenceId}`)
   expect(prompt).toContain("presentationOptions")
   expect(prompt).toContain("33333333-3333-4333-8333-333333333333")
   expect(prompt).toContain("PassageQuote")
-  expect(prompt).not.toContain("stable-snapshot-id")
+  expect(prompt).not.toContain("#citation-e7")
+  expect(prompt).not.toContain("citationRef")
   expect(model.doStreamCalls).toHaveLength(2)
+})
+
+it("keeps opaque citation targets independent of result order and short reference numbers", () => {
+  const firstId = "11111111-1111-4111-8111-111111111111"
+  const secondId = "22222222-2222-4222-8222-222222222222"
+  const evidence = [
+    {
+      id: firstId,
+      citationRef: "e9",
+      title: "First source",
+      origin: "canonical",
+      sourceUrl: null,
+      content: { state: "not-collected" }
+    },
+    {
+      id: secondId,
+      citationRef: "e1",
+      title: "Second source",
+      origin: "canonical",
+      sourceUrl: null,
+      content: { state: "not-collected" }
+    }
+  ]
+  const schema = z.object({ evidence: z.array(z.object({ id: z.string(), citation: z.string() })) })
+  const forward = schema.parse(JSON.parse(researchModelOutput({ output: { evidence } }).value))
+  const reverse = schema.parse(JSON.parse(researchModelOutput({ output: { evidence: evidence.toReversed() } }).value))
+  expect(forward.evidence).toEqual([
+    { id: firstId, citation: `[1](#citation-${firstId})` },
+    { id: secondId, citation: `[2](#citation-${secondId})` }
+  ])
+  expect(reverse.evidence).toEqual([
+    { id: secondId, citation: `[1](#citation-${secondId})` },
+    { id: firstId, citation: `[2](#citation-${firstId})` }
+  ])
 })
 
 it("supplies exact record mention links only for validated result snapshots", () => {
@@ -405,7 +447,7 @@ it("supplies exact record mention links only for validated result snapshots", ()
   ).toBeUndefined()
 })
 
-it("exposes short evidence ids to the model without mutating browser snapshots or record references", () => {
+it("exposes immutable evidence ids to the model without mutating browser snapshots or record references", () => {
   const evidence = {
     id: "stable-evidence-identity",
     citationRef: "e1",
@@ -423,8 +465,8 @@ it("exposes short evidence ids to the model without mutating browser snapshots o
     ...output,
     evidence: [
       {
-        id: "e1",
-        citation: "[1](#citation-e1)",
+        id: evidence.id,
+        citation: `[1](#citation-${evidence.id})`,
         recordId: evidence.recordId,
         billId: evidence.billId,
         title: evidence.title,
@@ -434,9 +476,9 @@ it("exposes short evidence ids to the model without mutating browser snapshots o
       }
     ]
   })
-  expect(model.value).not.toContain("stable-evidence-identity")
+  expect(model.value).not.toContain("citationRef")
   expect(output.evidence[0]?.id).toBe("stable-evidence-identity")
-  const presentation = createCitationPresentation("answer", "Claim [1](#citation-e1).", [
+  const presentation = createCitationPresentation("answer", "Claim [1](#citation-stable-evidence-identity).", [
     { ...evidence, origin: "canonical", content: { state: "not-collected" } }
   ])
   expect(presentation.missingReferences).toEqual([])

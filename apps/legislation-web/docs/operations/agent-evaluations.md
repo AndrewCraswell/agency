@@ -34,6 +34,12 @@ floating-point search scores and source whitespace through hosted storage. Re-sy
 their storage contract. A fixture contains either `output` or a captured `error` with its domain category and message,
 never both. Captured errors replay as real service failures without adding a fixture gap; unrecorded inputs still fail
 as coverage gaps. Do not fabricate successful aliases for invalid identifiers.
+Known public research failures retain the code, reference and message supplied to the model in error events.
+Other SDK error messages are recorded as unknown rather than exposing untrusted diagnostics. A historical generic
+error placeholder does not prove which error explanation the model received; do not grade it as such.
+Length and other non-answer terminations are recorded as agent failures, retaining their actual finish reason
+without continuing dependent follow-ups. The summary's completed count describes recorded executions, not accepted
+or complete answers; inspect per-case status and termination.
 
 The supplied 12 smoke tasks are synthetic, draft, diagnostic cases, not a reviewed benchmark or representative traffic.
 They require `allowDrafts: true`. Fixture matching is exact after structured argument normalization; unrecorded alternative
@@ -100,6 +106,8 @@ run ID; each repeat produces a new generation. Candidate reasoning defaults to l
 chat's configured reasoning. Judge and critic reasoning remains low. Candidate instructions combine the pinned hosted
 prompt with the same application composition rules as chat and trusted date context derived from the persisted run
 start time. Resume reuses that time; the exact composed instruction hash participates in the candidate checkpoint.
+The source inventory records Git-reported tracked deletions with a null hash. Restored files are hashed normally;
+unexpected missing files or other read failures stop preflight rather than silently omitting source provenance.
 Retained provider metadata is scrubbed of credential fields and reasoning payloads before result artifacts or
 evaluation observations are written. Supplied usage counters and costs remain available; reasoning-token counts
 are measurements, not retained reasoning text.

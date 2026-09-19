@@ -87,7 +87,7 @@ export function contentOptions(content: PresentationContent) {
     label,
     ...(content.kind === "evidence"
       ? {
-          evidenceId: content.evidence.citationRef ?? content.evidence.id,
+          evidenceId: content.evidence.id,
           recordId: content.evidence.recordId,
           billId: content.evidence.billId,
           billIdentity: content.evidence.billIdentity,

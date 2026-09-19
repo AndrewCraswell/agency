@@ -1,5 +1,6 @@
 const failureMessages = {
-  not_processed: "The record exists, but its text is not ready. Read its metadata or select another processed source.",
+  precondition_failed:
+    "The conditions required for this operation were not met. Check the selected records and their metadata.",
   result_limit:
     "The result is too large to read safely. This call did not establish complete coverage or an absence of evidence.",
   invalid_request: "The research request is invalid. Check the filters and identifiers before retrying.",
@@ -62,8 +63,8 @@ export function researchFailureCode(value: unknown): ResearchFailureCode {
   if (value === "payload_too_large") {
     return "result_limit"
   }
-  if (value === "conflict" || value === "precondition_failed") {
-    return "not_processed"
+  if (value === "conflict") {
+    return "precondition_failed"
   }
   if (value === "unprocessable") {
     return "invalid_request"

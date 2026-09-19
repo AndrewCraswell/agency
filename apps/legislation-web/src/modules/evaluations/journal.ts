@@ -11,6 +11,21 @@ function isMissing(error: unknown) {
 
 export class CheckpointMismatch extends Error {}
 
+export async function snapshotSources(root: string, files: readonly string[], deleted: ReadonlySet<string>) {
+  return Promise.all(
+    [...new Set(files)].sort().map(async (file) => {
+      try {
+        return { file, hash: digest(await readFile(path.join(root, file), "utf8")) }
+      } catch (error) {
+        if (!deleted.has(file) || !isMissing(error)) {
+          throw error
+        }
+        return { file, hash: null }
+      }
+    })
+  )
+}
+
 export async function withEvaluationLock<Result>(
   operation: () => Promise<Result>,
   lockDirectory = fileURLToPath(new URL("../../../tmp/agent-evaluations", import.meta.url))

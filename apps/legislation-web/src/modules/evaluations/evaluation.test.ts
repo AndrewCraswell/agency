@@ -2,6 +2,7 @@ import type { LanguageModelV4 } from "@openrouter/ai-sdk-provider"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { MockLanguageModelV4 } from "ai/test"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 import { checkRun } from "./checks"
 import {
   assertSafeArtifact,
@@ -65,6 +66,7 @@ function streamStep(
     tool?: { name: string; input: unknown }
     usage?: Awaited<ReturnType<LanguageModelV4["doGenerate"]>>["usage"]
     isInterrupted?: boolean
+    finishReason?: "length" | "other"
     providerMetadata?: Awaited<ReturnType<LanguageModelV4["doGenerate"]>>["providerMetadata"]
   } = {}
 ): Awaited<ReturnType<LanguageModelV4["doStream"]>> {
@@ -91,7 +93,10 @@ function streamStep(
         }
         controller.enqueue({
           type: "finish",
-          finishReason: { unified: options.tool ? "tool-calls" : "stop", raw: options.tool ? "tool_calls" : "stop" },
+          finishReason: {
+            unified: options.finishReason ?? (options.tool ? "tool-calls" : "stop"),
+            raw: options.finishReason ?? (options.tool ? "tool_calls" : "stop")
+          },
           usage: options.usage ?? {
             inputTokens: { total: 12, noCache: 7, cacheRead: 3, cacheWrite: 2 },
             outputTokens: { total: 6, text: 4, reasoning: 2 }
@@ -357,6 +362,104 @@ describe("evaluation contracts", () => {
 })
 
 describe("shared SDK execution", () => {
+  it.each(["length", "other"] as const)(
+    "does not report %s termination as a completed answer or continue its follow-ups",
+    async (finishReason) => {
+      const model = new MockLanguageModelV4({
+        doStream: [streamStep({ text: "An unfinished answer", finishReason })]
+      })
+      const result = await executeCase({
+        item: caseSchema.parse({ ...sample(), followUps: ["Summarize the answer."] }),
+        model,
+        instructions: "Pinned",
+        budget: createCallBudget(3, 180000),
+        signal: new AbortController().signal
+      })
+      expect(result.status).toBe("agent-failure")
+      expect(result.turns).toHaveLength(1)
+      expect(result.turns[0]?.termination).toBe(finishReason)
+      expect(model.doStreamCalls).toHaveLength(1)
+      expect(result.scores.find((score) => score.name === "terminal-contract")?.value).toBe(0)
+    }
+  )
+
+  it.each(["conflict", "precondition_failed"] as const)(
+    "records the public %s tool message actually sent to the model without inventing processing facts",
+    async (category) => {
+      const model = new MockLanguageModelV4({
+        doStream: [
+          streamStep({
+            tool: {
+              name: "get_bill_text",
+              input: { ...capturedTextFailure.input, cursor: null, limit: null, versionCode: null }
+            }
+          }),
+          streamStep({ text: "The requested text could not be read." })
+        ]
+      })
+      const result = await executeCase({
+        item: caseSchema.parse({
+          ...sample(),
+          fixtures: [
+            {
+              ...capturedTextFailure,
+              error: { category, message: "The captured operation could not be completed." }
+            }
+          ]
+        }),
+        model,
+        instructions: "Pinned",
+        budget: createCallBudget(3, 180000),
+        signal: new AbortController().signal
+      })
+      const failure = z
+        .object({
+          message: z.string(),
+          code: z.literal("precondition_failed"),
+          reference: z.uuid()
+        })
+        .parse(result.events.find((event) => event.type === "error")?.value)
+      expect(result.status).toBe("completed")
+      expect(result.fixtureGaps).toEqual([])
+      expect(failure.message).toContain("The conditions required for this operation were not met.")
+      expect(failure.message).not.toMatch(/exists|not ready|not processed/i)
+      expect(model.doStreamCalls[1]?.prompt).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: "tool",
+            content: expect.arrayContaining([
+              expect.objectContaining({
+                type: "tool-result",
+                output: { type: "error-text", value: failure.message }
+              })
+            ])
+          })
+        ])
+      )
+    }
+  )
+
+  it("marks an unavailable SDK error message unknown instead of exposing an untrusted diagnostic", async () => {
+    const model = new MockLanguageModelV4({
+      doStream: [
+        streamStep({ tool: { name: "unregistered_tool", input: {} } }),
+        streamStep({ text: "That tool is unavailable." })
+      ]
+    })
+    const result = await executeCase({
+      item: sample(),
+      model,
+      instructions: "Pinned",
+      budget: createCallBudget(3, 180000),
+      signal: new AbortController().signal
+    })
+    expect(result.events.find((event) => event.type === "error")?.value).toEqual({
+      message: null,
+      code: null,
+      reference: null
+    })
+  })
+
   it("excludes provider reasoning and credentials from retained results and telemetry while preserving usage", async () => {
     const model = new MockLanguageModelV4({
       doStream: [

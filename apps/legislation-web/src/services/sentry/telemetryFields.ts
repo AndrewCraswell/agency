@@ -34,7 +34,7 @@ export const telemetryFields = {
     "internal"
   ]),
   toolFailure: z.enum([
-    "not_processed",
+    "precondition_failed",
     "result_limit",
     "invalid_request",
     "invalid_cursor",

@@ -15,6 +15,41 @@ function source(id: string, overrides: Partial<EvidenceSnapshot> = {}): Evidence
 }
 
 describe("citation presentation", () => {
+  it("resolves omitted UUID separators only by exact registered identity", () => {
+    const id = "10cf92b0-a39b-8018-a5ab-f1c0b43ef54e"
+    const evidence = source(id)
+    const reference = "#citation-10cf92b0a39b-8018-a5ab-f1c0b43ef54e"
+    const presentation = createCitationPresentation("answer", `[1](${reference})`, [evidence])
+    expect(presentation.resolveCitation(reference)).toEqual({ answerId: "answer", number: 1, evidence })
+    expect(
+      createCitationPresentation("answer", "[1](#citation-10cf92b0a39b8018a5abf1c0b43ef54f)", [evidence]).citations
+    ).toEqual([])
+    expect(createCitationPresentation("other-answer", `[1](${reference})`, []).citations).toEqual([])
+  })
+
+  it("leaves conflicting UUID representations unresolved", () => {
+    const id = "10cf92b0-a39b-8018-a5ab-f1c0b43ef54e"
+    const reference = `#citation-${id}`
+    const presentation = createCitationPresentation("answer", `[1](${reference})`, [
+      source(id),
+      source(id.replaceAll("-", ""))
+    ])
+    expect(presentation.resolveCitation(reference)).toBeUndefined()
+    expect(presentation.missingReferences).toEqual([id])
+  })
+
+  it("repairs an opaque citation delimiter only in prose and keeps its exact source identity", () => {
+    const id = "11111111-1111-4111-8111-111111111111"
+    const marker = `[9](#citation-${id}]`
+    const protectedText = `\`${marker}\`\n\n!${marker}`
+    const text = `${marker}\n\n${protectedText}`
+    const evidence = source(id, { citationRef: "e7" })
+    const presentation = createCitationPresentation("answer", text, [evidence])
+    expect(presentation.formatCitationGroups(text)).toBe(`${marker.slice(0, -1)})\n\n${protectedText}`)
+    expect(presentation.resolveCitation(`#citation-${id}`)).toEqual({ answerId: "answer", number: 1, evidence })
+    expect(createCitationPresentation("other-answer", text, []).missingReferences).toEqual([id])
+  })
+
   it.each(malformedCitationFixtures)("normalizes the exact delimiter receipt $marker within its answer", (fixture) => {
     const presentation = createCitationPresentation(fixture.answerId, fixture.marker, [fixture.evidence])
     expect(presentation.formatCitationGroups(fixture.marker)).toBe(fixture.marker.slice(0, -1) + ")")

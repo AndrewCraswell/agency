@@ -19,6 +19,7 @@ import {
   CheckpointMismatch,
   createStageJournal,
   durableCallCounter,
+  snapshotSources,
   withEvaluationLock,
   writeArtifact
 } from "../../src/modules/evaluations/journal"
@@ -63,7 +64,7 @@ const frozenManifestSchema = z.object({
   datasetHash: z.string(),
   datasetVersion: z.string(),
   caseHashes: z.array(z.object({ id: z.string(), hash: z.string() })),
-  sources: z.array(z.object({ file: z.string(), hash: z.string() })),
+  sources: z.array(z.object({ file: z.string(), hash: z.string().nullable() })),
   limits: z.unknown(),
   prompts: z.array(z.object({ name: z.string(), version: z.number(), hash: z.string() })),
   synced: z.object({ ids: z.record(z.string(), z.string()), timestamp: z.string() }),
@@ -291,31 +292,26 @@ async function main() {
       maxBuffer: 50 * 1024 * 1024
     }
   )
+  const sourcePaths = [
+    "apps/legislation-web/src",
+    "apps/legislation-web/tools/agent/evaluate-agent.ts",
+    "packages/legislation-core/src"
+  ]
   const sourceFiles = execFileSync(
     "git",
-    [
-      "-C",
-      root,
-      "ls-files",
-      "--cached",
-      "--others",
-      "--exclude-standard",
-      "--",
-      "apps/legislation-web/src",
-      "apps/legislation-web/tools/agent/evaluate-agent.ts",
-      "packages/legislation-core/src"
-    ],
+    ["-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "--", ...sourcePaths],
     { encoding: "utf8" }
   )
     .trim()
     .split("\n")
     .filter(Boolean)
-  const sources = await Promise.all(
-    [...new Set(sourceFiles)].map(async (file) => ({
-      file,
-      hash: digest(await readFile(path.join(root, file), "utf8"))
-    }))
+  const deletedSources = new Set(
+    execFileSync("git", ["-C", root, "ls-files", "--deleted", "--", ...sourcePaths], { encoding: "utf8" })
+      .trim()
+      .split("\n")
+      .filter(Boolean)
   )
+  const sources = await snapshotSources(root, sourceFiles, deletedSources)
   const manifest = {
     runId,
     runContract,

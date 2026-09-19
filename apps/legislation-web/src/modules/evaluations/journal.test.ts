@@ -1,9 +1,10 @@
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { createStageJournal, durableCallCounter, withEvaluationLock } from "./journal"
+import { digest } from "./contracts"
+import { createStageJournal, durableCallCounter, snapshotSources, withEvaluationLock } from "./journal"
 
 const directories: string[] = []
 async function temporary() {
@@ -16,6 +17,32 @@ afterEach(async () => {
 })
 
 describe("evaluation journal", () => {
+  it("records tracked source deletions without dropping them from a deterministic inventory", async () => {
+    const root = await temporary()
+    await writeFile(path.join(root, "present.ts"), "source")
+    expect(await snapshotSources(root, ["present.ts", "deleted.ts", "present.ts"], new Set(["deleted.ts"]))).toEqual([
+      { file: "deleted.ts", hash: null },
+      { file: "present.ts", hash: digest("source") }
+    ])
+  })
+
+  it("hashes a source restored after Git reported it deleted", async () => {
+    const root = await temporary()
+    await writeFile(path.join(root, "restored.ts"), "restored")
+    expect(await snapshotSources(root, ["restored.ts"], new Set(["restored.ts"]))).toEqual([
+      { file: "restored.ts", hash: digest("restored") }
+    ])
+  })
+
+  it("surfaces missing sources not reported deleted and other read failures", async () => {
+    const root = await temporary()
+    await expect(snapshotSources(root, ["missing.ts"], new Set())).rejects.toMatchObject({ code: "ENOENT" })
+    await mkdir(path.join(root, "directory.ts"))
+    await expect(snapshotSources(root, ["directory.ts"], new Set(["directory.ts"]))).rejects.toMatchObject({
+      code: "EISDIR"
+    })
+  })
+
   it("reuses completed stages and rejects changed evidence", async () => {
     const journal = createStageJournal(await temporary())
     const operation = vi.fn<() => Promise<string>>().mockResolvedValue("judge result")

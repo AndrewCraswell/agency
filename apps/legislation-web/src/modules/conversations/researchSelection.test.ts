@@ -173,7 +173,7 @@ it("uses explicit resolution rather than unscoped or excessive replacement choic
   ).toMatchObject({ action: "resolve_document" })
 })
 
-it.each(["forbidden", "timeout", "not_processed", "step_limit", "interrupted"] as const)(
+it.each(["forbidden", "timeout", "precondition_failed", "step_limit", "interrupted"] as const)(
   "does not turn %s into a selection retry",
   (code) => {
     expect(createResearchSelections().recover("get_bill_text", input, code)).toBeUndefined()

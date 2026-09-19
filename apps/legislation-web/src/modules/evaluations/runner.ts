@@ -10,6 +10,7 @@ import { createClarificationTool } from "../conversations/clarificationTool"
 import { createCitationPresentation } from "../conversations/components/citationPresentation"
 import { redactCredentials } from "../conversations/redactCredentials"
 import { createResearchTools } from "../conversations/research"
+import { ResearchFailure } from "../conversations/researchFailure"
 import { checkRun } from "./checks"
 import {
   assertSafeArtifact,
@@ -192,13 +193,19 @@ export async function executeCase(options: {
                 text += chunk.text
               } else if (chunk.type === "tool-call" || chunk.type === "tool-result" || chunk.type === "tool-error") {
                 let type: EvalEvent["type"] = "error"
-                let value: unknown = "Tool execution failed."
+                let value: unknown = { message: null, code: null, reference: null }
                 if (chunk.type === "tool-call") {
                   type = "call"
                   value = chunk.input
                 } else if (chunk.type === "tool-result") {
                   type = "result"
                   value = chunk.output
+                } else if (chunk.error instanceof ResearchFailure) {
+                  value = {
+                    message: chunk.error.toString(),
+                    code: chunk.error.code,
+                    reference: chunk.error.reference
+                  }
                 }
                 events.push({ turn, step, type, tool: chunk.toolName, callId: chunk.toolCallId, value })
               } else if (chunk.type === "finish-step") {
@@ -270,7 +277,7 @@ export async function executeCase(options: {
       status = "ungradable"
       break
     }
-    if (termination === "incomplete" || termination === "error") {
+    if (termination !== "stop" && termination !== "clarification") {
       status = "agent-failure"
       break
     }

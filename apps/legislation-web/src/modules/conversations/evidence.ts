@@ -80,6 +80,10 @@ export const citedAnswerSchema = z
   })
 
 export type EvidenceSnapshot = z.infer<typeof evidenceSnapshotSchema>
+export function projectModelEvidence({ citationRef: _citationRef, ...source }: EvidenceSnapshot, index: number) {
+  return { ...source, citation: `[${index + 1}](#citation-${source.id})` }
+}
+
 export const researchContextSchema = z.object({ evidence: z.array(evidenceSnapshotSchema).max(320) })
 
 const sourceRecordSchema = z.object({

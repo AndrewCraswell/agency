@@ -12,6 +12,11 @@ const config: StorybookConfig = {
     const { mergeConfig } = await import("vite")
     return mergeConfig(config, {
       plugins: [vanillaExtractPlugin()],
+      server: {
+        watch: {
+          ignored: [/[\\/]\.next(?:[\\/]|$)/]
+        }
+      },
       resolve: {
         alias: {
           "@": fileURLToPath(new URL("../src", import.meta.url)),

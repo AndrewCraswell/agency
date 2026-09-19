@@ -166,6 +166,8 @@ describe("server-owned research memory", () => {
         expect(JSON.stringify(prompt)).toContain("Only the first section page was read.")
         expect(JSON.stringify(prompt)).toContain("timeout")
         expect(JSON.stringify(prompt)).toContain("judicial interpretation")
+        expect(JSON.stringify(prompt)).toContain("#citation-provision-2367-ih-section-3")
+        expect(JSON.stringify(prompt)).not.toContain("#citation-e252")
         expect(JSON.stringify(prompt)).not.toContain("expired-input-cursor")
         expect(JSON.stringify(prompt)).not.toContain("expired-output-cursor")
         return {
@@ -177,7 +179,7 @@ describe("server-owned research memory", () => {
                 type: "text-delta",
                 id: "answer",
                 delta:
-                  "The proposed text permits civil actions; judicial interpretation remains unresolved. [1](#citation-e252)"
+                  "The proposed text permits civil actions; judicial interpretation remains unresolved. [1](#citation-provision-2367-ih-section-3)"
               })
               controller.enqueue({ type: "text-end", id: "answer" })
               controller.enqueue({

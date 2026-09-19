@@ -190,6 +190,7 @@ describe("run-owned presentation records", () => {
     const contents = projectPresentationContents("get_bill_text", {}, [
       {
         id: "source-one",
+        citationRef: "e7",
         recordId: "document-one",
         title: "Introduced text",
         origin: "canonical",

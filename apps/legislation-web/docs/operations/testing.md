@@ -92,6 +92,12 @@ These fixtures do not establish deployed provider availability. Skipped environm
 passes. Run expensive profiles once and clean up owned processes. Root `pnpm verify` delegates to
 `verify:legislation`, excluding unrelated workspaces. Neither entrypoint runs formatting.
 
+Ordinary pnpm run/exec commands and Git hooks report dependency-state mismatches instead of implicitly installing,
+linking or pruning packages (`verifyDepsBeforeRun: error`). Run an explicit, coordinated `pnpm install` only after
+dependency-manifest changes or a confirmed dependency-state failure. Diagnose configuration/cache mismatches first;
+do not reinstall blindly or bypass hooks. Serialize installation with other workspace activity, then rerun the
+original command through normal hooks.
+
 Types, lint and non-database coverage use Turbo with four explicit legislation package filters, `--concurrency=1`
 and `--cache=local:rw`. Unchanged tasks replay their local cache; coverage restores the configured `coverage/**`
 outputs. Shared dependency task relationships remain part of cache invalidation. A previous direct Vitest or recursive
@@ -110,3 +116,7 @@ invocations against the same resources. Do not terminate another session's tests
 
 `pnpm dev` in W starts Next.js only. Built/fixture acceptance is not live deployment, browser consent, provider coverage
 or production latency. This documentation move ran no tests or verification.
+
+For component browser review, `pnpm --filter legislation-web storybook` serves the production components at
+`http://127.0.0.1:6007`. Its Vite watcher excludes `.next` build output so generated HTML cannot repeatedly reload
+the preview during another Next build. Source changes still update the preview normally.

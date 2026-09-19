@@ -10,6 +10,9 @@ tool categories. Stream completion does not prove that the research goal was sat
 that qualification. Proposed statutory text must remain distinct from uncertain judicial interpretation.
 
 Each response permits eight tool-capable research steps and reserves a ninth model step for synthesis without tools.
+Each model step allows 8,192 output tokens shared by reasoning and visible text; a reasoning-heavy response can
+otherwise consume its allowance before delivering the answer. A length termination remains an incomplete outcome,
+not proof that all requested findings were delivered.
 The separate 24-call budget remains a hard safety bound across those research steps; reaching it disables tools on
 the next step so the model can synthesize without repeatedly making rejected calls. If a non-error response still
 finishes without prose, a completed presentation, or a clarification request, the stream emits an explicit incomplete
@@ -30,10 +33,13 @@ remain distinct from incomplete research.
 
 ## Citations and handles
 
-Old `eN` citation markers are turn-local and may collide. Restored evidence is deduplicated by its immutable identity,
-assigned fresh references, and registered in both the model context and the response's `data-research-context` part.
-Fresh tool reads reuse that registration for the same evidence identity. Citation rendering, telemetry and development
-reload recovery understand the retained evidence even when the follow-up makes no new tool calls.
+Model-facing evidence and presentation options use immutable evidence-snapshot IDs and copy-ready citation links,
+not ordinal `eN` targets that can be confused with a result position. Fresh tools and retained context share the same
+projection. The renderer still assigns visible citation numbers by first appearance; labels are not source identities.
+Restored evidence is deduplicated and registered in the response's `data-research-context` part before it can resolve.
+Server-owned short references remain internal registration metadata. Earlier markers never make an unregistered
+source available. Citation rendering, telemetry and development reload recovery understand retained evidence even
+when the follow-up makes no new tool calls.
 
 Result handles, presentation IDs and page cursors are not restored. Evidence-based presentation options receive fresh
 IDs; other views require new retrieval. A removed continuation cursor leaves `hasMore: true`, so the model must restart
@@ -65,9 +71,12 @@ requires a separately authorized, source-reviewed evaluation.
 
 ## Citation and passage presentation
 
-The renderer recognizes the observed `[7](#citation-e549]` wrong-delimiter form only in Markdown prose. Exact,
+The renderer recognizes the observed wrong closing delimiter for numeric references and opaque UUID citation targets
+only in Markdown prose. Exact,
 answer-owned IDs resolve normally; missing or conflicting IDs use the existing unavailable-citation control.
 It does not infer sources from label numbers, similar IDs, previous turns, code literals, images, or link labels.
+Missing UUID separators resolve only when all 32 hexadecimal digits exactly match one registered source in the
+current answer. Changed digits, unavailable sources and conflicting UUID representations remain unresolved.
 Rendering repairs do not rewrite saved model output or establish support for a claim.
 
 Evidence panels and passage cards render retained Markdown headings, tables and links without executing source HTML.

@@ -62,6 +62,27 @@ describe("composition contracts", () => {
     expect(instructions).toContain(
       "Preserve which official holds legal authority and which entity acts through that authority; an implementing entity's role does not itself establish independent discretion beyond an authorized schedule or other operative constraints."
     )
+    for (const rule of [
+      "never derive citation targets from result order, adjacency or a numeric sequence",
+      "Citation targets use opaque evidence-snapshot IDs, not record IDs or display numbers.",
+      "Changing visible citation numbering must not change its source target.",
+      "a person's identity record does not establish how that person voted",
+      "a later package vote is not proof of earlier amendment adoption",
+      "separate what the text directs from whether or when it was adopted",
+      "may include X does not mean only X or must include X",
+      "Preserve explicit exceptions, whether conditions apply together (and) or as alternatives (or), and operative timing triggers, deadlines and causal requirements.",
+      "Do not replace a conditional mandate with discretionary permission or omit its prerequisites.",
+      "Uncertain applicability does not weaken the supplied text's modal force",
+      "Keep a deadline attached to the particular action it limits, not a later opportunity or outcome.",
+      "an introduction date is not a search or retrieval timestamp",
+      "A surrounding disclaimer cannot narrow an overbroad standalone quotation.",
+      "Equal amounts do not make a request and recommendation the same action",
+      "A noisy heading alone does not establish an identity conflict when record and document bindings match",
+      "preserving subgroup restrictions, opt-in requirements and stated mechanisms limiting benefits",
+      "never silently repair words inside quotation marks"
+    ]) {
+      expect(instructions).toContain(rule)
+    }
   })
 
   it("wires unread-cross-reference limits into composed instructions without claiming semantic enforcement", () => {
