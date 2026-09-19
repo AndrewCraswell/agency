@@ -109,6 +109,8 @@ for Langfuse. A missing sampled browser parent is not a claim of complete front-
 The edge branch loads only the supported edge Sentry integration; never import NodeSDK, Node context managers or
 Langfuse's Node processor there. Do not retain `skipOpenTelemetrySetup` without supplying the required supported edge
 setup. Verify its isolation and parentage independently; the Node probe below is not evidence of edge acceptance.
+The [edge implementation](edge-telemetry.md) now delegates provider setup to the edge SDK and verifies that export
+condition separately with synthetic request-isolation and propagation cases; production collection remains gated.
 
 ## Dependencies and implementation gates
 
