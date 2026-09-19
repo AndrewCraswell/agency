@@ -183,8 +183,13 @@ export function normalizeWashingtonScraperEvents(
     result.event.sessionRelationsComplete = true
     result.sessionIds = [legislativeSessionId("wa", scraperBillProfiles.wa.session)]
     result.organizationReferences = hosts.flatMap((entry) =>
-      (entry.agency === "House" || entry.agency === "Senate" || entry.agency === "Joint") && entry.code.length > 0
-        ? [[`waCommittee:${entry.agency.toLowerCase()}:${entry.code}`]]
+      entry.agency === "House" || entry.agency === "Senate" || entry.agency === "Joint"
+        ? [
+            [
+              `waCommitteeId:2025-26:${entry.agency.toLowerCase()}:${entry.id}`,
+              ...(entry.code.length > 0 ? [`waCommittee:${entry.agency.toLowerCase()}:${entry.code}`] : [])
+            ]
+          ]
         : []
     )
     result.event.organizationRelationsComplete = result.organizationReferences.length === hosts.length

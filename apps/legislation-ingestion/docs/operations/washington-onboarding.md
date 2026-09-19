@@ -13,9 +13,18 @@ Event organization references are grouped by host. Each group can carry multiple
 matching identifiers must resolve to exactly one canonical organization in the event's jurisdiction. Conflicting,
 missing or empty host groups keep relationship readiness false. Multiple identifiers for one organization do not
 produce duplicate relationships, and distinct hosts remain separate requirements. NC, AK and WA use this one resolver.
-The existing adapters currently supply their validated code identities; Washington numeric committee-ID enrichment
-still requires a retained official inventory crosswalk. This change does not introduce name-based matching or mark
-unresolved Washington meetings complete. Thirty focused adapter/resolver tests and ingestion type checking passed.
+Washington now also supplies biennium-scoped numeric committee IDs. The official 2025-26 inventory was retained at
+`openstates/committee-inventories/wa/2025-26/c1561487f80e3c20b7b8ecbf54c9f5236c2c4ecb48cc87ca6d436072aa9dfdd6.xml`.
+All 34 entries matched unique existing organizations; production import and replay preserved identical identifiers
+and the existing 51 organizations / 609 membership snapshot. Manual Washington foundation replay requires this
+retained crosswalk so it cannot silently remove the numeric identifiers. Scheduled Washington foundation refresh
+remains unenabled and still needs acquisition wiring before activation.
+
+Meeting 32344 was reconciled from its retained window without rewriting source facts. Its old `LGLT` abbreviation
+and current `LGV` committee resolve through official Senate ID 34080. Authenticated MCP `get_event` returned the
+canonical Local Government committee and one agenda item. This is one verified recovery, not complete statewide
+meeting acceptance. No name-specific correction was introduced. The prior full verification exited unsuccessfully
+in web coverage; focused ingestion checks pass, but full repository acceptance remains open.
 
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |

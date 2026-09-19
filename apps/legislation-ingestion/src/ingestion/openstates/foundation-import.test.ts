@@ -48,7 +48,8 @@ describe("archived state foundation import", () => {
       current.files,
       history.files,
       retrievedAt,
-      current.revision
+      current.revision,
+      undefined
     )
   })
 

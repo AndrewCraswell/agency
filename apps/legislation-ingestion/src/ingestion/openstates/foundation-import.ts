@@ -5,6 +5,7 @@ import { validatePeopleArchivePair } from "./people-archive-pair.js"
 import { importPeopleRepository } from "./people-import.js"
 import type { PeopleRepositoryFile } from "./people-repository.js"
 import { readArchivedPeoplePilot } from "./pilot-archive.js"
+import { readWashingtonCommitteeInventory } from "./washington-committee-inventory.js"
 
 type ArchivedPeoplePilot = Awaited<ReturnType<typeof readArchivedPeoplePilot>>
 type FoundationState = ArchivedPeoplePilot["state"]
@@ -24,7 +25,8 @@ type FoundationDependencies = {
     currentFiles: readonly PeopleRepositoryFile[],
     historyFiles: readonly PeopleRepositoryFile[],
     retrievedAt: Date,
-    revision: string
+    revision: string,
+    officialInventory?: Awaited<ReturnType<typeof readWashingtonCommitteeInventory>>
   ): Promise<unknown>
 }
 
@@ -36,13 +38,23 @@ export async function importArchivedStateFoundation(
     state: FoundationState
     currentManifestPath: string
     historyManifestPath: string
+    committeeInventoryPath?: string
   },
   dependencies: FoundationDependencies = {
     read: readArchivedPeoplePilot,
     importPeople: (database, state, currentFiles, historyFiles, retrievedAt, revision) =>
       importPeopleRepository(database, state, currentFiles, historyFiles, retrievedAt, undefined, revision),
-    importCommittees: (database, state, currentFiles, historyFiles, retrievedAt, revision) =>
-      importCommitteeRepository(database, state, currentFiles, historyFiles, retrievedAt, undefined, revision)
+    importCommittees: (database, state, currentFiles, historyFiles, retrievedAt, revision, officialInventory) =>
+      importCommitteeRepository(
+        database,
+        state,
+        currentFiles,
+        historyFiles,
+        retrievedAt,
+        undefined,
+        revision,
+        officialInventory
+      )
   }
 ) {
   const [current, history] = await Promise.all([
@@ -53,6 +65,13 @@ export async function importArchivedStateFoundation(
   if (pair.state !== input.state) {
     throw new Error("People archive pair does not match requested state")
   }
+  if (input.committeeInventoryPath && input.state !== "wa")
+    throw new Error("Committee inventory does not match jurisdiction")
+  if (input.state === "wa" && !input.committeeInventoryPath)
+    throw new Error("Washington foundation replay requires retained committee inventory")
+  const officialInventory = input.committeeInventoryPath
+    ? await readWashingtonCommitteeInventory(input.store, input.committeeInventoryPath)
+    : undefined
   const people = await dependencies.importPeople(
     database,
     input.state,
@@ -67,7 +86,8 @@ export async function importArchivedStateFoundation(
     current.files,
     history.files,
     pair.retrievedAt,
-    current.revision
+    current.revision,
+    officialInventory
   )
   return {
     status: "foundation_imported" as const,

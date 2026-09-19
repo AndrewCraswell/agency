@@ -11,6 +11,25 @@ import {
 } from "./scraper-washington-events.js"
 
 const context = { start: "2025-01-13", end: "2025-01-19", retrievedAt: new Date("2026-09-19T00:00:00Z") }
+it("resolves renamed committee codes through the same scoped publisher ID", () => {
+  const raw = fixture()
+  raw.extras.committees = [{ id: "34080", agency: "Senate", code: "LGLT", name: "Prior publisher name" }]
+  raw.participants[0]!.name = "Prior publisher name"
+  const snapshots = normalizeWashingtonScraperEvents([raw], context)
+  const candidate = {
+    id: "organization:local-government",
+    jurisdictionId: "jurisdiction:wa",
+    upstreamIds: { "waCommitteeId:2025-26:senate:34080": "retained-source", "waCommittee:senate:LGV": "roster" }
+  }
+  const [resolved] = resolveEventOrganizationReferences(snapshots, [candidate])
+  expect(resolved?.event.organizationRelationsComplete).toBe(true)
+  expect(resolved?.organizationIds).toEqual([candidate.id])
+  expect(
+    resolveEventOrganizationReferences(snapshots, [
+      { ...candidate, upstreamIds: { "waCommitteeId:2023-24:senate:34080": "other-session" } }
+    ])[0]?.event.organizationRelationsComplete
+  ).toBe(false)
+})
 function fixture() {
   return {
     _id: "temporary-extraction-uuid",
@@ -45,8 +64,8 @@ it.each(["Joint", "House", "Senate"])(
     raw.extras.committees[0]!.agency = agency
     raw.extras.committees[0]!.code = ""
     const [snapshot] = normalizeWashingtonScraperEvents([raw], context)
-    expect(snapshot?.organizationReferences).toEqual([])
-    expect(snapshot?.event.organizationRelationsComplete).toBe(false)
+    expect(snapshot?.organizationReferences).toEqual([[`waCommitteeId:2025-26:${agency.toLowerCase()}:31641`]])
+    expect(resolveEventOrganizationReferences([snapshot!], [])[0]?.event.organizationRelationsComplete).toBe(false)
     expect(snapshot?.event.sourceId).toBe("32346")
     expect(snapshot?.event.sourceIsOfficial).toBe(true)
   }
@@ -170,7 +189,7 @@ describe("Washington shared event preparation", () => {
     ]
     record.participants[0]!.name = record.extras.committees[0]!.name
     const [row] = normalizeWashingtonScraperEvents([record], context)
-    expect(row?.organizationReferences).toEqual([["waCommittee:joint:JLARC"]])
+    expect(row?.organizationReferences).toEqual([["waCommitteeId:2025-26:joint:-5", "waCommittee:joint:JLARC"]])
     expect(row?.organizationIds).toEqual([])
     expect(row?.event.organizationRelationsComplete).toBe(true)
     expect(resolveEventOrganizationReferences([row!], [])[0]?.event.organizationRelationsComplete).toBe(false)
@@ -215,7 +234,7 @@ describe("Washington shared event preparation", () => {
       { identifier: "HB 1000", jurisdictionId: "jurisdiction:wa", sessionId: "session:wa:2025-2026" }
     ])
     expect(row?.participants[0]?.organizationId).toBeUndefined()
-    expect(row?.organizationReferences).toEqual([["waCommittee:house:ED"]])
+    expect(row?.organizationReferences).toEqual([["waCommitteeId:2025-26:house:31641", "waCommittee:house:ED"]])
   })
   it("reuses relationship resolvers and refuses unresolved or ambiguous identities", () => {
     const rows = normalizeWashingtonScraperEvents([fixture()], context)

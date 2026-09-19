@@ -5,6 +5,7 @@ import { inventoryCommitteeHistory } from "./committee-history.js"
 import { normalizeOpenStatesCommittees } from "./entities.js"
 import { preparePeopleRepositoryImport } from "./people-import.js"
 import { peopleSourceProfiles, type PeopleRepositoryFile } from "./people-repository.js"
+import { bindCommitteeInventory, type parseWashingtonCommitteeInventory } from "./washington-committee-inventory.js"
 
 /** Current repository rosters are complete only after every referenced identity is accepted. */
 export function prepareCommitteeRepositoryImport(
@@ -12,8 +13,11 @@ export function prepareCommitteeRepositoryImport(
   historyFiles: readonly PeopleRepositoryFile[],
   retrievedAt: Date,
   state: keyof typeof peopleSourceProfiles,
-  revision: string = peopleSourceProfiles[state].revision
+  revision: string = peopleSourceProfiles[state].revision,
+  officialInventory?: ReturnType<typeof parseWashingtonCommitteeInventory>
 ) {
+  if (officialInventory && (state !== "wa" || officialInventory.biennium !== "2025-26"))
+    throw new Error("Committee inventory does not match reviewed jurisdiction/session")
   const people = preparePeopleRepositoryImport(currentFiles, historyFiles, retrievedAt, state, revision)
   const inventory = inventoryCommitteeHistory(
     currentFiles.filter((file) => file.path.includes("/committees/")),
@@ -48,7 +52,7 @@ export function prepareCommitteeRepositoryImport(
   const observations = new Map(plan.identityEligible.map((committee) => [committee.committeeId, committee]))
   const completeRosterIds = new Set(plan.eligible.map((committee) => committee.committeeId))
   const detectedAt = retrievedAt.toISOString().slice(0, 10)
-  return {
+  const result = {
     plan,
     snapshot: {
       ...normalized,
@@ -70,6 +74,10 @@ export function prepareCommitteeRepositoryImport(
       }))
     }
   }
+  if (officialInventory) {
+    result.snapshot.organizations = bindCommitteeInventory(result.snapshot.organizations, officialInventory.entries)
+  }
+  return result
 }
 
 export async function importCommitteeRepository(
@@ -79,9 +87,17 @@ export async function importCommitteeRepository(
   historyFiles: readonly PeopleRepositoryFile[],
   retrievedAt: Date,
   persist: typeof replaceEntitySnapshot = replaceEntitySnapshot,
-  revision: string = peopleSourceProfiles[state].revision
+  revision: string = peopleSourceProfiles[state].revision,
+  officialInventory?: ReturnType<typeof parseWashingtonCommitteeInventory>
 ) {
-  const result = prepareCommitteeRepositoryImport(currentFiles, historyFiles, retrievedAt, state, revision)
+  const result = prepareCommitteeRepositoryImport(
+    currentFiles,
+    historyFiles,
+    retrievedAt,
+    state,
+    revision,
+    officialInventory
+  )
   if (result.plan.identityEligible.length === 0) {
     return { status: "held" as const, plan: result.plan }
   }
@@ -98,6 +114,9 @@ export async function importCommitteeRepository(
       cursor: {
         revision,
         retrievedAt: retrievedAt.toISOString(),
+        ...(officialInventory
+          ? { officialInventory: { sha256: officialInventory.sha256, sourceUrl: officialInventory.sourceUrl } }
+          : {}),
         complete: result.plan.held.length === 0 && result.plan.identityHeld.length === 0,
         eligibleCommittees: result.plan.eligible.length,
         eligibleMemberships: result.plan.eligibleMemberships,

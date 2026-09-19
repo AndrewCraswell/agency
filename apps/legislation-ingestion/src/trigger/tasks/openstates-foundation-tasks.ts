@@ -16,12 +16,16 @@ import { parseScheduledScraperJurisdictions } from "../scraper-schedule-manifest
 
 const manifestPath = z
   .string()
-  .regex(/^openstates\/people\/[a-f0-9]{40}\/(ak|nc)\/(entities|history)\/[A-Za-z0-9-]+\/complete\.json$/)
+  .regex(/^openstates\/people\/[a-f0-9]{40}\/(ak|nc|wa)\/(entities|history)\/[A-Za-z0-9-]+\/complete\.json$/)
 
 export const openStatesFoundationImportPayload = z.strictObject({
-  state: z.enum(["ak", "nc"]),
+  state: z.enum(["ak", "nc", "wa"]),
   currentManifestPath: manifestPath,
-  historyManifestPath: manifestPath
+  historyManifestPath: manifestPath,
+  committeeInventoryPath: z
+    .string()
+    .regex(/^openstates\/committee-inventories\/wa\/20[0-9]{2}-[0-9]{2}\/[a-f0-9]{64}\.xml$/)
+    .optional()
 })
 
 const refreshPayload = z.strictObject({
