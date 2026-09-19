@@ -7,6 +7,13 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Duplicate-free production replay `run_06gbk9eih3vtv6t2gqcvd8bl01` completed with unchanged 337 people/381 terms
+and seven holds. Dufault read-back again contained exactly the same two canonical term IDs and date ranges,
+without an undated fallback. This closes his production correction/replay gate, not the seven other history holds.
+Shared review-refresh fix is committed as `bb7fb42`; full verification 20720 is still running before deployment.
+The next alias page after HB 1279 is undergoing dry-run byte checks (65742): 307 candidates, no held groups.
+No apply has been started for that page.
+
 The version 34 foundation replay completed with 337 people, 381 terms, 13 applied reviews and seven historical
 holds. Direct production read-back confirmed Dufault's undated fallback was replaced by exactly two canonical
 terms: January 14, 2019-January 8, 2023, and January 13, 2025 onward. A second identical retained replay was
