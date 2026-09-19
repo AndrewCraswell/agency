@@ -7,6 +7,16 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+The shared lock-contention retry passed full `pnpm verify` (1014). The guarded HB 1330-1354 alias apply
+(58341) completed, and its repeat dry run returned zero candidates and zero held groups. The verified cleanup
+cursor is now HB 1354; all 149 removed untouched aliases remain recoverable from reconciliation checkpoints.
+This reuses the shared transactional reconciliation path rather than introducing Washington-specific mutation logic.
+
+Implementation boundary: jurisdiction adapters translate publisher formats and identifiers. Ownership, retained-source
+validation, idempotent persistence, relationship replay, document extraction/OCR, embeddings, search synchronization
+and acceptance checks remain shared. Person-specific historical corrections belong in hash-bound review data with
+primary-source evidence, not branches in the ingestion engine. Unverified transitions remain held.
+
 The HB 1305-1329 alias cleanup completed on its same-page retry (11394). Repeat dry run returned zero candidates,
 zero held groups and a complete page; verified cleanup cursor is now HB 1329. Removed rows remain recoverable
 from audit checkpoints. The lock retry fix is committed as `3bddc6a`; type/lint and 23 focused tests pass, with
