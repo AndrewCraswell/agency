@@ -42,7 +42,8 @@ class WashingtonEventTests(unittest.TestCase):
         scraper = self.scraper_class(None, "/tmp")
         meeting = f'''<ArrayOfCommitteeMeeting xmlns="http://WSLWebServices.leg.wa.gov/">
           <CommitteeMeeting><Cancelled>{cancelled}</Cancelled><Agency>House</Agency><Date>{date}</Date>
-          <Committees><Committee><LongName>Education</LongName></Committee></Committees>
+          <Committees><Committee><Id>31641</Id><Agency>House</Agency><Acronym>ED</Acronym>
+          <LongName>Education</LongName></Committee></Committees>
           <AgendaId>{agenda_id}</AgendaId><Notes>Public hearing</Notes><Room>1</Room>
           <Building>Capitol</Building><City>Olympia</City><State>WA</State></CommitteeMeeting>
         </ArrayOfCommitteeMeeting>'''.encode()
@@ -61,6 +62,7 @@ class WashingtonEventTests(unittest.TestCase):
         event = events[0]
         self.assertEqual(event.status, "cancelled")
         self.assertEqual(event.upstream_id, "32346")
+        self.assertEqual(event.extras["committees"], [{"id": "31641", "agency": "House", "code": "ED", "name": "Education"}])
         self.assertEqual(event.start_date.utcoffset(), datetime.timedelta(hours=-8))
         self.assertEqual(len(event.agenda), 2)
         self.assertEqual(event.agenda[0]["description"], "Agency briefing")

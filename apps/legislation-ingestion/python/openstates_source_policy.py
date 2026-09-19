@@ -49,6 +49,17 @@ PATCHES = {
                 classification="committee-meeting",
                 upstream_id=agenda_id,
 '''),
+        ('''            event.add_participant(event_com, type="committee", note="host")
+''', '''            hosts = []
+            for committee in xpath(row, "wa:Committees/wa:Committee"):
+                host = {"id": xpath(committee, "string(wa:Id)"),
+                        "agency": xpath(committee, "string(wa:Agency)"),
+                        "code": xpath(committee, "string(wa:Acronym)"),
+                        "name": xpath(committee, "string(wa:LongName)")}
+                hosts.append(host)
+                event.add_participant(host["name"], type="committee", note="host")
+            event.extras["committees"] = hosts
+'''),
         ('''            if bill_id:
                 if bill_id.startswith(("ESB ", "SSB ", "EHB ", "SHB ")):
                     bill_id = bill_id[1:]

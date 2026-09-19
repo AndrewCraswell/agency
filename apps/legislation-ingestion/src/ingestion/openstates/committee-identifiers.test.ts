@@ -1,5 +1,29 @@
 import { expect, it } from "vitest"
-import { alaskaCommitteeIdentifiers, northCarolinaCommitteeIdentifiers } from "./committee-identifiers.js"
+import {
+  alaskaCommitteeIdentifiers,
+  northCarolinaCommitteeIdentifiers,
+  washingtonCommitteeIdentifiers
+} from "./committee-identifiers.js"
+
+it("maps Washington official chamber codes without guessing committee names", () => {
+  const url = "https://leg.wa.gov/about-the-legislature/committees/senate/lgv"
+  expect(washingtonCommitteeIdentifiers([{ url }], "upper")).toEqual({ "waCommittee:senate:LGV": url })
+  expect(washingtonCommitteeIdentifiers([{ url }], "lower")).toEqual({})
+  const house = "https://leg.wa.gov/House/Committees/PEW"
+  expect(washingtonCommitteeIdentifiers([{ url: house }], "lower")).toEqual({ "waCommittee:house:PEW": house })
+  const currentHouse = "https://leg.wa.gov/about-the-legislature/committees/house-of-representatives/cs"
+  expect(washingtonCommitteeIdentifiers([{ url: currentHouse }], "lower")).toEqual({
+    "waCommittee:house:CS": currentHouse
+  })
+  for (const invalid of [
+    url + "?other=1",
+    url + "#fragment",
+    url.replace("leg.wa.gov", "example.org"),
+    url.replace("https://", "https://user@")
+  ]) {
+    expect(washingtonCommitteeIdentifiers([{ url: invalid }], "upper")).toEqual({})
+  }
+})
 
 it("retains both session identities independently from homepage selection", () => {
   expect(

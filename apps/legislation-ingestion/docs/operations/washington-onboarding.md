@@ -239,3 +239,22 @@ Source bodies, response hashes, extracted events and counts are retained under
 This closes source-extraction fidelity for that window, not Washington event onboarding. The shared execution boundary,
 immutable window planning, canonical identity/relationship mapping, duplicate-free database replay, hosted deployment
 and recurring event sync remain open. The full repository verification is running after this implementation.
+
+## Canonical meeting replay (2026-09-19)
+
+The adapter now retains every publisher host committee's numeric ID, chamber, code and name. Canonical preparation
+uses the stable agenda ID (not the extraction UUID), verifies exact official source URLs and Pacific clocks, and
+passes explicit bill selectors through a helper shared with Alaska. Foundation import derives committee codes from
+retained official committee URLs; the existing relationship resolver rejects missing or ambiguous matches without
+name-based fallback. Current and retained publisher URL layouts are both supported.
+
+The complete 78-response canary was replayed offline through the rebuilt pinned source. Its 77 events and 287 agenda
+items then passed through the existing canonical event writer in `washington_scraper_replay_20260919`. Repeated imports
+retained identical identities/counts. All 77 event-to-committee links resolved, including the cancelled meeting, with
+zero unresolved hosts. Twelve agenda bill links resolved against the deliberately small 11-bill local corpus;
+remaining bill relationships are not claimed complete. Evidence: `database-replay.json` and
+`host-relationship-replay.json` under `artifacts/openstates-washington-meeting-canary/`.
+
+The prior full repository verification passed (optional unconfigured database/corpus cases skipped). Focused mapper,
+committee and Alaska regression checks cover the new shared preparation. Washington's execution-window contract,
+durable dispatch/continuation and production acceptance still need implementation before enabling event sync.

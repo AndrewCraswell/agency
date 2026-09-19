@@ -1,6 +1,10 @@
 import { parseDocument } from "yaml"
 import { z } from "zod"
-import { alaskaCommitteeIdentifiers, northCarolinaCommitteeIdentifiers } from "./committee-identifiers.js"
+import {
+  alaskaCommitteeIdentifiers,
+  northCarolinaCommitteeIdentifiers,
+  washingtonCommitteeIdentifiers
+} from "./committee-identifiers.js"
 import { peopleSourceProfiles, type PeopleRepositoryFile } from "./people-repository.js"
 
 const chamberSchema = z.enum(["upper", "lower", "legislature"])
@@ -118,10 +122,21 @@ export function inventoryCommitteeHistory(
                 committee.chamber ?? (parentChamber.success ? parentChamber.data : null)
               )
             }
-          : {
-              ...northCarolinaCommitteeIdentifiers(committee.links),
-              ...northCarolinaCommitteeIdentifiers(committee.sources)
-            },
+          : state === "wa"
+            ? {
+                ...washingtonCommitteeIdentifiers(
+                  committee.links,
+                  committee.chamber ?? (parentChamber.success ? parentChamber.data : null)
+                ),
+                ...washingtonCommitteeIdentifiers(
+                  committee.sources,
+                  committee.chamber ?? (parentChamber.success ? parentChamber.data : null)
+                )
+              }
+            : {
+                ...northCarolinaCommitteeIdentifiers(committee.links),
+                ...northCarolinaCommitteeIdentifiers(committee.sources)
+              },
       committeeId: committee.id,
       name: committee.name,
       classification: committee.classification,

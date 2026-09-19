@@ -3,6 +3,7 @@ import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { normalizeOpenStatesEvent } from "./events.js"
 import { readArchivedScraperAttempt } from "./scraper-archive.js"
+import { scraperEventBillReferences } from "./scraper-event-bill-references.js"
 
 const eventSchema = z
   .object({
@@ -65,30 +66,10 @@ export function normalizeAlaskaScraperEvent(input: unknown, retrievedAt: Date) {
     if (!agenda) {
       continue
     }
-    const entities = z.array(z.unknown()).safeParse(item.related_entities ?? [])
-    if (!entities.success) {
-      continue
-    }
-    agenda.billReferences = entities.data.flatMap((entity) => {
-      const reference = z
-        .object({ entity_type: z.literal("bill"), bill_id: z.string(), name: z.string() })
-        .safeParse(entity)
-      if (!reference.success || !reference.data.bill_id.startsWith("~")) {
-        return []
-      }
-      let identifier: unknown
-      try {
-        identifier = JSON.parse(reference.data.bill_id.slice(1))
-      } catch {
-        return []
-      }
-      const explicit = z
-        .strictObject({ identifier: z.string().regex(/^[HS](?:B|R|JR|J|CR|SC|SCR) [1-9][0-9]{0,4}$/) })
-        .safeParse(identifier)
-      if (!explicit.success || explicit.data.identifier !== reference.data.name) {
-        return []
-      }
-      return [{ identifier: explicit.data.identifier, jurisdictionId: "jurisdiction:ak", sessionId: "session:ak:34" }]
+    agenda.billReferences = scraperEventBillReferences(item.related_entities ?? [], {
+      state: "ak",
+      session: "34",
+      identifier: /^[HS](?:B|R|JR|J|CR|SC|SCR) [1-9][0-9]{0,4}$/
     })
   }
   return result
