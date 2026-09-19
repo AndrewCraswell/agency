@@ -839,3 +839,22 @@ enum. Its production read-only Washington dry run completed, and `--apply` witho
 access. The observed plan digest was `e7f2ffce3fdb1b3667fa3997c3d71bd6ca8abd8bc46a49357e8b8dbce6f7ba16`, with 169,213
 proposed positions, 567 unresolved positions and three proposed sponsors. Counts can shrink as live ingestion resolves
 relationships. No manual apply was performed; the hosted reconciliation still requires the frozen bill cycle to finish.
+
+## Hosted content handoff canary
+
+Production scraper activation included Washington, but content activation still contained only `nc,ak`. The narrowly
+scoped `OPENSTATES_CONTENT_ENABLED_STATES` value was extended to `nc,ak,wa` and read back successfully. Shared worker and
+controller concurrency remain two; no recurring Washington schedule was created and no candidate was promoted.
+
+Pinned `20260919.22` run `run_06gbi9p922afiiuvjhlkemng01` completed successfully with a one-bill, concurrency-one payload.
+For `bill:wa:2025-2026:hb:1000`, it processed two existing documents, inserted ten embeddings and skipped eleven existing
+embedding work items, with no document or embedding failures. Neither document required OCR; this run does not establish
+Washington OCR acceptance. The checkpoint explicitly reports `ingestionComplete: false`, `searchVerified: false` and
+`nextWork.kind: continue`. Treat this as proof that the shared hosted content path works, not session-wide completion or
+duplicate-free replay proof. The existing shared controller continues from canonical backlog until drained, including
+rescheduling itself after its per-run continuation budget; no Washington-specific processing loop is needed.
+
+Five bill batches have committed (50 of 3,411 inventoried bills). The sixth was observed executing as
+`run_06gbia5c4u4093f5prk7u4g301`, pinned to the same candidate. Calendar recovery remains separate: the held window still
+has no retained manifest or settlement marker. An approximate queue count of zero is not sufficient evidence to clear
+ownership; do not infer cloud shutdown from that count or the missing local process alone.
