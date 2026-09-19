@@ -59,6 +59,18 @@ including real isolated PostgreSQL insert/replay tests for both writers; ingesti
 Deployment and production replay are still required before closing the public-read gap. Protocol-alias duplication
 remains separate and unresolved. The preceding full verification terminated with 24 web-test failures, not a clean pass.
 
+Transport identity prevention is now implemented in both aggregate writers using the downloader's shared HTTP-to-HTTPS
+rule. An unambiguous existing document keeps its ID and processing artifacts when a source switches protocol. Bill,
+collection, path, query and format distinctions remain intact; ambiguous aliases or duplicate batch targets fail closed.
+Existing duplicate pairs are not silently deleted or merged. Seventy-eight focused tests passed, including both real
+PostgreSQL writer paths replaying an HTTP archive document through an HTTPS scraper record while preserving content
+and OCR state. Ingestion type-check passed. This is local implementation evidence, not deployment acceptance.
+
+A read-only current-session census found 2,796 transport-alias groups containing 5,592 document rows. None has two
+different non-null content hashes, but 2,794 groups contain an unhashed copy: absence of a conflicting hash is not proof
+of byte equivalence. Consolidation must preserve canonical references, sections and vectors and explicitly handle
+unprocessed copies. The running pinned deployment has not yet received this identity fix; rollout remains open.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled

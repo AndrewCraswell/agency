@@ -63,6 +63,43 @@ describePostgres.sequential("atomic bill batch receipts", () => {
     await write()
     expect(await read()).toMatchObject(processed)
   })
+  it.each(["single", "batch"])("reuses archive HTTP document identity on %s HTTPS scraper replay", async (mode) => {
+    const bill = aggregate(`alias-${mode}`)
+    const original = {
+      id: `${bill.bill.id}:archive`,
+      billId: bill.bill.id,
+      classification: "version",
+      title: "Bill",
+      sourceUrl: "http://example.test/1000.pdf",
+      processingStatus: "processed",
+      ocrStatus: "not-required",
+      contentHash: "a".repeat(64),
+      text: "Already processed",
+      blobPath: "retained/original.pdf"
+    }
+    await upsertBillAggregate(database, { ...bill, documents: [{ document: original }] })
+    const incoming = {
+      ...bill,
+      documents: [
+        {
+          document: {
+            id: `${bill.bill.id}:scraped`,
+            billId: bill.bill.id,
+            classification: "version",
+            title: "Current title",
+            sourceUrl: "https://example.test/1000.pdf"
+          }
+        }
+      ]
+    }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (mode === "single") await upsertBillAggregate(database, incoming)
+      else await upsertBillAggregates(database, [incoming])
+    }
+    const rows = await database.select().from(schema.billDocuments).where(eq(schema.billDocuments.billId, bill.bill.id))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ ...original, title: "Current title", sourceUrl: "https://example.test/1000.pdf" })
+  })
   beforeAll(async () => {
     await migrate(database, {
       migrationsFolder: fileURLToPath(

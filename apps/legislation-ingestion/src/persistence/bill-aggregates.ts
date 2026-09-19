@@ -17,8 +17,9 @@ import {
 } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
-import { and, eq, inArray, notInArray, or, sql } from "drizzle-orm"
+import { and, eq, inArray, notInArray, sql } from "drizzle-orm"
 import { assertBillBatchOwnership, type BillBatchOwnership } from "./bill-batch-ownership.js"
+import { findBillDocumentIdentity } from "./bill-document-identity.js"
 import { prepareBillDocument } from "./bill-document-lifecycle.js"
 import { preserveBillResolvedLinks } from "./bill-resolved-links.js"
 import { observeCanonicalRecord } from "./changes.js"
@@ -452,15 +453,10 @@ export async function upsertBillAggregate(
 
     if (aggregate.documents !== undefined) {
       for (const document of aggregate.documents) {
-        const existingDocument = await transaction.query.billDocuments.findFirst({
-          where: or(
-            eq(billDocuments.id, document.document.id),
-            and(
-              eq(billDocuments.billId, document.document.billId),
-              eq(billDocuments.sourceUrl, document.document.sourceUrl)
-            )
-          )
-        })
+        const existingDocument = findBillDocumentIdentity(
+          document.document,
+          await transaction.query.billDocuments.findMany({ where: eq(billDocuments.billId, document.document.billId) })
+        )
         const persistedDocument = prepareBillDocument(document.document, existingDocument)
         await transaction
           .insert(billDocuments)
@@ -811,18 +807,25 @@ export async function upsertBillAggregates(
       candidateDocumentValues.length === 0
         ? []
         : await transaction
-            .select({ billId: billDocuments.billId, id: billDocuments.id, sourceUrl: billDocuments.sourceUrl })
+            .select({
+              billId: billDocuments.billId,
+              id: billDocuments.id,
+              sourceUrl: billDocuments.sourceUrl,
+              classification: billDocuments.classification
+            })
             .from(billDocuments)
             .where(inArray(billDocuments.billId, billIds))
-    const existingDocumentIds = new Map(
-      existingDocuments.map((document) => [`${document.billId}\u001f${document.sourceUrl}`, document.id])
-    )
-    const documentValues = candidateDocumentValues.map((document) =>
-      prepareBillDocument({
+    const documentValues = candidateDocumentValues.map((document) => {
+      const resolved = prepareBillDocument({
         ...document,
-        id: existingDocumentIds.get(`${document.billId}\u001f${document.sourceUrl}`) ?? document.id
+        id: findBillDocumentIdentity(document, existingDocuments)?.id ?? document.id
       })
-    )
+      existingDocuments.push(resolved)
+      return resolved
+    })
+    if (new Set(documentValues.map((document) => document.id)).size !== documentValues.length) {
+      throw new Error("Bill batch contains duplicate document targets")
+    }
     if (documentValues.length > 0) {
       await transaction
         .insert(billDocuments)

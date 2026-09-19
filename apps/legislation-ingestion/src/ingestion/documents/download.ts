@@ -1,6 +1,7 @@
 import { load } from "cheerio"
 import { unzipSync } from "fflate"
 import { DocumentExtractionError, MAX_DOCUMENT_BYTES } from "./extract.js"
+import { documentTransportUrl } from "./transport-url.js"
 import { fetchDocumentWithTrustedIntermediates, relayedDocumentSource } from "./trusted-document-transport.js"
 
 const supportedMediaTypes = new Set([
@@ -865,14 +866,9 @@ export async function downloadDocument(
     timeoutMs?: number
   } = {}
 ): Promise<DownloadedDocument> {
-  const url = resolveApprovedDocumentUrl(sourceUrl)
+  const url = documentTransportUrl(resolveApprovedDocumentUrl(sourceUrl), options.allowHttp === true)
   if (KNOWN_INACCESSIBLE_DOCUMENT_HOSTS.has(url.hostname.toLowerCase())) {
     throw new Error(`Document source is inaccessible: ${url.hostname.toLowerCase()}`)
-  }
-  if (url.protocol === "http:" && options.allowHttp !== true) {
-    url.protocol = "https:"
-  } else if (url.protocol !== "https:" && !(options.allowHttp === true && url.protocol === "http:")) {
-    throw new Error("Document URL must use HTTPS")
   }
   const maximumBytes = options.maximumBytes ?? MAX_DOCUMENT_BYTES
   const baseFetcher: typeof fetch =
