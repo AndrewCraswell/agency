@@ -76,6 +76,70 @@ Jurisdiction clarification rules supply structured choices rather than inferred 
 mappings must exactly name those choices; otherwise the driver pauses. Non-jurisdiction questions require an exact
 authored answer. An unanswered/repeated clarification or absent discovery blocks dependent prompts unless an explicit
 missing-records branch exists. Accepted narrowing must be recorded in the plan; it is never selected automatically.
+Discovered record inventories are not appended to user prompts. In fixed mode they establish prerequisites only,
+not the user's selected sample. Dependency kinds must match the exported UI kinds (`meeting`, not `event`).
+
+### Adaptive conversations
+
+Add `adaptive` to a scenario to test natural follow-through. The first step remains the exact opening prompt; later
+steps become coverage goals, not mandatory questions. The simulated user sees the rendered conversation and visible
+clarification controls, never exported tool outputs, hidden discovery records, traces or evaluator reference answers.
+It can ask a follow-up, answer clarification, make a bounded recovery attempt, finish early or pause for human input.
+
+```json
+{
+  "id": "representative-article-ideas",
+  "objective": "Develop ten newspaper article ideas about three representatives, with grounded vote highlights.",
+  "jurisdictions": ["U.S. federal"],
+  "maximumExchanges": 8,
+  "adaptive": {
+    "persona": "A Washington constituent exploring article ideas, not asking for a complete legislative audit.",
+    "constraints": [
+      "Representatives are Suzan DelBene, Patty Murray and Maria Cantwell.",
+      "Focus on the 119th Congress through September 18, 2026.",
+      "Keep all three people in scope; distinguish unavailable voting evidence from no activity."
+    ],
+    "maximumRecoveries": 1
+  },
+  "steps": [
+    {"id": "ideas", "prompt": "Suggest ten newspaper article ideas about Suzan DelBene, Patty Murray and Maria Cantwell's work in the 119th Congress through September 18, 2026. Which votes would you highlight?"},
+    {"id": "evidence", "prompt": "Understand the supporting sources and each person's actual position on the highlighted votes."},
+    {"id": "limitations", "prompt": "Distinguish proposals from enacted changes and identify important gaps or counterevidence."}
+  ]
+}
+```
+
+Validate without inference using the normal command. To authorize application research **and additional planner
+model calls**, add `--execute --adaptive-model <explicit-model-id>` with `OPENROUTER_API_KEY` configured. The planner
+uses low reasoning, no tools, no retries, at most 3000 output tokens and a 60-second per-decision deadline. It does
+not change the application's model, prompt or reasoning settings. An invalid/failed decision stops the driver;
+there is no hidden repair loop. No live campaign is launched by adding or validating a plan.
+
+Every planner input, candidate decision, accepted decision, usage receipt and submitted prompt is journaled after
+credential redaction, without provider reasoning. Jurisdiction changes, unavailable options, identical repeated
+decisions, excess recovery and invented goal IDs/quotes are rejected. Free-text scope and semantic adherence still
+require human review: structured validation is not proof that a model acted like a real user or resisted every source
+instruction. Clarification answers must come from the brief; missing personal facts should cause a pause.
+
+Goal dispositions cite exact visible text and remain **unverified**, including on `finished-unassessed`. Adaptive
+reports separate `exchangeCounts`, `decisions` and `goalAssessment` from fixed-step coverage; they never equate a
+terminal response with a successful research objective. Failed exchanges remain failed even after a later recovery.
+The eight-exchange ceiling includes clarification resumes and recovery prompts. A run can finish earlier rather than
+ask filler questions; reaching the ceiling pauses instead of declaring success. Review each decision for coaching,
+scope drift and skipped objectives before using the run for quality claims.
+
+### Waiting and failure capture
+
+`--wait-ms` controls the browser's wait per exchange (default 600000, allowed 1000-3600000). It is separate from the
+application, which has no total research deadline. The driver observes generation/clarification requests rather than
+waiting for unrelated homepage activity. On expiry it records the driver deadline, attempts Stop, and still attempts
+the exchange export and screenshot. Before closing an incomplete or failed run it makes a final best-effort visible
+snapshot, screenshot and export; failed capture attempts remain in the journal. A post-Stop snapshot can be partial.
+No wait expiry is classified as a proven application timeout, and an uncertain generation is never automatically resent.
+
+Start with serial runs to assess single-user usefulness; test controlled concurrency separately. Fixed scenarios and
+deterministic local fixtures remain the regression track. Neither adaptive conversations nor this driver replace
+Langfuse-native quality evaluation or independently checked source evidence.
 
 Only `--execute --base-url http://127.0.0.1:3000` authorizes actual browser research against a credential-free loopback
 application. This can incur the application's model/provider costs, including homepage suggestions. It creates a

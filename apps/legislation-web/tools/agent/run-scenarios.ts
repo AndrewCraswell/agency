@@ -3,9 +3,13 @@ import { readFileSync } from "node:fs"
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises"
 import { isAbsolute, join, relative, resolve } from "node:path"
 import { setTimeout as delay } from "node:timers/promises"
+import { pathToFileURL } from "node:url"
 import { parseArgs } from "node:util"
+import type { LanguageModel } from "ai"
 import type { Page, Request } from "playwright"
 import { redactCredentials } from "../../src/modules/conversations/redactCredentials"
+import { createChatModel } from "../../src/services/openrouter/chat-model"
+import { planAdaptiveTurn } from "./adaptive-planner"
 import {
   approvedJurisdictions,
   inspectSnapshot,
@@ -16,6 +20,8 @@ import {
   selectStep,
   snapshotSchema,
   summarizeExchange,
+  type AdaptiveDecision,
+  type VisibleConversation,
   type RequestObservation,
   type Scenario,
   type StepProgress
@@ -57,13 +63,56 @@ async function exportConversation(page: Page) {
   return snapshotSchema.parse(redactCredentials(JSON.parse(Buffer.concat(chunks).toString("utf8"))))
 }
 
-async function execute(scenario: Scenario, baseUrl: string, output: string) {
+async function visibleConversation(page: Page): Promise<VisibleConversation> {
+  const conversation = page.getByRole("log", { name: "Conversation", exact: true })
+  const transcript = await conversation.innerText()
+  const form = page.getByRole("form", { name: "Clarification", exact: true })
+  let clarification: VisibleConversation["clarification"] = null
+  if (await form.isVisible()) {
+    const multiple = (await form.getByRole("checkbox").count()) > 0
+    const controls = form.getByRole(multiple ? "checkbox" : "radio")
+    const optionLabels = await controls.evaluateAll((elements) =>
+      elements.map((element) => {
+        const ids = element.getAttribute("aria-labelledby")?.split(/\s+/) ?? []
+        return (
+          ids
+            .map((id) => element.ownerDocument.getElementById(id)?.textContent ?? "")
+            .join(" ")
+            .trim() ||
+          element.getAttribute("aria-label") ||
+          element.closest("label")?.textContent?.trim() ||
+          ""
+        )
+      })
+    )
+    clarification = {
+      question: await form.locator("legend").innerText(),
+      optionLabels,
+      allowsText: await form.getByRole("textbox", { name: "Your answer", exact: true }).isVisible(),
+      multiple
+    }
+  }
+  const lastResponse = conversation.getByRole("article", { name: "Rostra response", exact: true }).last()
+  const hasFailure =
+    (await conversation.getByRole("button", { name: "Try again", exact: true }).isVisible()) ||
+    ((await lastResponse.count()) > 0 &&
+      (await lastResponse.getByText("Incomplete response", { exact: true }).isVisible()))
+  return { transcript: String(redactCredentials(transcript)), clarification, hasFailure }
+}
+
+export async function runScenario(
+  scenario: Scenario,
+  baseUrl: string,
+  output: string,
+  options: { adaptiveModel?: string; model?: LanguageModel; waitMs: number }
+) {
+  const { adaptiveModel, waitMs } = options
   // Neither Playwright nor a browser is loaded by plan/validation mode.
   const { chromium } = await import("playwright")
   await mkdir(output, { recursive: true })
   const directory = join(output, `${scenario.id}-${Date.now()}-${randomUUID()}`)
   await mkdir(directory)
-  const progress: StepProgress[] = scenario.steps.map((step) => ({
+  const progress: StepProgress[] = (scenario.adaptive ? [] : scenario.steps).map((step) => ({
     id: step.id,
     selected: null,
     executedRequestIds: [],
@@ -74,6 +123,9 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
     join(directory, "plan.json"),
     serialized({
       scenario,
+      adaptiveModel: adaptiveModel ?? null,
+      plannerReasoning: scenario.adaptive ? "low" : null,
+      waitMs,
       approvedJurisdictions: approvedJurisdictions(scenario),
       baseUrl,
       coverage: scenarioCoverage(scenario, progress)
@@ -101,12 +153,21 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
   let isExporting = false
   let exportViolation = false
   let activeStep: StepProgress | undefined
+  const decisions: AdaptiveDecision[] = []
+  let visible: VisibleConversation | undefined
+  const planner =
+    options.model ??
+    (scenario.adaptive && adaptiveModel
+      ? createChatModel(process.env.OPENROUTER_API_KEY, adaptiveModel, { reasoning: { effort: "low" } })
+      : undefined)
   const requests = new Map<Request, RequestObservation & { exchange: number }>()
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
+  let page: Page | undefined
   try {
     browser = await chromium.launch({ headless: true })
     const context = await browser.newContext({ acceptDownloads: true, serviceWorkers: "block" })
-    const page = await context.newPage()
+    page = await context.newPage()
+    const activePage = page
     page.setDefaultTimeout(10_000)
     await page.route("**/*", async (route) => {
       const request = route.request()
@@ -115,7 +176,11 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
         exportViolation = true
         record("export-chat-request-blocked", { method: request.method() })
         await route.abort("blockedbyclient")
-      } else if (request.isNavigationRequest() && request.frame() === page.mainFrame() && url.origin !== baseUrl) {
+      } else if (
+        request.isNavigationRequest() &&
+        request.frame() === activePage.mainFrame() &&
+        url.origin !== baseUrl
+      ) {
         record("external-navigation-blocked", { origin: url.origin })
         await route.abort("blockedbyclient")
       } else {
@@ -187,9 +252,60 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
     const answeredQuestions = new Set<string>()
     let conversationId: string | undefined
 
-    outer: for (const [index, step] of progress.entries()) {
+    const slots = scenario.adaptive ? scenario.maximumExchanges : scenario.steps.length
+    outer: for (let index = 0; index < slots; index++) {
+      let decision: AdaptiveDecision | undefined
+      let selection: ReturnType<typeof selectStep>
+      let step = progress[index]
+      if (scenario.adaptive) {
+        if (exchange >= scenario.maximumExchanges) {
+          reason = "The approved exchange budget is exhausted; goals remain unassessed."
+          break
+        }
+        if (index > 0) {
+          if (!planner || !visible) {
+            throw new Error("Adaptive planning requires a model and visible conversation.")
+          }
+          const planned = await planAdaptiveTurn({
+            model: planner,
+            scenario,
+            visible,
+            previous: decisions,
+            exchange,
+            signal: AbortSignal.timeout(60_000),
+            record
+          })
+          decision = planned.decision
+          record("adaptive-decision", { model: adaptiveModel, ...planned })
+          decisions.push(decision)
+          if (decision.action === "finish" || decision.action === "pause") {
+            state = decision.action === "finish" ? "finished-unassessed" : "paused"
+            reason = decision.reason
+            break
+          }
+        }
+        step = {
+          id: `exchange-${exchange + 1}`,
+          selected: "primary",
+          executedRequestIds: [],
+          answered: false,
+          records: []
+        }
+        progress.push(step)
+        selection = {
+          kind: "submit",
+          branch: "primary",
+          prompt:
+            (decision?.text ?? scenario.steps[0]!.prompt) +
+            `\n\nApproved jurisdictions: ${approvedJurisdictions(scenario).join(", ")}.`
+        }
+      } else {
+        selection = selectStep(scenario, index, progress)
+      }
+      if (!step) {
+        throw new Error("The selected step is unavailable.")
+      }
       activeStep = step
-      const selection = selectStep(scenario, index, progress)
       if (selection.kind === "pause") {
         reason = selection.reason
         break
@@ -201,10 +317,31 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
       step.selected = selection.branch
       record("step-selected", { stepId: step.id, ...selection })
       let submit = async () => {
-        await page.getByRole("textbox", { name: "Your question", exact: true }).fill(selection.prompt)
-        await page.getByRole("button", { name: "Send question", exact: true }).click()
+        await activePage.getByRole("textbox", { name: "Your question", exact: true }).fill(selection.prompt)
+        await activePage.getByRole("button", { name: "Send question", exact: true }).click()
       }
       let submission: unknown = { kind: "prompt", text: selection.prompt }
+      if (decision?.action === "clarify") {
+        const answer = decision
+        const question = visible?.clarification
+        if (!question) {
+          throw new Error("The visible clarification is unavailable.")
+        }
+        submission = { kind: "clarification", question: question.question, answer }
+        submit = async () => {
+          const form = activePage.getByRole("form", { name: "Clarification", exact: true })
+          if ((await form.locator("legend").innerText()) !== question.question) {
+            throw new Error("The visible clarification changed.")
+          }
+          for (const label of answer.optionLabels) {
+            await form.getByRole(question.multiple ? "checkbox" : "radio", { name: label, exact: true }).click()
+          }
+          if (answer.text) {
+            await form.getByRole("textbox", { name: "Your answer", exact: true }).fill(answer.text)
+          }
+          await form.getByRole("button", { name: "Continue", exact: true }).click()
+        }
+      }
       while (!step.answered) {
         if (exchange >= scenario.maximumExchanges) {
           reason = "The approved exchange budget is exhausted; dependent prompts remain unexecuted."
@@ -216,11 +353,14 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
         const started = Date.now()
         let idleSince: number | undefined
         let isSettled = false
-        while (Date.now() - started < 170_000) {
+        while (Date.now() - started < waitMs) {
           if (journalError) {
             throw new Error("The event journal could not be persisted.")
           }
-          const observed = [...requests.values()].filter((request) => request.exchange === exchange)
+          const observed = [...requests.values()].filter(
+            (request) =>
+              request.exchange === exchange && ["generation", "resume", "confirmation"].includes(request.kind)
+          )
           const isBusy = await page.getByRole("button", { name: "Stop response", exact: true }).isVisible()
           const isConfirming = (await page.locator('form[aria-label="Clarification"][aria-busy="true"]').count()) > 0
           if (observed.length && observed.every((request) => request.terminal !== null) && !isBusy && !isConfirming) {
@@ -238,10 +378,16 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
           record("driver-timeout", { stepId: step.id })
           const stop = page.getByRole("button", { name: "Stop response", exact: true })
           if (await stop.isVisible()) {
-            await stop.click()
+            await stop
+              .click()
+              .then(() => record("timeout-stop", { requested: true }))
+              .catch((error: unknown) => record("timeout-stop-failed", { message: errorText(error) }))
           }
           reason = "The driver wait budget expired; no timeout cause is attributed to the application."
-          break outer
+          record("timeout-visible", await visibleConversation(page))
+          await page
+            .screenshot({ path: join(directory, `timeout-${exchange}.png`), fullPage: true })
+            .catch((error: unknown) => record("screenshot-failed", { message: errorText(error) }))
         }
         isExporting = true
         const snapshot = await exportConversation(page).finally(() => {
@@ -269,9 +415,19 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
           messageIds: inspection.messageIds,
           calls: inspection.calls,
           evidenceCandidates: inspection.evidenceCandidates,
-          evidenceAssessment: "unassessed"
+          evidenceAssessment: "unassessed",
+          driverTimedOut: !isSettled
         })
         record("exchange-observed", { stepId: step.id, ...summary })
+        if (!isSettled) {
+          break outer
+        }
+        if (scenario.adaptive) {
+          visible = await visibleConversation(page)
+          record("visible-conversation", visible)
+          reason = "The approved exchange budget ended; adaptive goal assessment remains unverified."
+          break
+        }
         if (step.answered) {
           break
         }
@@ -289,7 +445,7 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
         const controlKind = inspection.clarification.input.kind === "single" ? "radio" : "checkbox"
         submission = { kind: "clarification", question, answer: clarification }
         submit = async () => {
-          const form = page.getByRole("form", { name: "Clarification", exact: true })
+          const form = activePage.getByRole("form", { name: "Clarification", exact: true })
           if ((await form.locator("legend").innerText()) !== question) {
             throw new Error("The visible clarification changed; the authored answer was not submitted.")
           }
@@ -304,7 +460,7 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
         }
       }
     }
-    if (progress.every((step) => step.answered)) {
+    if (!scenario.adaptive && progress.every((step) => step.answered)) {
       state = "finished-unassessed"
       reason = "All selected prompts received terminal answers; research correctness remains unassessed."
     }
@@ -313,6 +469,21 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
     reason = String(errorText(error))
     record("driver-error", { reason })
   } finally {
+    if (page && state !== "finished-unassessed") {
+      await page
+        .screenshot({ path: join(directory, "final.png"), fullPage: true })
+        .catch((error: unknown) => record("final-screenshot-failed", { message: errorText(error) }))
+      await visibleConversation(page)
+        .then((value) => record("final-visible-conversation", value))
+        .catch((error: unknown) => record("final-visible-failed", { message: errorText(error) }))
+      isExporting = true
+      await exportConversation(page)
+        .then((snapshot) => writeFile(join(directory, "final-snapshot.json"), serialized(snapshot), { flag: "wx" }))
+        .catch((error: unknown) => record("final-export-failed", { message: errorText(error) }))
+        .finally(() => {
+          isExporting = false
+        })
+    }
     await browser?.close().catch((error: unknown) => record("browser-close-error", { message: errorText(error) }))
     await writes
     if (journalError) {
@@ -324,7 +495,15 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
       serialized({
         state,
         reason,
-        coverage: scenarioCoverage(scenario, progress),
+        mode: scenario.adaptive ? "adaptive" : "fixed",
+        decisions,
+        goalAssessment: scenario.adaptive ? { goals: decisions.at(-1)?.goals ?? [], verified: false } : null,
+        exchangeCounts: {
+          submitted: exchange,
+          captured: exchanges.length,
+          answered: progress.filter((step) => step.answered).length
+        },
+        coverage: scenarioCoverage(scenario, scenario.adaptive ? [] : progress),
         progress,
         exchanges,
         requests: [...requests.values()],
@@ -333,15 +512,15 @@ async function execute(scenario: Scenario, baseUrl: string, output: string) {
           "No semantic evidence assessment is performed. Invocation, discovered records and delivered answers are distinct.",
           "Request observations do not establish duplicate model generations or billing.",
           "Transport failures remain recorded even when a terminal answer was delivered.",
-          "Only explicitly authored questions, jurisdiction choices and missing-discovery branches can be submitted.",
-          "This driver never resumes old runs or automatically retries a request."
+          "Adaptive decisions use rendered conversation only; diagnostic exports are not planner inputs. Model scope adherence and goal claims require human review.",
+          "This driver never resumes old runs or blindly retries a request. Adaptive recovery is separately budgeted and preserves initial failures.",
+          "A driver deadline is a capture boundary, not an application timeout. Final captures after Stop may remain partial."
         ]
       }),
       { flag: "wx" }
     )
   }
-  process.stdout.write(serialized({ directory, state, reason, coverage: scenarioCoverage(scenario, progress) }))
-  process.exitCode = state === "finished-unassessed" ? 0 : 1
+  return { directory, state, reason, coverage: scenarioCoverage(scenario, scenario.adaptive ? [] : progress) }
 }
 
 async function main() {
@@ -351,7 +530,9 @@ async function main() {
       scenario: { type: "string" },
       execute: { type: "boolean", default: false },
       "base-url": { type: "string", default: "http://127.0.0.1:3000" },
-      output: { type: "string", default: "artifacts/scenario-runs" }
+      output: { type: "string", default: "artifacts/scenario-runs" },
+      "adaptive-model": { type: "string" },
+      "wait-ms": { type: "string", default: "600000" }
     }
   })
   if (values.help || !values.scenario) {
@@ -362,12 +543,24 @@ async function main() {
         "clarificationAnswers: jurisdiction rules {question,kind:'jurisdiction',jurisdictions,options?:[{label,jurisdictions}]}; other rules {question,kind:'other',optionLabels,text}.\n" +
         "Jurisdiction text is generated from structured choices; option labels must exactly join their mapped jurisdiction names with ', '. State-only answers may omit an already approved federal scope.\n" +
         "Optional: acceptedNarrowing {jurisdictions,reason}; step.requiresRecordsFrom {stepId,kind,onMissingRecords}.\n" +
-        "Clarification questions/options match exactly; missing answers pause. No resume, implicit state selection, retries or semantic pass claim.\n"
+        "Fixed clarification questions/options match exactly; missing answers pause. No resume or semantic pass claim.\n" +
+        "Adaptive: add adaptive {persona,constraints,maximumRecoveries:0-2}; steps become coverage goals after the opening prompt. --adaptive-model <model-id> is required with --execute and incurs planner calls using OPENROUTER_API_KEY.\n" +
+        "--wait-ms defaults to 600000 per browser exchange; on expiry Stop and final capture are attempted, never automatic resubmission.\n"
     )
     return
   }
   const input = values.scenario === "-" ? readFileSync(0, "utf8") : await readFile(resolve(values.scenario), "utf8")
   const scenario = scenarioSchema.parse(JSON.parse(input))
+  const waitMs = Number(values["wait-ms"])
+  if (!Number.isSafeInteger(waitMs) || waitMs < 1000 || waitMs > 3_600_000) {
+    throw new Error("wait-ms must be 1000-3600000.")
+  }
+  if (values["adaptive-model"] && !scenario.adaptive) {
+    throw new Error("adaptive-model requires an adaptive scenario.")
+  }
+  if (values.execute && scenario.adaptive && (!values["adaptive-model"]?.trim() || !process.env.OPENROUTER_API_KEY)) {
+    throw new Error("Adaptive execution requires adaptive-model and OPENROUTER_API_KEY.")
+  }
   const baseUrl = new URL(values["base-url"])
   if (
     !["http:", "https:"].includes(baseUrl.protocol) ||
@@ -397,10 +590,17 @@ async function main() {
     )
     return
   }
-  await execute(scenario, baseUrl.origin, output)
+  const result = await runScenario(scenario, baseUrl.origin, output, {
+    adaptiveModel: values["adaptive-model"],
+    waitMs
+  })
+  process.stdout.write(serialized(result))
+  process.exitCode = result.state === "finished-unassessed" ? 0 : 1
 }
 
-void main().catch((error: unknown) => {
-  process.stderr.write(String(errorText(error)) + "\n")
-  process.exitCode = 1
-})
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  void main().catch((error: unknown) => {
+    process.stderr.write(String(errorText(error)) + "\n")
+    process.exitCode = 1
+  })
+}

@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest"
 import type { ClarificationRequest } from "../../src/modules/conversations/clarification"
 import {
   approvedJurisdictions,
+  adaptiveDecisionSchema,
+  validateAdaptiveDecision,
   inspectSnapshot,
   requestIdentity,
   scenarioCoverage,
@@ -65,6 +67,103 @@ function progress(): StepProgress[] {
     records: []
   }))
 }
+
+describe("adaptive conversation policy", () => {
+  const scenario = scenarioSchema.parse({
+    ...authored,
+    adaptive: { persona: "A local reporter", constraints: ["Keep all three jurisdictions"], maximumRecoveries: 1 }
+  })
+  const visible = {
+    transcript: "I found a California proposal. New York evidence is unavailable.",
+    clarification: null,
+    hasFailure: false
+  }
+  const next = adaptiveDecisionSchema.parse({
+    action: "follow-up",
+    text: "What does the California proposal require?",
+    optionLabels: [],
+    reason: "Follow the selected proposal.",
+    jurisdictions: authored.jurisdictions,
+    goals: []
+  })
+
+  it("accepts a natural follow-up without hidden record dependencies", () => {
+    expect(validateAdaptiveDecision(scenario, visible, next, [])).toEqual(next)
+  })
+
+  it("rejects scope changes and invented goal evidence", () => {
+    expect(() => validateAdaptiveDecision(scenario, visible, { ...next, jurisdictions: ["U.S. federal"] }, [])).toThrow(
+      "jurisdictions"
+    )
+    expect(() =>
+      validateAdaptiveDecision(
+        scenario,
+        visible,
+        { ...next, goals: [{ id: "discover", status: "addressed", quote: "All states passed laws." }] },
+        []
+      )
+    ).toThrow("quote")
+    expect(() =>
+      validateAdaptiveDecision(
+        scenario,
+        visible,
+        { ...next, goals: [{ id: "unknown", status: "addressed", quote: "California" }] },
+        []
+      )
+    ).toThrow("authored goals")
+  })
+
+  it("requires an explicit bounded recovery and retains failures", () => {
+    const failed = { ...visible, hasFailure: true }
+    const recovery = { ...next, action: "recover" as const }
+    expect(() => validateAdaptiveDecision(scenario, failed, next, [])).toThrow("recovery")
+    expect(validateAdaptiveDecision(scenario, failed, recovery, [])).toEqual(recovery)
+    expect(() =>
+      validateAdaptiveDecision(scenario, failed, { ...recovery, text: "Try a smaller comparison." }, [recovery])
+    ).toThrow("budget")
+    expect(() => validateAdaptiveDecision(scenario, visible, recovery, [])).toThrow("no visible failure")
+  })
+
+  it("rejects repeated submissions and unavailable clarification options", () => {
+    expect(() => validateAdaptiveDecision(scenario, visible, next, [next])).toThrow("repeat")
+    expect(() =>
+      validateAdaptiveDecision(
+        scenario,
+        { ...visible, hasFailure: true },
+        { ...next, action: "recover", text: scenario.steps[0]!.prompt },
+        []
+      )
+    ).toThrow("repeat")
+    const pending = {
+      ...visible,
+      clarification: {
+        question: "Which state?",
+        optionLabels: ["California", "New York"],
+        allowsText: false,
+        multiple: true
+      }
+    }
+    const answer = { ...next, action: "clarify" as const, text: "", optionLabels: ["California", "New York"] }
+    expect(validateAdaptiveDecision(scenario, pending, answer, [])).toEqual(answer)
+    expect(() => validateAdaptiveDecision(scenario, pending, { ...answer, optionLabels: ["Texas"] }, [])).toThrow(
+      "controls"
+    )
+    expect(() => validateAdaptiveDecision(scenario, pending, next, [])).toThrow("pending clarification")
+    expect(() => validateAdaptiveDecision(scenario, pending, { ...answer, text: "unsupported free text" }, [])).toThrow(
+      "controls"
+    )
+  })
+
+  it("requires every goal disposition before finishing, without certifying correctness", () => {
+    const finish = { ...next, action: "finish" as const, text: "" }
+    expect(() => validateAdaptiveDecision(scenario, visible, finish, [])).toThrow("every goal")
+    const goals = [
+      { id: "discover", status: "addressed" as const, quote: "I found a California proposal." },
+      { id: "compare", status: "unresolved" as const, quote: "New York evidence is unavailable." }
+    ]
+    expect(validateAdaptiveDecision(scenario, visible, { ...finish, goals }, []).goals).toEqual(goals)
+  })
+})
 
 describe("explicit scenario scope", () => {
   it("rejects unspecified states instead of selecting convenient federal scope", () => {
@@ -292,14 +391,16 @@ describe("dependent prompt selection and coverage", () => {
     })
   })
 
-  it("supplies actual returned record identities for an authored dependent question", () => {
+  it("does not inject discovered records into an authored dependent question", () => {
     const steps = progress()
     steps[0]!.answered = true
     steps[0]!.records.push({ id: "bill:fixture", kind: "bill", title: "Synthetic proposal" })
     const selection = selectStep(scenarioSchema.parse(authored), 1, steps)
     expect(selection.kind).toBe("submit")
     invariant(selection.kind === "submit")
-    expect(selection.prompt).toContain("Synthetic proposal (bill:fixture)")
+    expect(selection.prompt).toBe(
+      "Compare the discovered proposals.\n\nApproved jurisdictions: U.S. federal, California, New York."
+    )
     expect(selection.branch).toBe("primary")
   })
 
@@ -465,7 +566,10 @@ describe("export observation and the executable plan", () => {
     const cli = fileURLToPath(new URL("./run-scenarios.ts", import.meta.url))
     const result = spawnSync(process.execPath, ["--import", "tsx", cli, "--scenario", "-"], {
       cwd: fileURLToPath(new URL("../../", import.meta.url)),
-      input: JSON.stringify(authored),
+      input: JSON.stringify({
+        ...authored,
+        adaptive: { persona: "A reporter", constraints: ["Preserve the named states"] }
+      }),
       encoding: "utf8",
       timeout: 30_000,
       env: { ...process.env, OPENROUTER_API_KEY: "", LANGFUSE_SECRET_KEY: "" }

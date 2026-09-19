@@ -75,6 +75,13 @@ export const scenarioSchema = z
     jurisdictions,
     acceptedNarrowing: z.strictObject({ jurisdictions, reason: text }).optional(),
     maximumExchanges: z.number().int().min(1).max(8),
+    adaptive: z
+      .strictObject({
+        persona: text,
+        constraints: z.array(text).min(1).max(12),
+        maximumRecoveries: z.number().int().min(0).max(2).default(1)
+      })
+      .optional(),
     steps: z
       .array(
         z.strictObject({
@@ -213,12 +220,106 @@ export function selectStep(scenario: Scenario, index: number, progress: readonly
       }
       prompt = dependency.onMissingRecords
       branch = "missing-records"
-    } else {
-      prompt += `\n\nPreviously observed records:\n${records.map((record) => `${record.title} (${record.id})`).join("\n")}`
     }
   }
   prompt += `\n\nApproved jurisdictions: ${approvedJurisdictions(scenario).join(", ")}.`
   return { kind: "submit" as const, branch, prompt }
+}
+
+export const adaptiveDecisionSchema = z.strictObject({
+  action: z.enum(["follow-up", "clarify", "recover", "finish", "pause"]),
+  text: z.string().trim().max(2000),
+  optionLabels: z.array(text).max(12),
+  reason: text,
+  jurisdictions,
+  goals: z
+    .array(
+      z.strictObject({
+        id: identifier,
+        status: z.enum(["addressed", "unresolved"]),
+        quote: text
+      })
+    )
+    .max(8)
+})
+export type AdaptiveDecision = z.infer<typeof adaptiveDecisionSchema>
+export type VisibleConversation = {
+  transcript: string
+  clarification: { question: string; optionLabels: string[]; allowsText: boolean; multiple: boolean } | null
+  hasFailure: boolean
+}
+
+export function validateAdaptiveDecision(
+  scenario: Scenario,
+  visible: VisibleConversation,
+  decision: AdaptiveDecision,
+  previous: readonly AdaptiveDecision[]
+) {
+  const approved = approvedJurisdictions(scenario)
+  if (
+    decision.jurisdictions.length !== approved.length ||
+    decision.jurisdictions.some((name) => !approved.includes(name))
+  ) {
+    throw new Error("Adaptive decision changed the approved jurisdictions.")
+  }
+  if (
+    new Set(decision.goals.map((goal) => goal.id)).size !== decision.goals.length ||
+    decision.goals.some(
+      (goal) => !scenario.steps.some((step) => step.id === goal.id) || !visible.transcript.includes(goal.quote)
+    )
+  ) {
+    throw new Error("Adaptive goal claims must name authored goals and quote visible conversation text exactly.")
+  }
+  if (decision.action === "pause") {
+    return decision
+  }
+  if (decision.action === "finish") {
+    if (visible.clarification || scenario.steps.some((step) => !decision.goals.some((goal) => goal.id === step.id))) {
+      throw new Error("Finishing requires a disposition for every goal and no pending clarification.")
+    }
+    return decision
+  }
+  if (decision.action === "clarify") {
+    const clarification = visible.clarification
+    if (
+      !clarification ||
+      (!clarification.allowsText && decision.text) ||
+      (!clarification.multiple && decision.optionLabels.length > 1) ||
+      new Set(decision.optionLabels).size !== decision.optionLabels.length ||
+      decision.optionLabels.some(
+        (label) => clarification.optionLabels.filter((option) => option === label).length !== 1
+      ) ||
+      (!decision.text && !decision.optionLabels.length)
+    ) {
+      throw new Error("Adaptive answer does not match the visible clarification controls.")
+    }
+  } else {
+    if (visible.clarification || !decision.text || decision.optionLabels.length) {
+      throw new Error("A follow-up requires text and no pending clarification or selected options.")
+    }
+    if (visible.hasFailure && decision.action !== "recover") {
+      throw new Error("A failed response requires an explicit recovery decision.")
+    }
+  }
+  if (
+    decision.action === "recover" &&
+    (!visible.hasFailure ||
+      previous.filter((entry) => entry.action === "recover").length >= (scenario.adaptive?.maximumRecoveries ?? 0))
+  ) {
+    throw new Error("The adaptive recovery budget is exhausted or no visible failure exists.")
+  }
+  if (
+    decision.text === scenario.steps[0]?.prompt ||
+    previous.some(
+      (entry) =>
+        entry.action === decision.action &&
+        entry.text === decision.text &&
+        JSON.stringify(entry.optionLabels) === JSON.stringify(decision.optionLabels)
+    )
+  ) {
+    throw new Error("The adaptive driver will not repeat an identical submission.")
+  }
+  return decision
 }
 
 export function selectClarification(
