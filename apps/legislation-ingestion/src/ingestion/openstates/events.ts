@@ -92,7 +92,7 @@ export interface OpenStatesEventSnapshot {
   documents: DocumentInsert[]
   event: EventInsert
   organizationIds: string[]
-  organizationReferences?: string[]
+  organizationReferences?: string[][]
   participants: ParticipantInsert[]
   sessionIds: string[]
 }
@@ -208,7 +208,9 @@ export function normalizeOpenStatesEvent(
   const startAt = sourceDate(source.start_date, "start_date")
   const provenanceComplete = httpsSourceUrl(sourceUrl) && context.retrievedAt !== undefined
   const organizationReferences =
-    context.jurisdictionCode === "nc" ? Object.keys(northCarolinaCommitteeIdentifiers(source.sources)) : []
+    context.jurisdictionCode === "nc"
+      ? Object.keys(northCarolinaCommitteeIdentifiers(source.sources)).map((reference) => [reference])
+      : []
   const agendaSessionIds = [
     ...new Set(source.agenda.flatMap((item) => item.related_entities.flatMap((entity) => entity.bill?.session ?? [])))
   ].map((session) => legislativeSessionId(context.jurisdictionCode, session))

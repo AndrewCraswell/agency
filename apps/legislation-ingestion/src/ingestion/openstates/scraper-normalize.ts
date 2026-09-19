@@ -61,7 +61,7 @@ export function normalizeNcScraperEvents(records: readonly unknown[], retrievedA
     snapshot.sessionIds = [legislativeSessionId("nc", "2025")]
     const organizationReferences = Object.keys(northCarolinaCommitteeIdentifiers(record.sources))
     snapshot.event.organizationRelationsComplete = organizationReferences.length === 1
-    snapshot.organizationReferences = organizationReferences
+    snapshot.organizationReferences = organizationReferences.map((reference) => [reference])
     return snapshot
   })
 }

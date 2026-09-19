@@ -7,6 +7,16 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ## Requirements and evidence
 
+### Shared committee reference resolution
+
+Event organization references are grouped by host. Each group can carry multiple publisher identifiers, but all
+matching identifiers must resolve to exactly one canonical organization in the event's jurisdiction. Conflicting,
+missing or empty host groups keep relationship readiness false. Multiple identifiers for one organization do not
+produce duplicate relationships, and distinct hosts remain separate requirements. NC, AK and WA use this one resolver.
+The existing adapters currently supply their validated code identities; Washington numeric committee-ID enrichment
+still requires a retained official inventory crosswalk. This change does not introduce name-based matching or mark
+unresolved Washington meetings complete. Thirty focused adapter/resolver tests and ingestion type checking passed.
+
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |
 | [x] | Inspect production archive baseline | September 19 2026 read-only query: 16,753 bills across five sessions below; historical-import runs exist for each |

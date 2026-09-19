@@ -230,7 +230,7 @@ describe("Open States event normalization", () => {
       sourceUrl: "https://www.ncleg.gov/Committees/NoticeDocument/12345/CommitteeMeetingNotice",
       upstreamIds: { ncNoticeDocument: "12345", openstates: "ocd-event/api-uuid" }
     })
-    expect(snapshot.organizationReferences).toEqual(["ncCommittee:NonStanding:680"])
+    expect(snapshot.organizationReferences).toEqual([["ncCommittee:NonStanding:680"]])
   })
 
   it("does not trust an NC numeric upstream ID without its matching notice URL", () => {

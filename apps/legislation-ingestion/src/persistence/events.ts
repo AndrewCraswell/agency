@@ -27,7 +27,8 @@ export interface EventSnapshot {
   documents: Array<typeof eventDocuments.$inferInsert>
   event: typeof legislativeEvents.$inferInsert
   organizationIds?: readonly string[]
-  organizationReferences?: readonly string[]
+  /** One group per host; identifiers within a group are alternative source identities. */
+  organizationReferences?: readonly (readonly string[])[]
   participants: Array<typeof eventParticipants.$inferInsert>
   sessionIds?: readonly string[]
 }

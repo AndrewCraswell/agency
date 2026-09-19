@@ -170,7 +170,7 @@ describe("Washington shared event preparation", () => {
     ]
     record.participants[0]!.name = record.extras.committees[0]!.name
     const [row] = normalizeWashingtonScraperEvents([record], context)
-    expect(row?.organizationReferences).toEqual(["waCommittee:joint:JLARC"])
+    expect(row?.organizationReferences).toEqual([["waCommittee:joint:JLARC"]])
     expect(row?.organizationIds).toEqual([])
     expect(row?.event.organizationRelationsComplete).toBe(true)
     expect(resolveEventOrganizationReferences([row!], [])[0]?.event.organizationRelationsComplete).toBe(false)
@@ -215,7 +215,7 @@ describe("Washington shared event preparation", () => {
       { identifier: "HB 1000", jurisdictionId: "jurisdiction:wa", sessionId: "session:wa:2025-2026" }
     ])
     expect(row?.participants[0]?.organizationId).toBeUndefined()
-    expect(row?.organizationReferences).toEqual(["waCommittee:house:ED"])
+    expect(row?.organizationReferences).toEqual([["waCommittee:house:ED"]])
   })
   it("reuses relationship resolvers and refuses unresolved or ambiguous identities", () => {
     const rows = normalizeWashingtonScraperEvents([fixture()], context)

@@ -30,4 +30,36 @@ it("requires unique same-jurisdiction resolution for every source organization r
     expect(result?.organizationIds).toEqual([])
   }
   expect(snapshot.event.organizationRelationsComplete).toBe(true)
+
+  const aliases = { ...snapshot, organizationReferences: [["publisher:id:42", "akCommittee:34:HFIN"]] }
+  const byStableId = { ...candidate, upstreamIds: { "publisher:id:42": "source" } }
+  const byBoth = { ...candidate, upstreamIds: { ...candidate.upstreamIds, ...byStableId.upstreamIds } }
+  for (const candidates of [[candidate], [byStableId], [byBoth], [candidate, byStableId]]) {
+    const result = resolveEventOrganizationReferences([aliases], candidates)[0]
+    expect(result?.event.organizationRelationsComplete).toBe(true)
+    expect(result?.organizationIds).toEqual([candidate.id])
+  }
+  const conflicting = resolveEventOrganizationReferences(
+    [aliases],
+    [candidate, { ...byStableId, id: "organization:conflict" }]
+  )[0]
+  expect(conflicting?.event.organizationRelationsComplete).toBe(false)
+  expect(conflicting?.organizationIds).toEqual([])
+
+  for (const organizationReferences of [[[]], [["publisher:missing"]], [["akCommittee:34:HFIN"], []]]) {
+    const result = resolveEventOrganizationReferences([{ ...snapshot, organizationReferences }], [candidate])[0]
+    expect(result?.event.organizationRelationsComplete).toBe(false)
+  }
+  const twoHosts = resolveEventOrganizationReferences(
+    [{ ...snapshot, organizationReferences: [["akCommittee:34:HFIN"], ["publisher:id:42"]] }],
+    [candidate, { ...byStableId, id: "organization:second" }]
+  )[0]
+  expect(twoHosts?.event.organizationRelationsComplete).toBe(true)
+  expect(twoHosts?.organizationIds).toEqual([candidate.id, "organization:second"])
+  expect(
+    resolveEventOrganizationReferences(
+      [{ ...aliases, event: { ...aliases.event, organizationRelationsComplete: false } }],
+      [byBoth]
+    )[0]?.event.organizationRelationsComplete
+  ).toBe(false)
 })

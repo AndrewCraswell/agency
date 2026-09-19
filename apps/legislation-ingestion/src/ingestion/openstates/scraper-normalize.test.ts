@@ -273,7 +273,7 @@ describe("NC raw scraper mapping", () => {
       ]
     }
     const snapshot = normalizeNcScraperEvents([event], new Date("2026-09-14T00:00:00Z"))[0]
-    expect(snapshot?.organizationReferences).toEqual(["ncCommittee:HouseStanding:42"])
+    expect(snapshot?.organizationReferences).toEqual([["ncCommittee:HouseStanding:42"]])
     expect(snapshot?.event.organizationRelationsComplete).toBe(true)
   })
   it("ignores per-run UUIDs and keeps name-only votes unresolved", () => {

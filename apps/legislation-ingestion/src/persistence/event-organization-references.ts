@@ -6,14 +6,14 @@ export function resolveEventOrganizationReferences(
 ) {
   return snapshots.map((snapshot) => {
     let resolved = true
-    const referencedIds = (snapshot.organizationReferences ?? []).flatMap((reference) => {
+    const referencedIds = (snapshot.organizationReferences ?? []).flatMap((references) => {
       const matches = [
         ...new Set(
           candidates
             .filter(
               (candidate) =>
                 candidate.jurisdictionId === snapshot.event.jurisdictionId &&
-                Object.hasOwn(candidate.upstreamIds, reference)
+                references.some((reference) => Object.hasOwn(candidate.upstreamIds, reference))
             )
             .map((candidate) => candidate.id)
         )

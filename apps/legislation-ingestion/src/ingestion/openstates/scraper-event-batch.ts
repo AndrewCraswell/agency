@@ -50,7 +50,7 @@ export function normalizeAlaskaScraperEvent(input: unknown, retrievedAt: Date) {
   result.event.sourceId = record.upstream_id
   result.event.upstreamIds = { alaskaMeetingOccurrence: record.upstream_id, session: "34" }
   result.sessionIds = ["session:ak:34"]
-  result.organizationReferences = [`akCommittee:34:${chamber}${sponsor}`]
+  result.organizationReferences = [[`akCommittee:34:${chamber}${sponsor}`]]
   // This adapter is admitted only for the verified Legislature 34 extraction lane.
   // A single explicit host is the source's organization set, not a name-based canonical match.
   const host = z.object({ entity_type: z.literal("committee"), note: z.literal("host"), name: z.string().min(1) })
