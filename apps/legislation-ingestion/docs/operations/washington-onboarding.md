@@ -877,3 +877,11 @@ review time. A read-only replay of the exact retained Ramos file produces one pe
 This is not yet a production import, vote-link reconciliation, or closure of the other historical reviews.
 The full checksummed current/history pair also replays successfully: 337 people, 369 terms, 19 quarantined files and
 zero current-roster coverage issues. Twenty-four focused review/import/quarantine tests and ingestion type-checking pass.
+
+The reviewed full archive pair was then imported into production through `importPeopleRepository` and replayed once.
+Ramos previously had no canonical Open States terms; the import created the two expected terms. The second import
+preserved their exact IDs, dates and source URLs without adding a term. Authenticated MCP `get_person` returned his
+inactive identity, both terms and the Senate resolution provenance. A read-only replay of the first ten-bill retained
+batch now resolves all 784 vote positions (previously 780) and every sponsor. Evidence:
+`artifacts/openstates-washington-hosted/first-batch-people-role-reviewed.json`. This proves resolution for that batch;
+the full-session null-link reconciliation still waits for the hosted bill cycle and is not claimed complete.
