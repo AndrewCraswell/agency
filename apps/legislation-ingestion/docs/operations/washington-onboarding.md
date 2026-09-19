@@ -192,3 +192,29 @@ The retained attempt was recovered without repeating extraction. It too contains
 completed bill records), not a complete batch, and remains unpromoted. Evidence is retained as
 `wa-frozen-house-retry-20260919` in the same local archive store. Investigate source diagnostics/retry policy before
 increasing concurrency; neither failure authorizes partial promotion or claims a complete Washington refresh.
+
+## Full-batch retry and meeting-source audit (2026-09-19)
+
+The pinned runtime already configures three source retries with exponential waits of 10, 20 and 40 seconds.
+An isolated ten-bill diagnostic retry completed HB 1000-1009 successfully with 25 retained files, using the same
+runtime and no additional retry layer. Its archive is `wa-frozen-house-diagnostic-20260919` in the Washington bill
+store. Checksum-verified canonical preparation returned all ten requested bills and replayed deterministically.
+This is evidence of intermittent upstream failure, not identification of the original failing endpoint or sustained
+source reliability. No concurrency increase or hosted activation was made.
+
+The shared production writer then replayed the complete batch in the isolated local database. Two consecutive
+passes retained identical IDs/counts: 11 total bills (including the earlier Senate canary), 162 actions, 70 document
+records, 12 votes and 882 named positions. HB 1000 overlapped the earlier canary without becoming a duplicate.
+Reports are `artifacts/openstates-washington-bills/reports/house-batch-{diagnostic,database-replay}.json`.
+This does not replace archive-to-scraper parity, production acceptance, or full-session ingestion checks.
+
+A live read of the official `CommitteeMeetingService.asmx/GetCommitteeMeetings` endpoint for January 13-19, 2025
+returned 77 meetings with 77 distinct agenda IDs across House and Senate, including one cancelled meeting.
+The pinned upstream event scraper currently discards cancellations and agenda entries without bill IDs, fetches the
+same inventory once per chamber, and defaults to a future-only window. Before activating Washington events, preserve
+cancellations and non-bill agenda entries, use explicit bounded windows and stable agenda identities, and validate
+Pacific timestamps. Reuse the canonical event writer and existing cancellation status mapping; no separate event
+database or Washington-specific persistence pipeline is needed. Events remain disabled.
+
+The preceding full `pnpm verify` run completed successfully. Its optional positive disposable-corpus API acceptance
+was skipped; this is not proof of authenticated Washington retrieval.
