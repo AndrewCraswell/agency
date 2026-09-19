@@ -57,7 +57,7 @@ function fixture() {
   }
 }
 
-it.each(["Joint", "House", "Senate"])(
+it.each(["Joint", "House", "Senate", "Other", "Agency"])(
   "retains %s hosts without abbreviations without inventing organization links",
   (agency) => {
     const raw = fixture()
@@ -70,6 +70,34 @@ it.each(["Joint", "House", "Senate"])(
     expect(snapshot?.event.sourceIsOfficial).toBe(true)
   }
 )
+
+it.each(["Other", "Agency"])("resolves %s hosts only by exact accepted publisher identity", (agency) => {
+  const raw = fixture()
+  raw.extras.committees[0] = { id: "21488", agency, code: "I900", name: "Publisher host" }
+  raw.participants[0]!.name = "Publisher host"
+  const rows = normalizeWashingtonScraperEvents([raw], context)
+  const reference = `waCommitteeId:2025-26:${agency.toLowerCase()}:21488`
+  expect(rows[0]?.organizationReferences).toEqual([[reference]])
+  const candidate = {
+    id: "organization:accepted-host",
+    jurisdictionId: "jurisdiction:wa",
+    upstreamIds: { [reference]: "retained publisher evidence" }
+  }
+  const [resolved] = resolveEventOrganizationReferences(rows, [candidate])
+  expect(resolved?.organizationIds).toEqual([candidate.id])
+  expect(resolved?.event.organizationRelationsComplete).toBe(true)
+  for (const candidates of [
+    [],
+    [{ ...candidate, jurisdictionId: "jurisdiction:ak" }],
+    [{ ...candidate, upstreamIds: { [`waCommittee:${agency.toLowerCase()}:I900`]: "code alone" } }],
+    [{ ...candidate, upstreamIds: { [`waCommitteeId:2023-24:${agency.toLowerCase()}:21488`]: "wrong biennium" } }],
+    [candidate, { ...candidate, id: "organization:ambiguous" }]
+  ]) {
+    const [held] = resolveEventOrganizationReferences(rows, candidates)
+    expect(held?.organizationIds).toEqual([])
+    expect(held?.event.organizationRelationsComplete).toBe(false)
+  }
+})
 
 it("still rejects malformed nonempty abbreviations", () => {
   const raw = fixture()

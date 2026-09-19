@@ -182,17 +182,15 @@ export function normalizeWashingtonScraperEvents(
     result.event.sourceIsOfficial = true
     result.event.sessionRelationsComplete = true
     result.sessionIds = [legislativeSessionId("wa", scraperBillProfiles.wa.session)]
-    result.organizationReferences = hosts.flatMap((entry) =>
-      entry.agency === "House" || entry.agency === "Senate" || entry.agency === "Joint"
-        ? [
-            [
-              `waCommitteeId:${scraperBillProfiles.wa.biennium}:${entry.agency.toLowerCase()}:${entry.id}`,
-              ...(entry.code.length > 0 ? [`waCommittee:${entry.agency.toLowerCase()}:${entry.code}`] : [])
-            ]
-          ]
-        : []
-    )
-    result.event.organizationRelationsComplete = result.organizationReferences.length === hosts.length
+    result.organizationReferences = hosts.map((entry) => [
+      `waCommitteeId:${scraperBillProfiles.wa.biennium}:${entry.agency.toLowerCase()}:${entry.id}`,
+      // Roster code aliases are established only for legislative chambers. Other hosts still have exact IDs.
+      ...((entry.agency === "House" || entry.agency === "Senate" || entry.agency === "Joint") && entry.code.length > 0
+        ? [`waCommittee:${entry.agency.toLowerCase()}:${entry.code}`]
+        : [])
+    ])
+    // This describes source completeness; the shared resolver still requires one accepted match for every host.
+    result.event.organizationRelationsComplete = true
     result.event.canonicalFactsComplete = true
     for (const [order, item] of record.agenda.entries()) {
       const agenda = result.agendaItems.find((entry) => entry.agendaItem.ordinal === order)

@@ -7,6 +7,20 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+The Washington event adapter now preserves signed, biennium/agency-scoped publisher host IDs for `Other` and
+`Agency` records instead of dropping them. It reuses the existing shared unique-identity resolver; no organizations
+are created and no code-only alias is admitted for these categories. Eighteen focused tests pass, including
+missing/ambiguous matches, wrong jurisdiction, wrong biennium and abbreviation-only candidates. A real retained
+SAO meeting (32331) now emits `waCommitteeId:2025-26:other:21488` and remains unready with no accepted mapping.
+Full verification is running as 86708; the change is not yet deployed. Publisher host-catalog ingestion remains open.
+
+Primary-source research confirms the missing hosts cannot simply be mapped onto JLARC: the official SAO agenda
+names its own audit-hearing body, and the Legislature has a separate archived profile for the aging/disability
+joint committee. Preserve distinct identities and historical active states when adding source-backed organizations.
+Sources: https://app.leg.wa.gov/committeeschedules/Home/Agenda/32331 and
+https://leg.wa.gov/about-the-legislature/committees/joint/adjlec/.
+Alias dry-run retry 4698 also stopped on a publisher connect timeout; no apply was dispatched.
+
 All 90 retained calendar replay runs are now complete. Every retrieved output reports `reconciled`, with 90
 distinct window IDs and the expected plan `c2e3cc9c1b0f9fdcbd5dd40c8f4aa20fe8128c2740e85ceebb267daffac97a42`.
 Output totals are 1,453 event snapshots, 6,336 bill links and 1,424 organization links. Link totals are not counts
