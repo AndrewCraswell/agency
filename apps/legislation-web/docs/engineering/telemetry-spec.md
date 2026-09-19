@@ -13,6 +13,8 @@ The [tool execution contract](tool-execution-telemetry.md) owns per-call outcome
 result budgets and tool/model cost attribution.
 The [runtime ownership design](telemetry-runtime-design.md) resolves pinned-SDK provider initialization,
 sink-independent sampling and export isolation, with local feasibility evidence.
+The [typed foundation](telemetry-foundation.md) documents the implemented default-off contract/emitter boundary and
+its bounds; feature producers and vendor adapters remain separate delivery tasks.
 The [product specification](../product/product-spec.md) continues to own product scope. Telemetry must not ship a
 planned product feature merely to fill a dashboard.
 
