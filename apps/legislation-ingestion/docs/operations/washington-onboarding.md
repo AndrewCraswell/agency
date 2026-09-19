@@ -66,6 +66,14 @@ Docker context, `apps/legislation-web/Dockerfile`, and `/ready`. The preceding s
 verdict and recheck for intervening releases before uploading. Railway MCP authentication is unavailable, while
 CLI access succeeds; no credentials or service configuration were changed.
 
+Verification session 25266 subsequently completed with exit zero, including 240 web acceptance tests and built
+MCP/runtime checks. Database tests without configured test URLs remained skipped; previously recorded isolated
+database tests are separate evidence. Clean commit `7a7e523` was uploaded to the explicit production web service as
+deployment `d2080fd2-f894-4727-8901-f236cc4a47c2`. Upload is not deployment success: inspect that exact deployment
+and recheck authenticated document provenance before closing the release gate. The HB 1230-1254 dry run completed
+with 163 candidates and no held groups; apply session 72173 is running, so the completed cleanup cursor remains
+HB 1229 until terminal apply and zero-candidate replay. No Washington schedules were enabled.
+
 ### Cross-state content activation recovery
 
 Hosted inspection found older North Carolina content controllers on `20260919.6` failed when their global enabled-state
