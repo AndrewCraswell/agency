@@ -56,4 +56,25 @@ describe("archive vote identities", () => {
       normalize([identified])[0]?.vote.id
     )
   })
+
+  it("rejects conflicting observations rather than silently dropping a roll call", () => {
+    expect(() => normalize([vote, { ...vote, result: "fail" }])).toThrow("Conflicting Open States vote")
+    expect(() =>
+      normalize([
+        { ...vote, id: "shared" },
+        { ...vote, id: "shared", counts: [{ option: "yes", value: 40 }] }
+      ])
+    ).toThrow("Conflicting Open States vote")
+  })
+
+  it("deduplicates identical observations without depending on position order", () => {
+    const named = {
+      ...vote,
+      votes: [
+        { voter_name: "First", option: "yes" },
+        { voter_name: "Second", option: "no" }
+      ]
+    }
+    expect(normalize([named, { ...named, votes: [...named.votes].reverse() }])).toHaveLength(1)
+  })
 })

@@ -431,3 +431,11 @@ explicitly dates his House swearing-in to January 14, 2013. These establish sour
 they are not permission to reverse dates mechanically or infer all term boundaries. Reviewed correction evidence must
 remain separate from the shared importer, bind the exact source identity/hash, and pass the same period validation.
 No historical-role corrections have been applied from this review yet.
+
+## Conflicting vote observation admission
+
+The shared normalizer now refuses conflicting observations with the same vote identity, including source-ID collisions
+and indistinguishable unidentified roll calls. It still collapses identical duplicate observations, independently of
+vote/position array order. This prevents silent first-record-wins loss; it does not invent identities from vote tallies.
+Sixty focused normalizer/scraper tests passed, and all 3,413 current archive bills still normalize to 2,306 votes under
+the stricter rule. A new full verification run was started after this change.

@@ -526,7 +526,22 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       }
     }
   })
-  const uniqueVotes = uniqueBy(votes, (vote) => vote.vote.id)
+  const votesById = new Map<string, (typeof votes)[number]>()
+  const voteObservation = (entry: (typeof votes)[number]) =>
+    JSON.stringify({
+      vote: { ...entry.vote, sourceSequence: undefined },
+      positions: entry.positions
+        .map((position) => ({ ...position, sourceSequence: undefined }))
+        .sort((a, b) => a.sourceIdentity.localeCompare(b.sourceIdentity))
+    })
+  for (const entry of votes) {
+    const previous = votesById.get(entry.vote.id)
+    if (previous && voteObservation(previous) !== voteObservation(entry)) {
+      throw new Error("Conflicting Open States vote observations share one identity")
+    }
+    if (!previous) votesById.set(entry.vote.id, entry)
+  }
+  const uniqueVotes = [...votesById.values()]
   const actions = uniqueBy(
     source.actions.map((action, index) => {
       const sourceOrganizationId = organizationReferenceId(action.organization ?? action.organization_id)
