@@ -51,6 +51,14 @@ bill run `run_06gbir9hlo4daa7fuooqqa2a01` was executing on `20260919.22`; no ove
 These findings keep replay, content and public-read requirements open. Successful bill promotion is not full bill
 readiness, and the existing archive content baseline does not prove the new records are processed.
 
+Pending OCR lifecycle implementation: both shared aggregate writers now initialize unevaluated documents with an
+explicit pending OCR state. Ordinary metadata replay repairs only null OCR status on pending records; it never infers
+OCR-not-required for an unprocessed file. The single-record writer now preserves the complete existing OCR evidence
+and retry state rather than allowing incoming metadata to reset those fields. Twenty-five focused tests passed,
+including real isolated PostgreSQL insert/replay tests for both writers; ingestion type-check and focused lint passed.
+Deployment and production replay are still required before closing the public-read gap. Protocol-alias duplication
+remains separate and unresolved. The preceding full verification terminated with 24 web-test failures, not a clean pass.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled

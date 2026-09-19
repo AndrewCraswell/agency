@@ -5,7 +5,7 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { upsertBillAggregates } from "./bill-aggregates.js"
+import { upsertBillAggregate, upsertBillAggregates } from "./bill-aggregates.js"
 import { assertBillBatchOwnership, claimBillBatchOwnership, releaseBillBatchOwnership } from "./bill-batch-ownership.js"
 import { commitOwnedEmptyPromotion } from "./promotion-receipt.js"
 
@@ -30,6 +30,38 @@ describePostgres.sequential("atomic bill batch receipts", () => {
       sourceUrl: `https://example.test/receipts/${suffix}`,
       title: "Original"
     }
+  })
+  it.each(["single", "batch"])("preserves document OCR lifecycle through %s metadata replay", async (mode) => {
+    const bill = aggregate(`ocr-${mode}`)
+    const document = {
+      id: `${bill.bill.id}:document`,
+      billId: bill.bill.id,
+      sourceUrl: "https://example.test/document.pdf",
+      classification: "version",
+      title: "Bill"
+    }
+    const value = { ...bill, documents: [{ document }] }
+    const write = () =>
+      mode === "single" ? upsertBillAggregate(database, value) : upsertBillAggregates(database, [value])
+    await write()
+    const read = () => database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, document.id) })
+    expect(await read()).toMatchObject({ processingStatus: "pending", ocrStatus: "pending" })
+    await database.update(schema.billDocuments).set({ ocrStatus: null }).where(eq(schema.billDocuments.id, document.id))
+    await write()
+    expect(await read()).toMatchObject({ processingStatus: "pending", ocrStatus: "pending" })
+    const processed = {
+      processingStatus: "processed",
+      ocrStatus: "processed",
+      ocrProvider: "test-provider",
+      ocrCompletedAt: new Date("2026-09-19T00:00:00Z"),
+      ocrPageCount: 1,
+      processingAttempts: 2,
+      text: "OCR text"
+    }
+    await database.update(schema.billDocuments).set(processed).where(eq(schema.billDocuments.id, document.id))
+    await write()
+    await write()
+    expect(await read()).toMatchObject(processed)
   })
   beforeAll(async () => {
     await migrate(database, {

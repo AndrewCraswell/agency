@@ -19,6 +19,7 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { and, eq, inArray, notInArray, or, sql } from "drizzle-orm"
 import { assertBillBatchOwnership, type BillBatchOwnership } from "./bill-batch-ownership.js"
+import { prepareBillDocument } from "./bill-document-lifecycle.js"
 import { preserveBillResolvedLinks } from "./bill-resolved-links.js"
 import { observeCanonicalRecord } from "./changes.js"
 import { promotionAlreadyCommitted } from "./promotion-receipt.js"
@@ -460,17 +461,7 @@ export async function upsertBillAggregate(
             )
           )
         })
-        const persistedDocument = {
-          ...document.document,
-          id: existingDocument?.id ?? document.document.id,
-          blobPath: existingDocument?.blobPath ?? document.document.blobPath,
-          contentHash: existingDocument?.contentHash ?? document.document.contentHash,
-          lastAttemptAt: existingDocument?.lastAttemptAt ?? document.document.lastAttemptAt,
-          processingAttempts: existingDocument?.processingAttempts ?? document.document.processingAttempts,
-          processingError: existingDocument?.processingError ?? document.document.processingError,
-          processingStatus: existingDocument?.processingStatus ?? document.document.processingStatus,
-          text: existingDocument?.text ?? document.document.text
-        }
+        const persistedDocument = prepareBillDocument(document.document, existingDocument)
         await transaction
           .insert(billDocuments)
           .values(persistedDocument)
@@ -826,10 +817,12 @@ export async function upsertBillAggregates(
     const existingDocumentIds = new Map(
       existingDocuments.map((document) => [`${document.billId}\u001f${document.sourceUrl}`, document.id])
     )
-    const documentValues = candidateDocumentValues.map((document) => ({
-      ...document,
-      id: existingDocumentIds.get(`${document.billId}\u001f${document.sourceUrl}`) ?? document.id
-    }))
+    const documentValues = candidateDocumentValues.map((document) =>
+      prepareBillDocument({
+        ...document,
+        id: existingDocumentIds.get(`${document.billId}\u001f${document.sourceUrl}`) ?? document.id
+      })
+    )
     if (documentValues.length > 0) {
       await transaction
         .insert(billDocuments)
@@ -840,6 +833,7 @@ export async function upsertBillAggregates(
             classification: sql`excluded.classification`,
             contentType: sql`excluded.content_type`,
             documentDate: sql`excluded.document_date`,
+            ocrStatus: sql`coalesce(${billDocuments.ocrStatus}, case when ${billDocuments.processingStatus} = 'pending' then 'pending' end)`,
             sourceUrl: sql`excluded.source_url`,
             title: sql`excluded.title`,
             updatedAt: new Date(),
