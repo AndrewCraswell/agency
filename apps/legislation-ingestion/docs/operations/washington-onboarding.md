@@ -19,6 +19,16 @@ The follow-up server-filtered Trigger inspection returned no executing, waiting,
 pending-version content controllers/workers (no further pages). Database inspection found no content locks for
 `nc:all`, `nc:2003` or `nc:2011`. Candidate `20260919.33` is building without promotion after the deployed importer
 contract check passed; successful deployment and resumed-run results are still required.
+Deployment `20260919.33` subsequently succeeded without promotion (`ae55rwrc`, image manifest
+`0c5563b41c977572069a0acc969a5bf90afbd5dcbf11b44edb68d2ad8dd5ed2f`). Single-bill recovery canary
+`run_06gbjvs06ul5bngfpad5kt6v01` completed: NC 2003 SB 765 processed one document, inserted one embedding and skipped
+five existing vectors, with no document, OCR or embedding failures. This validates the activation repair in the hosted
+runtime; it does not mean the NC backlog is complete. WA extraction chains remain on their existing pinned versions.
+After repeating the empty-runtime and database-lock checks, two idempotent version-33 controllers were queued with
+their previous 10-bill, concurrency-two limits: `run_06gbk05lvqcn7gev8paj89qv01` (NC 2003) and
+`run_06gbk05mvr0tbd3a0d7tcaa601` (NC 2011). The shared content queue remains limited to two workers. No schedules were
+created or changed. Other failed NC scopes still require inventory and controlled recovery; do not assume these two
+controllers repair them.
 
 ## Requirements and evidence
 
