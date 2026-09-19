@@ -549,3 +549,13 @@ is therefore not limited to concurrent Washington-wide searches. Inspection of `
 bill/document filters are applied after a global bounded nearest-neighbor candidate scan; a bill-scoped request does not
 first restrict the vector population to that bill. Query-plan and latency evidence are still needed before selecting a
 replacement strategy. Do not mask the failure by raising timeouts or claim the cause proven from code inspection alone.
+
+A bounded production read-only EXPLAIN ANALYZE comparison reproduced the global candidate timeout (15,281 ms,
+PostgreSQL 57014) and completed a bill-restricted exact-vector query in 532 ms. Both used the same synthetic nonzero
+1536-dimensional vector and existing model/contract; this measures query execution, not semantic relevance or full HTTP
+latency. Plans are retained in `reports/semantic-selectivity-plan.json` in the archive audit store.
+
+The shared query builder now has an explicit bill/document-scoped exact-ranking path with all filters before ranking
+and pagination. A SQL `OFFSET 0` boundary prevents inlining into a global graph scan; numeric `.offset(0)` was found
+to be omitted by the ORM and is not sufficient. Five generated-query tests pass. Actual generated-query execution,
+broader correctness/pagination checks, full verification and deployment remain pending; statewide search is unchanged.

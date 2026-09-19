@@ -1210,6 +1210,52 @@ export function buildSemanticPassageSearchQuery(
   const distance = sql<number>`${documentSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const snippet = sql<string | null>`left(${documentSections.text}, 1200)`
   const filters = passageFilters(input)
+  // Explicit parents are a small relational population. Rank that population
+  // exactly instead of fetching a global ANN window and discarding most of it.
+  // OFFSET 0 preserves the subquery boundary so the planner cannot turn this
+  // back into an unfiltered HNSW scan. Keep all requested filters inside it.
+  if (input.billIds?.length || input.documentIds?.length) {
+    const scoped = database.$with("scoped_passage_embeddings").as(
+      database
+        .select({ sectionId: documentSections.id, embedding: documentSectionEmbeddings.embedding })
+        .from(billDocuments)
+        .innerJoin(documentSections, eq(documentSections.documentId, billDocuments.id))
+        .innerJoin(documentSectionEmbeddings, eq(documentSectionEmbeddings.sectionId, documentSections.id))
+        .innerJoin(bills, eq(billDocuments.billId, bills.id))
+        .where(
+          and(
+            eq(documentSectionEmbeddings.model, route.model),
+            eq(documentSectionEmbeddings.inputContract, route.embeddingInputContract),
+            eq(billDocuments.processingStatus, "processed"),
+            ...filters
+          )
+        )
+        .offset(sql`0`)
+    )
+    const scopedDistance = sql<number>`${scoped.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
+    const ranked = database.$with("ranked_scoped_passages").as(
+      database
+        .select({ sectionId: scoped.sectionId, distance: scopedDistance.as("distance") })
+        .from(scoped)
+        .orderBy(asc(scopedDistance), asc(scoped.sectionId))
+        .limit(limit + 1)
+        .offset(offset)
+    )
+    return database
+      .with(scoped, ranked)
+      .select(
+        passageSelection(
+          semanticSimilarityScore(sql<number>`${ranked.distance}`),
+          snippet,
+          sql<number>`${ranked.distance}`
+        )
+      )
+      .from(ranked)
+      .innerJoin(documentSections, eq(ranked.sectionId, documentSections.id))
+      .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+      .innerJoin(bills, eq(billDocuments.billId, bills.id))
+      .orderBy(asc(ranked.distance), asc(documentSections.id))
+  }
   const jurisdictionSectionPrefix = semanticPassageJurisdictionSectionPrefix(input)
   const nearestLimit =
     filters.length === 0 || hasOnlySemanticPassageJurisdictionFilter(input)
