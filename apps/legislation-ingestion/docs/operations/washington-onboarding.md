@@ -644,3 +644,25 @@ No embeddings or indexes were rebuilt. Hosted scraper activation, full-calendar 
 remain separate open gates. The official CommitteeService `GetCommittees?biennium=2025-26` was also inspected: it supplies
 standing committee identifiers, chamber, names, acronym and phone, but does not establish a complete child hierarchy.
 Do not use that response alone to assert full committee-detail completeness.
+
+## Hosted extraction canary (2026-09-19)
+
+The existing Azure job supports per-execution image and environment overrides. This was used instead of replacing
+the shared production template. A cloud layer built on the verified Washington adapter passed runtime startup checks
+and was pushed as immutable image
+`acrr2jsh7uot4legdev.azurecr.io/openstates-scraper@sha256:0696a3f2801ded36d29364040d9c308b181b5484fa266384bd5d2c2d15ec2f75`.
+Its source-input approval remains `3556d11cfa4010e0e8909e14b551f054e2b84a3d7deb0a242d62101e5bc8156e`.
+
+A separate `openstates-scraper-canary` queue was created in the existing storage account. The shared dispatcher submitted
+only HB 1000 with a 600-second deadline. Execution `leg-dev-openstates-scraper-vy3vrgq` ran from 08:48:00 to 08:48:42 UTC
+and reached `Succeeded`. The shared worker retained six checksum-verified files in the existing `state-sources` container
+and emitted a queue-deletion settlement for `wa-hosted-house-canary-20260919`. The shared archive reader and normalizer
+accepted exactly `bill:wa:2025-2026:hb:1000`: three actions, two documents and no votes. Repeated normalization was identical.
+Manifest SHA-256: `c7f560a60da24eacd36669f33a8fe9da9940a0eec34a5134877acfab99624af1`.
+Local verification report: `artifacts/openstates-washington-hosted/house-canary.json`.
+
+Read-back confirmed the persistent production job still uses image `sha256:cd41549d55377efdd0ce8637bda9800f74b546d2791cb0dc083d132776938369`
+and queue `openstates-scraper-dispatch`. The canary has no database credentials and performed no canonical writes.
+This proves hosted House extraction, identity-based queue/blob access, retention, settlement and deterministic normalization;
+it does not prove Senate/vote extraction, hosted event windows, canonical promotion, full-session refresh or regular syncing.
+The canary queue has no automatic scaler; future canaries require explicit one-off executions.
