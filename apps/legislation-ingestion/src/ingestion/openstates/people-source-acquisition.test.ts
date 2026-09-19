@@ -68,5 +68,20 @@ describe("Open States people source acquisition", () => {
     ])
     expect(current).toMatchObject({ revision, state: "ak", lane: "entities" })
     expect(history).toMatchObject({ revision, state: "ak", lane: "history" })
+    const objectsBefore = [...store.objects].map(([path, bytes]) => [path, Buffer.from(bytes).toString("hex")])
+    const replay = {
+      files: [...current.files, ...history.files],
+      retrievedAt: new Date("2026-09-19T00:00:00Z"),
+      revision,
+      state: "ak" as const
+    }
+    expect(await archivePeopleRepositoryRevision(store, replay)).toEqual(result)
+    expect([...store.objects].map(([path, bytes]) => [path, Buffer.from(bytes).toString("hex")])).toEqual(objectsBefore)
+    await expect(
+      archivePeopleRepositoryRevision(store, {
+        ...replay,
+        files: replay.files.map((file) => ({ ...file, content: `${file.content}\nchanged: true` }))
+      })
+    ).rejects.toThrow("conflict or corruption")
   })
 })

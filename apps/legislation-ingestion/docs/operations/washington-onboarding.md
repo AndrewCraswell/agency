@@ -44,6 +44,15 @@ limits were changed.
 The subsequent refresh-focused suite passed 24 tests, plus ingestion types and lint. The bill retry was verified
 `EXECUTING`; calendar continuation reached 54/90 windows and dispatched `run_06gbjme7dkinun7iau3l6lju01`.
 
+Unpromoted deployment `20260919.31` (`ju803at3`, manifest
+`9d7d791050408587b9badb598f5413623d0b33ad39cc6528142266dcaf71eb9f`) contains the identity and refresh wiring.
+Version-pinned hosted refresh `run_06gbjo205l80mhubltgmeoeq01` completed with `no_change`, proving the official
+inventory can be acquired, retained and compared from the hosted runtime. Existing extraction chains were not
+cancelled or moved. An additional local fix preserves the original retrieval time when replaying the same retained
+people revision after a supplementary source change, while still rejecting changed file bytes. Its six focused
+tests, types and lint pass; this later fix still requires deployment. Full verification remains unaccepted because
+of the separate web vote-attribution evidence-ID assertions.
+
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |
 | [x] | Inspect production archive baseline | September 19 2026 read-only query: 16,753 bills across five sessions below; historical-import runs exist for each |

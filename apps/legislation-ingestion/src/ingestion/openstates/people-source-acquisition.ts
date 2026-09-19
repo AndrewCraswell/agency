@@ -3,7 +3,7 @@ import { unzipSync } from "fflate"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { peopleSourceState, type PeopleRepositoryFile } from "./people-repository.js"
-import { archivePeoplePilot } from "./pilot-archive.js"
+import { archivePeoplePilot, readArchivedPeoplePilot } from "./pilot-archive.js"
 
 const revisionSchema = z.string().regex(/^[a-f0-9]{40}$/)
 const stateSchema = peopleSourceState
@@ -91,15 +91,21 @@ export async function archivePeopleRepositoryRevision(
   const state = stateSchema.parse(input.state)
   if (!Number.isFinite(input.retrievedAt.getTime())) throw new Error("Invalid people source retrieval date")
   const runId = `source-${revision.slice(0, 16)}`
+  const existingPath = `openstates/people/${revision}/${state}/entities/${runId}/complete.json`
+  // A retained revision is immutable, including its original observation time. New supplementary
+  // sources may require replaying it later; still compare every supplied file through putVerified.
+  const retrievedAt = (await target.exists(existingPath))
+    ? (await readArchivedPeoplePilot(target, existingPath)).retrievedAt
+    : input.retrievedAt
   const current = await archivePeoplePilot(
-    createLaneStore(input.files, revision, input.retrievedAt, state, "entities"),
+    createLaneStore(input.files, revision, retrievedAt, state, "entities"),
     target,
     runId,
     "entities",
     state
   )
   const history = await archivePeoplePilot(
-    createLaneStore(input.files, revision, input.retrievedAt, state, "history"),
+    createLaneStore(input.files, revision, retrievedAt, state, "history"),
     target,
     runId,
     "history",
