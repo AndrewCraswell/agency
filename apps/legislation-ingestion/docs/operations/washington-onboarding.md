@@ -913,3 +913,17 @@ One idempotent hosted `openstates-event-windows` continuation was submitted as `
 caller-supplied next offset. Further continuations are hosted and version-pinned, not dependent on a long-lived local
 operator. No recurring schedule or concurrency increase was introduced. Submission alone does not prove the next window
 was promoted; its receipt remains a verification gate.
+
+The recovered hosted run subsequently completed with 14 committed windows and 76 pending, and automatically started
+`run_06gbigjp6jb1lhar4c518sof01` on the same `20260919.22` version. This closes the recovery/continuation check, not
+the full calendar gate. Concurrent bill run `run_06gbifkgn816jnsueb4crmbq01` completed ten bills with zero unresolved
+sponsors or positions and dispatched the next batch automatically.
+
+Two further source-bound reviews remove contradictory pre-2025 Senate assertions for Jessica Bateman and Keith
+Goehner. The [January 13 Senate journal, page 9](https://leg.wa.gov/media/uvyisxpn/sj_25_001.pdf) distinguishes them
+from re-elected senators and records their new-member oaths. Bateman's
+[official biography](https://senatedemocrats.wa.gov/bateman/biography/) also confirms earlier House service. These
+reviews preserve independently supplied House roles; their precise House boundary dates are not newly certified.
+The full retained pair now prepares 337 people and 374 terms with 14 held histories and no current-roster coverage
+issues. Production import and replay succeeded: all six reviewed people have exactly two canonical terms each, and
+the second import preserves all twelve IDs, dates and source URLs. No new name-specific engine logic was introduced.

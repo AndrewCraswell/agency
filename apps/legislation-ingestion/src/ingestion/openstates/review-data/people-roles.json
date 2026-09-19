@@ -103,5 +103,50 @@
         "reason": "Official biography distinguishes House service beginning January 2016 from Senate service beginning January 2023. Remove the contradictory 2016-2023 Senate assertion, preserving the independently supplied roles."
       }
     ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Jessica-Bateman-ea4e5e77-aa55-421f-8ac5-48c65fbc2ab0.yml",
+    "sourceSha256": "53f20372f1afa4cf3b528300e87bff4d5f2a6a5799cd885fd9f66171bddf5297",
+    "personId": "ocd-person/ea4e5e77-aa55-421f-8ac5-48c65fbc2ab0",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "22",
+          "start_date": "2021-01-11",
+          "end_date": "2025-01-12"
+        },
+        "after": null,
+        "evidenceUrls": [
+          "https://leg.wa.gov/media/uvyisxpn/sj_25_001.pdf",
+          "https://senatedemocrats.wa.gov/bateman/biography/"
+        ],
+        "reason": "The January 13, 2025 Senate journal page 9 lists Bateman among newly elected senators, separately from re-elected senators, and records her oath. Her official biography confirms previous House service. Remove the contradictory earlier Senate assertion while retaining the independently supplied House role and current Senate role; this does not independently certify the House boundary dates."
+      }
+    ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Keith-Goehner-f1d29afa-f381-46f2-a6e4-17ab801b3fdb.yml",
+    "sourceSha256": "b4486705696335ebce0e03a9725ab90e89b5c7fb986a1333c1bca22a50d7970d",
+    "personId": "ocd-person/f1d29afa-f381-46f2-a6e4-17ab801b3fdb",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "12",
+          "start_date": "2019-01-14",
+          "end_date": "2025-01-12"
+        },
+        "after": null,
+        "evidenceUrls": ["https://leg.wa.gov/media/uvyisxpn/sj_25_001.pdf"],
+        "reason": "The January 13, 2025 Senate journal page 9 lists Goehner among newly elected senators, separately from re-elected senators, and records his oath. Remove the contradictory continuous 2019-2025 Senate assertion. Retain the independently supplied House and current Senate roles without claiming independent verification of the House boundary dates."
+      }
+    ]
   }
 ]
