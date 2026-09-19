@@ -7,6 +7,21 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Washington's official website publishes a September 19 scheduled-maintenance notice (7 AM-7 PM), consistent
+with both hosted extraction and local publisher connection failures. Do not spin up repeated replacements during
+the outage. Source: https://leg.wa.gov/about-the-legislature/legislative-agencies/leap/.
+
+Leonard Christian now has an exact-file-hash-bound role review: correct the 2014 role to House and remove the
+contradictory 2013-2014 duplicate and erroneous 2023-2025 Senate assertion. The official member-history book,
+PDF pages 29-30 (printed 23-24), visually confirms the January 8, 2014 House appointment and successor
+McCaslin's November 25, 2014 oath. The 2025 Senate journal confirms Christian's new January 13 Senate oath.
+His existing 2023 House role is preserved, including its **not independently verified January 6, 2025 end date**;
+that date remains an open evidence item and this is not a claim of fully verified history.
+
+Full retained-pair preparation produces 337 people, 383 terms, 14 applied reviews, six structural history holds,
+and zero coverage issues. Christian has exactly three prepared roles. Twelve focused review/refresh tests pass;
+full verification is running as 89272. No production foundation import or deployment has applied this new review.
+
 Host-reference fix `41af79f` passed full `pnpm verify` (86708), including 240 API acceptance cases and built MCP
 acceptance; optional database and positive-corpus skips remain explicit. It has not been deployed.
 

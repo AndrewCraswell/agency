@@ -2,6 +2,63 @@
   {
     "state": "wa",
     "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Leonard-Christian-4d01a3aa-64e5-439d-9574-c1b749c1d52a.yml",
+    "sourceSha256": "ef58ba68db160109af054639b89d1ed3d75385589c7ca7b19b0c268da1e1c3fe",
+    "personId": "ocd-person/4d01a3aa-64e5-439d-9574-c1b749c1d52a",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "4",
+          "start_date": "2014-01-08",
+          "end_date": "2014-11-25"
+        },
+        "after": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "4",
+          "start_date": "2014-01-08",
+          "end_date": "2014-11-25"
+        },
+        "evidenceUrls": [
+          "https://leg.wa.gov/media/2f5orsfq/members-of-the-legislature-1889-2025.pdf",
+          "https://lawfilesext.leg.wa.gov/law/Journals/2014/HJ_14_001.htm"
+        ],
+        "reason": "The official 2025 member-history book, printed pages 23-24, records Christian's January 8, 2014 House appointment and successor Robert McCaslin's November 25, 2014 oath to serve the unexpired term. The 2014 House journal identifies the appointment to House district 4 position 1. Correct the chamber while retaining the supplied transition dates."
+      },
+      {
+        "before": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "4",
+          "start_date": "2013-01-01",
+          "end_date": "2014-12-31"
+        },
+        "after": null,
+        "evidenceUrls": ["https://leg.wa.gov/media/2f5orsfq/members-of-the-legislature-1889-2025.pdf"],
+        "reason": "Remove the duplicate House interval whose 2013 start predates the documented January 2014 appointment and whose December end follows the documented November successor oath. The corrected 2014 role preserves the source-backed service interval."
+      },
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "4",
+          "start_date": "2023-01-09",
+          "end_date": "2025-01-12"
+        },
+        "after": null,
+        "evidenceUrls": [
+          "https://leg.wa.gov/media/2f5orsfq/members-of-the-legislature-1889-2025.pdf",
+          "https://leg.wa.gov/media/s1wjssrg/2025-senate-journal-vol-1.pdf"
+        ],
+        "reason": "The official member-history book identifies Christian's 2023 service as House, while the January 13, 2025 Senate journal records his new Senate oath. Remove the erroneous duplicate 2023-2025 Senate role. Preserve the existing 2023 House role and 2025 Senate role unchanged. This review does not independently validate the retained House end date of January 6, 2025; exact end-date verification remains open."
+      }
+    ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
     "path": "data/wa/legislature/Jeremie-Dufault-2dce9967-a2fc-4211-9b1a-bce3b4f32a09.yml",
     "sourceSha256": "0c5739fa24f27ce484be7307d1050b9227932b0bf3f5b92248b9d6458457b1a5",
     "personId": "ocd-person/2dce9967-a2fc-4211-9b1a-bce3b4f32a09",
