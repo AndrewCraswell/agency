@@ -118,6 +118,9 @@ export async function buildScraperPersonBackfillPlan(
     where sponsor.person_id is null
     order by sponsor.id
   `)
+  // Bound lookups by session and vote before filtering null identities. Global
+  // null-person statistics can otherwise select a cross-jurisdiction index scan.
+  // Count siblings once per unresolved vote, not once per unresolved position.
   const positionRows = await database.execute<{
     chamber: string | null
     name: string | null
@@ -128,19 +131,34 @@ export async function buildScraperPersonBackfillPlan(
     source_url: string | null
     vote_id: string
   }>(sql`
-    select position.vote_id, position.source_identity, vote.source_url, vote.motion, vote.chamber,
-      totals.position_count, position.source_name as name,
+    with session_votes as materialized (
+      select vote.id, vote.source_url, vote.motion, vote.chamber, vote.held_date, vote.held_at
+      from legislation.bills bill
+      join legislation.votes vote on vote.bill_id = bill.id
+      where bill.session_id = ${sessionId}
+    ), unresolved as materialized (
+      select vote.*, position.source_identity, position.source_name
+      from session_votes vote
+      cross join lateral (
+        select position.source_identity, position.source_name, position.person_id
+        from legislation.vote_positions position
+        where position.vote_id = vote.id
+        offset 0
+      ) position
+      where position.person_id is null
+    ), totals as materialized (
+      select unresolved.id, tally.position_count
+      from (select distinct id from unresolved) unresolved
+      cross join lateral (
+        select count(*)::int as position_count
+        from legislation.vote_positions sibling where sibling.vote_id = unresolved.id
+      ) tally
+    )
+    select vote.id as vote_id, vote.source_identity, vote.source_url, vote.motion, vote.chamber,
+      totals.position_count, vote.source_name as name,
       coalesce(vote.held_date, vote.held_at::date)::text as observed_date
-    from legislation.bills bill
-    join legislation.votes vote on vote.bill_id = bill.id
-    join legislation.vote_positions position on position.vote_id = vote.id
-    join lateral (
-      select count(*)::int as position_count
-      from legislation.vote_positions sibling
-      where sibling.vote_id = vote.id
-    ) totals on true
-    where bill.session_id = ${sessionId} and position.person_id is null
-    order by position.vote_id, position.source_identity
+    from unresolved vote join totals on totals.id = vote.id
+    order by vote.id, vote.source_identity
   `)
   const linkedSponsorRows = await database.execute<{ bill_id: string; classification: string; person_id: string }>(sql`
     select sponsor.bill_id, sponsor.classification, sponsor.person_id

@@ -796,3 +796,15 @@ The reconciliation sponsor query initially exceeded the diagnostic 30-second sta
 indexed action lookup to bills with unresolved sponsors let that query finish. The subsequent existing vote-position
 query then exceeded the same budget and still needs performance diagnosis. Full verification was started again and
 is not yet a clean completion result. The active hosted chain remains pinned to `20260919.20`, without this new fix.
+
+Reconciliation's vote query plan incorrectly estimated one global null-person row and selected `vote_positions_person_idx`
+before applying the Washington session scope. The query now materializes session votes and performs vote-indexed position
+lookups before filtering unresolved identities, counting siblings once per unresolved vote. A production read-only plan
+then completed under the same 30-second per-statement budget: 170,529 proposed vote-position links, 567 still not found,
+three proposed sponsors, zero ambiguous decisions and zero sponsor uniqueness conflicts. Scott on HB 1002 maps to the
+canonical Shaun Scott source identity. This is a correction plan, not executed corrections or proof of complete history.
+
+The second hosted batch `run_06gbi2r0tkftcbf908bdmblo01` reached `FAILED` before promotion with
+`Ambiguous duplicate sponsor observation`. Do not launch an overlapping refresh or accept the failed batch as committed;
+inspect its retained sponsorships and correct normalization only if the evidence establishes an exact duplicate.
+Calendar ingestion is independent and has committed 11 of 90 windows.
