@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { EvidenceSnapshot } from "../evidence"
+import { malformedCitationFixtures } from "./citationEvidenceFixtures"
 import { createCitationPresentation } from "./citationPresentation"
 
 function source(id: string, overrides: Partial<EvidenceSnapshot> = {}): EvidenceSnapshot {
@@ -14,6 +15,76 @@ function source(id: string, overrides: Partial<EvidenceSnapshot> = {}): Evidence
 }
 
 describe("citation presentation", () => {
+  it.each(malformedCitationFixtures)("normalizes the exact delimiter receipt $marker within its answer", (fixture) => {
+    const presentation = createCitationPresentation(fixture.answerId, fixture.marker, [fixture.evidence])
+    expect(presentation.formatCitationGroups(fixture.marker)).toBe(fixture.marker.slice(0, -1) + ")")
+    expect(presentation.citations).toEqual([{ answerId: fixture.answerId, number: 1, evidence: fixture.evidence }])
+  })
+
+  it("exposes malformed missing and ambiguous IDs as unavailable without guessing another source", () => {
+    const text = "[7](#citation-e549] [4](#citation-e139]"
+    const presentation = createCitationPresentation("answer", text, [
+      source("nearby", { citationRef: "e54" }),
+      source("first-match", { citationRef: "e139" }),
+      source("conflict", { citationRef: "e139" })
+    ])
+    expect(presentation.formatCitationGroups(text)).toBe("[7](#citation-e549) [4](#citation-e139)")
+    expect(presentation.citations).toEqual([])
+    expect(presentation.missingReferences).toEqual(["e549", "e139"])
+  })
+
+  it("normalizes malformed citations only in prose and preserves Markdown boundaries and literals", () => {
+    const untouched = [
+      "`[7](#citation-e549]`",
+      "",
+      "```md",
+      "[7](#citation-e549]",
+      "```",
+      "",
+      "    [7](#citation-e549]",
+      "",
+      "\\[7](#citation-e549]",
+      "",
+      "![7](#citation-e549]",
+      "",
+      "[outer [7](#citation-e549]](https://publisher.example/other)",
+      "",
+      '<div data-value="[7](#citation-e549]"></div>',
+      "",
+      "[7](#citation-e549suffix] [7](#citation-e0549] [7](#citation-e549"
+    ].join("\n")
+    const prose =
+      "\n\n**Claim [7](#citation-e549]**\n\n| Claim | Source |\n| --- | --- |\n| Text | [7](#citation-e549] |"
+    const presentation = createCitationPresentation("answer", untouched + prose, [
+      source("exact", { citationRef: "e549" })
+    ])
+    expect(presentation.formatCitationGroups(untouched + prose)).toBe(
+      untouched + prose.replaceAll("[7](#citation-e549]", "[7](#citation-e549)")
+    )
+    expect(presentation.citations).toHaveLength(1)
+  })
+
+  it("never carries a repaired marker's evidence across answers", () => {
+    const text = "[7](#citation-e549]"
+    const first = source("first", { citationRef: "e549" })
+    const second = source("second", { citationRef: "e549" })
+    expect(createCitationPresentation("first-answer", text, [first]).citations[0]?.evidence).toBe(first)
+    expect(createCitationPresentation("second-answer", text, [second]).citations[0]?.evidence).toBe(second)
+    expect(createCitationPresentation("missing-answer", text, []).missingReferences).toEqual(["e549"])
+  })
+
+  it.each([
+    "[outer [7](#citation-e549]](https://publisher.example/other)",
+    "![outer [7](#citation-e549]](https://publisher.example/image.png)",
+    "[outer [7](#citation-e549]][ref]\n\n[ref]: https://publisher.example/other",
+    "![outer [7](#citation-e549]][ref]\n\n[ref]: https://publisher.example/image.png"
+  ])("preserves malformed markers inside surrounding Markdown labels: %s", (label) => {
+    const text = `A claim [7](#citation-e549].\n\n${label}`
+    const presentation = createCitationPresentation("answer", text, [source("exact", { citationRef: "e549" })])
+    expect(presentation.formatCitationGroups(text)).toBe(`A claim [7](#citation-e549).\n\n${label}`)
+    expect(presentation.citations).toHaveLength(1)
+  })
+
   it("resolves short references to exact stable evidence and retains pending numbers", () => {
     const evidence = source("stable", { citationRef: "e1" })
     const text = "[9](#citation-e1) [2](#citation-unknown)"

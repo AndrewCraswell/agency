@@ -26,6 +26,7 @@ import {
 } from "../composerDraft"
 import { createConversationExport, downloadConversationExport } from "../conversationExport"
 import { entityPageSchema } from "../entityResults"
+import { messageResponseOutcome, responseIsIncomplete } from "../responseOutcome"
 import type { ResearchSuggestion } from "../suggestions"
 import { ChatComposer } from "./ChatComposer"
 import type { CitationSelection } from "./citationPresentation"
@@ -66,7 +67,6 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
   } = useConversationSession()
   const isConversation = conversationId !== undefined
   const hasSession = conversationId === chat.id
-  const [wasStopped, setWasStopped] = useState(false)
   const [isReferencePickerOpen, setReferencePickerOpen] = useState(false)
   const [selectedCitation, setSelectedCitation] = useState<CitationSelection>()
   const [exportStatus, setExportStatus] = useState<string>()
@@ -84,6 +84,22 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
     .map(messageComposerDraft)
     .filter((previous) => composerDraftText(previous).trim().length > 0)
   const hasInterruptedResponse = interruptedMessageId !== undefined && interruptedMessageId === lastMessage?.id
+  const lastOutcome =
+    lastMessage && (lastMessage.role === "assistant" || hasInterruptedResponse)
+      ? messageResponseOutcome(lastMessage)
+      : undefined
+  const hasIncompleteResponse =
+    !isRunning && (lastOutcome ? responseIsIncomplete(lastOutcome) : status === "error" || hasInterruptedResponse)
+  const outcomeNotices = {
+    cancelled: "Response stopped. Any research received is still available.",
+    exhausted: "Research reached its response limit. The answer may be incomplete.",
+    failed: "Research could not be completed. Your question is still in this conversation.",
+    partial: "This response may be incomplete. Any research received is still available.",
+    unknown: "Completion could not be confirmed. Your question is still in this conversation.",
+    completed: "",
+    clarification: ""
+  }
+  const outcomeNotice = outcomeNotices[lastOutcome?.status ?? "unknown"]
   const composer = useRef<ComposerHandle>(null)
   const isNavigating = useRef(false)
   const isExportCommand = composerDraftText(draft).trim() === "/export"
@@ -137,7 +153,6 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
     if (!hasSession) {
       return
     }
-    setWasStopped(false)
     void sendMessage({
       text: composerDraftText(draft),
       metadata: composerMessageMetadata(draft, references)
@@ -147,7 +162,6 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
   }
 
   function handleStop() {
-    setWasStopped(true)
     markInterrupted()
     cancelClarification()
     void stop()
@@ -260,8 +274,8 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
                         isLatest={message.id === messages.at(-1)?.id}
                         isRunning={isRunning && message.id === messages.at(-1)?.id}
                         isIncomplete={
-                          message.id === interruptedMessageId ||
-                          ((wasStopped || status === "error") && message.id === messages.at(-1)?.id)
+                          !(isRunning && message.id === messages.at(-1)?.id) &&
+                          responseIsIncomplete(messageResponseOutcome(message))
                         }
                         onEvidence={handleEvidence}
                       />
@@ -291,13 +305,12 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
                     Preparing research...
                   </output>
                 )}
-                {(status === "error" || (hasInterruptedResponse && !isRunning)) && (
+                {hasIncompleteResponse && (
                   <div role="alert" className="space-y-3 text-sm">
-                    <p>The response was interrupted. Your question is still in this conversation.</p>
+                    <p>{outcomeNotice}</p>
                     <Button
                       variant="outline"
                       onClick={() => {
-                        setWasStopped(false)
                         void regenerate()
                       }}
                     >

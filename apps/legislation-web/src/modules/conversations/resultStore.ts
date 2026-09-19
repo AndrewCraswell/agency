@@ -7,7 +7,6 @@ import {
   type EntityKind
 } from "./entityResults"
 import { entityCardSchema, entityKindSchema } from "./entityResults"
-import { resultPersistence } from "./resultPersistence.server"
 
 export const retainedResultSchema = z.object({
   sessionKey: z.uuid(),
@@ -216,4 +215,19 @@ export function createResultStore(now = Date.now, persistence?: ResultPersistenc
   return { create, page, record, references, persist, recover }
 }
 
-export const resultStore = createResultStore(Date.now, resultPersistence)
+export const resultStore = createResultStore(Date.now, {
+  async save(id, snapshot) {
+    const { resultPersistence } = await import("./resultPersistence.server")
+    return resultPersistence.save(id, snapshot)
+  },
+  async read(sessionKey, id) {
+    const { resultPersistence } = await import("./resultPersistence.server")
+    return resultPersistence.read(sessionKey, id)
+  },
+  async load(tool, input, signal) {
+    signal.throwIfAborted()
+    const { resultPersistence } = await import("./resultPersistence.server")
+    signal.throwIfAborted()
+    return resultPersistence.load(tool, input, signal)
+  }
+})

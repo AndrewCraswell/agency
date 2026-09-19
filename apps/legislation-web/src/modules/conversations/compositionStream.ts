@@ -1,6 +1,7 @@
 import { applySpecPatch, pipeJsonRender, type Spec } from "@json-render/core"
 import type { UIMessageChunk } from "ai"
 import { z } from "zod"
+import { clarificationRequestSchema } from "./clarification"
 import {
   answerCatalog,
   maximumPresentationBytes,
@@ -17,10 +18,11 @@ import {
 import { createCompositionDiagnostics, type CompositionDiagnostic } from "./compositionDiagnostics"
 import type { EntityCard } from "./entityResults"
 import { contentReferenceSchema, type PresentationContent } from "./presentationContent"
+import { researchToolMeasurementSchema } from "./researchMeasurement"
+import { classifyResponse, incompleteAnswerText, responseIsIncomplete, type ResponseOutcome } from "./responseOutcome"
 
 const maximumBlocks = 3
 const maximumPatches = 16
-const incompleteAnswerText = "Research ended before an answer was completed. Narrow the question and try again."
 const unsafeKeys = new Set(["__proto__", "prototype", "constructor", ...Object.getOwnPropertyNames(Object.prototype)])
 const rootSchema = presentationSpecSchema.shape.root.refine((root) => !unsafeKeys.has(root))
 const patchSchema = z.union([
@@ -49,7 +51,12 @@ type CompositionStreamOptions = {
   onBlock?: (block: PresentationBlock) => void
   onComplete?: (answer: ComposedAnswer) => void
 }
-export type ComposedAnswer = { text: string; blocks: PresentationBlock[]; isInterrupted: boolean }
+export type ComposedAnswer = {
+  text: string
+  blocks: PresentationBlock[]
+  isInterrupted: boolean
+  outcome: ResponseOutcome
+}
 type PendingBlock = {
   blockId: string
   root: string
@@ -90,6 +97,13 @@ export function createCompositionStream(
   let invalidFence = false
   let invalidBlockId = 0
   let hasCompletedClarification = false
+  let finishReason: string | null = null
+  let hasStreamError = false
+  let hasSyntheticText = false
+  let hasExhaustedResearch = false
+  let outcome: ResponseOutcome | undefined
+  const pendingToolCalls = new Set<string>()
+  const failedToolCalls = new Set<string>()
   const renderedBlocks = new Map<string, PresentationBlock>()
 
   function flushText(controller: ReadableStreamDefaultController<UIMessageChunk>) {
@@ -119,9 +133,32 @@ export function createCompositionStream(
     }
     textIds.add(id)
     renderedText += incompleteAnswerText
+    hasSyntheticText = true
     controller.enqueue({ type: "text-start", id })
     controller.enqueue({ type: "text-delta", id, delta: incompleteAnswerText })
     controller.enqueue({ type: "text-end", id })
+  }
+
+  function terminalOutcome() {
+    return classifyResponse({
+      hasAnswer:
+        Boolean((hasSyntheticText ? renderedText.replace(incompleteAnswerText, "") : renderedText).trim()) ||
+        [...renderedBlocks.values()].some((block) => block.state === "ready"),
+      hasClarification: hasCompletedClarification,
+      finishReason,
+      pendingToolCalls: [...pendingToolCalls],
+      failedToolCalls: [...failedToolCalls],
+      isError: hasStreamError || [...renderedBlocks.values()].some((block) => block.state === "error"),
+      isInterrupted: Boolean(interruption),
+      isExhausted: hasExhaustedResearch
+    })
+  }
+
+  function emitOutcome(controller: ReadableStreamDefaultController<UIMessageChunk>) {
+    if (!outcome) {
+      outcome = terminalOutcome()
+      controller.enqueue({ type: "data-response-outcome", id: "response-outcome", data: outcome })
+    }
   }
 
   function complete() {
@@ -130,7 +167,8 @@ export function createCompositionStream(
       options.onComplete?.({
         text: renderedText,
         blocks: [...renderedBlocks.values()],
-        isInterrupted: isCancelled || Boolean(interruption)
+        isInterrupted: responseIsIncomplete(outcome ?? terminalOutcome()),
+        outcome: outcome ?? terminalOutcome()
       })
     }
   }
@@ -338,7 +376,7 @@ export function createCompositionStream(
     const marker: UIMessageChunk = { type: "data-composition-context", data: null }
     contexts.set(marker, chunk)
     controller.enqueue(marker)
-    if (chunk.type === "data-presentation" || chunk.type === "data-spec") {
+    if (chunk.type === "data-presentation" || chunk.type === "data-spec" || chunk.type === "data-response-outcome") {
       return
     }
     if (chunk.type === "text-start" || chunk.type === "text-delta" || chunk.type === "text-end") {
@@ -434,6 +472,7 @@ export function createCompositionStream(
             flushText(controller)
             seal(controller)
             emitIncompleteAnswer(controller)
+            emitOutcome(controller)
             complete()
             controller.close()
             reader.releaseLock()
@@ -472,13 +511,33 @@ export function createCompositionStream(
           }
           const context = contexts.get(chunk)
           if (context) {
+            if (context.type === "data-tool-measurement") {
+              const measurement = researchToolMeasurementSchema.safeParse(context.data)
+              hasExhaustedResearch ||= measurement.success && measurement.data.failureCode === "step_limit"
+            }
+            if (context.type === "tool-input-start" || context.type === "tool-input-available") {
+              pendingToolCalls.add(context.toolCallId)
+            } else if (
+              context.type === "tool-output-available" ||
+              context.type === "tool-output-error" ||
+              context.type === "tool-output-denied"
+            ) {
+              pendingToolCalls.delete(context.toolCallId)
+              if (context.type !== "tool-output-available") {
+                failedToolCalls.add(context.toolCallId)
+              }
+            } else if (context.type === "finish") {
+              finishReason = context.finishReason ?? null
+            }
             if (
               (context.type === "tool-input-start" || context.type === "tool-input-available") &&
               context.toolName === "ask_clarification"
             ) {
               clarificationToolCalls.add(context.toolCallId)
             } else if (context.type === "tool-output-available" && clarificationToolCalls.has(context.toolCallId)) {
-              hasCompletedClarification = true
+              hasCompletedClarification = z
+                .object({ clarification: clarificationRequestSchema })
+                .safeParse(context.output).success
             }
             if (context.type === "text-start" || context.type === "text-delta" || context.type === "text-end") {
               if (!textChunkSchema.safeParse(context).success) {
@@ -491,9 +550,14 @@ export function createCompositionStream(
               }
             } else if (context.type === "abort" || context.type === "error") {
               interruption = "Presentation interrupted before completion."
+              hasStreamError = context.type === "error"
             } else if (context.type === "finish" && context.finishReason === "error") {
               interruption = "Presentation interrupted before completion."
-            } else if (context.type === "data-presentation" || context.type === "data-spec") {
+            } else if (
+              context.type === "data-presentation" ||
+              context.type === "data-spec" ||
+              context.type === "data-response-outcome"
+            ) {
               report("Incoming presentation data is not accepted.")
             }
             continue
@@ -547,6 +611,7 @@ export function createCompositionStream(
             if (chunk.type === "finish") {
               emitIncompleteAnswer(controller)
             }
+            emitOutcome(controller)
             isTerminated = true
           }
           controller.enqueue(chunk)
@@ -557,7 +622,9 @@ export function createCompositionStream(
           return
         }
         interruption = "Presentation stream failed."
+        hasStreamError = true
         reject(interruption, controller)
+        emitOutcome(controller)
         complete()
         controller.enqueue({ type: "error", errorText: "The response stream ended unexpectedly." })
         controller.close()

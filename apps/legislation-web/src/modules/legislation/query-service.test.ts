@@ -1,6 +1,8 @@
 import * as schema from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
+import { describeAnalytics } from "@repo/legislation-core/research/analytics-catalog"
+import { analyticsQuerySchema } from "@repo/legislation-core/research/analytics-contract"
 import { getTableColumns } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { PgDialect } from "drizzle-orm/pg-core"
@@ -36,6 +38,13 @@ import {
 const pool = new pg.Pool({ connectionString: "postgresql://query-service-test.invalid/legislation" })
 const database = drizzle(pool, { schema })
 
+vi.mock("./analytics-telemetry", () => ({
+  createAnalyticsTelemetry: () => ({
+    observe: async (_name: string, _metadata: unknown, operation: () => Promise<unknown>) => operation(),
+    shutdown: async () => undefined
+  })
+}))
+
 afterAll(async () => {
   await pool.end()
 })
@@ -57,11 +66,65 @@ describe("mention discovery", () => {
       const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
       expect(statement).toContain("union all")
       expect(statement).toContain("date asc nulls last")
+      expect(statement).toContain(`coalesce(to_char("action_at" at time zone 'UTC'`)
+      expect(statement).toContain(`to_char("action_date", 'YYYY-MM-DD')`)
+      expect(statement).toContain(`coalesce(to_char("held_at" at time zone 'UTC'`)
+      expect(statement).toContain(`to_char("held_date", 'YYYY-MM-DD')`)
       expect(statement).toContain("offset")
       expect(query.mock.calls[0]?.[1]).toEqual(["bill:us:116:hr:1", "bill:us:116:hr:1", 2, 1])
       expect(query).toHaveBeenCalledOnce()
     } finally {
       query.mockRestore()
+    }
+  })
+
+  it("serves the analytics catalog without executing or connecting to the database", async () => {
+    const query = vi.spyOn(pool, "query").mockImplementation(() => {
+      throw new Error("Static catalogs must not query the database")
+    })
+    const connect = vi.spyOn(pool, "connect").mockImplementation(() => {
+      throw new Error("Static catalogs must not acquire a connection")
+    })
+    try {
+      const service = new LegislationQueryService(database)
+      await expect(service.describeAnalytics()).resolves.toEqual(describeAnalytics())
+      await expect(service.describeAnalytics(["bills"])).resolves.toEqual(describeAnalytics(["bills"]))
+      await expect(service.describeAnalytics(["private_data"])).rejects.toMatchObject({ category: "invalid_request" })
+      expect(query).not.toHaveBeenCalled()
+      expect(connect).not.toHaveBeenCalled()
+    } finally {
+      query.mockRestore()
+      connect.mockRestore()
+    }
+  })
+
+  it("returns a grounded aggregate from one scoped execution with a receipt, not catalog-derived counts", async () => {
+    const execute = vi.spyOn(database, "execute").mockResolvedValueOnce({
+      rows: [{ total: 4 }],
+      rowCount: 1,
+      command: "SELECT",
+      oid: 0,
+      fields: []
+    })
+    try {
+      const input = analyticsQuerySchema.parse({
+        dataset: "bills",
+        filters: [{ field: "sessionId", op: "eq", values: ["session:us:119"] }],
+        metrics: [{ name: "total", operation: "countDistinct", field: "id" }]
+      })
+      const result = await new LegislationQueryService(database).analyzeLegislation(input)
+      expect(result.rows).toEqual([{ total: 4 }])
+      expect(result.receipt).toMatchObject({ nextOffset: null, queryHash: expect.any(String) })
+      expect(execute).toHaveBeenCalledOnce()
+      const statement = execute.mock.calls[0]?.[0]
+      if (statement === undefined || typeof statement === "string") {
+        throw new Error("Missing analytics query")
+      }
+      const query = new PgDialect().sqlToQuery(statement.getSQL())
+      expect(query.sql).toContain('count(distinct "root"."id")')
+      expect(query.params).toContain("session:us:119")
+    } finally {
+      execute.mockRestore()
     }
   })
 

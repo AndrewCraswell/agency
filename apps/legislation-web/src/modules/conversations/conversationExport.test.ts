@@ -1,8 +1,173 @@
 import type { UIMessage } from "ai"
 import { describe, expect, it } from "vitest"
 import { createConversationExport } from "./conversationExport"
+import { incompleteAnswerText } from "./responseOutcome"
 
 describe("conversation export", () => {
+  it.each(["success", "error"])("exports matching %s measurements and leaves unknown metrics null", (outcome) => {
+    const runId = "22222222-2222-4222-8222-222222222222"
+    const measurement = {
+      toolCallId: "measured",
+      toolName: "search_bills",
+      runId,
+      startedAt: "2026-09-19T02:00:00.000Z",
+      finishedAt: "2026-09-19T02:00:00.025Z",
+      durationMs: 25,
+      dependencyDurationMs: 10,
+      rawResultBytes: outcome === "success" ? 200 : null,
+      enrichedResultBytes: outcome === "success" ? 350 : null,
+      modelResultBytes: outcome === "success" ? 120 : null,
+      resultCount: outcome === "success" ? 0 : null,
+      hasNextPage: outcome === "success" ? false : null,
+      outcome,
+      failureCode: outcome === "success" ? null : "dependency_unavailable",
+      attemptCount: 1,
+      internalRetryCount: null,
+      retryOfToolCallId: null
+    }
+    const exported = createConversationExport({
+      conversationId: "session",
+      status: "ready",
+      messages: [
+        {
+          id: "answer",
+          role: "assistant",
+          metadata: { runId },
+          parts: [
+            outcome === "success"
+              ? {
+                  type: "dynamic-tool",
+                  toolCallId: "measured",
+                  toolName: "search_bills",
+                  state: "output-available",
+                  input: {},
+                  output: {}
+                }
+              : {
+                  type: "dynamic-tool",
+                  toolCallId: "measured",
+                  toolName: "search_bills",
+                  state: "output-error",
+                  input: {},
+                  errorText: "The data service is temporarily unavailable."
+                },
+            { type: "dynamic-tool", toolCallId: "unknown", toolName: "search_bills", state: "input-streaming" },
+            { type: "data-tool-measurement", data: measurement },
+            { type: "data-tool-measurement", data: { ...measurement, toolCallId: "unknown", durationMs: -1 } },
+            {
+              type: "data-tool-measurement",
+              data: { ...measurement, durationMs: 999, runId: "33333333-3333-4333-8333-333333333333" }
+            },
+            { type: "data-tool-measurement", data: { ...measurement, durationMs: 999, toolName: "get_bill" } }
+          ]
+        }
+      ]
+    })
+    expect(exported).toMatchObject({
+      toolCalls: [
+        { toolCallId: "measured", durationMs: 25, resultBytes: measurement.enrichedResultBytes, measurement },
+        { toolCallId: "unknown", durationMs: null, resultBytes: null, measurement: null }
+      ]
+    })
+  })
+
+  it.each([
+    { text: incompleteAnswerText, finishReason: null, isCancelled: false, expected: "unknown", hasAnswer: false },
+    { text: "Delivered findings", finishReason: "stop", isCancelled: false, expected: "completed", hasAnswer: true },
+    { text: "Some findings", finishReason: null, isCancelled: false, expected: "partial", hasAnswer: true },
+    { text: "Some findings", finishReason: "length", isCancelled: false, expected: "exhausted", hasAnswer: true },
+    { text: "Some findings", finishReason: null, isCancelled: true, expected: "cancelled", hasAnswer: true }
+  ])(
+    "separates ready interaction from $expected answer",
+    ({ text, finishReason, isCancelled, expected, hasAnswer }) => {
+      const exported = createConversationExport({
+        conversationId: "conversation-1",
+        status: "ready",
+        messages: [
+          {
+            id: "answer",
+            role: "assistant",
+            metadata: { responseObservation: { finishReason, isCancelled } },
+            parts: [{ type: "text", text }]
+          }
+        ]
+      })
+      expect(exported).toMatchObject({
+        interactionStatus: "ready",
+        responseOutcomes: [{ messageId: "answer", status: expected, hasAnswer, finishReason }]
+      })
+    }
+  )
+
+  it("retains completed text and the separate late abort observation", () => {
+    const exported = createConversationExport({
+      conversationId: "conversation-1",
+      status: "error",
+      messages: [
+        {
+          id: "answer",
+          role: "assistant",
+          metadata: { responseObservation: { isAbort: true, isError: true, isDisconnect: true } },
+          parts: [
+            { type: "text", text: "A complete delivered answer." },
+            {
+              type: "data-response-outcome",
+              data: {
+                status: "completed",
+                finishReason: "stop",
+                hasAnswer: true,
+                pendingToolCalls: [],
+                failedToolCalls: []
+              }
+            }
+          ]
+        }
+      ]
+    })
+    expect(exported).toMatchObject({
+      responseOutcomes: [{ status: "completed", hasAnswer: true, finishReason: "stop" }],
+      messages: [
+        { metadata: { responseObservation: { isAbort: true } }, parts: [{ text: "A complete delivered answer." }, {}] }
+      ]
+    })
+  })
+
+  it("does not count failed presentation or pending tools as an answer when idle", () => {
+    const exported = createConversationExport({
+      conversationId: "conversation-1",
+      status: "ready",
+      messages: [
+        {
+          id: "answer",
+          role: "assistant",
+          parts: [
+            { type: "data-presentation", data: { state: "error", blockId: "failed", reason: "presentation" } },
+            { type: "dynamic-tool", toolName: "search_bill_text", toolCallId: "pending", state: "input-streaming" },
+            {
+              type: "dynamic-tool",
+              toolName: "search_bills",
+              toolCallId: "failed",
+              state: "output-error",
+              input: {},
+              errorText: "Search failed"
+            }
+          ]
+        }
+      ]
+    })
+    expect(exported).toMatchObject({
+      responseOutcomes: [
+        {
+          status: "failed",
+          hasAnswer: false,
+          finishReason: null,
+          pendingToolCalls: ["pending"],
+          failedToolCalls: ["failed"]
+        }
+      ]
+    })
+  })
+
   it.each([
     {
       name: "inline credentials and public URL spelling",
@@ -43,6 +208,12 @@ describe("conversation export", () => {
       name: "known keys in standalone and embedded URL paths",
       text: "https://example.org/sk-or-v1-synthetic-key\nSee [source](https://example.org/sk-lf-synthetic-key?id=1).",
       expected: "https://example.org/[REDACTED]\nSee [source](https://example.org/[REDACTED]?id=1)."
+    },
+    {
+      name: "malformed URL within public prose",
+      text: "Report at https://[::1:8080/bill breaks.\nBasic Grant rules remain unchanged. See https://example.org/bill#section-2.",
+      expected:
+        "Report at [INVALID URL] breaks.\nBasic Grant rules remain unchanged. See https://example.org/bill#section-2."
     },
     {
       name: "public prose beginning with a URL",
@@ -181,7 +352,7 @@ describe("conversation export", () => {
     expect(createConversationExport({ conversationId: "conversation-1", messages, status: "error" })).toMatchObject({
       conversationId: "conversation-1",
       sessionId: "conversation-1",
-      status: "error",
+      interactionStatus: "error",
       replayId: null,
       messages,
       toolCalls: [

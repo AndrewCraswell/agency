@@ -5,6 +5,8 @@ import { clarificationRequestSchema, clarificationResponseSchema, type Clarifica
 import { composerDraftSchema, type ComposerDraft } from "./composerDraft"
 import { presentationBlockSchema } from "./composition"
 import { researchContextSchema } from "./evidence"
+import { researchToolMeasurementSchema } from "./researchMeasurement"
+import { responseOutcomeSchema } from "./responseOutcome"
 
 export const developmentConversationKey = "rostra.development.conversation"
 
@@ -41,7 +43,12 @@ export async function parseDevelopmentConversation(serialized: string): Promise<
   }
   const validated = await safeValidateUIMessages({
     messages: snapshot.data.messages,
-    dataSchemas: { presentation: presentationBlockSchema, "research-context": researchContextSchema }
+    dataSchemas: {
+      presentation: presentationBlockSchema,
+      "research-context": researchContextSchema,
+      "response-outcome": responseOutcomeSchema,
+      "tool-measurement": researchToolMeasurementSchema
+    }
   })
   if (!validated.success) {
     return undefined

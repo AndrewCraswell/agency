@@ -1,9 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import type { UIMessage } from "ai"
+import { useRef, useState } from "react"
 import { expect, fn, within } from "storybook/test"
 import invariant from "tiny-invariant"
 import { StickToBottom } from "use-stick-to-bottom"
+import { malformedCitationFixtures } from "../components/citationEvidenceFixtures"
+import type { CitationSelection } from "../components/citationPresentation"
 import { ConversationResponse } from "../components/ConversationResponse"
+import { EvidencePanel } from "../components/EvidencePanel"
 import { recordMentionHref, type PresentationBlock } from "../composition"
 import type { EvidenceSnapshot } from "../evidence"
 import { activityPart, reviewData, toolCaptures } from "./reviewFixtures"
@@ -94,6 +98,73 @@ const meta: Meta<typeof ConversationResponse> = {
 }
 export default meta
 type Story = StoryObj<typeof meta>
+
+function MalformedCitationExamples() {
+  const [selection, setSelection] = useState<CitationSelection>()
+  const trigger = useRef<HTMLElement | null>(null)
+  const fixtures = [
+    ...malformedCitationFixtures,
+    {
+      answerId: "reused-reference-fixture",
+      marker: "[7](#citation-e549]",
+      evidence: {
+        id: "reused-reference-source",
+        citationRef: "e549",
+        title: "Different source in a later answer",
+        origin: "web",
+        sourceUrl: "https://publisher.example/fixture/later-answer",
+        content: { state: "available", quote: "This source belongs only to the later answer." }
+      } satisfies EvidenceSnapshot
+    }
+  ]
+  return (
+    <>
+      {fixtures.map((fixture) => (
+        <section key={fixture.answerId} aria-label={fixture.answerId}>
+          <ConversationResponse
+            message={{
+              id: fixture.answerId,
+              role: "assistant",
+              parts: [{ type: "text", text: `Synthetic claim ${fixture.marker}. Unavailable [9](#citation-e999].` }]
+            }}
+            evidence={[fixture.evidence]}
+            isRunning={false}
+            isIncomplete={false}
+            onEvidence={(citation) => {
+              trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+              setSelection(citation)
+            }}
+          />
+        </section>
+      ))}
+      <EvidencePanel
+        selection={selection}
+        onClose={() => setSelection(undefined)}
+        returnFocus={() => trigger.current?.focus()}
+      />
+    </>
+  )
+}
+
+export const MalformedCitations: Story = {
+  render: () => <MalformedCitationExamples />,
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
+    const answer = within(canvas.getByRole("region", { name: "syntax-fixture-071" }))
+    await expect(canvasElement.textContent).not.toContain("#citation-")
+    const source = answer.getByRole("button", { name: "Read source 1: Citation syntax fixture 071" })
+    source.focus()
+    await userEvent.keyboard("{Enter}")
+    const body = within(canvasElement.ownerDocument.body)
+    const dialog = within(await body.findByRole("dialog", { name: "Source 1" }))
+    await expect(dialog.getByRole("heading", { name: "Citation syntax fixture 071" })).toBeVisible()
+    await userEvent.click(dialog.getByRole("button", { name: "Close evidence" }))
+    await expect(answer.getByRole("button", { name: "Citation 2 unavailable" })).toHaveAttribute(
+      "aria-disabled",
+      "true"
+    )
+  }
+}
 
 export const CompleteCollapsed: Story = {}
 export const CompleteExpanded: Story = {

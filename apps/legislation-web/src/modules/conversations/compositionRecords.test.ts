@@ -68,6 +68,124 @@ describe("run-owned presentation records", () => {
     ).toBe(false)
   })
 
+  it("derives introduction and referral stages from recorded description text when classification is unset", () => {
+    const store = createResultStore()
+    const data = {
+      bill: { id: "bill:us:119:hr:7989", title: "Federal bill", chamber: "lower", jurisdictionId: "jurisdiction:us" },
+      progressActions: [
+        {
+          id: "intro",
+          billId: "bill:us:119:hr:7989",
+          ordinal: 1,
+          classification: [],
+          actionDate: "2025-03-18",
+          sourceUrl: "https://congress.gov/bill/119/hr/7989/actions",
+          description: "Introduced in House"
+        },
+        {
+          id: "committee",
+          billId: "bill:us:119:hr:7989",
+          ordinal: 2,
+          classification: [],
+          actionDate: "2025-03-18",
+          sourceUrl: "https://congress.gov/bill/119/hr/7989/actions",
+          description: "Referred to the House Committee on Energy and Commerce"
+        }
+      ],
+      progressTruncated: false
+    }
+    const page = store.create("owner", "get_bill", data, undefined, async () => data)
+    invariant(page)
+    const content = projectPresentationContents("get_bill", data, [], page).find(
+      (content) => content.kind === "bill-progress"
+    )
+    invariant(content?.kind === "bill-progress")
+    expect(content.stages.map((stage) => stage.state)).toEqual(["recorded", "current", "unknown", "unknown", "unknown"])
+    const introduced = content.stages.find((stage) => stage.id === "introduced")
+    const committee = content.stages.find((stage) => stage.id === "committee")
+    // Real recorded date and source URL are preserved, not fabricated.
+    expect(introduced?.date).toBe("2025-03-18")
+    expect(committee?.date).toBe("2025-03-18")
+    expect(committee?.sourceUrl).toBe("https://congress.gov/bill/119/hr/7989/actions")
+    // Referral is only "current" (in progress), never promoted to a completed/approved state.
+    expect(committee?.state).toBe("current")
+    const undatedPartial = projectPresentationContents(
+      "get_bill",
+      {
+        ...data,
+        progressActions: data.progressActions.map((action) => ({ ...action, actionDate: null })),
+        progressTruncated: true
+      },
+      [],
+      page
+    ).find((content) => content.kind === "bill-progress")
+    invariant(undatedPartial?.kind === "bill-progress")
+    expect(undatedPartial.hasMore).toBe(true)
+    expect(undatedPartial.stages.map((stage) => stage.state)).toEqual([
+      "recorded",
+      "recorded",
+      "unknown",
+      "unknown",
+      "unknown"
+    ])
+    expect(undatedPartial.stages.every((stage) => stage.date === undefined)).toBe(true)
+  })
+
+  it("leaves stages unknown when unset classification and description do not match a recognized boilerplate phrase", () => {
+    const store = createResultStore()
+    const data = {
+      bill: { id: "bill:us:119:hr:7989", title: "Federal bill", chamber: "lower", jurisdictionId: "jurisdiction:us" },
+      progressActions: [
+        {
+          id: "remarks",
+          billId: "bill:us:119:hr:7989",
+          ordinal: 1,
+          classification: [],
+          actionDate: "2025-03-18",
+          description: "Sponsor introductory remarks on measure"
+        }
+      ],
+      progressTruncated: false
+    }
+    const page = store.create("owner", "get_bill", data, undefined, async () => data)
+    invariant(page)
+    const content = projectPresentationContents("get_bill", data, [], page).find(
+      (content) => content.kind === "bill-progress"
+    )
+    invariant(content?.kind === "bill-progress")
+    expect(content.stages.every((stage) => stage.state === "unknown")).toBe(true)
+  })
+
+  it("prefers real classification over description-derived classification when both are present", () => {
+    const store = createResultStore()
+    const data = {
+      bill: { id: "bill:us:119:hr:7989", title: "Federal bill", chamber: "lower", jurisdictionId: "jurisdiction:us" },
+      progressActions: [
+        {
+          id: "committee",
+          billId: "bill:us:119:hr:7989",
+          ordinal: 1,
+          // Text alone would match "introduction", but real classification says committee referral;
+          // the real, already-recorded classification must win.
+          classification: ["referral-committee"],
+          actionDate: "2025-03-18",
+          description: "Introduced in House"
+        }
+      ],
+      progressTruncated: false
+    }
+    const page = store.create("owner", "get_bill", data, undefined, async () => data)
+    invariant(page)
+    const content = projectPresentationContents("get_bill", data, [], page).find(
+      (content) => content.kind === "bill-progress"
+    )
+    invariant(content?.kind === "bill-progress")
+    const introduced = content.stages.find((stage) => stage.id === "introduced")
+    const committee = content.stages.find((stage) => stage.id === "committee")
+    expect(introduced?.state).toBe("unknown")
+    expect(committee?.state).toBe("current")
+  })
+
   it("resolves only exact run-owned content and preserves source snapshots", () => {
     const contents = projectPresentationContents("get_bill_text", {}, [
       {

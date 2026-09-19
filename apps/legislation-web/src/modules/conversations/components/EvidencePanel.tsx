@@ -7,6 +7,7 @@ import { Button } from "../../../components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "../../../components/ui/sheet"
 import { evidenceSourceUrl, formatEvidenceCitation } from "../evidence"
 import type { CitationSelection } from "./citationPresentation"
+import { EvidencePassage } from "./EvidencePassage"
 import * as styles from "./ConversationResponse.css"
 
 type EvidencePanelProps = Readonly<{
@@ -84,7 +85,7 @@ export function EvidencePanel({ selection: currentSelection, onClose, returnFocu
               )}
             </dl>
             {evidence.content.state === "available" ? (
-              <blockquote className={styles.quote}>{evidence.content.quote}</blockquote>
+              <EvidencePassage className={styles.quote} quote={evidence.content.quote} />
             ) : (
               <p className="text-sm text-muted-foreground">No passage was retrieved for this source.</p>
             )}

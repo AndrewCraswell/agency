@@ -8,6 +8,7 @@ import { presentationBlockSchema } from "../composition"
 import type { EvidenceSnapshot } from "../evidence"
 import type { ContentComponent, PresentationContent } from "../presentationContent"
 import { ChatProviders } from "./ChatProviders"
+import { markdownEvidenceFixture, qualifiedEvidenceFixture } from "./citationEvidenceFixtures"
 import type { CitationSelection } from "./citationPresentation"
 import { ConversationResponse } from "./ConversationResponse"
 import { CompactRecordCard, RecordCard, recordHref } from "./EntityResults"
@@ -219,11 +220,11 @@ it.each(["CitationCard", "PassageQuote"] as const)(
     const excerpt = screen.getByRole("button", { name: "Show full passage" })
     expect(excerpt.getAttribute("aria-expanded")).toBe("false")
     await user.click(excerpt)
-    expect(document.querySelector("blockquote")?.textContent).toBe(
-      source.content.state === "available" ? source.content.quote : ""
+    expect(document.querySelector("blockquote")?.textContent?.replace(/\s+/g, " ").trim()).toBe(
+      source.content.state === "available" ? source.content.quote.replace(/\s+/g, " ").trim() : ""
     )
     await user.click(screen.getByRole("button", { name: "Show less" }))
-    expect(document.querySelector("blockquote")?.textContent?.length).toBeLessThan(601)
+    expect(screen.getByRole("region", { name: "Retrieved passage" }).getAttribute("tabindex")).toBe("0")
     await user.click(markers[0]!)
     expect(onEvidence).toHaveBeenCalledWith({ answerId: "answer", number: 1, evidence: source })
     expect(screen.getByRole("link", { name: "Read in full" }).getAttribute("href")).toBe(source.sourceUrl)
@@ -255,7 +256,43 @@ it("does not describe a truncated retrieved excerpt as the full passage", async 
   expect(screen.getByText("Only part of the retrieved passage is shown.")).toBeDefined()
   expect(screen.queryByRole("button", { name: "Show full passage" })).toBeNull()
   await userEvent.setup().click(screen.getByRole("button", { name: "Show retrieved excerpt" }))
-  expect(document.querySelector("blockquote")?.textContent).toBe("Exact words. ".repeat(100))
+  expect(document.querySelector("blockquote")?.textContent?.trim()).toBe("Exact words. ".repeat(100).trim())
+})
+
+it.each(["CitationCard", "PassageQuote"] as const)(
+  "preserves Markdown tables and gives keyboard access to retained qualifications in %s",
+  async (component) => {
+    show({ ...content, evidence: markdownEvidenceFixture }, component)
+    const user = userEvent.setup()
+    const preview = screen.getByRole("region", { name: "Retrieved passage" })
+    expect(within(preview).getByRole("heading", { name: "Budget estimate" })).toBeDefined()
+    expect(within(preview).getByRole("cell", { name: "$17 million" })).toBeDefined()
+    expect(within(preview).getByText(/illustrative components must not/)).toBeDefined()
+    expect(within(preview).getByRole("link", { name: "source methodology" }).getAttribute("href")).toBe(
+      "https://publisher.example/fixture/methodology"
+    )
+    const expand = screen.getByRole("button", { name: "Show retrieved excerpt" })
+    expect(expand.getAttribute("aria-controls")).toBe(preview.id)
+    expand.focus()
+    await user.keyboard("{Enter}")
+    expect(screen.getByRole("button", { name: "Show less" }).getAttribute("aria-expanded")).toBe("true")
+    expect(screen.queryByRole("region", { name: "Retrieved passage" })).toBeNull()
+    expect(screen.getByText(/illustrative components must not/)).toBeDefined()
+    expect(screen.getByText("Only part of the retrieved passage is shown.")).toBeDefined()
+  }
+)
+
+it("keeps the selected-study qualification available after expanding the retained excerpt", async () => {
+  show({ ...content, evidence: qualifiedEvidenceFixture }, "PassageQuote")
+  const expand = screen.getByRole("button", { name: "Show retrieved excerpt" })
+  expand.focus()
+  await userEvent.setup().keyboard(" ")
+  expect(screen.getByRole("button", { name: "Show less" })).toBeDefined()
+  expect(screen.getByText(/carefully designed safeguards/)).toBeDefined()
+  expect(screen.getByText(/does not establish results for all US districts/)).toBeDefined()
+  expect(screen.getByRole("link", { name: "Read in full" }).getAttribute("href")).toBe(
+    qualifiedEvidenceFixture.sourceUrl
+  )
 })
 
 it("renders the designed compact passage row and opens the exact numbered evidence without a quote body", async () => {

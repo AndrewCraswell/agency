@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeAll, describe, expect, it, vi } from "vitest"
 import { EMBEDDING_ROUTES } from "./embedding-routing"
+import { embeddingTokenizer } from "./embedding-tokenizer"
 import {
   EMBEDDING_DIMENSIONS,
   EMBEDDING_MODEL,
@@ -19,6 +20,11 @@ function successfulResponse(model: string = EMBEDDING_MODEL, dimensions: number 
 }
 
 describe("OpenRouter embedding client", () => {
+  beforeAll(async () => {
+    // Loading the pinned vocabulary is setup, not part of the mocked HTTP contract's deadline.
+    await embeddingTokenizer(EMBEDDING_ROUTES.bill.model)
+  }, 30_000)
+
   it.each(["headers", "body"])("retries a deadline during %s with unchanged input", async (phase) => {
     const timeout = new DOMException("deadline", "TimeoutError")
     const timedResponse = successfulResponse()

@@ -2,6 +2,23 @@ import { z } from "zod"
 import { entityCardSchema, type EntityPage } from "./entityResults"
 import { sourceUrlSchema } from "./evidence"
 
+// Some source actions have descriptions but no classification. Recognize only explicit introduction/referral.
+const INTRODUCED_PATTERN = /^introduced in (the )?(house|senate)\b/i
+const REFERRED_TO_COMMITTEE_PATTERN = /^referred to\b.*committee/i
+
+function inferClassificationFromDescription(description: string | null | undefined): string[] {
+  if (!description) {
+    return []
+  }
+  if (INTRODUCED_PATTERN.test(description)) {
+    return ["introduction"]
+  }
+  if (REFERRED_TO_COMMITTEE_PATTERN.test(description)) {
+    return ["referral-committee"]
+  }
+  return []
+}
+
 export const billProgressSchema = z.strictObject({
   id: z.uuid(),
   kind: z.literal("bill-progress"),
@@ -43,7 +60,8 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
             classification: z.array(z.string()),
             chamber: z.string().nullish(),
             actionDate: z.iso.date().nullish(),
-            sourceUrl: sourceUrlSchema.nullish()
+            sourceUrl: sourceUrlSchema.nullish(),
+            description: z.string().nullish()
           })
         )
         .max(100),
@@ -77,12 +95,14 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
   })
   let current: string | undefined
   for (const action of [...progressActions].sort((left, right) => left.ordinal - right.ordinal)) {
+    const classification =
+      action.classification.length > 0 ? action.classification : inferClassificationFromDescription(action.description)
     let stageId: string | undefined
-    if (action.classification.includes("introduction")) {
+    if (classification.includes("introduction")) {
       stageId = "introduced"
     }
     if (
-      action.classification.some((value) =>
+      classification.some((value) =>
         [
           "referral-committee",
           "committee-passage",
@@ -93,13 +113,11 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
     ) {
       stageId = "committee"
     }
-    if (action.classification.includes("passage") && action.chamber && bill.chamber) {
+    if (classification.includes("passage") && action.chamber && bill.chamber) {
       stageId = action.chamber === bill.chamber ? "first" : "second"
     }
     if (
-      action.classification.some((value) =>
-        ["executive-receipt", "executive-signature", "executive-veto"].includes(value)
-      )
+      classification.some((value) => ["executive-receipt", "executive-signature", "executive-veto"].includes(value))
     ) {
       stageId = "executive"
     }

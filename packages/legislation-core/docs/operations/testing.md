@@ -14,5 +14,9 @@ auth primitives and telemetry sanitization. C imports no app, including test set
 from Node auth/context/database exports. Verify packaged migration, tokenizer, checksum and license assets when packaging
 changes; subpath exports alone do not prove dependency isolation in M's runtime image.
 
+The embedding client suite initializes the real pinned Voyage vocabulary in a bounded suite setup hook.
+Its mocked HTTP contract assertions retain the normal test deadline; vocabulary loading and coverage instrumentation
+must not be mistaken for provider latency. Tokenization and vocabulary checksum validation remain real.
+
 Serialize C/I/W database suites and run each expensive profile once. Shared contract changes validate their affected
 consumers through [root legislation verification](../../../../apps/legislation-web/docs/operations/testing.md#full-verification).

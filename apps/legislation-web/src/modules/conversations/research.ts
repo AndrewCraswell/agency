@@ -1,14 +1,12 @@
 import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
+import { normalizeLegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { researchResultByteLimit } from "@repo/legislation-core/research/result-pages"
 import { createLegislationResearchTools, type LegislationQueryApi } from "@repo/legislation-core/research/tools"
 import { dynamicTool, type ToolSet } from "ai"
 import { z } from "zod"
-import { createAnalyticsTelemetry } from "../legislation/analytics-telemetry"
-import { getNextLegislationApplication } from "../legislation/runtime/runtime"
 import { isPublicWebhookAddress } from "../request-handling/api/webhook-security"
-import { getResearchRuntime } from "../search/research-runtime"
 import { researchAgentLimits } from "./agent"
 import { chatIsAvailable } from "./chatRequest"
 import { recordMentionHref } from "./composition"
@@ -16,14 +14,15 @@ import { entityPageSchema, type EntityPage } from "./entityResults"
 import { evidenceSnapshotSchema, sourceUrlSchema, type EvidenceSnapshot } from "./evidence"
 import { createResearchEvidenceProjector } from "./evidenceSource.server"
 import { contentOptions, projectPresentationContents, type PresentationContent } from "./presentationContent"
-import { ResearchFailure, researchFailureCode } from "./researchFailure"
+import { ResearchFailure, researchFailureCode, researchLimitRecovery } from "./researchFailure"
+import type { ResearchToolMeasurement } from "./researchMeasurement"
 import type { ResearchObservation } from "./researchMemory"
+import { createResearchSelections } from "./researchSelection"
 import { isResearchTool, researchToolLabels } from "./researchTools"
 import { resultStore } from "./resultStore"
-import { createToolFailureReporter } from "./toolFailures"
+import type { createToolFailureReporter } from "./toolFailures"
 
 const resultSchema = z.object({ structuredContent: z.object({ data: z.json() }) })
-const cursorInputSchema = z.object({ cursor: z.string().optional() })
 const failureSchema = z.object({ error: z.string(), message: z.string().optional() })
 const modelResultSchema = z.looseObject({
   evidence: z.array(evidenceSnapshotSchema.required({ citationRef: true })).max(40)
@@ -239,7 +238,7 @@ function createWebResearchTools(environment: NodeJS.ProcessEnv, signal: AbortSig
   ]
 }
 
-export function researchModelOutput({ output }: { output: unknown }) {
+function serializeResearchModelOutput(output: unknown) {
   const result = modelResultSchema.parse(output)
   const page = entityPageSchema.safeParse(result.resultSet)
   const recordLinks = page.success
@@ -266,6 +265,40 @@ export function researchModelOutput({ output }: { output: unknown }) {
   }
 }
 
+export function researchModelOutput({ output }: { output: unknown }) {
+  const result = serializeResearchModelOutput(output)
+  if (Buffer.byteLength(result.value, "utf8") > researchResultByteLimit) {
+    throw new ResearchFailure("result_limit", crypto.randomUUID(), researchLimitRecovery(""))
+  }
+  return result
+}
+
+function resultMeasurements(
+  data: z.infer<ReturnType<typeof z.json>>
+): Pick<ResearchToolMeasurement, "resultCount" | "hasNextPage"> {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return { resultCount: null, hasNextPage: null }
+  }
+  const collection = [data.items, data.events, data.sections, data.rows].find(Array.isArray)
+  const receipt = data.receipt
+  const nextOffset =
+    receipt !== null && typeof receipt === "object" && !Array.isArray(receipt) ? receipt.nextOffset : undefined
+  const hasContinuation =
+    typeof data.nextCursor === "string" || typeof data.nextChildCursor === "string" || typeof nextOffset === "number"
+  const hasPagination =
+    "nextCursor" in data || "nextChildCursor" in data || typeof data.truncated === "boolean" || nextOffset === null
+  let hasNextPage: boolean | null = null
+  if (hasContinuation) {
+    hasNextPage = true
+  } else if (data.truncated !== true && hasPagination) {
+    hasNextPage = false
+  }
+  return {
+    resultCount: collection?.length ?? null,
+    hasNextPage
+  }
+}
+
 export function modelInputSchema(schema: z.ZodType) {
   if (!(schema instanceof z.ZodObject)) {
     throw new Error("Research tools require object inputs")
@@ -289,23 +322,7 @@ export function modelInputSchema(schema: z.ZodType) {
     .transform((input) => schema.parse(Object.fromEntries(Object.entries(input).filter(([, value]) => value !== null))))
 }
 
-function collectCursors(value: unknown, cursors: Set<string>) {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectCursors(item, cursors)
-    }
-  } else if (value !== null && typeof value === "object") {
-    for (const [key, item] of Object.entries(value)) {
-      if ((key === "nextCursor" || key === "nextChildCursor") && typeof item === "string" && item.length > 0) {
-        cursors.add(item)
-      } else {
-        collectCursors(item, cursors)
-      }
-    }
-  }
-}
-
-export function createResearchTools(
+export async function createResearchTools(
   environment: NodeJS.ProcessEnv,
   signal: AbortSignal,
   canResearch = () => true,
@@ -316,16 +333,24 @@ export function createResearchTools(
   onResultSet?: (page: EntityPage) => string | void,
   previousCitationReferences: readonly string[] = [],
   onContents?: (contents: PresentationContent[]) => void,
-  memory?: { evidence: EvidenceSnapshot[]; record: (observation: ResearchObservation) => void }
+  memory?: { evidence: EvidenceSnapshot[]; record: (observation: ResearchObservation) => void },
+  onMeasurement?: (measurement: ResearchToolMeasurement) => void
 ) {
   if (environment.NODE_ENV !== "development" && !chatIsAvailable(environment)) {
     throw new Error("Research is unavailable in this environment.")
   }
   signal.throwIfAborted()
-  const queryService = queryServiceOverride ?? getNextLegislationApplication().queryService
+  let queryService = queryServiceOverride
+  if (!queryService) {
+    const { getNextLegislationApplication } = await import("../legislation/runtime/runtime")
+    signal.throwIfAborted()
+    queryService = getNextLegislationApplication().queryService
+  }
+  const catalogService = queryService
   const logger = createLogger({ service: "legislation-chat", level: "warn" })
   const projectEvidence = createResearchEvidenceProjector(logger, runId, previousCitationReferences, memory?.evidence)
-  const failureReporter = reportFailure ?? createToolFailureReporter(runId)
+  const failureReporter = reportFailure ?? (await import("./toolFailures")).createToolFailureReporter(runId)
+  signal.throwIfAborted()
   const webDefinitions = createWebResearchTools(environment, signal)
   const definitions = [...createLegislationResearchTools(queryService, logger), ...webDefinitions]
   async function execute(name: string, input: unknown, executionSignal = signal) {
@@ -341,10 +366,26 @@ export function createResearchTools(
       }
       return definition.execute(input)
     }
+    if (name === "describe_analytics") {
+      const { createAnalyticsTelemetry } = await import("../legislation/analytics-telemetry")
+      executionSignal.throwIfAborted()
+      const definition = createLegislationResearchTools(catalogService, logger, createAnalyticsTelemetry()).find(
+        (candidate) => candidate.name === name
+      )
+      if (!definition) {
+        throw new ResearchFailure("dependency_unavailable", crypto.randomUUID())
+      }
+      return definition.execute(input)
+    }
+    const { getResearchRuntime } = await import("../search/research-runtime")
+    executionSignal.throwIfAborted()
     return getResearchRuntime().run(async (service) => {
       executionSignal.throwIfAborted()
       const telemetry =
-        name === "describe_analytics" || name === "analyze_legislation" ? createAnalyticsTelemetry() : undefined
+        name === "analyze_legislation"
+          ? (await import("../legislation/analytics-telemetry")).createAnalyticsTelemetry()
+          : undefined
+      executionSignal.throwIfAborted()
       const definition = createLegislationResearchTools(service, logger, telemetry).find(
         (candidate) => candidate.name === name
       )
@@ -355,7 +396,7 @@ export function createResearchTools(
     }, executionSignal)
   }
   const tools: ToolSet = {}
-  const cursors = new Set<string>()
+  const selections = createResearchSelections()
   let calls = 0
   for (const definition of definitions) {
     const { name } = definition
@@ -368,8 +409,54 @@ export function createResearchTools(
       toModelOutput: researchModelOutput,
       execute: async (input, { toolCallId }) => {
         const reference = crypto.randomUUID()
+        const startedAtIso = new Date().toISOString()
         const startedAt = performance.now()
         let resultBytes: number | undefined
+        let dependencyDurationMs: number | null = null
+        let enrichedResultBytes: number | null = null
+        let modelResultBytes: number | null = null
+        let counts: Pick<ResearchToolMeasurement, "resultCount" | "hasNextPage"> = {
+          resultCount: null,
+          hasNextPage: null
+        }
+        function measurement(
+          outcome: ResearchToolMeasurement["outcome"],
+          failureCode: ResearchToolMeasurement["failureCode"]
+        ): ResearchToolMeasurement {
+          return {
+            runId,
+            toolCallId,
+            toolName: name,
+            startedAt: startedAtIso,
+            finishedAt: new Date().toISOString(),
+            durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+            dependencyDurationMs,
+            rawResultBytes: resultBytes ?? null,
+            enrichedResultBytes,
+            modelResultBytes,
+            ...counts,
+            outcome,
+            failureCode,
+            attemptCount: 1,
+            internalRetryCount: null,
+            retryOfToolCallId: null
+          }
+        }
+        function measureOutput(output: unknown) {
+          enrichedResultBytes = Buffer.byteLength(JSON.stringify(output), "utf8")
+          modelResultBytes = Buffer.byteLength(serializeResearchModelOutput(output).value, "utf8")
+          if (modelResultBytes > researchResultByteLimit) {
+            throw new ResearchFailure("result_limit", reference)
+          }
+        }
+        function publishMeasurement(value: ResearchToolMeasurement) {
+          try {
+            onMeasurement?.(value)
+          } catch {
+            logger.warn("Research tool measurement was not recorded", { tool: name, toolCallId, runId })
+          }
+        }
+        let selectionInput: Record<string, unknown> | undefined
         try {
           signal.throwIfAborted()
           if (!canResearch()) {
@@ -379,15 +466,13 @@ export function createResearchTools(
           if (calls > researchAgentLimits.calls) {
             throw new ResearchFailure("step_limit", reference)
           }
-          const pagination = cursorInputSchema.parse(input)
-          if (pagination.cursor !== undefined && !cursors.has(pagination.cursor)) {
-            throw new ResearchFailure("invalid_cursor", reference)
-          }
-          const childPagination = z.object({ childCursor: z.string().optional() }).parse(input)
-          if (childPagination.childCursor !== undefined && !cursors.has(childPagination.childCursor)) {
-            throw new ResearchFailure("invalid_cursor", reference)
-          }
-          const result = await execute(name, input)
+          const pageInput = z.record(z.string(), z.unknown()).parse(definition.inputSchema.parse(input))
+          selectionInput = pageInput
+          selections.validate(name, pageInput, reference)
+          const dependencyStartedAt = performance.now()
+          const result = await execute(name, pageInput).finally(() => {
+            dependencyDurationMs = Math.max(0, Math.round(performance.now() - dependencyStartedAt))
+          })
           signal.throwIfAborted()
           if ("isError" in result && result.isError && "content" in result) {
             const content = result.content[0]
@@ -403,65 +488,97 @@ export function createResearchTools(
             throw new ResearchFailure("invalid_response", reference)
           }
           resultBytes = Buffer.byteLength(JSON.stringify(parsed.data.structuredContent), "utf8")
+          counts = resultMeasurements(parsed.data.structuredContent.data)
           if (resultBytes > researchResultByteLimit) {
             throw new ResearchFailure("result_limit", reference)
           }
-          collectCursors(parsed.data.structuredContent, cursors)
-          const pageInput = z.record(z.string(), z.unknown()).parse(input)
-          const resultSet = sessionKey
-            ? resultStore.create(
-                sessionKey,
-                name,
-                parsed.data.structuredContent.data,
-                typeof pageInput.query === "string" ? pageInput.query : undefined,
-                async (cursor, pageSignal) => {
-                  const nextResult = await execute(name, { ...pageInput, cursor }, pageSignal)
-                  pageSignal.throwIfAborted()
-                  if ("isError" in nextResult && nextResult.isError) {
-                    throw new ResearchFailure("dependency_unavailable", crypto.randomUUID())
-                  }
-                  const page = resultSchema.parse(nextResult)
-                  if (Buffer.byteLength(JSON.stringify(page.structuredContent), "utf8") > researchResultByteLimit) {
-                    throw new ResearchFailure("result_limit", crypto.randomUUID())
-                  }
-                  return page.structuredContent.data
-                },
-                pageInput
-              )
-            : undefined
-          let resultHandle: string | void = undefined
-          if (resultSet) {
-            await resultStore.persist(resultSet.id)
-            resultHandle = onResultSet?.(resultSet)
-          }
-          const evidence = projectEvidence(parsed.data.structuredContent.data)
-          const contents = onContents
-            ? projectPresentationContents(name, parsed.data.structuredContent.data, evidence, resultSet)
-            : []
-          onContents?.(contents)
-          memory?.record({ tool: name, input, data: parsed.data.structuredContent.data, evidence })
-          return {
+          const isCatalog = name === "describe_analytics"
+          const resultSet =
+            sessionKey && !isCatalog
+              ? resultStore.create(
+                  sessionKey,
+                  name,
+                  parsed.data.structuredContent.data,
+                  typeof pageInput.query === "string" ? pageInput.query : undefined,
+                  async (cursor, pageSignal) => {
+                    const nextResult = await execute(name, { ...pageInput, cursor }, pageSignal)
+                    pageSignal.throwIfAborted()
+                    if ("isError" in nextResult && nextResult.isError) {
+                      throw new ResearchFailure("dependency_unavailable", crypto.randomUUID())
+                    }
+                    const page = resultSchema.parse(nextResult)
+                    if (Buffer.byteLength(JSON.stringify(page.structuredContent), "utf8") > researchResultByteLimit) {
+                      throw new ResearchFailure("result_limit", crypto.randomUUID())
+                    }
+                    return page.structuredContent.data
+                  },
+                  pageInput
+                )
+              : undefined
+          const evidence = isCatalog ? [] : projectEvidence(parsed.data.structuredContent.data)
+          const contents =
+            onContents && !isCatalog
+              ? projectPresentationContents(name, parsed.data.structuredContent.data, evidence, resultSet)
+              : []
+          const output = {
             ...parsed.data.structuredContent,
-            ...(typeof resultHandle === "string" ? { resultHandle } : {}),
             evidence,
             ...(onContents ? { presentationOptions: contents.map(contentOptions) } : {}),
             resultSet
           }
+          measureOutput(output)
+          const resultHandle = resultSet ? onResultSet?.(resultSet) : undefined
+          const finalOutput = {
+            ...output,
+            ...(typeof resultHandle === "string" ? { resultHandle } : {})
+          }
+          measureOutput(finalOutput)
+          if (!isCatalog) {
+            selections.register(parsed.data.structuredContent.data, reference)
+          }
+          if (resultSet) {
+            await resultStore.persist(resultSet.id)
+          }
+          if (!isCatalog) {
+            onContents?.(contents)
+            memory?.record({ tool: name, input: pageInput, data: parsed.data.structuredContent.data, evidence })
+          }
+          publishMeasurement(measurement("success", null))
+          return finalOutput
         } catch (error) {
-          let failure = error instanceof ResearchFailure ? error : new ResearchFailure("internal", reference)
+          const normalized = normalizeLegislationError(error)
+          let failure =
+            error instanceof ResearchFailure
+              ? error
+              : new ResearchFailure(
+                  normalized.details?.reason === "timeout" ? "timeout" : researchFailureCode(normalized.category),
+                  reference
+                )
           if (signal.aborted) {
             const isTimeout = signal.reason instanceof Error && signal.reason.name === "TimeoutError"
             failure = new ResearchFailure(isTimeout ? "timeout" : "interrupted", reference)
           } else if (error instanceof z.ZodError) {
             failure = new ResearchFailure("invalid_request", reference)
           }
+          let recovery: ResearchFailure["recovery"]
+          if (failure.code === "result_limit") {
+            recovery = researchLimitRecovery(name)
+          } else if (selectionInput) {
+            recovery = selections.recover(name, selectionInput, failure.code)
+          }
+          if (recovery) {
+            failure = new ResearchFailure(failure.code, failure.reference, recovery)
+          }
           memory?.record({ tool: name, input, failure: failure.code })
+          const failedMeasurement = measurement("error", failure.code)
+          publishMeasurement(failedMeasurement)
           failureReporter({
             toolCallId,
             toolName: name,
             error: failure,
-            durationMs: Math.round(performance.now() - startedAt),
-            resultBytes
+            durationMs: failedMeasurement.durationMs,
+            resultBytes,
+            measurement: failedMeasurement
           })
           logger.warn("Research tool failed", {
             tool: name,

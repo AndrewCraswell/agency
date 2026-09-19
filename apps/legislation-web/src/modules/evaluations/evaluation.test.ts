@@ -695,6 +695,11 @@ describe("shared SDK execution", () => {
     )
     expect(caseResultSchema.parse(outcome)).toEqual(outcome)
     expect(budget.used).toBe(1)
-    expect(model.doStreamCalls[0]?.prompt[0]).toMatchObject({ role: "system", content: "Pinned instructions" })
+    expect(model.doStreamCalls[0]?.prompt[0]).toMatchObject({
+      role: "system",
+      content: expect.stringMatching(
+        /^Pinned instructions\n\nWhen tools are disabled, finish with an answer from the evidence already retrieved\./
+      )
+    })
   })
 })

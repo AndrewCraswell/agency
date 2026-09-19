@@ -316,13 +316,29 @@ describe("createCompositionStream", () => {
     for await (const message of messages) {
       finalMessage = message
     }
-    expect(finalMessage?.parts.map((part) => part.type)).toEqual(["text", "data-presentation", "text"])
+    expect(finalMessage?.parts.map((part) => part.type)).toEqual([
+      "text",
+      "data-presentation",
+      "text",
+      "data-response-outcome"
+    ])
     expect(finalMessage?.parts[0]).toMatchObject({ text: "Before\n" })
     expect(finalMessage?.parts[1]).toMatchObject({
       id: "presentation-first",
       data: { state: "ready", records: [record("bill-1")] }
     })
     expect(finalMessage?.parts[2]).toMatchObject({ text: "After" })
+    expect(finalMessage?.parts[3]).toEqual({
+      type: "data-response-outcome",
+      id: "response-outcome",
+      data: {
+        status: "completed",
+        finishReason: "stop",
+        hasAnswer: true,
+        pendingToolCalls: [],
+        failedToolCalls: []
+      }
+    })
     expect(onBlock.mock.calls.map(([block]) => block.state)).toEqual(["pending", "ready"])
   })
 
@@ -627,7 +643,14 @@ describe("createCompositionStream", () => {
     expect(onComplete).toHaveBeenCalledWith({
       text: "Research ended before an answer was completed. Narrow the question and try again.",
       blocks: [],
-      isInterrupted: true
+      isInterrupted: true,
+      outcome: {
+        status: "failed",
+        hasAnswer: false,
+        finishReason: "stop",
+        pendingToolCalls: [],
+        failedToolCalls: ["failed-search"]
+      }
     })
   })
 
@@ -643,7 +666,18 @@ describe("createCompositionStream", () => {
               toolName: "ask_clarification",
               input: { question: "Which jurisdiction?" }
             },
-            { type: "tool-output-available", toolCallId: "clarify", output: { clarificationId: "clarification-1" } },
+            {
+              type: "tool-output-available",
+              toolCallId: "clarify",
+              output: {
+                clarification: {
+                  id: resultId,
+                  revision: 1,
+                  state: "pending",
+                  input: { kind: "text", question: "Which jurisdiction?", allowSkip: false }
+                }
+              }
+            },
             { type: "finish", finishReason: "stop" }
           ]
         ),
@@ -652,7 +686,119 @@ describe("createCompositionStream", () => {
     )
     expect(text(chunks)).toBe("")
     expect(chunks.at(-1)).toEqual({ type: "finish", finishReason: "stop" })
+    expect(chunks).toContainEqual(
+      expect.objectContaining({
+        type: "data-response-outcome",
+        data: expect.objectContaining({ status: "clarification", hasAnswer: false })
+      })
+    )
   })
+
+  it.each([
+    { ending: [], content: "Some findings", expected: "partial", finishReason: null },
+    { ending: [], content: "", expected: "unknown", finishReason: null },
+    {
+      ending: [{ type: "finish", finishReason: "length" }],
+      content: "Some findings",
+      expected: "exhausted",
+      finishReason: "length"
+    },
+    { ending: [{ type: "abort" }], content: "Some findings", expected: "partial", finishReason: null },
+    {
+      ending: [{ type: "finish", finishReason: "stop" }, { type: "abort" }],
+      content: "Full findings",
+      expected: "completed",
+      finishReason: "stop"
+    }
+  ] satisfies { ending: UIMessageChunk[]; content: string; expected: string; finishReason: string | null }[])(
+    "retains $expected outcome and raw finish reason",
+    async ({ ending, content, expected, finishReason }) => {
+      const onComplete = vi.fn<NonNullable<Parameters<typeof createCompositionStream>[1]["onComplete"]>>()
+      const chunks = await collect(
+        createCompositionStream(textStream([content], ending), {
+          resolveRecord: resolver,
+          onComplete
+        })
+      )
+      expect(chunks.filter((chunk) => chunk.type === "data-response-outcome")).toEqual([
+        expect.objectContaining({ data: expect.objectContaining({ status: expected, finishReason }) })
+      ])
+      expect(onComplete.mock.calls[0]?.[0].outcome.status).toBe(expected)
+      expect(text(chunks)).toContain(content)
+    }
+  )
+
+  it("reports idle pending tools without inventing a timeout or completed answer", async () => {
+    const chunks = await collect(
+      createCompositionStream(
+        chunkStream([{ type: "tool-input-start", toolCallId: "pending", toolName: "search_bill_text" }]),
+        { resolveRecord: resolver }
+      )
+    )
+    expect(chunks).toContainEqual(
+      expect.objectContaining({
+        type: "data-response-outcome",
+        data: {
+          status: "unknown",
+          hasAnswer: false,
+          finishReason: null,
+          pendingToolCalls: ["pending"],
+          failedToolCalls: []
+        }
+      })
+    )
+  })
+
+  it.each(["step_limit", "result_limit", "timeout", "interrupted"])(
+    "distinguishes explicit call exhaustion from %s per-tool failure",
+    async (failureCode) => {
+      const chunks = await collect(
+        createCompositionStream(
+          textStream(
+            [],
+            [
+              { type: "tool-input-available", toolCallId: "search", toolName: "search_bills", input: {} },
+              { type: "tool-output-error", toolCallId: "search", errorText: "Research did not complete." },
+              {
+                type: "data-tool-measurement",
+                data: {
+                  runId: resultId,
+                  toolCallId: "search",
+                  toolName: "search_bills",
+                  startedAt: "2026-09-19T02:00:00.000Z",
+                  finishedAt: "2026-09-19T02:00:00.001Z",
+                  durationMs: 1,
+                  dependencyDurationMs: null,
+                  rawResultBytes: null,
+                  enrichedResultBytes: null,
+                  modelResultBytes: null,
+                  resultCount: null,
+                  hasNextPage: null,
+                  outcome: "error",
+                  failureCode,
+                  attemptCount: 1,
+                  internalRetryCount: null,
+                  retryOfToolCallId: null
+                }
+              },
+              { type: "finish", finishReason: "stop" }
+            ]
+          ),
+          { resolveRecord: resolver }
+        )
+      )
+      expect(chunks).toContainEqual(
+        expect.objectContaining({
+          type: "data-response-outcome",
+          data: expect.objectContaining({
+            status: failureCode === "step_limit" ? "exhausted" : "failed",
+            hasAnswer: false,
+            finishReason: "stop"
+          })
+        })
+      )
+    }
+  )
 
   it.each<UIMessageChunk | undefined>([
     { type: "finish", finishReason: "tool-calls" },

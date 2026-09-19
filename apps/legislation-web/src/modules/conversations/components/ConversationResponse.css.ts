@@ -323,3 +323,27 @@ export const quote = style({
   whiteSpace: "pre-wrap",
   overflowWrap: "anywhere"
 })
+
+export const passageMarkdown = style({ minWidth: 0, whiteSpace: "normal" })
+export const passagePreview = style({
+  maxHeight: "16rem",
+  overflow: "auto",
+  overscrollBehavior: "contain",
+  ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
+})
+globalStyle(`${passageMarkdown} h1, ${passageMarkdown} h2, ${passageMarkdown} h3`, {
+  fontFamily: "var(--font-public-sans), sans-serif",
+  fontSize: "1em",
+  fontWeight: 600,
+  margin: "12px 0"
+})
+globalStyle(`${passageMarkdown} p`, { margin: "8px 0" })
+globalStyle(`${passageMarkdown} ul, ${passageMarkdown} ol`, { paddingLeft: 24, margin: "8px 0" })
+globalStyle(`${passageMarkdown} ul`, { listStyle: "disc" })
+globalStyle(`${passageMarkdown} ol`, { listStyle: "decimal" })
+globalStyle(`${passageMarkdown} table`, { borderCollapse: "collapse", fontSize: 14 })
+globalStyle(`${passageMarkdown} td, ${passageMarkdown} th`, {
+  padding: 8,
+  borderBottom: "1px solid var(--border)",
+  textAlign: "left"
+})

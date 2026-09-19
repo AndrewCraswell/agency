@@ -3,6 +3,7 @@ import { useRef, useState } from "react"
 import { expect, waitFor, within } from "storybook/test"
 import invariant from "tiny-invariant"
 import { StickToBottom } from "use-stick-to-bottom"
+import { markdownEvidenceFixture, qualifiedEvidenceFixture } from "../components/citationEvidenceFixtures"
 import type { CitationSelection } from "../components/citationPresentation"
 import { ComposedRecord } from "../components/ComposedRecord"
 import { ConversationResponse } from "../components/ConversationResponse"
@@ -113,10 +114,40 @@ export const TruncatedPassage: Story = {
     const canvas = within(canvasElement)
     const expand = canvas.getByRole("button", { name: "Show full passage" })
     await userEvent.click(expand)
-    await expect(canvasElement.querySelector("blockquote")?.textContent).toBe(
-      drawerEvidence.content.state === "available" ? drawerEvidence.content.quote : ""
+    await expect(canvasElement.querySelector("blockquote")?.textContent?.replace(/\s+/g, " ").trim()).toBe(
+      drawerEvidence.content.state === "available" ? drawerEvidence.content.quote.replace(/\s+/g, " ").trim() : ""
     )
     await userEvent.click(canvas.getByRole("button", { name: "Show less" }))
+  }
+}
+export const MarkdownTablePassage: Story = {
+  render: () => display({ ...source, evidence: markdownEvidenceFixture }, "PassageQuote"),
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
+    const preview = canvas.getByRole("region", { name: "Retrieved passage" })
+    await expect(within(preview).getByRole("heading", { name: "Budget estimate" })).toBeVisible()
+    await expect(within(preview).getByRole("cell", { name: "$17 million" })).toBeInTheDocument()
+    const expand = canvas.getByRole("button", { name: "Show retrieved excerpt" })
+    expand.focus()
+    await userEvent.keyboard("{Enter}")
+    await expect(canvas.getByRole("button", { name: "Show less" })).toHaveAttribute("aria-expanded", "true")
+    await expect(canvas.getByText(/illustrative components must not/)).toBeVisible()
+    await expect(canvas.getByText("Only part of the retrieved passage is shown.")).toBeVisible()
+  }
+}
+export const QualifiedStudyPassage: Story = {
+  render: () => display({ ...source, evidence: qualifiedEvidenceFixture }, "PassageQuote"),
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
+    const expand = canvas.getByRole("button", { name: "Show retrieved excerpt" })
+    expand.focus()
+    await userEvent.keyboard(" ")
+    await expect(canvas.getByText(/carefully designed safeguards/)).toBeVisible()
+    await expect(canvas.getByText(/does not establish results for all US districts/)).toBeVisible()
+    await expect(canvas.getByRole("link", { name: "Read in full" })).toHaveAttribute(
+      "href",
+      qualifiedEvidenceFixture.sourceUrl
+    )
   }
 }
 export const PassageUnavailable: Story = {

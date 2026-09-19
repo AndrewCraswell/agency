@@ -1,20 +1,43 @@
 import type { LookupAddress } from "node:dns"
+import { LegislationError } from "@repo/legislation-core/domain/errors"
+import { describeAnalytics } from "@repo/legislation-core/research/analytics-catalog"
+import { researchResultByteLimit } from "@repo/legislation-core/research/result-pages"
+import type { LegislationQueryApi } from "@repo/legislation-core/research/tools"
 import { dynamicTool, isStepCount, streamText } from "ai"
 import { MockLanguageModelV4 } from "ai/test"
 import { afterEach, expect, it, vi } from "vitest"
 import { z } from "zod"
+import { researchAgentLimits, runResearchAgent } from "./agent"
 import { createCitationPresentation } from "./components/citationPresentation"
-import { recordMentionHref } from "./composition"
+import { compositionInstructions, recordMentionHref } from "./composition"
 import type { EntityPage } from "./entityResults"
 import { projectResearchEvidence } from "./evidence"
 import { createResearchTools, modelInputSchema, researchModelOutput } from "./research"
 import { researchFailureCode } from "./researchFailure"
+import type { ResearchToolMeasurement } from "./researchMeasurement"
+import type { ResearchObservation } from "./researchMemory"
 
-const { lookupMock } = vi.hoisted(() => ({
-  lookupMock: vi.fn<() => Promise<LookupAddress[]>>(async () => [{ address: "8.8.8.8", family: 4 }])
+const { lookupMock, applicationQueryService, runtimeRun, analyticsObserve } = vi.hoisted(() => ({
+  lookupMock: vi.fn<() => Promise<LookupAddress[]>>(async () => [{ address: "8.8.8.8", family: 4 }]),
+  applicationQueryService: vi.fn<() => Partial<LegislationQueryApi>>(() => ({})),
+  runtimeRun: vi.fn<() => Promise<never>>(async () => {
+    throw new Error("Unexpected database runtime call")
+  }),
+  analyticsObserve: vi.fn<(name: string, metadata: unknown, operation: () => Promise<unknown>) => Promise<unknown>>(
+    async (_name, _metadata, operation) => operation()
+  )
 }))
 vi.mock("node:dns/promises", () => ({ lookup: lookupMock }))
-vi.mock("../legislation/runtime/runtime", () => ({ getNextLegislationApplication: () => ({ queryService: {} }) }))
+vi.mock("../legislation/runtime/runtime", () => ({
+  getNextLegislationApplication: () => ({ queryService: applicationQueryService() })
+}))
+vi.mock("../search/research-runtime", () => ({ getResearchRuntime: () => ({ run: runtimeRun }) }))
+vi.mock("../legislation/analytics-telemetry", () => ({
+  createAnalyticsTelemetry: () => ({ observe: analyticsObserve })
+}))
+vi.mock("@langfuse/tracing", () => ({
+  propagateAttributes: (_attributes: unknown, operation: () => unknown) => operation()
+}))
 const webEnvironment: NodeJS.ProcessEnv = {
   NODE_ENV: "development",
   FIRECRAWL_API_KEY: "fixture-secret",
@@ -24,14 +47,19 @@ const webEnvironment: NodeJS.ProcessEnv = {
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.clearAllMocks()
+  vi.restoreAllMocks()
+  vi.useRealTimers()
+  applicationQueryService.mockReturnValue({})
+  runtimeRun.mockReset()
+  runtimeRun.mockRejectedValue(new Error("Unexpected database runtime call"))
 })
 
 function webTools(signal = new AbortController().signal, canResearch = () => true) {
   return createResearchTools(webEnvironment, signal, canResearch, vi.fn<() => void>())
 }
 
-async function callWebTool(name: string, input: unknown, tools = webTools()) {
-  const definition = tools[name]
+async function callWebTool(name: string, input: unknown, tools = webTools(), toolCallId: string = crypto.randomUUID()) {
+  const definition = (await tools)[name]
   if (definition?.type !== "dynamic" || !definition.execute) {
     throw new Error("Missing tool")
   }
@@ -39,17 +67,17 @@ async function callWebTool(name: string, input: unknown, tools = webTools()) {
   if (!execute) {
     throw new Error("Missing tool execution")
   }
-  return execute(input, { toolCallId: crypto.randomUUID(), messages: [], context: {} })
+  return execute(input, { toolCallId, messages: [], context: {} })
 }
 
-it("only registers web tools when both provider settings are configured", () => {
-  expect(webTools()).toHaveProperty("search_web")
-  expect(webTools()).toHaveProperty("read_web_page")
-  expect(createResearchTools({ NODE_ENV: "development" }, new AbortController().signal)).not.toHaveProperty(
+it("only registers web tools when both provider settings are configured", async () => {
+  expect(await webTools()).toHaveProperty("search_web")
+  expect(await webTools()).toHaveProperty("read_web_page")
+  expect(await createResearchTools({ NODE_ENV: "development" }, new AbortController().signal)).not.toHaveProperty(
     "search_web"
   )
   expect(
-    createResearchTools({ NODE_ENV: "development", FIRECRAWL_API_KEY: "fixture" }, new AbortController().signal)
+    await createResearchTools({ NODE_ENV: "development", FIRECRAWL_API_KEY: "fixture" }, new AbortController().signal)
   ).not.toHaveProperty("read_web_page")
 })
 
@@ -457,9 +485,9 @@ it("preserves canonical batch sizes and child limits", () => {
   expect(schema.safeParse({ ids: ["invalid"], childLimit: 1 }).success).toBe(false)
 })
 
-it("admits configured production research before checking cancellation", () => {
+it("admits configured production research before checking cancellation", async () => {
   const cancellation = new Error("Request cancelled")
-  expect(() =>
+  await expect(
     createResearchTools(
       {
         NODE_ENV: "production",
@@ -468,11 +496,769 @@ it("admits configured production research before checking cancellation", () => {
       },
       AbortSignal.abort(cancellation)
     )
-  ).toThrow(cancellation)
+  ).rejects.toThrow(cancellation)
 })
 
-it("rejects unconfigured production research", () => {
-  expect(() => createResearchTools({ NODE_ENV: "production" }, new AbortController().signal)).toThrow(
+it("rejects unconfigured production research", async () => {
+  await expect(createResearchTools({ NODE_ENV: "production" }, new AbortController().signal)).rejects.toThrow(
     "Research is unavailable in this environment."
   )
+})
+
+// Public record IDs from campaign case 091; no retained conversation or telemetry payloads.
+const selectionBillId = "bill:us:119:hr:9619"
+const selectionDocument = {
+  id: `${selectionBillId}:document:51af43854225cf7d760326df`,
+  billId: selectionBillId,
+  versionCode: "ih"
+}
+const alteredDocumentId = `${selectionBillId}:document:51af43854225cf7d760760df`
+const selectionInput = { id: selectionBillId, documentId: selectionDocument.id, versionCode: "ih", limit: 50 }
+
+function selectionTools(
+  overrides: Partial<LegislationQueryApi> = {},
+  options: {
+    canResearch?: () => boolean
+    signal?: AbortSignal
+    onContents?: Parameters<typeof createResearchTools>[9]
+    onMeasurement?: (measurement: ResearchToolMeasurement) => void
+  } = {}
+) {
+  const unexpected = async () => {
+    throw new Error("Unexpected query-service call in selection fixture")
+  }
+  const service: LegislationQueryApi = {
+    compareBillVersions: unexpected,
+    findRelatedBills: unexpected,
+    getAmendment: unexpected,
+    getBill: async () => ({
+      bill: { id: selectionBillId, identifier: "HR 9619", title: "School AI procurement" },
+      documents: [selectionDocument]
+    }),
+    getBillVotes: unexpected,
+    getBillText: unexpected,
+    getBillTimeline: unexpected,
+    getEvent: unexpected,
+    getOrganization: unexpected,
+    getPerson: unexpected,
+    getSupportingMaterial: unexpected,
+    getVote: unexpected,
+    searchAmendments: unexpected,
+    searchBills: unexpected,
+    searchBillText: unexpected,
+    searchChanges: unexpected,
+    searchEvents: unexpected,
+    searchOrganizations: unexpected,
+    searchPeople: unexpected,
+    searchSupportingMaterials: unexpected,
+    searchVotes: unexpected,
+    ...overrides
+  }
+  const record = vi.fn<(observation: ResearchObservation) => void>()
+  const report = vi.fn<() => void>()
+  return {
+    record,
+    report,
+    tools: createResearchTools(
+      { NODE_ENV: "development" },
+      options.signal ?? new AbortController().signal,
+      options.canResearch ?? (() => true),
+      report,
+      undefined,
+      service,
+      undefined,
+      undefined,
+      [],
+      options.onContents,
+      { evidence: [], record },
+      options.onMeasurement
+    )
+  }
+}
+
+it("dispatches first-call and undiscovered explicit document IDs unchanged and retains canonical observations", async () => {
+  const getBillText = vi.fn<LegislationQueryApi["getBillText"]>(async (input) => ({
+    document: { ...selectionDocument, id: input.documentId },
+    sections: [],
+    nextCursor: null
+  }))
+  const fixture = selectionTools({ getBillText })
+  await callWebTool("get_bill_text", selectionInput, fixture.tools)
+  await callWebTool("get_bill", { id: selectionBillId }, fixture.tools)
+  const another = { ...selectionInput, documentId: `${selectionBillId}:document:explicit-new-id` }
+  await callWebTool("get_bill_text", another, fixture.tools)
+  expect(getBillText.mock.calls).toEqual([[selectionInput], [another]])
+  expect(fixture.record).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      input: another,
+      data: { document: { ...selectionDocument, id: another.documentId }, sections: [], nextCursor: null }
+    })
+  )
+  expect(fixture.report).not.toHaveBeenCalled()
+})
+
+it("keeps a mutated document read as a reported failure and offers exact choices without automatic substitution", async () => {
+  const getBillText = vi.fn<LegislationQueryApi["getBillText"]>(async ({ documentId }) => {
+    if (documentId !== selectionDocument.id) {
+      throw new LegislationError("not_found", "Document was not found")
+    }
+    return { document: selectionDocument, sections: [], nextCursor: null }
+  })
+  const fixture = selectionTools({ getBillText })
+  await callWebTool("get_bill", { id: selectionBillId }, fixture.tools)
+  const altered = { ...selectionInput, documentId: alteredDocumentId }
+  await expect(callWebTool("get_bill_text", altered, fixture.tools)).rejects.toMatchObject({
+    code: "not_found",
+    recovery: { action: "select_returned", documents: [selectionDocument] }
+  })
+  expect(getBillText.mock.calls).toEqual([[altered]])
+  expect(fixture.report).toHaveBeenCalledWith(
+    expect.objectContaining({
+      toolName: "get_bill_text",
+      error: expect.objectContaining({
+        code: "not_found",
+        recovery: {
+          action: "select_returned",
+          instruction: expect.any(String),
+          documents: [selectionDocument]
+        }
+      })
+    })
+  )
+  expect(fixture.record).toHaveBeenLastCalledWith({ tool: "get_bill_text", input: altered, failure: "not_found" })
+  await callWebTool("get_bill_text", selectionInput, fixture.tools)
+  expect(getBillText.mock.calls).toEqual([[altered], [selectionInput]])
+})
+
+it("rejects a known document's wrong parent before any backend read", async () => {
+  const getBillText = vi.fn<LegislationQueryApi["getBillText"]>()
+  const fixture = selectionTools({ getBillText })
+  await callWebTool("get_bill", { id: selectionBillId }, fixture.tools)
+  await expect(
+    callWebTool("get_bill_text", { ...selectionInput, id: "bill:us:118:hr:9619" }, fixture.tools)
+  ).rejects.toMatchObject({ code: "invalid_request", recovery: { action: "resolve_document" } })
+  expect(getBillText).not.toHaveBeenCalled()
+})
+
+it("preserves exact document selectors across collection, section, comparison and text-search tools", async () => {
+  const getDocumentSections = vi.fn<NonNullable<LegislationQueryApi["getDocumentSections"]>>(async () => ({
+    items: []
+  }))
+  const readRecordCollection = vi.fn<NonNullable<LegislationQueryApi["readRecordCollection"]>>(async () => ({
+    items: []
+  }))
+  const compareBillVersions = vi.fn<LegislationQueryApi["compareBillVersions"]>(async () => ({ sections: [] }))
+  const searchBillText = vi.fn<LegislationQueryApi["searchBillText"]>(async () => ({ items: [] }))
+  const fixture = selectionTools({ getDocumentSections, readRecordCollection, compareBillVersions, searchBillText })
+  await callWebTool("get_bill", { id: selectionBillId }, fixture.tools)
+  const sectionInput = { documentId: selectionDocument.id, limit: 10 }
+  const collectionInput = {
+    collection: "document-sections",
+    recordId: selectionDocument.id,
+    sectionId: "section:2",
+    textOffset: 10000,
+    limit: 1
+  }
+  const comparisonInput = {
+    billId: selectionBillId,
+    documentIds: [selectionDocument.id, `${selectionBillId}:document:explicit-second-version`],
+    limit: 10
+  }
+  await callWebTool("get_document_sections", sectionInput, fixture.tools)
+  await callWebTool("read_record_collection", collectionInput, fixture.tools)
+  await callWebTool("compare_bill_versions", comparisonInput, fixture.tools)
+  await callWebTool(
+    "search_bill_text",
+    { query: "procurement", billId: selectionBillId, documentIds: [selectionDocument.id] },
+    fixture.tools
+  )
+  expect(getDocumentSections).toHaveBeenCalledExactlyOnceWith(sectionInput)
+  expect(readRecordCollection).toHaveBeenCalledExactlyOnceWith(collectionInput)
+  expect(compareBillVersions).toHaveBeenCalledExactlyOnceWith({ ...comparisonInput, cursor: undefined })
+  expect(searchBillText).toHaveBeenCalledExactlyOnceWith({
+    query: "procurement",
+    billIds: [selectionBillId],
+    documentIds: [selectionDocument.id],
+    documentClassifications: undefined,
+    mode: "lexical"
+  })
+})
+
+it("passes the exact returned continuation through core and rejects mutation or another turn before service execution", async () => {
+  const getBillText = vi.fn<LegislationQueryApi["getBillText"]>(async ({ cursor }) => ({
+    document: selectionDocument,
+    sections: [],
+    nextCursor: cursor ? null : "upstream-offset-50"
+  }))
+  const fixture = selectionTools({ getBillText })
+  const first = await callWebTool("get_bill_text", selectionInput, fixture.tools)
+  const cursor = z.object({ data: z.object({ nextCursor: z.string() }) }).parse(first).data.nextCursor
+  const altered = `${cursor.slice(0, -4)}AAAA`
+  await expect(
+    callWebTool("get_bill_text", { ...selectionInput, cursor: altered }, fixture.tools)
+  ).rejects.toMatchObject({
+    code: "invalid_cursor",
+    recovery: { action: "select_returned", continuation: { field: "cursor", value: cursor } }
+  })
+  expect(getBillText).toHaveBeenCalledTimes(1)
+  await callWebTool("get_bill_text", { ...selectionInput, cursor }, fixture.tools)
+  expect(getBillText).toHaveBeenLastCalledWith({ ...selectionInput, cursor: "upstream-offset-50" })
+  const anotherTurn = selectionTools({ getBillText })
+  await expect(callWebTool("get_bill_text", { ...selectionInput, cursor }, anotherTurn.tools)).rejects.toMatchObject({
+    code: "invalid_cursor",
+    recovery: { action: "restart" }
+  })
+  expect(getBillText).toHaveBeenCalledTimes(2)
+})
+
+it("uses canonical schema defaults when validating continuation filters", async () => {
+  const searchBillText = vi.fn<LegislationQueryApi["searchBillText"]>(async () => ({
+    items: [],
+    nextCursor: "next-search-page"
+  }))
+  const fixture = selectionTools({ searchBillText })
+  const searchInput = {
+    query: "school procurement",
+    sessionIds: ["session:us:119"],
+    jurisdictionIds: ["jurisdiction:us"]
+  }
+  const first = await callWebTool("search_bill_text", searchInput, fixture.tools)
+  const cursor = z.object({ data: z.object({ nextCursor: z.string() }) }).parse(first).data.nextCursor
+  await callWebTool("search_bill_text", { ...searchInput, cursor }, fixture.tools)
+  expect(searchBillText).toHaveBeenLastCalledWith(
+    expect.objectContaining({ ...searchInput, mode: "lexical", cursor: "next-search-page" })
+  )
+  await expect(
+    callWebTool("search_bill_text", { ...searchInput, limit: 25, cursor }, fixture.tools)
+  ).rejects.toMatchObject({ code: "invalid_cursor", recovery: { action: "restart" } })
+  await expect(
+    callWebTool("search_bill_text", { ...searchInput, sessionIds: ["session:us:118"], cursor }, fixture.tools)
+  ).rejects.toMatchObject({ code: "invalid_cursor", recovery: { action: "answer" } })
+  await expect(
+    callWebTool("search_bill_text", { ...searchInput, jurisdictionIds: ["jurisdiction:ca"], cursor }, fixture.tools)
+  ).rejects.toMatchObject({ code: "invalid_cursor", recovery: { action: "answer" } })
+  expect(searchBillText).toHaveBeenCalledTimes(2)
+})
+
+it("charges every rejected selection to the existing call budget and offers recovery only once", async () => {
+  const getBillText = vi.fn<LegislationQueryApi["getBillText"]>()
+  const fixture = selectionTools({ getBillText })
+  const input = { ...selectionInput, cursor: "invented" }
+  await expect(callWebTool("get_bill_text", input, fixture.tools)).rejects.toMatchObject({
+    code: "invalid_cursor",
+    recovery: { action: "restart" }
+  })
+  for (let index = 1; index < researchAgentLimits.calls; index++) {
+    await expect(callWebTool("get_bill_text", input, fixture.tools)).rejects.toMatchObject({
+      code: "invalid_cursor",
+      recovery: { action: "answer" }
+    })
+  }
+  await expect(callWebTool("get_bill_text", input, fixture.tools)).rejects.toMatchObject({ code: "step_limit" })
+  expect(getBillText).not.toHaveBeenCalled()
+  expect(fixture.report).toHaveBeenCalledTimes(researchAgentLimits.calls + 1)
+})
+
+it("delivers exact recovery to the SDK model and preserves answer synthesis after repeated failed reads", async () => {
+  const getBillText = vi.fn<LegislationQueryApi["getBillText"]>(async ({ documentId }) => {
+    if (documentId !== selectionDocument.id) {
+      throw new LegislationError("not_found", "Document was not found")
+    }
+    return {
+      document: selectionDocument,
+      sections: [{ id: "section:definitions", documentId, heading: "Definitions", text: "SEC. 2. DEFINITIONS." }],
+      nextCursor: "more-sections"
+    }
+  })
+  const fixture = selectionTools({ getBillText })
+  const scriptedCalls = [
+    { name: "get_bill", input: { id: selectionBillId, childLimit: null } },
+    { name: "get_bill_text", input: { ...selectionInput, documentId: alteredDocumentId, cursor: null } },
+    { name: "get_bill_text", input: { ...selectionInput, cursor: null } }
+  ]
+  const answer =
+    "Research is incomplete: the read failed, and a definitions heading does not establish whether duties are absent."
+  let generations = 0
+  const model = new MockLanguageModelV4({
+    doStream: async ({ toolChoice }) => {
+      const call = scriptedCalls[generations] ?? {
+        name: "get_bill_text",
+        input: { ...selectionInput, cursor: "invented" }
+      }
+      generations++
+      const isSynthesis = toolChoice?.type === "none"
+      return {
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: "stream-start", warnings: [] })
+            if (isSynthesis) {
+              controller.enqueue({ type: "text-start", id: "answer" })
+              controller.enqueue({ type: "text-delta", id: "answer", delta: answer })
+              controller.enqueue({ type: "text-end", id: "answer" })
+            } else {
+              controller.enqueue({
+                type: "tool-call",
+                toolCallId: `selection-${generations}`,
+                toolName: call.name,
+                input: JSON.stringify(call.input)
+              })
+            }
+            controller.enqueue({
+              type: "finish",
+              finishReason: { unified: isSynthesis ? "stop" : "tool-calls", raw: isSynthesis ? "stop" : "tool_calls" },
+              usage: {
+                inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+                outputTokens: { total: 1, text: 1, reasoning: 0 }
+              }
+            })
+            controller.close()
+          }
+        })
+      }
+    }
+  })
+  const result = runResearchAgent({
+    sessionId: "selection-regression",
+    model,
+    instructions: compositionInstructions,
+    messages: [{ role: "user", content: "Read this bill's operative requirements." }],
+    tools: await fixture.tools,
+    signal: new AbortController().signal
+  })
+  let text = ""
+  for await (const chunk of result.stream) {
+    expect(chunk.type).not.toBe("error")
+    if (chunk.type === "text-delta") {
+      text += chunk.text
+    }
+  }
+  const errorResults = model.doStreamCalls[2]?.prompt
+    .filter((message) => message.role === "tool")
+    .flatMap((message) => message.content)
+    .filter((content) => content.type === "tool-result" && content.output.type === "error-text")
+  expect(errorResults).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        output: expect.objectContaining({
+          type: "error-text",
+          value: expect.stringContaining(JSON.stringify([selectionDocument]))
+        })
+      })
+    ])
+  )
+  expect(getBillText.mock.calls).toEqual([[{ ...selectionInput, documentId: alteredDocumentId }], [selectionInput]])
+  expect(model.doStreamCalls).toHaveLength(researchAgentLimits.steps)
+  expect(model.doStreamCalls.at(-1)?.toolChoice?.type).toBe("none")
+  expect(text).toBe(answer)
+  expect(fixture.record).toHaveBeenCalledWith(
+    expect.objectContaining({
+      tool: "get_bill_text",
+      input: selectionInput,
+      data: expect.objectContaining({ document: selectionDocument })
+    })
+  )
+})
+
+const broadTextInput = {
+  limit: 20,
+  query: "patient cost sharing rebate pass through spread pricing fees compensation pharmacy benefit managers",
+  jurisdictionIds: ["jurisdiction:us"],
+  sessionIds: ["session:us:119"],
+  classifications: ["version"],
+  mode: "lexical"
+}
+
+it("rejects enrichment overflow with actionable narrowing without dropping evidence or retrying", async () => {
+  const items = Array.from({ length: 5 }, (_, index) => ({
+    id: `section:${index}`,
+    documentId: `${selectionBillId}:document:${index}`,
+    billId: selectionBillId,
+    sectionIdentifier: `SEC. ${index + 1}`,
+    title: "Pharmacy benefit manager compensation",
+    sourceUrl: `https://www.congress.gov/bill/119th-congress/house-bill/9619/text?section=${index}`,
+    text: "Patient cost sharing and rebate pass through. ".repeat(650)
+  }))
+  const searchBillText = vi.fn<LegislationQueryApi["searchBillText"]>(async (input) => ({
+    items: items.slice(0, input.limit ?? items.length),
+    nextCursor: "unread-page",
+    truncated: true
+  }))
+  const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
+  const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
+  const fixture = selectionTools({ searchBillText }, { onContents, onMeasurement })
+  await expect(callWebTool("search_bill_text", broadTextInput, fixture.tools)).rejects.toMatchObject({
+    code: "result_limit",
+    recovery: {
+      action: "narrow",
+      instruction: expect.stringContaining("limit: 1")
+    },
+    message: expect.stringContaining("coverage remains incomplete")
+  })
+  const { classifications, ...selection } = broadTextInput
+  expect(searchBillText).toHaveBeenCalledExactlyOnceWith({
+    ...selection,
+    billIds: undefined,
+    documentClassifications: classifications
+  })
+  expect(onContents).not.toHaveBeenCalled()
+  expect(fixture.record).toHaveBeenCalledExactlyOnceWith({
+    tool: "search_bill_text",
+    input: broadTextInput,
+    failure: "result_limit"
+  })
+  expect(onMeasurement).toHaveBeenCalledOnce()
+  const measured = onMeasurement.mock.calls[0]?.[0]
+  expect(measured?.rawResultBytes).toBeLessThan(researchResultByteLimit)
+  expect(measured?.enrichedResultBytes).toBeGreaterThan(researchResultByteLimit)
+  expect(measured?.modelResultBytes).toBeGreaterThan(researchResultByteLimit)
+  expect(measured).toMatchObject({
+    outcome: "error",
+    failureCode: "result_limit",
+    resultCount: 5,
+    hasNextPage: true,
+    attemptCount: 1
+  })
+  expect(fixture.report).toHaveBeenCalledWith(expect.objectContaining({ measurement: measured }))
+  const narrowed = { ...broadTextInput, limit: 1, billId: selectionBillId }
+  const output = await callWebTool("search_bill_text", narrowed, fixture.tools)
+  expect(output).toMatchObject({
+    data: { items: [items[0]], nextCursor: expect.any(String), truncated: true },
+    evidence: [
+      {
+        recordId: items[0]?.documentId,
+        billId: selectionBillId,
+        sourceUrl: items[0]?.sourceUrl,
+        content: { state: "available", truncated: true }
+      }
+    ]
+  })
+  expect(Buffer.byteLength(researchModelOutput({ output }).value, "utf8")).toBeLessThan(researchResultByteLimit)
+  expect(searchBillText).toHaveBeenCalledTimes(2)
+  expect(fixture.record).toHaveBeenLastCalledWith(
+    expect.objectContaining({ input: narrowed, evidence: expect.any(Array) })
+  )
+})
+
+it("keeps raw-budget rejection measured and does not treat an oversized record as no evidence", async () => {
+  const getBill = vi.fn<LegislationQueryApi["getBill"]>(async () => ({
+    bill: { id: selectionBillId, title: "Recorded bill", detail: "x".repeat(researchResultByteLimit) }
+  }))
+  const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
+  const fixture = selectionTools({ getBill }, { onMeasurement })
+  await expect(callWebTool("get_bill", { id: selectionBillId }, fixture.tools)).rejects.toMatchObject({
+    code: "result_limit",
+    recovery: { action: "narrow", instruction: expect.stringContaining("childLimit: 1") }
+  })
+  const measured = onMeasurement.mock.calls[0]?.[0]
+  expect(measured?.rawResultBytes).toBeGreaterThan(researchResultByteLimit)
+  expect(measured).toMatchObject({ enrichedResultBytes: null, modelResultBytes: null, outcome: "error" })
+  expect(getBill).toHaveBeenCalledOnce()
+})
+
+it("measures accepted output in UTF-8 bytes and distinguishes dependency time from whole-tool time", async () => {
+  vi.useFakeTimers()
+  const start = new Date("2026-09-18T12:00:00.000Z")
+  vi.setSystemTime(start)
+  let clock = 0
+  vi.spyOn(performance, "now").mockImplementation(() => clock)
+  const data = {
+    items: [
+      {
+        documentId: selectionDocument.id,
+        billId: selectionBillId,
+        title: "Recorded compensation",
+        sourceUrl: "https://www.congress.gov/bill/119th-congress/house-bill/9619/text",
+        text: "A recorded rule costs €12."
+      }
+    ],
+    truncated: false
+  }
+  const searchBillText = vi.fn<LegislationQueryApi["searchBillText"]>(async () => {
+    clock += 23
+    vi.setSystemTime(new Date(start.getTime() + clock))
+    return data
+  })
+  const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
+  const fixture = selectionTools(
+    { searchBillText },
+    {
+      onMeasurement,
+      onContents: () => {
+        clock += 8
+        vi.setSystemTime(new Date(start.getTime() + clock))
+      }
+    }
+  )
+  const output = await callWebTool("search_bill_text", broadTextInput, fixture.tools)
+  expect(onMeasurement).toHaveBeenCalledExactlyOnceWith({
+    runId: expect.any(String),
+    toolCallId: expect.any(String),
+    toolName: "search_bill_text",
+    startedAt: start.toISOString(),
+    finishedAt: "2026-09-18T12:00:00.031Z",
+    durationMs: 31,
+    dependencyDurationMs: 23,
+    rawResultBytes: Buffer.byteLength(JSON.stringify({ data }), "utf8"),
+    enrichedResultBytes: Buffer.byteLength(JSON.stringify(output), "utf8"),
+    modelResultBytes: Buffer.byteLength(researchModelOutput({ output }).value, "utf8"),
+    resultCount: 1,
+    hasNextPage: false,
+    outcome: "success",
+    failureCode: null,
+    attemptCount: 1,
+    internalRetryCount: null,
+    retryOfToolCallId: null
+  })
+  const measuredText = JSON.stringify(onMeasurement.mock.calls)
+  expect(measuredText).not.toContain("€12")
+  expect(measuredText).not.toContain(broadTextInput.query)
+  expect(output).toMatchObject({
+    evidence: [
+      {
+        recordId: selectionDocument.id,
+        billId: selectionBillId,
+        content: { state: "available", quote: data.items[0]?.text }
+      }
+    ]
+  })
+})
+
+it("enforces the exact model boundary including added record links and multibyte text", () => {
+  const empty = { evidence: [], data: { text: "€" } }
+  const bytes = Buffer.byteLength(researchModelOutput({ output: empty }).value, "utf8")
+  const atLimit = { ...empty, data: { text: `€${"x".repeat(researchResultByteLimit - bytes)}` } }
+  expect(Buffer.byteLength(researchModelOutput({ output: atLimit }).value, "utf8")).toBe(researchResultByteLimit)
+  expect(() => researchModelOutput({ output: { ...atLimit, data: { text: `${atLimit.data.text}x` } } })).toThrow(
+    expect.objectContaining({ code: "result_limit" })
+  )
+
+  const resultSet: EntityPage = {
+    id: "11111111-1111-4111-8111-111111111111",
+    kind: "bill",
+    presentation: "list",
+    page: 0,
+    start: 1,
+    end: 1,
+    items: [{ id: selectionBillId, kind: "bill", title: "HR 9619", sourceUrl: null, fields: [], tallies: [] }],
+    hasNext: false,
+    hasPrevious: false,
+    warnings: []
+  }
+  const enriched = { evidence: [], resultSet, padding: "" }
+  enriched.padding = "x".repeat(researchResultByteLimit - Buffer.byteLength(JSON.stringify(enriched), "utf8"))
+  expect(Buffer.byteLength(JSON.stringify(enriched), "utf8")).toBe(researchResultByteLimit)
+  expect(() => researchModelOutput({ output: enriched })).toThrow(expect.objectContaining({ code: "result_limit" }))
+})
+
+it("serves the static analytics catalog through shared telemetry without opening the research database runtime", async () => {
+  const catalog = vi.fn<NonNullable<LegislationQueryApi["describeAnalytics"]>>(async (datasets) =>
+    describeAnalytics(datasets)
+  )
+  const aggregate = vi.fn<NonNullable<LegislationQueryApi["analyzeLegislation"]>>()
+  applicationQueryService.mockReturnValue({ describeAnalytics: catalog, analyzeLegislation: aggregate })
+  const tools = createResearchTools(
+    { NODE_ENV: "development" },
+    new AbortController().signal,
+    () => true,
+    vi.fn<() => void>()
+  )
+  const output = await callWebTool("describe_analytics", {}, tools)
+  expect(output).toMatchObject({ data: describeAnalytics(), evidence: [] })
+  expect(catalog).toHaveBeenCalledExactlyOnceWith(undefined)
+  expect(analyticsObserve).toHaveBeenCalledWith("mcp.describe_analytics", expect.any(Object), expect.any(Function))
+  expect(runtimeRun).not.toHaveBeenCalled()
+  expect(aggregate).not.toHaveBeenCalled()
+})
+
+it("keeps catalog examples out of evidence, selections and memory without stripping aggregate data", async () => {
+  const catalog = {
+    ...describeAnalytics(["bills"]),
+    examples: {
+      documents: [{ ...selectionDocument, billId: "bill:us:118:hr:9619", title: "string" }],
+      nextCursor: "placeholder-cursor"
+    }
+  }
+  const aggregate = {
+    rows: [{ total: 4 }],
+    receipt: { queryId: "aq_fixture", queryHash: "fixture-hash", nextOffset: null }
+  }
+  const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
+  const getBillText = vi.fn<LegislationQueryApi["getBillText"]>(async () => ({
+    document: selectionDocument,
+    sections: []
+  }))
+  const fixture = selectionTools(
+    {
+      describeAnalytics: async () => catalog,
+      analyzeLegislation: async () => aggregate,
+      getBillText
+    },
+    { onContents }
+  )
+  const output = await callWebTool("describe_analytics", { datasets: ["bills"] }, fixture.tools)
+  expect(output).toMatchObject({
+    data: { details: catalog.details, examples: { documents: catalog.examples.documents } },
+    evidence: [],
+    presentationOptions: []
+  })
+  expect(researchModelOutput({ output }).value).not.toContain("#citation-")
+  expect(onContents).not.toHaveBeenCalled()
+  expect(fixture.record).not.toHaveBeenCalled()
+  await callWebTool("get_bill_text", selectionInput, fixture.tools)
+  expect(getBillText).toHaveBeenCalledExactlyOnceWith(selectionInput)
+  await expect(
+    callWebTool(
+      "analyze_legislation",
+      { dataset: "bills", metrics: [{ name: "total", operation: "countDistinct", field: "id" }] },
+      fixture.tools
+    )
+  ).resolves.toMatchObject({ data: aggregate })
+  expect(fixture.record).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      tool: "analyze_legislation",
+      data: aggregate
+    })
+  )
+})
+
+it("retains analytics admission and aggregate execution boundaries", async () => {
+  const catalog = vi.fn<NonNullable<LegislationQueryApi["describeAnalytics"]>>(async () => describeAnalytics())
+  applicationQueryService.mockReturnValue({
+    describeAnalytics: catalog,
+    analyzeLegislation: vi.fn<NonNullable<LegislationQueryApi["analyzeLegislation"]>>()
+  })
+  const denied = createResearchTools(
+    { NODE_ENV: "development" },
+    new AbortController().signal,
+    () => false,
+    vi.fn<() => void>()
+  )
+  await expect(callWebTool("describe_analytics", {}, denied)).rejects.toMatchObject({ code: "interrupted" })
+  expect(catalog).not.toHaveBeenCalled()
+  runtimeRun.mockRejectedValueOnce(new LegislationError("dependency_unavailable", "Database fixture unavailable"))
+  await expect(
+    callWebTool(
+      "analyze_legislation",
+      { dataset: "bills", metrics: [{ name: "total", operation: "countDistinct", field: "id" }] },
+      createResearchTools({ NODE_ENV: "development" }, new AbortController().signal, () => true, vi.fn<() => void>())
+    )
+  ).rejects.toMatchObject({ code: "dependency_unavailable" })
+  expect(runtimeRun).toHaveBeenCalledOnce()
+})
+
+it.each([
+  { databaseCode: "57014", expected: "timeout" },
+  { databaseCode: "08006", expected: "dependency_unavailable" },
+  { databaseCode: "42804", expected: "internal" }
+])(
+  "classifies an observed outer-runtime $databaseCode without leaking its exception or retrying",
+  async ({ databaseCode, expected }) => {
+    runtimeRun.mockRejectedValueOnce(
+      new Error("Database wrapper with private connection information", {
+        cause: Object.assign(new Error("Private database detail"), { code: databaseCode })
+      })
+    )
+    const report = vi.fn<() => void>()
+    const tools = createResearchTools({ NODE_ENV: "development" }, new AbortController().signal, () => true, report)
+    await expect(callWebTool("get_bill_timeline", { limit: 100, id: "bill:us:119:hr:1" }, tools)).rejects.toMatchObject(
+      {
+        code: expected
+      }
+    )
+    expect(runtimeRun).toHaveBeenCalledOnce()
+    expect(JSON.stringify(report.mock.calls)).not.toMatch(/private|Private/)
+  }
+)
+
+it("preserves the exact timeline call and date/null evidence without a hidden retry", async () => {
+  const events = [
+    { id: "action:1", type: "action", date: "2025-07-03", description: "Date-only event" },
+    { id: "vote:1", type: "vote", date: "2025-07-04T00:15:12.345Z", description: "Timestamp event" },
+    { id: "action:2", type: "action", date: null, description: "Undated event" }
+  ]
+  const getBillTimeline = vi.fn<LegislationQueryApi["getBillTimeline"]>(async () => ({
+    billId: "bill:us:119:hr:1",
+    events,
+    truncated: false,
+    warnings: []
+  }))
+  const fixture = selectionTools({ getBillTimeline })
+  const input = { limit: 100, id: "bill:us:119:hr:1" }
+  const output = await callWebTool("get_bill_timeline", input, fixture.tools)
+  expect(output).toMatchObject({ data: { events } })
+  expect(getBillTimeline).toHaveBeenCalledExactlyOnceWith(input)
+})
+
+it.each([
+  { error: new LegislationError("dependency_unavailable", "The database query timed out."), code: "timeout" },
+  { error: new LegislationError("dependency_unavailable", "Unavailable fixture"), code: "dependency_unavailable" },
+  { error: new Error("Unknown historical cause; private-token and raw reasoning must not leak"), code: "internal" }
+])(
+  "reports scoped $code failures for the retained material query without inventing absent evidence",
+  async ({ error, code }) => {
+    const input = {
+      limit: 20,
+      sessionIds: ["session:us:119"],
+      documentFrom: "2025-01-01",
+      documentTo: "2026-09-18",
+      jurisdictionId: "jurisdiction:us",
+      mode: "hybrid",
+      query: "AI education claims procurement evidence schools tutoring assessment hearings testimony"
+    }
+    const searchSupportingMaterials = vi.fn<LegislationQueryApi["searchSupportingMaterials"]>(async () => {
+      throw error
+    })
+    const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
+    const fixture = selectionTools({ searchSupportingMaterials }, { onMeasurement })
+    await expect(callWebTool("search_supporting_materials", input, fixture.tools)).rejects.toMatchObject({ code })
+    expect(searchSupportingMaterials).toHaveBeenCalledExactlyOnceWith(input)
+    expect(fixture.record).toHaveBeenCalledExactlyOnceWith({
+      tool: "search_supporting_materials",
+      input,
+      failure: code
+    })
+    expect(onMeasurement).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        outcome: "error",
+        failureCode: code,
+        rawResultBytes: null,
+        enrichedResultBytes: null,
+        modelResultBytes: null,
+        resultCount: null,
+        hasNextPage: null,
+        attemptCount: 1
+      })
+    )
+    expect(JSON.stringify(onMeasurement.mock.calls)).not.toMatch(/private-token|raw reasoning/)
+  }
+)
+
+it("records rejected admission without fabricating dependency duration and tolerates an unavailable measurement sink", async () => {
+  const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
+  const denied = selectionTools({}, { canResearch: () => false, onMeasurement })
+  await expect(callWebTool("get_bill", { id: selectionBillId }, denied.tools)).rejects.toMatchObject({
+    code: "interrupted"
+  })
+  expect(onMeasurement).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ outcome: "error", failureCode: "interrupted", dependencyDurationMs: null })
+  )
+  onMeasurement.mockImplementation(() => {
+    throw new Error("Telemetry sink unavailable")
+  })
+  const accepted = selectionTools({}, { onMeasurement })
+  await expect(callWebTool("get_bill", { id: selectionBillId }, accepted.tools)).resolves.toMatchObject({
+    data: { bill: { id: selectionBillId } }
+  })
+  expect(accepted.report).not.toHaveBeenCalled()
+})
+
+it("measures repeated inputs as distinct calls without inventing retry relationships", async () => {
+  const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
+  const fixture = selectionTools({}, { onMeasurement })
+  const input = { id: selectionBillId }
+  await callWebTool("get_bill", input, fixture.tools, "call-first")
+  await callWebTool("get_bill", input, fixture.tools, "call-second")
+  expect(onMeasurement.mock.calls.map(([value]) => value.toolCallId)).toEqual(["call-first", "call-second"])
+  expect(onMeasurement.mock.calls.map(([value]) => value.retryOfToolCallId)).toEqual([null, null])
+  expect(onMeasurement.mock.calls.map(([value]) => value.outcome)).toEqual(["success", "success"])
 })

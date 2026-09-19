@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
+import { markdownEvidenceFixture, qualifiedEvidenceFixture } from "../components/citationEvidenceFixtures"
 import { EvidencePanel } from "../components/EvidencePanel"
 import type { EvidenceSnapshot } from "../evidence"
 import { DrawerExample, drawerEvidence } from "./drawerExamples"
@@ -31,3 +32,5 @@ export const NoPassage: Story = { args: { evidence: { ...drawerEvidence, content
 export const SourceUnavailable: Story = {
   args: { evidence: { ...drawerEvidence, sourceUrl: null, content: { state: "unavailable" } } }
 }
+export const MarkdownTable: Story = { args: { evidence: markdownEvidenceFixture } }
+export const QualifiedStudy: Story = { args: { evidence: qualifiedEvidenceFixture } }

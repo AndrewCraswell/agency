@@ -12,6 +12,12 @@ provenance and incomplete research across turns, with fresh citation registratio
 [Canonical bill identity](engineering/conversation-bill-identity.md) preserves bill titles, Congress/session and
 document provenance through follow-ups and requires explicit correction of conflicting earlier labels.
 
+[Exact research selections](engineering/conversation-research-selection.md) preserves returned document IDs and
+scoped cursors with bounded, explicit recovery.
+
+[Bill progress](engineering/conversation-bill-progress.md) derives stages from recorded actions while preserving
+unknown milestones, missing dates and incomplete history.
+
 [Conversation model settings](operations/development.md#development-chat-research-connection) use Luna with high
 reasoning for answers; suggestions and offline judges retain their separately configured low reasoning.
 

@@ -1,4 +1,5 @@
 import { createDatabase, withReadOnlyDatabase } from "@repo/legislation-core/database/database"
+import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { OpenRouterRetrievalClient } from "../../services/openrouter/openrouter-retrieval"
 import { loadConfig, type LegislationConfig } from "../configuration/config"
 import { LegislationQueryService } from "../legislation/query-service"
@@ -50,7 +51,15 @@ function createResearchRuntime(config: LegislationConfig = loadConfig()) {
           return await operation(new LegislationQueryService(database, retrieval, ranked))
         },
         requestSignal
-      )
+      ).catch((error: unknown) => {
+        if (deadline.aborted && !signal?.aborted) {
+          throw new LegislationError("dependency_unavailable", "The research query timed out. Narrow the selection.", {
+            cause: error,
+            details: { reason: "timeout", retryable: true }
+          })
+        }
+        throw error
+      })
     },
     async close() {
       await Promise.all([canonical.pool.end(), search?.pool.end()])

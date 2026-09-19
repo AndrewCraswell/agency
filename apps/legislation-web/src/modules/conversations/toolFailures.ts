@@ -2,6 +2,7 @@ import { captureException } from "@sentry/core"
 import { InvalidToolInputError, NoSuchToolError } from "ai"
 import { z } from "zod"
 import { ResearchFailure } from "./researchFailure"
+import { researchToolMeasurementSchema, type ResearchToolMeasurement } from "./researchMeasurement"
 
 type ToolFailure = Readonly<{
   toolCallId: string
@@ -9,11 +10,12 @@ type ToolFailure = Readonly<{
   error: unknown
   durationMs?: number
   resultBytes?: number
+  measurement?: ResearchToolMeasurement
 }>
 
 export function createToolFailureReporter(runId: string) {
   const reported = new Set<string>()
-  return ({ toolCallId, toolName, error, durationMs, resultBytes }: ToolFailure) => {
+  return ({ toolCallId, toolName, error, durationMs, resultBytes, measurement }: ToolFailure) => {
     if (reported.has(toolCallId)) {
       return
     }
@@ -34,7 +36,11 @@ export function createToolFailureReporter(runId: string) {
         runId,
         toolCallId
       },
-      extra: { durationMs, resultBytes }
+      extra: {
+        durationMs,
+        resultBytes,
+        measurement: measurement === undefined ? undefined : researchToolMeasurementSchema.parse(measurement)
+      }
     })
   }
 }

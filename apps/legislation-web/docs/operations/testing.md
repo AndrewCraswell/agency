@@ -63,25 +63,50 @@ deployed latency; keep wall-clock performance gates in a measured integration/be
 source-policy, tokenizer, parser or packaging tests merely because they use fixed fixtures or execute generated code.
 Review prose contracts directly instead of maintaining executable tests for document inventories.
 
+## Module loading
+
+Use Vitest's import profiler on one representative file before changing runner isolation or deleting tests:
+`--experimental.importDurations.print=on-warn --experimental.importDurations.thresholds.warn=0
+--experimental.importDurations.limit=20`. Total import timings include nested imports; do not sum them as independent
+costs. Keep the worker count, coverage setting and CPU allocation identical for before/after comparisons.
+
+`createResearchTools` is asynchronous. Callers await it; supplying a fixture query service avoids importing the live
+application/database composition. The read-only research runtime loads only for a live structured query.
+An injected failure reporter also avoids loading the default telemetry SDK; analytics telemetry loads only for
+live analytics operations.
+In-memory result stores also avoid loading server persistence; the default persistent store imports its adapter only
+when saving, restoring or continuing stored results. Fixture tests retain the real tool contracts and SDK loop,
+with import guards against loading production runtimes.
+
 ## Full verification
 
 The legislation-only entrypoint is `pnpm verify:legislation` from the repository root. The root manifest runs types,
 lint, scoped strict knip and non-database coverage across C/W/I/M, then I's Python suite, serialized C/I/W database
-profiles, and W followed by M built acceptance. I's coverage includes its parsing project. The command exists; this
-documentation audit did not run it or establish a passing result.
+profiles, and W followed by M built acceptance. I's coverage includes its parsing project.
 
 W has no `test:all` script. Its Node webhook receiver remains the separate
-`pnpm --filter legislation-web test:webhook-verification-receiver` command; the root gate does not explicitly invoke
-it. M's built acceptance uses distinct-origin HTTP fixtures, not a running W deployment. Root-coordinated I-to-W
-publication/rights/replay and live M-to-W acceptance are not implied by the scripts above. Skipped environment-gated
-database suites are not passes. Run expensive profiles once and clean up owned processes. Root `pnpm verify`
-temporarily delegates to `verify:legislation`, excluding unrelated workspaces. Neither entrypoint runs formatting.
-To restore full-repository verification, change the root `verify` script back to `run-s check test:coverage`.
+`pnpm --filter legislation-web test:webhook-verification-receiver` command, also invoked by the root acceptance gate.
+M's built acceptance uses distinct-origin HTTP fixtures; the final root-coordinated acceptance also exercises real
+built M and W on separate local origins. Positive corpus acceptance requires an explicitly supplied disposable database.
+These fixtures do not establish deployed provider availability. Skipped environment-gated database suites are not
+passes. Run expensive profiles once and clean up owned processes. Root `pnpm verify` delegates to
+`verify:legislation`, excluding unrelated workspaces. Neither entrypoint runs formatting.
 
-Each invocation defaults to at most four workers. Override with `VITEST_MAX_WORKERS` or `--maxWorkers` when measuring
-on a dedicated machine. This is not a cross-process lock: wait for an active run to finish before launching another,
-and never run two database or built-app acceptance invocations against the same resources. Do not terminate another
-session's tests merely because they are slow.
+Types, lint and non-database coverage use Turbo with four explicit legislation package filters, `--concurrency=1`
+and `--cache=local:rw`. Unchanged tasks replay their local cache; coverage restores the configured `coverage/**`
+outputs. Shared dependency task relationships remain part of cache invalidation. A previous direct Vitest or recursive
+pnpm run does not populate Turbo's cache: the first Turbo run for a new hash executes the task normally.
+The web app's shared Storybook configuration remains a lint/type prerequisite; unrelated product workspaces are not
+selected. Coverage runs only the four legislation packages.
+
+Knip, Python, database and built-acceptance stages remain outside Turbo and execute on every full invocation.
+No remote cache uploads are enabled by these scoped scripts. When diagnosing a cached task, append `--force` to its
+individual script, for example `pnpm legislation:check:types --force`.
+
+Turbo serializes package tasks, not Vitest workers. W, I and C support `VITEST_MAX_WORKERS`; an explicit Vitest
+`--maxWorkers` also controls a focused invocation. Caching and task concurrency are not cross-process locks: wait for
+an active verification to finish before launching another, and never run two database or built-app acceptance
+invocations against the same resources. Do not terminate another session's tests merely because they are slow.
 
 `pnpm dev` in W starts Next.js only. Built/fixture acceptance is not live deployment, browser consent, provider coverage
 or production latency. This documentation move ran no tests or verification.

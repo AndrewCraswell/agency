@@ -11,6 +11,7 @@ import type { EntityCard, EntityPage } from "../entityResults"
 import type { EvidenceSnapshot } from "../evidence"
 import type { MeetingDetails, VoteDetails } from "../recordDetails"
 import { ChatProviders } from "./ChatProviders"
+import { malformedCitationFixtures } from "./citationEvidenceFixtures"
 import { createCitationPresentation, type CitationSelection } from "./citationPresentation"
 import { ConversationResponse } from "./ConversationResponse"
 import { CompactRecordCard, RecordCard } from "./EntityResults"
@@ -122,6 +123,53 @@ function inlineResponse(parts: UIMessage["parts"], isRunning = false) {
 }
 
 describe("response presentation snapshots", () => {
+  it.each(malformedCitationFixtures)(
+    "activates the exact answer-owned source for malformed receipt $marker",
+    async (fixture) => {
+      const onEvidence = vi.fn<(selection: CitationSelection) => void>()
+      const { container } = render(
+        <ConversationResponse
+          message={message(`Claim ${fixture.marker}. Unknown [9](#citation-e999].`, fixture.answerId)}
+          evidence={[fixture.evidence]}
+          isRunning={false}
+          isIncomplete={false}
+          onEvidence={onEvidence}
+        />,
+        { wrapper: InlineProviders }
+      )
+      expect(container.textContent).not.toContain("#citation-")
+      const source = screen.getByRole("button", { name: `Read source 1: ${fixture.evidence.title}` })
+      source.focus()
+      await userEvent.setup().keyboard("{Enter}")
+      expect(onEvidence).toHaveBeenCalledWith({
+        answerId: fixture.answerId,
+        number: 1,
+        evidence: fixture.evidence
+      })
+      const missing = screen.getByRole("button", { name: "Citation 2 unavailable" })
+      expect(missing.getAttribute("aria-disabled")).toBe("true")
+      await userEvent.setup().click(missing)
+      expect(onEvidence).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it("keeps malformed markers literal inside code and escaped Markdown", () => {
+    const text = "`[7](#citation-e549]`\n\n```md\n[7](#citation-e549]\n```\n\n\\[7](#citation-e549]"
+    const { container } = render(
+      <ConversationResponse
+        message={message(text)}
+        evidence={[]}
+        isRunning={false}
+        isIncomplete={false}
+        onEvidence={() => undefined}
+      />,
+      { wrapper: InlineProviders }
+    )
+    expect(container.textContent).toContain("[7](#citation-e549]")
+    expect(screen.queryByRole("button", { name: /Citation .* unavailable/ })).toBeNull()
+    expect(screen.queryByRole("button", { name: /Sources/ })).toBeNull()
+  })
+
   it("opens freshly registered prior-turn evidence by keyboard without a repeated tool call", async () => {
     const onEvidence = vi.fn<(selection: CitationSelection) => void>()
     const source = { ...first, citationRef: "e42" }

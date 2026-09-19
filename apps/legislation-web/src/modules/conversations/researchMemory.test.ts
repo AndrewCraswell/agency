@@ -3,6 +3,7 @@ import type { ModelMessage } from "ai"
 import { MockLanguageModelV4 } from "ai/test"
 import invariant from "tiny-invariant"
 import { describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 import { runResearchAgent } from "./agent"
 import { conversationTextMessages, chatRequestSchema } from "./chatRequest"
 import { createCitationPresentation } from "./components/citationPresentation"
@@ -68,6 +69,90 @@ async function seed(persistence: ResearchSnapshotPersistence, id = runId, source
 }
 
 describe("server-owned research memory", () => {
+  it.each([
+    {
+      name: "conditional immunity",
+      quote: "A developer satisfying paragraphs (1) and (2) is immune from the specified civil action.",
+      qualification:
+        "Failure to satisfy those conditions removes this immunity; it does not itself establish liability."
+    },
+    {
+      name: "hearing opportunity",
+      quote: "Provide written notice and an opportunity for a fair hearing.",
+      qualification:
+        "Assistance continues during the 30-day correction period; the passage does not require a completed hearing before every action."
+    },
+    {
+      name: "fiscal component and whole-bill estimate",
+      quote: "The modeled section 2 change reduces premiums for the specified population.",
+      qualification: "The modeled whole-bill net effect increases premiums over the same forecast horizon."
+    },
+    {
+      name: "proposed rather than final authority",
+      quote: "The agency proposes payment at the outpatient rate plus five percent.",
+      qualification: "Proposed rule, not final authority; final adoption and effective date have not been retrieved."
+    }
+  ])(
+    "retains both claim and qualification for $name without upgrading incomplete scope",
+    async ({ quote, qualification }) => {
+      const { persistence } = persistenceFixture()
+      const turn = createResearchTurn(
+        owner.sessionKey,
+        owner.sessionId,
+        "Compare 2021-2026 federal and state policy.",
+        () => 0
+      )
+      const input = { query: "policy", sessionIds: ["session:us:119"], jurisdictionIds: ["jurisdiction:us"] }
+      const source: EvidenceSnapshot = {
+        ...evidence,
+        content: { state: "available", quote: `${quote}\n\n${qualification}`, truncated: true, totalCharacters: 4000 }
+      }
+      const data = {
+        sections: [{ text: `${quote}\n\n${qualification}` }],
+        sampleCount: 2,
+        populationDenominator: null,
+        warnings: ["Only one Congress and the first section page were retrieved."],
+        nextCursor: "turn-owned-continuation"
+      }
+      turn.record({ tool: "search_bill_text", input, data, evidence: [source] })
+      turn.record({ tool: "analyze_legislation", input: { dataset: "bills" }, failure: "dependency_unavailable" })
+      await turn.save(runId, true, persistence)
+      const restored = await restoreResearchMemory(owner, history, ["e1"], persistence, () => 1)
+      invariant(restored.message && typeof restored.message.content === "string")
+      const context = z
+        .object({
+          turns: z.array(
+            z.looseObject({
+              observations: z.array(z.looseObject({ data: z.unknown().optional() }))
+            })
+          )
+        })
+        .parse(JSON.parse(restored.message.content.split("\n\n").at(-1) ?? ""))
+      expect(context.turns[0]).toMatchObject({
+        goal: "Compare 2021-2026 federal and state policy.",
+        interrupted: true,
+        observations: [
+          {
+            input,
+            data: {
+              sections: [{ text: `${quote}\n\n${qualification}` }],
+              sampleCount: 2,
+              populationDenominator: null,
+              warnings: data.warnings
+            },
+            hasMore: true,
+            dataOmitted: false
+          },
+          { failure: "dependency_unavailable" }
+        ]
+      })
+      expect(context.turns[0]?.observations[0]?.data).not.toHaveProperty("nextCursor")
+      expect(restored.evidence[0]?.content).toEqual(source.content)
+      expect(restored.evidence[0]?.versionLabel).toBe(source.versionLabel)
+      expect(restored.evidence[0]?.citationRef).not.toBe("e1")
+    }
+  )
+
   it("restores bounded provenance and failed goals into actual follow-up model input without another read", async () => {
     const { persistence } = persistenceFixture()
     await seed(persistence)

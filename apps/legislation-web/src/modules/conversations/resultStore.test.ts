@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vitest"
 import { projectEntityResult, ResultExpiredError } from "./entityResults"
 import { createResultStore, type RetainedResult, type ResultPersistence } from "./resultStore"
 
+vi.mock("./resultPersistence.server", () => {
+  throw new Error("In-memory result stores must not import server persistence")
+})
+
 describe("result recovery", () => {
   it("restores session-owned snapshots and resumes pagination after a process restart", async () => {
     const records = new Map<string, RetainedResult>()

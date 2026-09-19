@@ -54,7 +54,9 @@ export async function collectChatStream(stream: ReadableStream<TextStreamPart<To
         output.responses.push({ id: chunk.response.id, modelId: chunk.response.modelId })
       }
       if (chunk.type === "finish") {
-        output.termination = chunk.finishReason
+        if (output.termination !== "error" && output.termination !== "abort") {
+          output.termination = chunk.finishReason
+        }
         output.inputTokens = chunk.totalUsage.inputTokens ?? null
         output.outputTokens = chunk.totalUsage.outputTokens ?? null
       }

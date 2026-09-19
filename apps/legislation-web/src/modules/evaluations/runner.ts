@@ -151,7 +151,7 @@ export async function executeCase(options: {
                       .join("\n")
               return createCitationPresentation("history", text, []).missingReferences
             })
-          const tools = createResearchTools(
+          const tools = await createResearchTools(
             { NODE_ENV: "development" },
             signal,
             () => !pending,

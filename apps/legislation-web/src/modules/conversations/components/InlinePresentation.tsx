@@ -11,6 +11,7 @@ import type { ContentComponent, PresentationContent } from "../presentationConte
 import { BillProgressCard } from "./BillProgressCard"
 import type { CitationSelection } from "./citationPresentation"
 import { EntityResults } from "./EntityResults"
+import { EvidencePassage } from "./EvidencePassage"
 import { VoteDetails } from "./VoteDetails"
 import * as compactStyles from "./CompactRecordCard.css"
 import * as responseStyles from "./ConversationResponse.css"
@@ -72,11 +73,6 @@ function QuoteContent({
   if (expanded) {
     expandLabel = "Show less"
   }
-  let quote = fullText
-  if (fullText && isLong && !expanded) {
-    const boundary = fullText.lastIndexOf(" ", 600)
-    quote = fullText.slice(0, boundary > 0 ? boundary : 600)
-  }
   const url = evidenceSourceUrl(evidence)
   const isCard = variant === "CitationCard"
   let unavailable = "No passage was retrieved for this source."
@@ -124,15 +120,26 @@ function QuoteContent({
   )
   const excerpt = (
     <>
-      {quote ? (
-        <blockquote className={isCard ? styles.quote : styles.passageText}>{quote}</blockquote>
+      {fullText ? (
+        <EvidencePassage
+          id={`${descriptionId}-passage`}
+          className={isCard ? styles.quote : styles.passageText}
+          quote={fullText}
+          isScrollable={isLong && !expanded}
+        />
       ) : (
         <p className={styles.note}>{unavailable}</p>
       )}
       {isPartial && <p className={styles.note}>Only part of the retrieved passage is shown.</p>}
       {isLong && (
         <div className={styles.plainActions}>
-          <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-expanded={expanded}
+            aria-controls={`${descriptionId}-passage`}
+            onClick={() => setExpanded(!expanded)}
+          >
             {expandLabel}
           </Button>
           {!expanded && <span className={styles.note}>Passage excerpt</span>}

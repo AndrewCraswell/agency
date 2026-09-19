@@ -30,12 +30,15 @@ import {
   type ProfileDetails,
   type VoteDetails
 } from "../recordDetails"
+import { messageResponseOutcome, responseIsIncomplete } from "../responseOutcome"
 
 function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string) {
   const sessionKey = snapshot?.sessionKey ?? ownerKey ?? crypto.randomUUID()
+  let isExplicitlyCancelled = false
   const transport = new DefaultChatTransport({
     api: "/chat",
     prepareSendMessagesRequest: ({ id, messages, body }) => {
+      isExplicitlyCancelled = false
       const metadata = z
         .object({ references: z.array(conversationReferenceSchema).max(12) })
         .safeParse(messages.findLast((message) => message.role === "user")?.metadata)
@@ -59,11 +62,41 @@ function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string
         chat.messages = acknowledgeMessage(chat.messages, part.data)
       }
     },
+    onFinish: ({ message, isAbort, isError, isDisconnect, finishReason }) => {
+      chat.messages = chat.messages.map((current) => {
+        if (current.id !== message.id) {
+          return current
+        }
+        const metadata = z.record(z.string(), z.unknown()).safeParse(current.metadata)
+        const previous = z
+          .object({ isCancelled: z.boolean() })
+          .safeParse(metadata.success ? metadata.data.responseObservation : undefined)
+        return {
+          ...current,
+          metadata: {
+            ...(metadata.success ? metadata.data : {}),
+            responseObservation: {
+              finishReason: finishReason ?? null,
+              isAbort,
+              isError,
+              isDisconnect,
+              isCancelled: isExplicitlyCancelled || (previous.success && previous.data.isCancelled)
+            }
+          }
+        }
+      })
+    },
     onError: (error) => {
       captureException(error, { tags: { operation: "chat_transport", sessionId: chat.id } })
     }
   })
-  return { chat, sessionKey }
+  return {
+    chat,
+    sessionKey,
+    markCancelled: () => {
+      isExplicitlyCancelled = true
+    }
+  }
 }
 
 type ConversationSessionValue = Readonly<{
@@ -156,8 +189,15 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   }, [])
 
   const persistConversation = useEffectEvent(() => {
+    const lastMessage = chat.messages.at(-1)
+    const hasTerminalAnswer =
+      lastMessage?.role === "assistant" && !responseIsIncomplete(messageResponseOutcome(lastMessage))
     const wasInterrupted =
-      chat.status === "submitted" || chat.status === "streaming" || chat.status === "error" || isConfirmingClarification
+      !hasTerminalAnswer &&
+      (chat.status === "submitted" ||
+        chat.status === "streaming" ||
+        chat.status === "error" ||
+        isConfirmingClarification)
     const snapshot: DevelopmentConversation = {
       id: chat.id,
       sessionKey: session.sessionKey,
@@ -213,7 +253,25 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   }
 
   function markInterrupted() {
-    setInterruptedMessageId(chat.messages.at(-1)?.id)
+    session.markCancelled()
+    const latest = chat.messages.at(-1)
+    if (latest) {
+      const metadata = z.record(z.string(), z.unknown()).safeParse(latest.metadata)
+      setMessages((messages) =>
+        messages.map((message) =>
+          message.id === latest.id
+            ? {
+                ...message,
+                metadata: {
+                  ...(metadata.success ? metadata.data : {}),
+                  responseObservation: { isCancelled: true }
+                }
+              }
+            : message
+        )
+      )
+    }
+    setInterruptedMessageId(latest?.id)
   }
 
   async function loadResultPage(resultId: string, page: number, signal: AbortSignal) {

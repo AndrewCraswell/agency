@@ -50,3 +50,37 @@ and checks that the second request sees prior operative text without another dat
 and conversation isolation, expiration, colliding markers, byte limits, failures and reload. Citation tests cover
 keyboard activation and retained-source telemetry. Deterministic fixtures establish wiring, evidence availability,
 final-step synthesis, and explicit empty-answer handling, not live-model legal accuracy or a resumed evaluation campaign.
+
+## Claim fidelity
+
+The synthesis contract preserves safe-harbor prerequisites, opportunity-versus-completed-hearing language,
+proposed-versus-final authority, fiscal component-versus-net effects, and selected-sample-versus-population scope.
+It requires the relevant version, dates, denominator or explicit missingness rather than inventing completeness.
+Retained-context regressions preserve qualifications alongside the favorable clause and keep narrow query filters,
+failed reads and pagination gaps visible across turns.
+
+These are safeguards, not a legal-claim validator. Deterministic transport tests cannot establish that a live model
+will interpret every provision correctly. Historical campaign scores are not rewritten; live semantic acceptance
+requires a separately authorized, source-reviewed evaluation.
+
+## Citation and passage presentation
+
+The renderer recognizes the observed `[7](#citation-e549]` wrong-delimiter form only in Markdown prose. Exact,
+answer-owned IDs resolve normally; missing or conflicting IDs use the existing unavailable-citation control.
+It does not infer sources from label numbers, similar IDs, previous turns, code literals, images, or link labels.
+Rendering repairs do not rewrite saved model output or establish support for a claim.
+
+Evidence panels and passage cards render retained Markdown headings, tables and links without executing source HTML.
+A bare source `<br>` becomes a line break; code literals remain literal. Long card previews scroll and expand the
+complete saved excerpt instead of cutting Markdown syntax at a character boundary. Partial-read labels and publisher
+links remain visible after expansion. Text absent from the saved evidence is not reconstructed or fetched by the renderer.
+
+Deterministic Storybook fixtures are `ConversationResponse/MalformedCitations`,
+`InlinePresentation/MarkdownTablePassage`, `InlinePresentation/QualifiedStudyPassage`, and
+`EvidencePanel/MarkdownTable` and `/QualifiedStudy`. They are explicitly synthetic, not historical claim evidence.
+At desktop and mobile sizes, activate each `Read source 1: ...` button within its named answer region, verify the
+matching source heading and link, close the drawer and check focus return. The later answer deliberately reuses `e549`
+with a different source. `Citation 2 unavailable` must never open a source. For previews, keyboard-scroll the
+`Retrieved passage` region, then activate `Show retrieved excerpt` with Enter or Space and inspect the net table row
+and final qualification. The expanded control is `Show less`; truncation disclosure must remain. These fixtures do
+not replace separately authorized historical-source or live-research acceptance.

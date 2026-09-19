@@ -18,6 +18,76 @@ type CitationReference = Readonly<{
 
 const markdownParser = unified().use(remarkParse).use(Object.values(defaultRemarkPlugins))
 
+function normalizeMalformedCitations(markdown: string) {
+  if (!/\[\d+\]\(#citation-e[1-9][0-9]{0,30}\]/.test(markdown)) {
+    return markdown
+  }
+  const tree = markdownParser.parse(markdown)
+  const candidates: { start: number; end: number }[] = []
+  function visit(node: typeof tree | (typeof tree.children)[number]) {
+    if (node.type === "text") {
+      const start = node.position?.start.offset
+      const end = node.position?.end.offset
+      if (start === undefined || end === undefined) {
+        return
+      }
+      // Repair only the observed wrong closing delimiter, inside Markdown prose.
+      // Missing or ambiguous exact IDs still flow through the unavailable-citation renderer.
+      for (const match of markdown.slice(start, end).matchAll(/\[\d+\]\(#citation-e[1-9][0-9]{0,30}\]/g)) {
+        const offset = start + match.index
+        const prefix = markdown.slice(0, offset)
+        if (prefix.endsWith("!") || (prefix.match(/\\+$/)?.[0].length ?? 0) % 2 === 1) {
+          continue
+        }
+        candidates.push({ start: offset, end: offset + match[0].length })
+      }
+    } else if ("children" in node && node.type !== "link" && node.type !== "linkReference") {
+      node.children.forEach(visit)
+    }
+  }
+  visit(tree)
+  if (candidates.length === 0) {
+    return markdown
+  }
+  // A malformed marker can prevent its surrounding link or image from parsing.
+  // Mask candidates without moving offsets, then protect the enclosing Markdown.
+  let masked = markdown
+  for (const candidate of candidates.toSorted((left, right) => right.start - left.start)) {
+    masked =
+      masked.slice(0, candidate.start) + "x".repeat(candidate.end - candidate.start) + masked.slice(candidate.end)
+  }
+  const protectedRanges: { start: number; end: number }[] = []
+  function protect(node: typeof tree | (typeof tree.children)[number]) {
+    if (
+      node.type === "link" ||
+      node.type === "linkReference" ||
+      node.type === "image" ||
+      node.type === "imageReference"
+    ) {
+      const start = node.position?.start.offset
+      const end = node.position?.end.offset
+      if (start !== undefined && end !== undefined) {
+        protectedRanges.push({ start, end })
+      }
+      return
+    }
+    if ("children" in node) {
+      node.children.forEach(protect)
+    }
+  }
+  protect(markdownParser.parse(masked))
+  const edits = candidates
+    .filter(
+      (candidate) => !protectedRanges.some((range) => candidate.start >= range.start && candidate.end <= range.end)
+    )
+    .map((candidate) => candidate.end - 1)
+  let normalized = markdown
+  for (const offset of edits.sort((left, right) => right - left)) {
+    normalized = normalized.slice(0, offset) + ")" + normalized.slice(offset + 1)
+  }
+  return normalized
+}
+
 function normalizedSourceUrl(value: string | null | undefined) {
   if (!value) {
     return undefined
@@ -77,7 +147,8 @@ export function createCitationPresentation(
     return href?.startsWith("#citation-") ? href.slice("#citation-".length) : undefined
   }
 
-  const tree = markdownParser.parse(text)
+  const normalizedText = normalizeMalformedCitations(text)
+  const tree = markdownParser.parse(normalizedText)
   const definitions = new Map<string, string>()
   const footnotes = new Map<string, Extract<(typeof tree.children)[number], { type: "footnoteDefinition" }>>()
   function collectDefinitions(node: typeof tree | (typeof tree.children)[number]) {
@@ -137,8 +208,9 @@ export function createCitationPresentation(
     footnotes.get(identifier)?.children.forEach(visit)
   }
 
-  function formatCitationGroups(markdown: string) {
-    const parsed = markdown === text ? tree : markdownParser.parse(markdown)
+  function formatCitationGroups(input: string) {
+    const markdown = normalizeMalformedCitations(input)
+    const parsed = markdown === normalizedText ? tree : markdownParser.parse(markdown)
     const edits: { start: number; end: number; text: string }[] = []
     function visitGroups(node: typeof parsed | (typeof parsed.children)[number]) {
       if (!("children" in node)) {

@@ -3263,7 +3263,8 @@ export class LegislationQueryService {
           classification: billActions.classification,
           chamber: billActions.chamber,
           actionDate: billActions.actionDate,
-          sourceUrl: billActions.sourceUrl
+          sourceUrl: billActions.sourceUrl,
+          description: billActions.description
         })
         .from(billActions)
         .where(eq(billActions.billId, lookup.id))

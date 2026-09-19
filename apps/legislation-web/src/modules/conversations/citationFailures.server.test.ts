@@ -138,7 +138,14 @@ describe("missing citation telemetry", () => {
       composed: Promise.resolve({
         text: "Claim [1](#citation-known) [2](#citation-missing)",
         blocks: [],
-        isInterrupted: false
+        isInterrupted: false,
+        outcome: {
+          status: "completed",
+          finishReason: "stop",
+          hasAnswer: true,
+          pendingToolCalls: [],
+          failedToolCalls: []
+        }
       }),
       citationTelemetry: context
     }).completed

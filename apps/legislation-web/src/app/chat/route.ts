@@ -40,6 +40,7 @@ import {
 import { searchReferences } from "../../modules/conversations/referenceSearch"
 import { createResearchTools } from "../../modules/conversations/research"
 import { ResearchFailure } from "../../modules/conversations/researchFailure"
+import type { ResearchToolMeasurement } from "../../modules/conversations/researchMeasurement"
 import { createResearchTurn, restoreResearchMemory } from "../../modules/conversations/researchMemory"
 import { resultStore } from "../../modules/conversations/resultStore"
 import { researchSnapshotPersistence } from "../../modules/conversations/snapshotPersistence.server"
@@ -283,7 +284,8 @@ async function handleChatRequest(request: Request) {
           .join("\n") ??
         ""
     )
-    const tools = createResearchTools(
+    const toolMeasurements = new Map<string, ResearchToolMeasurement>()
+    const tools = await createResearchTools(
       process.env,
       signal,
       () => !isAwaitingClarification,
@@ -294,7 +296,8 @@ async function handleChatRequest(request: Request) {
       presentationRecords.register,
       previousCitationReferences,
       presentationRecords.registerContents,
-      { evidence: memory.evidence, record: turn.record }
+      { evidence: memory.evidence, record: turn.record },
+      (measurement) => toolMeasurements.set(measurement.toolCallId, measurement)
     )
     tools.ask_clarification = createClarificationTool(parsed.data.sessionKey, signal, () => {
       isAwaitingClarification = true
@@ -408,6 +411,17 @@ async function handleChatRequest(request: Request) {
                     controller.enqueue(chunk)
                     if (chunk.type === "start" && memory.evidence.length > 0) {
                       controller.enqueue({ type: "data-research-context", data: { evidence: memory.evidence } })
+                    }
+                    if (chunk.type === "tool-output-available" || chunk.type === "tool-output-error") {
+                      const measurement = toolMeasurements.get(chunk.toolCallId)
+                      if (measurement) {
+                        controller.enqueue({
+                          type: "data-tool-measurement",
+                          id: chunk.toolCallId,
+                          data: measurement
+                        })
+                        toolMeasurements.delete(chunk.toolCallId)
+                      }
                     }
                   }
                 })

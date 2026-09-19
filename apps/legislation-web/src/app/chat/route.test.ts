@@ -1,6 +1,7 @@
 import { MockLanguageModelV4 } from "ai/test"
 import { afterEach, expect, it, vi } from "vitest"
 import { z } from "zod"
+import { researchToolMeasurementSchema } from "../../modules/conversations/researchMeasurement"
 import { POST } from "./route"
 
 const { stored, getBillText, capturedInputs } = vi.hoisted(() => ({
@@ -113,6 +114,9 @@ it("streams an explicit incomplete answer and persists its interruption without 
   const stream = await response.text()
   expect(stream).toContain("Research ended before an answer was completed. Narrow the question and try again.")
   expect(stream).toContain('"finishReason":"stop"')
+  expect(stream).toContain('"type":"data-response-outcome"')
+  expect(stream).toContain('"status":"partial"')
+  expect(stream).toContain('"hasAnswer":false')
   expect([...stored.values()]).toContainEqual(expect.objectContaining({ kind: "research-turn", interrupted: true }))
 })
 
@@ -179,7 +183,30 @@ it("persists a turn and restores it through POST into the next model request and
     expect(text).not.toContain('"type":"error"')
     return text
   }
-  await send([question])
+  const initialStream = await send([question])
+  const measurementChunks = initialStream.split("\n").flatMap((line) => {
+    if (!line.startsWith("data: ") || line === "data: [DONE]") {
+      return []
+    }
+    const parsed = z
+      .object({
+        type: z.literal("data-tool-measurement"),
+        data: researchToolMeasurementSchema
+      })
+      .safeParse(JSON.parse(line.slice(6)))
+    return parsed.success ? [parsed.data.data] : []
+  })
+  expect(measurementChunks).toHaveLength(1)
+  expect(measurementChunks[0]).toMatchObject({
+    toolCallId: "read-text",
+    toolName: "get_bill_text",
+    outcome: "success",
+    durationMs: expect.any(Number),
+    rawResultBytes: expect.any(Number),
+    enrichedResultBytes: expect.any(Number),
+    modelResultBytes: expect.any(Number),
+    attemptCount: 1
+  })
   expect(getBillText).toHaveBeenCalledTimes(1)
   const runId = [...stored].find(
     ([, value]) => z.object({ kind: z.literal("research-turn") }).safeParse(value).success
