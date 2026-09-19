@@ -572,3 +572,15 @@ Evidence: `reports/semantic-session-plan.json`. Do not extend the explicit-paren
 on the successful small-parent benchmark. Statewide semantic acceptance requires a different measured strategy.
 The verification run started before the query edit captured intermediate failing query assertions; those five focused
 tests subsequently passed after correction. A fresh full verification is required against the final code.
+
+The session-filtered existing HNSW diagnostic returned three rows in 4,708 ms, using
+`document_section_embeddings_hnsw_idx` rather than exact-scoring the whole session. The shared builder now derives a
+safe canonical session prefix and requests only the page/lookahead population when no additional relational filters
+remain. Conflicting jurisdiction/session pairs, wildcard-bearing sessions and multi-scope requests do not receive this
+optimization. All relational filters remain present after candidate selection; no index or embedding was rebuilt.
+
+Actual generated-query replay returned three Washington 2025-2026 sections in 442 ms after the diagnostic had warmed
+the index. Treat that as a warm observation, not a latency guarantee. Explicit bill/document scopes and page isolation
+also passed again. Evidence: `semantic-session-graph-plan.json` and `semantic-generated-session-query.json` under the
+archive audit reports. Seven query tests and web type-check passed. Semantic relevance, deeper session pagination,
+full verification, deployment and authenticated post-deployment search remain required.

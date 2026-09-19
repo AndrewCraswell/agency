@@ -1310,11 +1310,25 @@ export function buildSemanticPassageSearchQuery(
 function semanticPassageJurisdictionSectionPrefix(
   input: Omit<PassageSearchInput, "query"> & { embedding: number[] }
 ): string | undefined {
+  const session = semanticPassageSessionPrefix(input)
+  if (session !== undefined) {return session}
   if (input.jurisdictionIds?.length !== 1) {
     return undefined
   }
   const match = STATE_JURISDICTION_ID.exec(input.jurisdictionIds[0] ?? "")
   return match === null ? undefined : `bill:${match[1]}:%`
+}
+
+function semanticPassageSessionPrefix(input: Omit<PassageSearchInput, "query"> & { embedding: number[] }) {
+  if (input.sessionIds?.length !== 1) {return undefined}
+  const match = /^session:([a-z]{2}):([A-Za-z0-9-]+)$/.exec(input.sessionIds[0] ?? "")
+  if (
+    !match ||
+    (input.jurisdictionIds !== undefined &&
+      (input.jurisdictionIds.length !== 1 || input.jurisdictionIds[0] !== `jurisdiction:${match[1]}`))
+  )
+    {return undefined}
+  return `bill:${match[1]}:${match[2]}:%`
 }
 
 function hasOnlySemanticPassageJurisdictionFilter(
@@ -1329,7 +1343,7 @@ function hasOnlySemanticPassageJurisdictionFilter(
     input.headings === undefined &&
     input.pageFrom === undefined &&
     input.pageTo === undefined &&
-    input.sessionIds === undefined &&
+    (input.sessionIds === undefined || semanticPassageSessionPrefix(input) !== undefined) &&
     input.statuses === undefined &&
     input.subjects === undefined &&
     input.classifications === undefined &&

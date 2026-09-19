@@ -57,7 +57,7 @@ describe("semantic passage query", () => {
     expect(query.params).not.toContain(20_000)
   })
 
-  it("keeps the bounded state graph while retaining a larger window for narrower relational filters", () => {
+  it("pushes a matching canonical session into the graph instead of requesting 20000 candidates", () => {
     const embedding = Array.from({ length: 1536 }, () => 0)
     const query = buildSemanticPassageSearchQuery(database, {
       embedding,
@@ -67,8 +67,23 @@ describe("semantic passage query", () => {
     }).toSQL()
 
     expect(query.sql).toContain('"legislation"."document_section_embeddings"."section_id" like')
-    expect(query.params).toEqual(expect.arrayContaining(["bill:nc:%", 20_000, "session:nc:2025"]))
+    expect(query.params).toEqual(expect.arrayContaining(["bill:nc:2025:%", 26, "session:nc:2025"]))
+    expect(query.params).not.toContain(20_000)
   })
+
+  it.each(["session:wa:2025_%", "session:ak:34"])(
+    "does not push an unsafe or conflicting session prefix: %s",
+    (session) => {
+      const query = buildSemanticPassageSearchQuery(database, {
+        embedding: Array.from({ length: 1536 }, () => 0),
+        jurisdictionIds: ["jurisdiction:wa"],
+        sessionIds: [session],
+        limit: 2
+      }).toSQL()
+      expect(query.params).toContain(20_000)
+      expect(query.params).toContain("bill:wa:%")
+    }
+  )
 
   it("uses the global candidate window when more than one jurisdiction is requested", () => {
     const embedding = Array.from({ length: 1536 }, () => 0)
