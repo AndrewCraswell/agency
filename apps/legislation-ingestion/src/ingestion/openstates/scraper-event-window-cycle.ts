@@ -14,6 +14,76 @@ import { washingtonEventWindow } from "./scraper-event-window.js"
 import { preparePlannedWashingtonEventWindow } from "./scraper-washington-events.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
+type WindowPlan = Awaited<ReturnType<typeof readEventWindowPlan>>
+
+function receiptStream(plan: WindowPlan, windowId: string) {
+  return `event-window:${plan.scope.jurisdiction}:${plan.scope.session}:${plan.id}:${windowId}`
+}
+
+function receiptContract(plan: WindowPlan, windowId: string, build: string) {
+  return z.object({
+    status: z.literal("promoted"),
+    planId: z.literal(plan.id),
+    windowId: z.literal(windowId),
+    build: z.literal(build),
+    events: z.number().int().nonnegative(),
+    manifestPath: z.string().min(1),
+    settlementPath: z.string().min(1)
+  })
+}
+
+/** Read actual committed receipts, never a caller-supplied next index. Shared by calendar adapters. */
+export async function inspectEventWindowCycle(
+  database: LegislationDatabase,
+  input: {
+    store: Pick<ArtifactStore, "read">
+    planPath: string
+    approvedBuild: string
+  },
+  dependencies = { readPlan: readEventWindowPlan, readReceipt }
+) {
+  const build = z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .parse(input.approvedBuild)
+  const plan = await dependencies.readPlan(input.store, input.planPath)
+  const pending: WindowPlan["windows"] = []
+  const completed: WindowPlan["windows"] = []
+  for (const window of plan.windows) {
+    const receipt = await dependencies.readReceipt(database, receiptStream(plan, window.id))
+    if (receipt === undefined) pending.push(window)
+    else {
+      receiptContract(plan, window.id, build).parse(receipt)
+      completed.push(window)
+    }
+  }
+  return { plan, pending, completed }
+}
+
+/** Process at most one item; downstream dispatch must use the returned exact pending identity. */
+export async function advanceWashingtonEventCycle(
+  database: LegislationDatabase,
+  input: Omit<Parameters<typeof executeWashingtonEventWindow>[1], "windowId">,
+  dependencies = { inspect: inspectEventWindowCycle, execute: executeWashingtonEventWindow }
+) {
+  const before = await dependencies.inspect(database, input)
+  if (before.plan.scope.jurisdiction !== "wa" || before.plan.scope.session !== "2025-2026")
+    throw new Error("Unreviewed meeting plan scope")
+  const selected = before.pending[0]
+  if (selected) await dependencies.execute(database, { ...input, windowId: selected.id })
+  const after = selected ? await dependencies.inspect(database, input) : before
+  if (after.plan.id !== before.plan.id || (selected && !after.completed.some((entry) => entry.id === selected.id))) {
+    throw new Error("Meeting continuation requires an unchanged plan and a committed completion receipt")
+  }
+  return {
+    status: after.pending.length ? ("pending" as const) : ("cycle_promoted" as const),
+    planId: after.plan.id,
+    completed: after.completed.length,
+    pending: after.pending.length,
+    nextWindowId: after.pending[0]?.id
+  }
+}
+
 async function readReceipt(
   database: LegislationDatabase,
   stream: string
@@ -59,16 +129,8 @@ export async function executeWashingtonEventWindow(
   const selected = plan.windows.find((entry) => entry.id === input.windowId)
   if (!selected) throw new Error("Unknown planned meeting window")
   const window = washingtonEventWindow.parse(selected.window)
-  const stream = `event-window:wa:2025-2026:${plan.id}:${selected.id}`
-  const receiptSchema = z.object({
-    status: z.literal("promoted"),
-    planId: z.literal(plan.id),
-    windowId: z.literal(selected.id),
-    build: z.literal(build),
-    events: z.number().int().nonnegative(),
-    manifestPath: z.string().min(1),
-    settlementPath: z.string().min(1)
-  })
+  const stream = receiptStream(plan, selected.id)
+  const receiptSchema = receiptContract(plan, selected.id, build)
   const existing = await dependencies.readReceipt(database, stream)
   if (existing !== undefined)
     return { status: "already_promoted" as const, events: receiptSchema.parse(existing).events }

@@ -310,3 +310,17 @@ Fourteen focused coordinator/dispatch/NC regression tests and fourteen real isol
 Ingestion type-check passed. The PostgreSQL checks include concurrent identical empty receipts, missing ownership,
 and conflicting replay. Hosted execution has not been activated; continuation task wiring, production acceptance,
 and the other Washington coverage/content/readiness gates remain open.
+
+## Bounded continuation wiring
+
+`openstates-event-windows` processes one pending Washington window per invocation using the shared receipt inspector.
+It rereads committed state after execution and refuses continuation without the selected completion receipt. A replay
+of an already completed plan does no extraction. The continuation key binds the exact plan and next window; database
+ownership remains the cross-process authority. The dedicated task queue has concurrency one, a one-hour timeout,
+and no automatic retry while worker shutdown might be uncertain. Database pools close before continuation dispatch.
+
+The task has no cron and requires explicit Washington activation. Its build is pinned to the locally validated
+candidate; existing NC/AK build approval is unchanged. This code is not evidence of a deployed or scheduled job.
+Nine coordinator/activation tests and three registered-task execution tests passed, including disabled activation,
+receipt-less success rejection, completion replay, failure cleanup and exact continuation dispatch. Hosted deployment,
+runtime approval and end-to-end acceptance remain required before enabling regular Washington sync.

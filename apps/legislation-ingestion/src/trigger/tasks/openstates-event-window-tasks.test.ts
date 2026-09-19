@@ -1,0 +1,85 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+const mocks = vi.hoisted(() => ({
+  advance: vi.fn(),
+  trigger: vi.fn(async () => ({ id: "continuation" })),
+  key: vi.fn(async () => "stable-key"),
+  end: vi.fn(async () => {}),
+  config: vi.fn(),
+  register: vi.fn<
+    (definition: {
+      run: (raw: unknown, context: { ctx: { run: { id: string } } }) => Promise<unknown>
+      queue: { concurrencyLimit: number }
+      retry: { maxAttempts: number }
+    }) => unknown
+  >((definition) => definition)
+}))
+vi.mock("@trigger.dev/sdk", () => ({
+  task: mocks.register,
+  tasks: { trigger: mocks.trigger },
+  idempotencyKeys: { create: mocks.key }
+}))
+vi.mock("../../config/config.js", () => ({ loadConfig: mocks.config }))
+vi.mock("@repo/legislation-core/database/database", () => ({
+  createDatabase: () => ({ database: {}, pool: { end: mocks.end } })
+}))
+vi.mock("../../ingestion/documents/artifact-store.js", () => ({ AzureBlobArtifactStore: class {} }))
+vi.mock("../../ingestion/openstates/scraper-event-window-cycle.js", () => ({
+  advanceWashingtonEventCycle: mocks.advance
+}))
+
+import { washingtonScraperCandidateBuild } from "../../ingestion/openstates/scraper-activation.js"
+import "./openstates-event-window-tasks.js"
+
+const payload = {
+  planPath: `openstates/event-window-plans/wa/2025-2026/${"a".repeat(64)}/plan.json`,
+  approvedBuild: washingtonScraperCandidateBuild
+}
+const definition = mocks.register.mock.calls[0]![0]
+const context = { ctx: { run: { id: "test-run" } } }
+
+describe("bounded meeting continuation task", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubEnv("OPENSTATES_SCRAPER_ENABLED_STATES", "")
+    vi.stubEnv("OPENSTATES_SCRAPER_QUEUE", "test-queue")
+    mocks.config.mockReturnValue({
+      azure: { storageAccount: "testaccount", stateSourceContainer: "sources" },
+      database: {}
+    })
+  })
+  afterEach(() => vi.unstubAllEnvs())
+  it("refuses activation before infrastructure access", async () => {
+    await expect(definition.run(payload, context)).rejects.toThrow(/not activated/)
+    expect(mocks.config).not.toHaveBeenCalled()
+  })
+  it("closes the pool and dispatches only the exact receipt-derived continuation", async () => {
+    vi.stubEnv("OPENSTATES_SCRAPER_ENABLED_STATES", "wa")
+    mocks.advance.mockResolvedValue({
+      status: "pending",
+      planId: "plan",
+      nextWindowId: "window",
+      completed: 1,
+      pending: 1
+    })
+    expect(definition.queue.concurrencyLimit).toBe(1)
+    expect(definition.retry.maxAttempts).toBe(1)
+    await definition.run(payload, context)
+    expect(mocks.end).toHaveBeenCalledOnce()
+    expect(mocks.key).toHaveBeenCalledWith("event-windows:plan:window", { scope: "global" })
+    expect(mocks.trigger).toHaveBeenCalledWith("openstates-event-windows", payload, {
+      concurrencyKey: "production:openstates-scraper:events:wa",
+      idempotencyKey: "stable-key"
+    })
+  })
+  it("does not continue after completion or failure and always closes an opened pool", async () => {
+    vi.stubEnv("OPENSTATES_SCRAPER_ENABLED_STATES", "wa")
+    mocks.advance.mockResolvedValue({ status: "cycle_promoted", nextWindowId: undefined })
+    await definition.run(payload, context)
+    expect(mocks.trigger).not.toHaveBeenCalled()
+    mocks.advance.mockRejectedValue(new Error("uncertain worker"))
+    await expect(definition.run(payload, context)).rejects.toThrow(/uncertain/)
+    expect(mocks.trigger).not.toHaveBeenCalled()
+    expect(mocks.end).toHaveBeenCalledTimes(2)
+  })
+})

@@ -1,7 +1,11 @@
 import * as schema from "@repo/legislation-core/database/schema/schema"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { describe, expect, it, vi } from "vitest"
-import { executeWashingtonEventWindow } from "./scraper-event-window-cycle.js"
+import {
+  executeWashingtonEventWindow,
+  inspectEventWindowCycle,
+  advanceWashingtonEventCycle
+} from "./scraper-event-window-cycle.js"
 import { createEventWindowPlan } from "./scraper-event-window-plan.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
@@ -47,6 +51,47 @@ function fixture() {
 }
 
 describe("meeting window coordination", () => {
+  it("inspects real receipt identities and fails closed on a receipt from another build", async () => {
+    const { database, input, dependencies, plan } = fixture()
+    expect((await inspectEventWindowCycle(database, input, dependencies)).pending).toEqual(plan.windows)
+    dependencies.readReceipt.mockResolvedValue({
+      status: "promoted",
+      planId: plan.id,
+      windowId: input.windowId,
+      build: input.approvedBuild,
+      events: 0,
+      manifestPath: "manifest.json",
+      settlementPath: "settlement.json"
+    })
+    expect((await inspectEventWindowCycle(database, input, dependencies)).pending).toEqual([])
+    dependencies.readReceipt.mockResolvedValue({
+      status: "promoted",
+      planId: plan.id,
+      windowId: input.windowId,
+      build: "b".repeat(64),
+      events: 0,
+      manifestPath: "manifest.json",
+      settlementPath: "settlement.json"
+    })
+    await expect(inspectEventWindowCycle(database, input, dependencies)).rejects.toThrow()
+  })
+  it("advances from committed receipts and resumes a finished cycle without executing again", async () => {
+    const { database, input, plan } = fixture()
+    const before = { plan, pending: plan.windows, completed: [] }
+    const after = { plan, pending: [], completed: plan.windows }
+    const inspect = vi.fn().mockResolvedValueOnce(before).mockResolvedValue(after)
+    const execute = vi.fn(async () => ({ status: "promoted" as const, events: 0 }))
+    expect((await advanceWashingtonEventCycle(database, input, { inspect, execute })).status).toBe("cycle_promoted")
+    expect(execute).toHaveBeenCalledOnce()
+    await advanceWashingtonEventCycle(database, input, { inspect, execute })
+    expect(execute).toHaveBeenCalledOnce()
+  })
+  it("does not advance merely because an executor returned success without a receipt", async () => {
+    const { database, input, plan } = fixture()
+    const inspect = vi.fn(async () => ({ plan, pending: plan.windows, completed: [] }))
+    const execute = vi.fn(async () => ({ status: "promoted" as const, events: 0 }))
+    await expect(advanceWashingtonEventCycle(database, input, { inspect, execute })).rejects.toThrow(/committed/)
+  })
   it("receipts a verified empty window without calling the canonical row writer", async () => {
     const { database, input, dependencies } = fixture()
     expect(await executeWashingtonEventWindow(database, input, dependencies)).toEqual({ status: "promoted", events: 0 })
