@@ -584,3 +584,15 @@ the index. Treat that as a warm observation, not a latency guarantee. Explicit b
 also passed again. Evidence: `semantic-session-graph-plan.json` and `semantic-generated-session-query.json` under the
 archive audit reports. Seven query tests and web type-check passed. Semantic relevance, deeper session pagination,
 full verification, deployment and authenticated post-deployment search remain required.
+
+Three-page validation with a retained HB 2266 housing passage vector exposed a planner regression: page one retrieved
+the source passage at distance zero, but page two chose a parallel sequential embedding-table scan and timed out.
+The captured plan is in `semantic-pagination.json`. An index-preferred transaction completed all three pages without
+duplicate IDs. The shared ANN path now sets `enable_seqscan=off` locally within its transaction; explicit-parent exact
+ranking retains ordinary planner settings. This does not change a database-wide setting.
+
+The actual implementation, without a diagnostic planner override, then completed pages in 1,958 / 1,941 / 1,911 ms.
+All 15 results belonged to Washington's current session; the known passage ranked first and no page IDs overlapped.
+Evidence is `semantic-pagination-implementation.json`. This is a self-retrieval/pagination check, not a held-out relevance
+evaluation or proof of deep-pagination stability under concurrent corpus changes. Seven focused tests and web type-check
+passed. Deployment and post-deployment authenticated semantic/hybrid checks remain open.

@@ -1311,7 +1311,9 @@ function semanticPassageJurisdictionSectionPrefix(
   input: Omit<PassageSearchInput, "query"> & { embedding: number[] }
 ): string | undefined {
   const session = semanticPassageSessionPrefix(input)
-  if (session !== undefined) {return session}
+  if (session !== undefined) {
+    return session
+  }
   if (input.jurisdictionIds?.length !== 1) {
     return undefined
   }
@@ -1320,14 +1322,17 @@ function semanticPassageJurisdictionSectionPrefix(
 }
 
 function semanticPassageSessionPrefix(input: Omit<PassageSearchInput, "query"> & { embedding: number[] }) {
-  if (input.sessionIds?.length !== 1) {return undefined}
+  if (input.sessionIds?.length !== 1) {
+    return undefined
+  }
   const match = /^session:([a-z]{2}):([A-Za-z0-9-]+)$/.exec(input.sessionIds[0] ?? "")
   if (
     !match ||
     (input.jurisdictionIds !== undefined &&
       (input.jurisdictionIds.length !== 1 || input.jurisdictionIds[0] !== `jurisdiction:${match[1]}`))
-  )
-    {return undefined}
+  ) {
+    return undefined
+  }
   return `bill:${match[1]}:${match[2]}:%`
 }
 
@@ -1369,6 +1374,12 @@ export async function semanticPassageSearch(
   // filtered inside the graph scan; narrower relational filters still use the
   // bounded candidate window before being applied in bulk.
   const rows = await database.transaction(async (transaction) => {
+    // Selective graph filters can make the planner prefer a full vector-table
+    // scan as the cursor grows. Prefer indexes only within this ANN transaction;
+    // explicit-parent exact ranking retains the normal planner configuration.
+    if (!input.billIds?.length && !input.documentIds?.length) {
+      await transaction.execute(sql`select set_config('enable_seqscan', 'off', true)`)
+    }
     await transaction.execute(sql`select
       set_config('hnsw.ef_search', '100', true),
       set_config('hnsw.iterative_scan', 'relaxed_order', true),
