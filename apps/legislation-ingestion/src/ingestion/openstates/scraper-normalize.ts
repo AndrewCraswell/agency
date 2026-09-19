@@ -6,8 +6,10 @@ import { normalizeOpenStatesEvent } from "./events.js"
 import { normalizeOpenStatesBill } from "./normalize.js"
 import { readArchivedScraperAttempt } from "./scraper-archive.js"
 import { assertScraperBillBatchScope, readScraperBillPlan } from "./scraper-batches.js"
+import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 import { readScraperBillDispatch } from "./scraper-dispatch.js"
 import { scraperVoteChamberFromEvidence } from "./scraper-vote-chamber.js"
+import { washingtonVoteEvidence } from "./scraper-washington-vote.js"
 
 function explicitAlaskaOutcome(motion: string) {
   if (/\b(?:FAILED|NOT ADOPTED)\b/.test(motion)) {
@@ -237,7 +239,7 @@ function normalizeVerifiedArchive(
   if (
     attempt.status !== "extracted" ||
     attempt.request.domain !== "bills" ||
-    attempt.request.session !== (attempt.request.jurisdiction === "nc" ? "2025" : "34") ||
+    attempt.request.session !== scraperBillProfiles[attempt.request.jurisdiction].session ||
     !attempt.request.bill_ids
   ) {
     throw new Error("Scraper attempt is not a completed bounded bill extraction")
@@ -258,14 +260,12 @@ function normalizeVerifiedArchive(
   )
 }
 
-function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdiction: "nc" | "ak") {
+function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdiction: keyof typeof scraperBillProfiles) {
   const isNc = jurisdiction === "nc"
-  const session = isNc ? "2025" : "34"
-  const requested = z
-    .array(z.string().regex(isNc ? /^[HS][1-9][0-9]{0,4}$/ : /^[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}$/))
-    .min(1)
-    .max(10)
-    .parse(input.requestedIds)
+  const isWa = jurisdiction === "wa"
+  const profile = scraperBillProfiles[jurisdiction]
+  const session = profile.session
+  const requested = z.array(z.string().regex(profile.identifier)).min(1).max(10).parse(input.requestedIds)
   if (new Set(requested).size !== requested.length || new Set(requested.map((id) => id[0])).size !== 1) {
     throw new Error("Invalid NC batch scope")
   }
@@ -273,7 +273,7 @@ function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdict
     billSchema
       .extend({
         legislative_session: z.literal(session),
-        identifier: z.string().regex(isNc ? /^[HS](?:B|JR|R) [1-9][0-9]*$/ : /^[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]*$/)
+        identifier: z.string().regex(isNc ? /^[HS](?:B|JR|R) [1-9][0-9]*$/ : profile.identifier)
       })
       .parse(record)
   )
@@ -320,24 +320,32 @@ function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdict
     }
     const official = isNc
       ? `https://www.ncleg.gov/BillLookUp/2025/${emitted[index]}`
-      : `https://www.akleg.gov/basis/Bill/Detail/34?Root=${emitted[index]}`
+      : isWa
+        ? "https://app.leg.wa.gov/billsummary/?BillNumber=" +
+          bill.identifier.split(" ")[1] +
+          "&Year=2025&Initiative=false"
+        : `https://www.akleg.gov/basis/Bill/Detail/34?Root=${emitted[index]}`
     if (!bill.sources.some((entry) => entry.url === official)) {
       throw new Error("NC bill source identity mismatch")
     }
+    const washingtonFacts = new Map<string, ReturnType<typeof washingtonVoteEvidence>>()
     const selectedVotes = votes
       .filter((vote) => vote.bill === bill._id)
       .map((vote) => {
+        const wa = isWa ? washingtonVoteEvidence(vote, bill) : undefined
         const urls = vote.sources
           .map((entry) => entry.url)
           .filter((url) =>
-            isNc
-              ? /^https:\/\/www\.ncleg\.gov\/Legislation\/Votes\/RollCallVoteTranscript\/2025\/[HS]\/[1-9][0-9]*$/.test(
-                  url
-                )
-              : new URL(url).origin === "https://www.akleg.gov" &&
-                new URL(url).pathname === "/basis/Journal/Pages/34" &&
-                new URL(url).searchParams.get("Bill") === bill.identifier &&
-                /^[0-9]+$/.test(new URL(url).searchParams.get("Page") ?? "")
+            wa
+              ? url === wa.sourceUrl
+              : isNc
+                ? /^https:\/\/www\.ncleg\.gov\/Legislation\/Votes\/RollCallVoteTranscript\/2025\/[HS]\/[1-9][0-9]*$/.test(
+                    url
+                  )
+                : new URL(url).origin === "https://www.akleg.gov" &&
+                  new URL(url).pathname === "/basis/Journal/Pages/34" &&
+                  new URL(url).searchParams.get("Bill") === bill.identifier &&
+                  /^[0-9]+$/.test(new URL(url).searchParams.get("Page") ?? "")
           )
         const officialVoteUrl = urls[0]
         if (urls.length !== 1 || officialVoteUrl === undefined) {
@@ -349,13 +357,16 @@ function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdict
           .replace(/\b[YNEA][0-9]+\b/g, "")
           .replace(/\s+/g, " ")
           .trim()
-        const identity = isNc
-          ? officialVoteUrl
-          : JSON.stringify([officialVoteUrl, z.iso.date().parse(vote.start_date), motionIdentity])
+        const identity = wa
+          ? wa.identity
+          : isNc
+            ? officialVoteUrl
+            : JSON.stringify([officialVoteUrl, z.iso.date().parse(vote.start_date), motionIdentity])
         if (seenVotes.has(identity)) {
           throw new Error("Missing or duplicate official roll-call identity")
         }
         seenVotes.add(identity)
+        if (wa) washingtonFacts.set(identity, wa)
         if (new Set(vote.votes.map((entry) => entry.voter_id ?? entry.voter_name)).size !== vote.votes.length) {
           throw new Error("Ambiguous duplicate source voter")
         }
@@ -372,7 +383,7 @@ function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdict
           // outcomes from simple majorities. Retain only explicit outcomes here.
           classification: isNc ? vote.classification : [],
           motion_classification: isNc ? vote.motion_classification : [],
-          result: isNc ? vote.result : explicitAlaskaOutcome(vote.motion_text),
+          result: wa ? wa.result : isNc ? vote.result : explicitAlaskaOutcome(vote.motion_text),
           organization: undefined,
           organization_id: undefined,
           // Older builds lose PM. Only a verified archive from the approved corrected build supplies the instant.
@@ -401,7 +412,7 @@ function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdict
       },
       {
         jurisdictionCode: jurisdiction,
-        jurisdictionName: isNc ? "North Carolina" : "Alaska",
+        jurisdictionName: isNc ? "North Carolina" : isWa ? "Washington" : "Alaska",
         retrievedAt: input.retrievedAt
       }
     )
@@ -422,13 +433,26 @@ function normalizeBills(input: NcBillInput, hasVerifiedClock: boolean, jurisdict
       ...entry,
       vote: {
         ...entry.vote,
-        chamber: scraperVoteChamberFromEvidence({
-          motion: entry.vote.motion,
-          positionCount: entry.positions?.length ?? 0,
-          session,
-          sourceUrl: entry.vote.sourceUrl ?? null,
-          state: jurisdiction
-        })
+        ...(isWa
+          ? {
+              result:
+                washingtonFacts.get(entry.vote.sourceId ?? "")?.result === "unknown" ? "unknown" : entry.vote.result,
+              timelineComplete:
+                washingtonFacts.get(entry.vote.sourceId ?? "")?.result === "unknown"
+                  ? false
+                  : entry.vote.timelineComplete,
+              rollCallNumber: washingtonFacts.get(entry.vote.sourceId ?? "")?.sequence
+            }
+          : {}),
+        chamber: isWa
+          ? washingtonFacts.get(entry.vote.sourceId ?? "")?.chamber
+          : scraperVoteChamberFromEvidence({
+              motion: entry.vote.motion,
+              positionCount: entry.positions?.length ?? 0,
+              session,
+              sourceUrl: entry.vote.sourceUrl ?? null,
+              state: jurisdiction
+            })
       },
       positions: entry.positions?.length
         ? entry.positions.map((entryPosition) => {

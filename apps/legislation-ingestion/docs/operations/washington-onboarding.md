@@ -12,7 +12,7 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [x] | Inspect production archive baseline | September 19 2026 read-only query: 16,753 bills across five sessions below; historical-import runs exist for each |
 | [ ] | Reconcile the complete published archive inventory | Compare the current archive catalog and checksums; stored counts alone do not prove archive completeness |
 | [x] | Review pinned scraper and live source access | Pinned revision `d43f853796ceeeb49205f7d144790647764ce105` has bill and event scrapers; both 2025 and 2026 official bill inventory requests returned HTTP 200 without credentials |
-| [ ] | Freeze bounded current-session bill inventory | Normalize both years, retain source hashes and exclusion counts, partition exact disjoint batches; fail on malformed or unexpected records |
+| [x] | Freeze bounded current-session bill inventory | Both annual XML sources retained and replayed; 3,411 unique bills in 342 disjoint batches, with validated exclusions and source hashes |
 | [ ] | Add Washington to shared extraction and promotion | Extend reviewed jurisdiction profiles and source policy, not a parallel ingestion engine; validate source/dispatch/build fingerprints |
 | [x] | Run isolated bounded bill extraction in both chambers | HB 1000 and SB 5000 retained successfully; this is source extraction only, not canonical promotion or hosted activation |
 | [ ] | Validate bill actions, documents and individual votes | Compare retained cases from both chambers to official pages, including substitutions, engrossments, resolutions and amendments |
@@ -129,3 +129,34 @@ normalization, duplicate-free database replay, hosted deployment or content/sear
 Repository `pnpm verify` passed for this slice, including 1,929 ingestion tests and 122 Python tests (7 platform/runtime
 skips on Windows, with the 28 relevant runner/policy cases passing unskipped in Docker). Unconfigured database suites
 and the optional positive disposable-corpus acceptance were skipped, not evidence of Washington database readiness.
+
+## Shared canonical preparation (2026-09-19)
+
+Washington bill archives now use the same checksum-verified archive reader, exact batch scope, canonical bill mapper
+and dispatch preparation as North Carolina and Alaska. Only source-specific roll-call evidence parsing is separate.
+Vote identity uses biennium, bill, source chamber, date and source sequence rather than temporary scraper UUIDs,
+motion wording or tallies. Named positions must reconcile with the published yes/no/other counts.
+
+The upstream majority-derived result is discarded. A final-passage outcome requires one matching official action on
+the same date and chamber with exact counts; other outcomes remain unknown. Unknown outcomes remain incomplete in
+the canonical mapper, even when vote counts reconcile. Date-only source records never receive invented instants.
+
+Both retained successful canaries normalized and replayed identically through the shared pipeline without database
+writes. HB 1000 yielded no votes; SB 5000 yielded two upper-chamber passed votes with source sequences 19 and 17.
+Focused tests cover identity, source mismatches, incomplete positions, ambiguous outcomes, archive replay and build
+approval. This is preparation evidence, not duplicate-free database replay or permission to activate hosted syncing.
+
+The retained canaries were also imported twice using the shared production writer into the new isolated local
+`washington_scraper_replay_20260919` database. Both passes retained exactly the same IDs and counts: 2 bills,
+25 actions, 10 document records, 23 sponsor observations, 2 votes and 98 vote positions. Evidence is retained in
+`artifacts/openstates-washington-canonical-replay/reports/database-replay.json`. Production was not changed.
+This proves replay for these two cases, not nationwide/archive-to-scraper reconciliation, interrupted-run recovery,
+resolved person identities, full-session coverage or document content readiness.
+
+The same isolated database then replayed the retained foundation through `importArchivedStateFoundation`:
+336 people, 367 terms, 51 organizations and 609 committee memberships retained identical IDs/counts on repeated
+imports. Current active service covers 98 House members and 49 senators. The existing shared current-roster path
+preserves validated current identities/terms while holding conflicting older histories; no person-specific exceptions
+were added. All 51 current committee rosters passed dependency checks. The 20 historical quarantines remain open.
+Reports: `artifacts/openstates-washington-foundation/reports/isolated-foundation-replay.json` and
+`isolated-membership-replay.json`. These local checks do not establish production import or complete service history.

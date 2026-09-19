@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
+import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 
 const revision = "d43f853796ceeeb49205f7d144790647764ce105"
 const runIdSchema = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{0,100}$/)
 const fileSchema = z.strictObject({
-  path: z.string().regex(/^_data\/(nc|ak)\/[a-zA-Z0-9_-][a-zA-Z0-9_.-]*\.json$/),
+  path: z.string().regex(/^_data\/(nc|ak|wa)\/[a-zA-Z0-9_-][a-zA-Z0-9_.-]*\.json$/),
   bytes: z
     .number()
     .int()
@@ -15,20 +16,15 @@ const fileSchema = z.strictObject({
 })
 const requestSchema = z
   .strictObject({
-    jurisdiction: z.enum(["nc", "ak"]),
+    jurisdiction: z.enum(["nc", "ak", "wa"]),
     domain: z.enum(["bills", "events"]),
     session: z
       .string()
-      .regex(/^(\d{4}(E\d+)?|34)$/)
+      .regex(/^(\d{4}(E\d+)?|34|2025-2026)$/)
       .nullable(),
     timeout_seconds: z.number().int().min(1).max(1500),
     // Older immutable canary evidence predates batching; this reader does not authorize execution.
-    bill_ids: z
-      .array(z.string().regex(/^[HS](?:B|R|JR|J|CR|SC|SCR)?[1-9][0-9]{0,4}$/))
-      .min(1)
-      .max(10)
-      .nullable()
-      .optional(),
+    bill_ids: z.array(z.string().min(1)).min(1).max(10).nullable().optional(),
     revision: z.literal(revision),
     event_keys: z
       .array(z.string().regex(/^[HSJ]:[A-Z0-9&]+:[0-9T:+.-]+$/))
@@ -40,14 +36,20 @@ const requestSchema = z
     request.domain === "bills" || request.jurisdiction === "ak" ? request.session !== null : request.session === null
   )
   .refine((request) =>
-    request.jurisdiction === "ak"
-      ? request.session === "34" &&
-        (request.domain === "events"
-          ? request.bill_ids === null &&
-            request.event_keys !== undefined &&
-            new Set(request.event_keys).size === request.event_keys.length
-          : !!request.bill_ids?.every((id) => /^[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}$/.test(id)))
-      : request.session !== "34" && (request.bill_ids?.every((id) => /^[HS][1-9][0-9]{0,4}$/.test(id)) ?? true)
+    request.jurisdiction === "wa"
+      ? request.domain === "bills" &&
+        request.session === scraperBillProfiles.wa.session &&
+        !!request.bill_ids?.every((id) => scraperBillProfiles.wa.identifier.test(id))
+      : request.jurisdiction === "ak"
+        ? request.session === "34" &&
+          (request.domain === "events"
+            ? request.bill_ids === null &&
+              request.event_keys !== undefined &&
+              new Set(request.event_keys).size === request.event_keys.length
+            : !!request.bill_ids?.every((id) => /^[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}$/.test(id)))
+        : request.session !== "34" &&
+          request.session !== "2025-2026" &&
+          (request.bill_ids?.every((id) => scraperBillProfiles.nc.identifier.test(id)) ?? true)
   )
   .refine(
     (request) => request.event_keys === undefined || (request.jurisdiction === "ak" && request.domain === "events")
@@ -163,7 +165,7 @@ export async function archiveScraperAttempt(source: Pick<ArtifactStore, "read">,
 
 export async function readArchivedScraperAttempt(store: Pick<ArtifactStore, "read">, manifestPath: string) {
   const match =
-    /^openstates\/scrapers\/([a-f0-9]{40})\/(nc|ak)\/(bills|events)\/([a-zA-Z0-9][a-zA-Z0-9-]{0,100})\/retained\.json$/.exec(
+    /^openstates\/scrapers\/([a-f0-9]{40})\/(nc|ak|wa)\/(bills|events)\/([a-zA-Z0-9][a-zA-Z0-9-]{0,100})\/retained\.json$/.exec(
       manifestPath
     )
   if (!match || match[1] !== revision) {

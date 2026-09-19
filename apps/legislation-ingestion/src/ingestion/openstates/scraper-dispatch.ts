@@ -36,7 +36,7 @@ export async function archiveScraperBillDispatch(
 /** The caller must additionally check this is the currently leased attempt before committing. */
 export async function readScraperBillDispatch(store: Pick<ArtifactStore, "read">, path: string, now: Date) {
   z.date().parse(now)
-  const match = /^openstates\/scraper-dispatches\/(nc|ak)\/([A-Za-z0-9][A-Za-z0-9-]{0,100})\.json$/.exec(path)
+  const match = /^openstates\/scraper-dispatches\/(nc|ak|wa)\/([A-Za-z0-9][A-Za-z0-9-]{0,100})\.json$/.exec(path)
   const runId = match?.[2]
   if (!runId) {
     throw new Error("Invalid scraper dispatch path")
