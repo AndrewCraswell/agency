@@ -885,3 +885,11 @@ inactive identity, both terms and the Senate resolution provenance. A read-only 
 batch now resolves all 784 vote positions (previously 780) and every sponsor. Evidence:
 `artifacts/openstates-washington-hosted/first-batch-people-role-reviewed.json`. This proves resolution for that batch;
 the full-session null-link reconciliation still waits for the hosted bill cycle and is not claimed complete.
+
+Three additional reviews remove erroneous pre-Senate upper-chamber assertions for Chris Gildon, Marcus Riccelli and
+Noel Frame. Their official biographies independently distinguish the earlier House service from subsequent Senate
+service: [Gildon](https://chrisgildon.src.wastateleg.org/about/),
+[Riccelli](https://senatedemocrats.wa.gov/riccelli/biography/) and
+[Frame](https://senatedemocrats.wa.gov/frame/biography/). The supplied legitimate roles and their dates are unchanged;
+no general rule converts a conflicting role into another chamber or guesses a boundary. Full retained-archive replay
+now yields 337 people, 372 terms, 16 quarantines and no current-roster coverage issues. All 24 focused tests pass.

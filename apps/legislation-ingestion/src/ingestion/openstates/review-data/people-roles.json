@@ -40,5 +40,68 @@
         "reason": "Resolution 8659 records death on April 19 and Senate service through his last day. Preserve the January 13 Senate start from the source and first-day journal."
       }
     ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Chris-Gildon-1e20aaf3-ffbb-4666-82c2-374b232b41ac.yml",
+    "sourceSha256": "d929b0f8e0fd8bc1ede870d7bdac9aba48caab86e2b2640dd985659d43701cde",
+    "personId": "ocd-person/1e20aaf3-ffbb-4666-82c2-374b232b41ac",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "25",
+          "start_date": "2019-01-14",
+          "end_date": "2021-01-10"
+        },
+        "after": null,
+        "evidenceUrls": ["https://chrisgildon.src.wastateleg.org/about/"],
+        "reason": "Official biography places the first two legislative years from 2019 in the House and the move to the Senate in 2021. Remove the contradictory 2019-2021 Senate assertion; preserve the independently supplied House and current Senate roles."
+      }
+    ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Marcus-Riccelli-1ecc75cc-95c9-4ae6-a8a4-1a0f87a10d0e.yml",
+    "sourceSha256": "12e457c0acdbea8d20b080bce1eab7aa9041723224741265263095183dd3dd9e",
+    "personId": "ocd-person/1ecc75cc-95c9-4ae6-a8a4-1a0f87a10d0e",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "3",
+          "start_date": "2013-01-14",
+          "end_date": "2025-01-12"
+        },
+        "after": null,
+        "evidenceUrls": ["https://senatedemocrats.wa.gov/riccelli/biography/"],
+        "reason": "Official biography states twelve years in the House following the 2012 election, before election to the Senate in 2024. Remove the contradictory 2013-2025 Senate assertion without inventing or changing the supplied House boundaries."
+      }
+    ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Noel-Frame-e9b85600-e33e-4a0a-af9f-bbcb98c0153f.yml",
+    "sourceSha256": "dd8122a6c8e6f0e3a3b7b8a9fd7a14cfc6b99b9b9d947bd84bb98ac8dfdd8a67",
+    "personId": "ocd-person/e9b85600-e33e-4a0a-af9f-bbcb98c0153f",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "36",
+          "start_date": "2016-01-07",
+          "end_date": "2023-01-08"
+        },
+        "after": null,
+        "evidenceUrls": ["https://senatedemocrats.wa.gov/frame/biography/"],
+        "reason": "Official biography distinguishes House service beginning January 2016 from Senate service beginning January 2023. Remove the contradictory 2016-2023 Senate assertion, preserving the independently supplied roles."
+      }
+    ]
   }
 ]
