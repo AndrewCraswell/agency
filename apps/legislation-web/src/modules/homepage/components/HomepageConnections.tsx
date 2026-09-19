@@ -119,6 +119,15 @@ const sources = [
     status: "Coming soon"
   },
   {
+    name: "RegInfo.gov",
+    href: "https://www.reginfo.gov",
+    description: "Unified Agenda and regulatory review planning",
+    categories: ["Documents", "Regulations"],
+    plannedCategories: ["Documents", "Regulations"],
+    scope: "Regulatory agenda and review planning",
+    status: "Coming soon"
+  },
+  {
     name: "FEC.gov",
     href: "https://www.fec.gov",
     description: "Campaign and committee finance filings",
