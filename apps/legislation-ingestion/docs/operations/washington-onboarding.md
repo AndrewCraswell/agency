@@ -7,6 +7,23 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+All 90 retained calendar replay runs are now complete. Every retrieved output reports `reconciled`, with 90
+distinct window IDs and the expected plan `c2e3cc9c1b0f9fdcbd5dd40c8f4aa20fe8128c2740e85ceebb267daffac97a42`.
+Output totals are 1,453 event snapshots, 6,336 bill links and 1,424 organization links. Link totals are not counts
+of ready events: meetings can have multiple hosts. PostgreSQL has 1,458 Washington events, of which 1,421 have
+complete organization relationships and summary readiness. The 37 held records comprise 32 official-agenda
+records and five older Open States UUID records with null publisher dates and source URLs. Do not delete or
+merge those five from title similarity; source-identity evidence is still required.
+
+The 32 official-agenda host gaps are: SAO performance audits (17), tax-preference citizen commission (7),
+Statute Law Committee (3), LEAP (2), JLARC I-900 subcommittee (1), aging/disability joint committee (1), and
+Civic Health joint committee (1). They remain an explicit coverage gate, not failed replay runs. Resolve hosts
+through retained publisher identities and accepted organization records, never event-title matching.
+
+Bill refresh has 84/342 committed receipts and one current ownership lease. The next alias dry run covers
+HB 1355-1379 (139 candidates, no held groups), but both attempts stopped on publisher connection failures
+(`ECONNRESET`, then connect timeout) before any apply. The verified cleanup cursor remains HB 1354.
+
 The shared lock-contention retry passed full `pnpm verify` (1014). The guarded HB 1330-1354 alias apply
 (58341) completed, and its repeat dry run returned zero candidates and zero held groups. The verified cleanup
 cursor is now HB 1354; all 149 removed untouched aliases remain recoverable from reconciliation checkpoints.
