@@ -7,6 +7,20 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+Full `pnpm verify` for `21fbe82` completed successfully (96350); default database suites still skip without explicit
+test database configuration, and the default positive-corpus acceptance remains skipped. The deployed API/importer
+contract check also passed. Trigger version `20260919.34`, deployment `747c0aam`, image
+`30415ede234499d56b8c7e7757455e502296cc611b3f20fcd07f9f92b27d0eda`, deployed without global promotion.
+After checking both foundation task types had no active or queued runs, retained Washington replay was dispatched
+as `run_06gbk8ib6q2hlr5pdrveq6su01` with a global idempotency key bound to the review commit/version. Before replay,
+Dufault had one Open States lower-chamber roster term with null start/end dates. Verify replacement with the two
+reviewed terms and duplicate-free repeat replay before closing this correction's production gate.
+
+An automation gap remains in `foundationSourcesUnchanged`: the skip decision compares upstream revision and
+committee inventory, but not the local review-data revision. Explicit immutable replay handles this release;
+the shared refresh gate should also detect review changes so future reviewed corrections do not require manual
+replay when upstream bytes remain unchanged. Keep that fix generic and source-bound.
+
 The next historical review removes Dufault's duplicate 2019-2023 role through the existing exact-fingerprint
 review data, without changing engine logic. The official 2023 House Journal, PDF pages 11 and 15 (printed 7 and
 11), identifies Sandlin's District 15 Position 2 election and the January 9 members' oath. Both pages were visually
