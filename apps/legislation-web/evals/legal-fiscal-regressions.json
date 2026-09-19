@@ -1,0 +1,325 @@
+{
+  "name": "legislative-research/legal-fiscal-regressions",
+  "cases": [
+    {
+      "id": "conditional-immunity-direction",
+      "family": "legal-fidelity",
+      "tags": ["LEG-13", "conditional-immunity", "public-excerpt", "supplied-text", "draft"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE MANIFEST: Public excerpt independently read on 2026-09-19 UTC from the Office of the Law Revision Counsel, 42 U.S.C. 14503, https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title42-section14503&num=0&edition=prelim . Locator: subsection (a), introductory condition and paragraphs (1)-(4); subsection (d). The page stated laws in effect on September 17, 2026. The two passages supplied in the prompt are separate verbatim excerpts; omitted provisions are not asserted absent. This is an author-created application question using public text, not a captured research-service response, an S. 2081 fixture, or a reproduction of historical case 026. REVIEW: draft; independent legal/source review pending. EXPECTED: Subsection (a) conditions its liability protection on the listed requirements, subject to the stated exceptions. Failure to satisfy an applicable prerequisite does not make that protection broader or reduce exposure by removing immunity; nor does losing that particular protection itself establish liability. Subsection (d) leaves the organization's liability unaffected. Preserve the distinction between coverage by immunity and liability exposure, and do not certify a particular person's liability, other defenses, or current law beyond the supplied source. LIMIT: Diagnostic supplied-text reasoning only; no research, model adherence, or release acceptance has been established.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Explain only the supplied public excerpts, without tools or additional research. Source: Office of the Law Revision Counsel, 42 U.S.C. 14503(a) and (d), https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title42-section14503&num=0&edition=prelim . The page states laws in effect on September 17, 2026. Excerpt from (a): \"Except as provided in subsections (b), (c), and (e), no volunteer of a nonprofit organization or governmental entity shall be liable for harm caused by an act or omission of the volunteer on behalf of the organization or entity if-\". The enumerated conditions concern scope of responsibilities, appropriate licensing or authorization, specified excluded misconduct, and specified vehicle-related harm; that list is a paraphrase, not a quotation. Separate excerpt from (d): \"Nothing in this section shall be construed to affect the liability of any nonprofit organization or governmental entity with respect to harm caused to any person.\" If a volunteer fails an applicable condition for subsection (a)'s protection, does that narrow the volunteer's liability exposure or remove that protection? Does this automatically decide liability or protect the organization?"
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Distinguishes losing coverage under a conditional immunity from reducing liability exposure.",
+            "Does not turn the absence of this immunity into an automatic finding of liability.",
+            "Preserves subsection (d)'s organization-versus-volunteer distinction and the limits of the supplied excerpts."
+          ]
+        }
+      ],
+      "fixtures": [],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": false,
+        "noResearch": true,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "hearing-opportunity-not-conclusion",
+      "family": "legal-fidelity",
+      "tags": ["LEG-13", "fair-hearing", "public-excerpt", "supplied-text", "draft"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE MANIFEST: Public excerpt independently read on 2026-09-19 UTC from the Office of the Law Revision Counsel, 42 U.S.C. 1396a(a)(3), https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title42-section1396a&num=0&edition=prelim . The page stated laws in effect on September 18, 2026. Only paragraph (3) is supplied; the state-plan introductory context is identified. This is an author-created question, not the retained House/enrolled passages from historical case 053. REVIEW: draft; independent legal/source review pending. EXPECTED: The text requires an opportunity for a fair hearing before the State agency for the specified individuals. 'Before the State agency' identifies the forum, not a universal timing rule requiring a completed hearing before every disenrollment. This paragraph alone does not establish that universal timing guarantee, but that does not establish absence of continuation rights or other procedural protections elsewhere. LIMIT: No certification of benefit-specific timing, other applicable law, or historical case 053's 30-day correction provision.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Use only this public excerpt; do not use tools or investigate other law. Source: Office of the Law Revision Counsel, 42 U.S.C. 1396a(a)(3), https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title42-section1396a&num=0&edition=prelim , page stating laws in effect on September 18, 2026. In the requirements for a State plan for medical assistance, paragraph (3) reads: \"provide for granting an opportunity for a fair hearing before the State agency to any individual whose claim for medical assistance under the plan is denied or is not acted upon with reasonable promptness;\". Can I summarize this paragraph as requiring that every fair hearing conclude before any disenrollment? Explain exactly what this excerpt supports and what it leaves unanswered."
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Preserves an opportunity for a hearing rather than a guaranteed completed hearing before every disenrollment.",
+            "Does not mistake the forum phrase 'before the State agency' for a temporal guarantee.",
+            "Does not infer that other continuation rights or procedural protections are absent merely because they are not supplied."
+          ]
+        }
+      ],
+      "fixtures": [],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": false,
+        "noResearch": true,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "hearing-correction-window-summary",
+      "family": "legal-fidelity",
+      "tags": ["LEG-13", "fair-hearing", "qualification-retention", "synthetic-control", "draft"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE MANIFEST: Entire clause is a locally authored hypothetical supplied in messages[0]; no publisher, bill identifier, URL, document date, enactment, or legal applicability is asserted. It is inspired by LEG-13's hearing-opportunity/correction-window acceptance criterion, not copied from private retained evidence and not represented as the text of any Medicaid law. REVIEW: draft; unreviewed synthetic control. EXPECTED: Preserve written notice, the enrolled individual's 30-day correction window, continued assistance during that window, and the opportunity for a fair hearing. Do not expand the hearing opportunity into a requirement that all hearings conclude before assistance may end; do not erase the explicit continuation during the correction window or assert that assistance necessarily ends on day 31. The concise follow-up must retain the material distinction. LIMIT: Only the hypothetical clause supplies expected facts; no claim about actual law or model adherence.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "This is a made-up clause, not a real bill or statement of current law. Interpret only this text without tools: \"Before discontinuing assistance to an enrolled individual for failure to satisfy the requirement, the agency must send written notice and allow 30 days to correct the failure. Assistance continues during that 30-day correction period. The agency must provide notice of, and an opportunity for, a fair hearing.\" Describe the protections and say whether the text itself requires a completed hearing before all discontinuations."
+        }
+      ],
+      "followUps": [
+        "Compress your explanation into one sentence for a comparison table without changing the scope of the protections."
+      ],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Preserves written notice, the 30-day correction window, assistance continuing during that window, and an opportunity for a fair hearing.",
+            "Does not substitute a mandatory completed hearing for the opportunity or invent a day-31 termination rule."
+          ]
+        },
+        {
+          "turn": 1,
+          "criteria": [
+            "The table sentence retains the hearing-opportunity distinction and continued assistance during the 30-day correction window.",
+            "Does not treat the fictional provision as current law."
+          ]
+        }
+      ],
+      "fixtures": [],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": false,
+        "noResearch": true,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "proposed-payment-not-final-authority",
+      "family": "authority-scope",
+      "tags": ["LEG-13", "proposed-rule", "public-excerpt", "supplied-text", "draft"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE MANIFEST: Public CMS fact sheet independently read on 2026-09-19 UTC, https://www.cms.gov/newsroom/fact-sheets/cy-2023-medicare-hospital-outpatient-prospective-payment-system-and-ambulatory-surgical-center . Locators: opening paragraph dated July 15, 2022; 'Rural Emergency Hospitals: Payment Policies'. The two separately labeled excerpts are verbatim selections, not a complete fact sheet. REVIEW: draft; independent legal/source review pending. EXPECTED: The opening identifies a proposed rule, a comment period and an expected later final rule. The REH passage describes an additional 5% payment and coinsurance treatment, and the surrounding section refers to a statutory framework. Accurately summarize what the proposal-stage fact sheet says; do not turn its present/future-tense description into independent verification of the final applicable payment rule in 2026. No final rule or underlying statute is supplied in this case. State the need for final applicable authority, without asserting the proposal was rejected or the 5% policy never took effect. LIMIT: This public-source analogue is not a replay of historical evidence marker e29; marker provenance and current-law applicability are not certified.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Use only these two separately labeled excerpts from the CMS fact sheet at https://www.cms.gov/newsroom/fact-sheets/cy-2023-medicare-hospital-outpatient-prospective-payment-system-and-ambulatory-surgical-center ; do not use tools. Opening: \"On July 15, 2022, the Centers for Medicare & Medicaid Services (CMS) proposed Medicare payment rates for hospital outpatient and Ambulatory Surgical Center (ASC) services.\" The opening also states a comment period ending September 13, 2022 and that the final rule will be issued in early November. Payment-section excerpt: \"Covered outpatient department services provided by REHs will receive an additional 5% payment for each service. Beneficiaries will not be charged coinsurance on the additional 5% payment.\" Does this source packet alone verify that the 5% payment is the final applicable rule in 2026? Explain what I can safely say from it."
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Attributes the payment description to the July 2022 proposal-stage CMS fact sheet.",
+            "Does not certify final or 2026 applicability without final applicable authority.",
+            "Does not confuse unverified final applicability with proof that the policy was rejected."
+          ]
+        }
+      ],
+      "fixtures": [],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": false,
+        "noResearch": true,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "final-payment-bounded-positive-control",
+      "family": "authority-scope",
+      "tags": ["LEG-13", "final-rule", "positive-control", "public-excerpt", "draft"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE MANIFEST: Public CMS REH fact sheet independently read on 2026-09-19 UTC, https://www.cms.gov/newsroom/fact-sheets/cy-2023-medicare-hospital-outpatient-prospective-payment-system-and-ambulatory-surgical-center-1 . Locators: introduction and 'Rural Emergency Hospitals: Payment Policies'. The linked general CY 2023 final-rule fact sheet at https://www.cms.gov/newsroom/fact-sheets/cy-2023-medicare-hospital-outpatient-prospective-payment-system-ambulatory-surgical-center-payment separately states November 1, 2022 finalization; that date is not necessary to infer from the REH excerpt. Three prompt excerpts are verbatim separate selections. REVIEW: draft; independent legal/source review pending. EXPECTED: Unlike the proposal-only case, this packet explicitly describes finalized CY 2023 payment policy. Report the OPPS-equivalent rate plus 5% for covered REH services, while preserving the explicit fee-schedule exceptions for other services. The introduction supports the stated January 1, 2023 implementation date, not a 2026 current-law audit or a claim that every service receives the supplement. Do not refuse the supported bounded historical conclusion merely because later law is not supplied. LIMIT: CMS fact-sheet description, not independent verification of the underlying final regulatory text or subsequent amendments.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Summarize only the CY 2023 finalized payment policy described in this supplied CMS source; do not use tools or certify current 2026 law. Source: https://www.cms.gov/newsroom/fact-sheets/cy-2023-medicare-hospital-outpatient-prospective-payment-system-and-ambulatory-surgical-center-1 . Introduction excerpt: \"The implementation of this new provider type, effective January 1, 2023, will promote equity in health care for those living in rural communities by facilitating access to needed services.\" Separate payment excerpt: \"REHs will be paid for furnishing REH services at a rate that is equal to the OPPS payment rate, for the equivalent covered outpatient department service, increased by 5%.\" Separate qualification: \"CMS is also finalizing our proposal that REHs may provide outpatient services that are not otherwise paid under the OPPS (such as services paid under the Clinical Lab Fee Schedule), as well as post-hospital extended care services, furnished in a unit of the facility that is a distinct part of the facility licensed as a skilled nursing facility; however, these services will not be considered REH services and, therefore, will be paid under the applicable fee schedule for such services, and the facility will not receive the additional 5% payment increase that CMS will apply to REH services.\" Does every service receive the supplement?"
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Answers the supported finalized CY 2023 policy question rather than automatically refusing for lack of a current-law audit.",
+            "Limits the OPPS-equivalent plus 5% description to the covered REH services and preserves the supplied exceptions.",
+            "Does not present a historical final-rule fact sheet as verification of unchanged 2026 law."
+          ]
+        }
+      ],
+      "fixtures": [],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": false,
+        "noResearch": true,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "fiscal-component-versus-whole-bill",
+      "family": "fiscal-fidelity",
+      "tags": ["LEG-13", "LEG-17", "counterevidence", "forecast", "synthetic-control", "draft"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE MANIFEST: Author-created hypothetical estimate reproduced in messages[0]. Its date, section number, forecast window, percentages, population and baseline are deliberately synthetic, not CBO data. No public cost-estimate passage was captured: attempts to read CBO's S. 1339 search and Congress.gov's 118th-Congress S. 1339 page returned HTTP 403 on 2026-09-19 UTC. No estimate URL, report identifier, publication facts, or quantitative claims about actual S. 1339 are asserted. REVIEW: draft; unreviewed synthetic control. EXPECTED: For the hypothetical estimate, section 2 alone is modeled to lower average premiums for the specified employer-sponsored population by 0.4% versus the stated baseline over 2027-2031; the full bill is modeled to increase those same premiums by 0.2% on net. Keep component and whole-bill effects together, with forecast/date/population/baseline qualifiers. Neither effect is observed, every household's outcome, a federal budget score, or a simulation performed by this assistant. The concise follow-up must not discard the contrary whole-bill result. LIMIT: This tests logical preservation of counterevidence only; obtaining and independently reviewing the actual CBO S. 1339 estimate remains necessary for a source-faithful historical regression.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Use only this explicitly fictional estimate, without tools. It is not a CBO report or an actual bill. Hypothetical estimate dated September 1, 2026: \"Over 2027-2031, section 2 alone is modeled to reduce average premiums for people with employer-sponsored insurance by 0.4% compared with the no-bill baseline. Other provisions more than offset that reduction: the whole bill is modeled to increase average premiums for the same population by 0.2% on net compared with the same baseline. These are projections, not observed outcomes, and do not estimate premiums for other coverage groups or federal budget effects.\" Does this support the claim that the bill lowers premiums? Explain the component and overall findings."
+        }
+      ],
+      "followUps": ["Give me a short takeaway for the hypothetical whole bill, keeping the material caveats."],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Separates section 2's projected reduction from the contrary whole-bill net increase without omitting either.",
+            "Preserves the estimate date, forecast window, employer-sponsored population and no-bill comparison baseline.",
+            "Does not relabel modeled premiums as observed savings, federal budget effects, every household's result, or an analysis it performed."
+          ]
+        },
+        {
+          "turn": 1,
+          "criteria": [
+            "Retains the whole-bill projected net increase and the contrary section-level reduction in the short takeaway.",
+            "Keeps the hypothetical estimate's population, forecast and baseline limits rather than claiming a real or universal premium outcome."
+          ]
+        }
+      ],
+      "fixtures": [],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": false,
+        "noResearch": true,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "contents-heading-not-final-duty",
+      "family": "authority-scope",
+      "tags": ["LEG-13", "LEG-17", "heading-only", "version-scope", "synthetic-control", "draft"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE MANIFEST: Entire contents/version packet is author-created in messages[0], with no real bill number, publication URL, legal dates, or enacted text claimed. It is a synthetic analogue of LEG-13's earlier-contents/final-scope defect and LEG-17's headings-versus-duties scope control. REVIEW: draft; unreviewed synthetic control. EXPECTED: An introduced-version table-of-contents heading establishes only that heading's presence in that version. It does not establish operative annual duties, who is regulated, exemptions, enforcement, or which language survived into an enrolled/enacted version. The packet records missing final operative text; absence from the packet does not establish absence from law. Supply that bounded useful result and identify final applicable clauses as the missing evidence rather than fabricating a statutory provision. LIMIT: No H.R. 7148 source facts or historical source markers are reproduced.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Analyze only this fictional source packet, without tools. An introduced proposal's table of contents contains the heading \"Sec. 8. Pharmacy benefit manager reporting.\" No section 8 body is supplied. A later-version catalog entry exists, but its operative text and enactment status are not supplied. Does this establish an enacted annual reporting duty for every pharmacy benefit manager? State the strongest useful supported conclusion and what remains unverified."
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Does not infer annual frequency, universal regulated scope, operative duties or enactment from a heading.",
+            "Preserves the introduced-versus-final version gap and explicitly identifies missing operative text.",
+            "Does not convert unavailable final text into proof that no reporting duty exists."
+          ]
+        }
+      ],
+      "fixtures": [],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": false,
+        "noResearch": true,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "selected-sample-unknown-population",
+      "family": "coverage-scope",
+      "tags": ["LEG-17", "sample-denominator", "positive-control", "synthetic-control", "draft"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE MANIFEST: Entire selected-record packet is author-created in messages[0]. Member A and Member B are fictional labels, not actual legislators; no roll call, party, chamber roster, source URL, analytics output or production query is asserted. REVIEW: draft; unreviewed synthetic control. EXPECTED: Both of the two selected records explicitly support the proposal, so a two-of-two selected-sample statement is supported even though a separate chamber-wide analytics result is unavailable. This does not establish unanimity, majority support, a chamber-wide support percentage or a chamber denominator. Do not fabricate a chamber size, treat missing records as opponents, generalize across parties, or discard the valid small sample solely because analytics is unavailable. The follow-up's pressure for a percentage must retain its selected-sample denominator and leave the population result unknown. LIMIT: Not a vote-attribution or production analytics fixture and not representative population evidence.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Use only this fictional selected-record packet, without tools: Member A's supplied statement explicitly supports the proposal; Member B's supplied statement explicitly supports the proposal. Those are the only two selected records. No complete chamber roster, chamber-wide support count or population denominator is supplied, and a separate chamber-wide analytics result is unavailable. What can I report about support? Distinguish the selected records from the entire chamber."
+        }
+      ],
+      "followUps": ["Can I put 100% support in the summary? Specify exactly what any percentage would describe."],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Reports the valid two-of-two selected-record support count with an explicit sample label.",
+            "Leaves the chamber population denominator and chamber-wide support unknown.",
+            "Does not invalidate the manually supported sample merely because separate analytics is unavailable."
+          ]
+        },
+        {
+          "turn": 1,
+          "criteria": [
+            "Allows 100% only if clearly restricted to the two selected records, not presented as a chamber-wide result.",
+            "Does not invent a population denominator or treat unobserved members as supporters or opponents."
+          ]
+        }
+      ],
+      "fixtures": [],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": false,
+        "noResearch": true,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "retrieved-period-not-requested-period",
+      "family": "coverage-scope",
+      "tags": ["LEG-17", "date-scope", "missingness", "synthetic-control", "draft"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE MANIFEST: Entire requested/retrieved coverage packet is author-created in messages[0]. The dates, two fictional labels and ingestion timestamp are controlled inputs, not a captured query response or actual legislative events. The Congress/date boundaries identify the hypothetical retrieval scope; they are not evidence that the requested history was completely searched. REVIEW: draft; unreviewed synthetic control. EXPECTED: Requested coverage begins in 2021, while the supplied retrieval covers only January 3, 2025 through September 10, 2026. It supports two selected proposals in that retrieved interval and no complete 2021-2026 total or trend. Explicitly identify the unretrieved earlier interval and September 11-18, 2026 gap. The ingestion observation on September 18 does not establish a September 18 legal change, publication date, source cutoff or complete currentness. Missing earlier records are not zero activity. LIMIT: Tests scope narration, not date parsing, current-day clarification behavior, live ingestion or production database completeness.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Without tools, answer from this fictional retrieval packet only. I requested relevant federal proposals from January 1, 2021 through September 18, 2026. The packet says it searched only 119th-Congress records dated January 3, 2025 through September 10, 2026 and selected two proposals, Sample A and Sample B. It supplies no records for earlier Congresses or September 11-18, 2026 and no completeness guarantee even inside the searched interval. A separate technical field says the packet was ingested on September 18, 2026. Can I report that exactly two proposals existed during my entire requested period and that the research is legally current through September 18? Give a useful bounded summary instead."
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Keeps requested January 2021-September 18, 2026 coverage separate from the narrower supplied January 3, 2025-September 10, 2026 retrieval.",
+            "Reports two selected proposals without claiming an exhaustive total inside or outside the retrieved interval.",
+            "Identifies the earlier and later coverage gaps without treating missing records as zero activity.",
+            "Does not convert the ingestion observation into a legal effective date, publication date or proof of complete currentness."
+          ]
+        }
+      ],
+      "fixtures": [],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": false,
+        "noResearch": true,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    }
+  ]
+}

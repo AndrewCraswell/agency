@@ -40,6 +40,44 @@ They require `allowDrafts: true`. Fixture matching is exact after structured arg
 valid plans are harness coverage gaps, not empty results or agent-quality failures. Expand fixtures before using these
 cases to compare autonomous retrieval. There is no live-query fallback and no production database mutation.
 
+Two additional local draft datasets target the remaining claim-quality acceptance:
+
+- `evals/vote-attribution-regressions.json` covers amendment sequencing, restoration, unread operative text, voice
+  votes and partial member positions. Fixtures are authored projections with public-source references, not complete
+  historical captures.
+- `evals/legal-fiscal-regressions.json` covers legal conditions, proposed/final authority, fiscal net effects and
+  sample/date scope. Public excerpts and hypothetical controls are labeled separately; the actual CBO S. 1339
+  estimate remains an unresolved source gap.
+
+Validate either with `pnpm tool agent/evaluate-agent --dataset PATH --config evals/agent-smoke.json`, omitting
+`--execute`, `--sync` and hosted-dataset flags. This validates local inputs without inference or hosted writes.
+All cases remain draft; schema validation and authored rubrics do not establish model adherence or legal accuracy.
+
+## Authored browser scenarios
+
+`pnpm tool agent/run-scenarios --scenario authored.json` validates and prints a plan without loading a browser,
+sending requests or creating run output. `--scenario -` reads JSON from stdin; `--help` describes the input.
+This tracked driver replaces ad hoc campaign scripts for new runs, not their historical journals.
+
+The plan declares full jurisdiction names, up to eight exchanges, ordered prompts and any discovery dependencies.
+Jurisdiction clarification rules supply structured choices rather than inferred matches. Optional radio/checkbox
+mappings must exactly name those choices; otherwise the driver pauses. Non-jurisdiction questions require an exact
+authored answer. An unanswered/repeated clarification or absent discovery blocks dependent prompts unless an explicit
+missing-records branch exists. Accepted narrowing must be recorded in the plan; it is never selected automatically.
+
+Only `--execute --base-url http://127.0.0.1:3000` authorizes actual browser research against a credential-free loopback
+application. This can incur the application's model/provider costs, including homepage suggestions. It creates a
+fresh directory under ignored `artifacts/scenario-runs` and never resumes or rewrites an old run. Browser execution
+requires the installed Playwright browser binary.
+
+Reports separate planned, selected, executed and terminally answered steps from unassessed objectives.
+Confirmation/resume request pairs are correlated by clarification ID; raw transport failures remain recorded even
+when an answer was delivered. A completed browser exchange, record list or tool invocation is not semantic acceptance
+or evidence of duplicate model billing. Offline policy tests and synthetic loopback browser fixtures verify the driver,
+not production research quality.
+
+## Frozen vote fixtures
+
 Vote detail tools paginate member positions without dropping voter records. Continue with the returned `nextCursor` and
 unchanged selection; a roll call may span several pages, with `positionOffset` and `positionsTruncated` describing each
 slice. Vote-level tallies remain totals for the roll call, not counts for the position slice. Shared cursors bind both

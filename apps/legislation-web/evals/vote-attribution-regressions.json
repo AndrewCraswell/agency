@@ -1,0 +1,967 @@
+{
+  "name": "legislative-research/vote-attribution-regressions",
+  "cases": [
+    {
+      "id": "leg5-adopted-strike-package",
+      "family": "vote-attribution",
+      "tags": ["leg-5", "semantic", "public-source-derived", "adopted-strike", "package-vote", "partial-positions"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "PROVENANCE: Primary public sources read on 2026-09-19 UTC: https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml and https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml. This is a hand-normalized, deliberately bounded fixture, not a production database capture or independently reviewed benchmark. IDs are fixture-local canonical-shaped aliases; LIS member identities S396 and S384 are source identifiers. Both XML sources contain full member lists, but these fixtures deliberately retain only Blackburn and Tillis and mark positions partial. No other member position may be inferred from this subset.\nVERIFIED FACTS: Roll call 363 was on Blackburn S.Amdt. 2814 to S.Amdt. 2360 to H.R. 1 at July 1, 2025, 04:08 AM as printed by the source. Its purpose was 'To strike the section relating to support for artificial intelligence.' It was agreed to 99-1. Blackburn voted Yea; Tillis voted Nay. Roll call 371 was on S.Amdt. 2360, as amended, at 11:49 AM that day. It was agreed to with 50 senators voting Yea, 50 Nay, and the Vice President voting Yea to break the tie. Blackburn voted Yea; Tillis voted Nay. Do not call this 51 senators voting Yea. Times are source-local labels; no UTC timestamp is manufactured.\nSEMANTIC ACCEPTANCE: Identify the two distinct motions and parent amendment relationship, reconcile the adopted strike before discussing the later amended substitute, and explain why the package vote does not establish support for the original targeted clause or individual policy motives. Blackburn's Yea/Yea combination is not contradictory: the subjects of the votes differ. Tillis's two Nays do not prove a specific policy motivation. '51-50' is acceptable only with the senator/VP distinction explicit. The evidence establishes adoption of the strike and later adoption of an amended substitute; it does not supply a complete intervening amendment history, operative Senate text, final enrolled text, or enactment record. Do not assert exhaustive survival/absence, a precise unprovided clause quotation, all AI provisions removed, or current enforceable law. A clear, cited limited answer is preferable to guessing. Equivalent accurate wording is acceptable; these are reviewer criteria, not an authored expected response proving model accuracy.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Using this bounded record set, compare Blackburn and Tillis on the July 1, 2025 strike and the later amended package. Read get_amendment for amendment:us:119:samdt:2814 and amendment:us:119:samdt:2360, and get_vote for vote:congress:senate-119-363 and vote:congress:senate-119-371. Does the later package vote establish that each senator supported the original AI provision? Separate verified motions and positions from inference about policy support or surviving text. Do not search for additional records or produce an exhaustive member list."
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Correctly links adopted S.Amdt. 2814 to its parent S.Amdt. 2360 and places roll call 363 before roll call 371 using the source-local clock labels.",
+            "Reports 99-1 on the strike and 50-50 among senators plus the Vice President's Yea on the amended substitute; does not count the Vice President as a senator.",
+            "Reports only the supplied Blackburn Yea/Yea and Tillis Nay/Nay positions, identifies their distinct motions, and does not infer clause-specific motives or support from package votes.",
+            "Explicitly distinguishes the adopted strike from proof of the final operative text or enactment; states the missing-version and incomplete-history limits without nullifying the known strike disposition.",
+            "Citations ground amendment disposition and recorded positions. No score is awarded merely for matching words, having text, or finishing a stream."
+          ]
+        }
+      ],
+      "fixtures": [
+        {
+          "method": "getAmendment",
+          "input": { "id": "amendment:us:119:samdt:2814" },
+          "output": {
+            "amendment": {
+              "id": "amendment:us:119:samdt:2814",
+              "billId": "bill:us:119:hr:1",
+              "amendmentType": "samdt",
+              "amendmentNumber": "2814",
+              "printedIdentifier": "S.Amdt. 2814",
+              "chamber": "senate",
+              "purpose": "To strike the section relating to support for artificial intelligence.",
+              "description": "The Senate roll-call record identifies S.Amdt. 2814 as an amendment to S.Amdt. 2360 to H.R. 1. This fixture contains roll-call-derived metadata, not amendment text.",
+              "status": "adopted",
+              "recordType": "structured",
+              "billIdentifier": "H.R. 1",
+              "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml"
+            },
+            "actions": [
+              {
+                "id": "action:fixture:2814:adoption",
+                "amendmentId": "amendment:us:119:samdt:2814",
+                "ordinal": 1,
+                "description": "July 1, 2025, 04:08 AM: Amendment Agreed to (99-1), roll call 363.",
+                "classification": [],
+                "actionDate": "2025-07-01",
+                "actionAt": null,
+                "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml"
+              }
+            ],
+            "materials": [],
+            "votes": [],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getAmendment",
+          "input": { "id": "amendment:us:119:samdt:2360" },
+          "output": {
+            "amendment": {
+              "id": "amendment:us:119:samdt:2360",
+              "billId": "bill:us:119:hr:1",
+              "amendmentType": "samdt",
+              "amendmentNumber": "2360",
+              "printedIdentifier": "S.Amdt. 2360",
+              "chamber": "senate",
+              "purpose": "In the nature of a substitute.",
+              "description": "Roll call 371 identifies the question as Amdt. No. 2360, as Amended. This fixture does not include all intervening amendments or the operative substitute text.",
+              "status": "adopted",
+              "recordType": "structured",
+              "billIdentifier": "H.R. 1",
+              "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml"
+            },
+            "actions": [
+              {
+                "id": "action:fixture:2360:adoption",
+                "amendmentId": "amendment:us:119:samdt:2360",
+                "ordinal": 1,
+                "description": "July 1, 2025, 11:49 AM: S.Amdt. 2360, as amended, agreed to, 50-50 among senators, with the Vice President voting Yea.",
+                "classification": [],
+                "actionDate": "2025-07-01",
+                "actionAt": null,
+                "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml"
+              }
+            ],
+            "materials": [],
+            "votes": [],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getVote",
+          "input": { "id": "vote:congress:senate-119-363" },
+          "output": {
+            "vote": {
+              "id": "vote:congress:senate-119-363",
+              "billId": "bill:us:119:hr:1",
+              "amendmentId": "amendment:us:119:samdt:2814",
+              "motion": "On the Amendment: Blackburn Amdt. No. 2814 to S.Amdt. 2360 to H.R. 1",
+              "question": "On the Amendment",
+              "result": "Amendment Agreed to (99-1)",
+              "heldDate": "2025-07-01",
+              "heldAt": null,
+              "voteType": "roll-call",
+              "yesCount": 99,
+              "noCount": 1,
+              "chamber": "senate",
+              "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml"
+            },
+            "positions": [
+              {
+                "person": { "id": "person:fixture:lis-s396", "name": "Marsha Blackburn" },
+                "position": {
+                  "voteId": "vote:congress:senate-119-363",
+                  "personId": "person:fixture:lis-s396",
+                  "sourceIdentity": "S396",
+                  "option": "yes"
+                }
+              },
+              {
+                "person": { "id": "person:fixture:lis-s384", "name": "Thomas Tillis" },
+                "position": {
+                  "voteId": "vote:congress:senate-119-363",
+                  "personId": "person:fixture:lis-s384",
+                  "sourceIdentity": "S384",
+                  "option": "no"
+                }
+              }
+            ],
+            "positionsTruncated": true
+          }
+        },
+        {
+          "method": "getVote",
+          "input": { "id": "vote:congress:senate-119-371" },
+          "output": {
+            "vote": {
+              "id": "vote:congress:senate-119-371",
+              "billId": "bill:us:119:hr:1",
+              "amendmentId": "amendment:us:119:samdt:2360",
+              "motion": "On the Amendment: Amdt. No. 2360, as Amended",
+              "question": "On the Amendment",
+              "result": "Amendment Agreed to (50-50, Vice President of the United States, voted Yea)",
+              "heldDate": "2025-07-01",
+              "heldAt": null,
+              "voteType": "roll-call",
+              "yesCount": 50,
+              "noCount": 50,
+              "chamber": "senate",
+              "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml"
+            },
+            "positions": [
+              {
+                "person": { "id": "person:fixture:lis-s396", "name": "Marsha Blackburn" },
+                "position": {
+                  "voteId": "vote:congress:senate-119-371",
+                  "personId": "person:fixture:lis-s396",
+                  "sourceIdentity": "S396",
+                  "option": "yes"
+                }
+              },
+              {
+                "person": { "id": "person:fixture:lis-s384", "name": "Thomas Tillis" },
+                "position": {
+                  "voteId": "vote:congress:senate-119-371",
+                  "personId": "person:fixture:lis-s384",
+                  "sourceIdentity": "S384",
+                  "option": "no"
+                }
+              }
+            ],
+            "positionsTruncated": true
+          }
+        }
+      ],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": true,
+        "noResearch": false,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "leg5-restoration-after-strike",
+      "family": "vote-attribution",
+      "tags": ["leg-5", "semantic", "synthetic-control", "restoration", "operative-text", "not-enacted"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "PROVENANCE: Entirely fictional legislative events and text adapted from the existing voteAttribution transport fixture. example.org URLs and H.R. 9000/S.Amdt. 9000-9002 are synthetic test identifiers, not researched historical claims. Procedural background source read on 2026-09-19 UTC: https://www.senate.gov/about/powers-procedures/voting.htm (motions and amendments are distinct vote subjects). The actual 2025 strike/package source pattern is https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml and https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml; those sources DO NOT document the fictional restoration here. Independent human review remains outstanding.\nFIXTURE FACTS: S.Amdt. 9001 strikes section 900 of S.Amdt. 9000 at 10:00 UTC; S.Amdt. 9002 explicitly restores section 900 at 11:00 UTC; the amended package is adopted at 12:00 UTC. The complete synthetic engrossed Senate version supplied by getBillText contains the restored grant-ineligibility clause. These timestamps are authored fixture facts, not converted historical Senate times.\nSEMANTIC ACCEPTANCE: Follow the complete ordered chain and acknowledge that restoration supersedes the earlier removal for this supplied Senate version. Identify the exact surviving section 900 and quote it only from the operative text. Do not parrot a permanent-removal conclusion from the first amendment. Distinguish a vote on restoration from a vote on the whole substitute; neither establishes a member's every policy motive. The fixture establishes Senate action on proposed legislation, not enactment or currently enforceable grant conditions. Explicitly frame any explanation of its effect as proposed/conditional. No production model response was generated or graded to author these criteria.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "This is a fictional legislative record, not H.R. 1. Did section 900's grant restriction survive the Senate's amended package, or was it permanently removed? Read amendments amendment:us:119:samdt:9000, amendment:us:119:samdt:9001 and amendment:us:119:samdt:9002; votes vote:us:fixture:removal, vote:us:fixture:restoration and vote:us:fixture:package; and get_bill_text for bill:us:119:hr:9000 with documentId document:us:119:hr:9000:eas. Reconcile the sequence, identify the operative version, and explain whether this proves the restriction is law. Use only these records."
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Reconstructs adopted strike, adopted restoration, then package adoption in chronological order; identifies each amendment's target rather than treating all three as the same motion.",
+            "Uses the supplied Senate engrossed section 900 to establish restoration in that version; does not claim the first strike permanently removed the clause.",
+            "Separates the clause's proposed effect from enactment/current legal duties and avoids individual-intent or every-clause-support inferences from package adoption.",
+            "Quotes only the supplied operative passage, cites the sequence and text, and preserves the explicit fictional scope."
+          ]
+        }
+      ],
+      "fixtures": [
+        {
+          "method": "getAmendment",
+          "input": { "id": "amendment:us:119:samdt:9000" },
+          "output": {
+            "amendment": {
+              "id": "amendment:us:119:samdt:9000",
+              "billId": "bill:us:119:hr:9000",
+              "printedIdentifier": "S.Amdt. 9000",
+              "amendmentType": "samdt",
+              "amendmentNumber": "9000",
+              "chamber": "senate",
+              "recordType": "structured",
+              "purpose": "Synthetic substitute grant package.",
+              "status": "adopted",
+              "sourceUrl": "https://example.org/leg-5/restoration/package"
+            },
+            "actions": [
+              {
+                "id": "action:fixture:package",
+                "ordinal": 1,
+                "description": "S.Amdt. 9000 agreed to as amended by S.Amdt. 9001 and S.Amdt. 9002.",
+                "actionDate": "2025-07-01",
+                "actionAt": "2025-07-01T12:00:00.000Z",
+                "classification": []
+              }
+            ],
+            "materials": [],
+            "votes": [],
+            "truncated": false
+          }
+        },
+        {
+          "method": "getAmendment",
+          "input": { "id": "amendment:us:119:samdt:9001" },
+          "output": {
+            "amendment": {
+              "id": "amendment:us:119:samdt:9001",
+              "billId": "bill:us:119:hr:9000",
+              "printedIdentifier": "S.Amdt. 9001",
+              "amendmentType": "samdt",
+              "amendmentNumber": "9001",
+              "chamber": "senate",
+              "recordType": "structured",
+              "purpose": "Strike section 900 of S.Amdt. 9000 to H.R. 9000, the state AI-law funding restriction.",
+              "status": "adopted",
+              "sourceUrl": "https://example.org/leg-5/restoration/strike"
+            },
+            "actions": [
+              {
+                "id": "action:fixture:strike",
+                "ordinal": 1,
+                "description": "S.Amdt. 9001 agreed to by recorded vote.",
+                "actionDate": "2025-07-01",
+                "actionAt": "2025-07-01T10:00:00.000Z",
+                "classification": []
+              }
+            ],
+            "materials": [],
+            "votes": [],
+            "truncated": false
+          }
+        },
+        {
+          "method": "getAmendment",
+          "input": { "id": "amendment:us:119:samdt:9002" },
+          "output": {
+            "amendment": {
+              "id": "amendment:us:119:samdt:9002",
+              "billId": "bill:us:119:hr:9000",
+              "printedIdentifier": "S.Amdt. 9002",
+              "amendmentType": "samdt",
+              "amendmentNumber": "9002",
+              "chamber": "senate",
+              "recordType": "structured",
+              "purpose": "Restore section 900 of S.Amdt. 9000 to H.R. 9000 after adoption of S.Amdt. 9001.",
+              "status": "adopted",
+              "sourceUrl": "https://example.org/leg-5/restoration/restore"
+            },
+            "actions": [
+              {
+                "id": "action:fixture:restore",
+                "ordinal": 1,
+                "description": "S.Amdt. 9002 agreed to by recorded vote.",
+                "actionDate": "2025-07-01",
+                "actionAt": "2025-07-01T11:00:00.000Z",
+                "classification": []
+              }
+            ],
+            "materials": [],
+            "votes": [],
+            "truncated": false
+          }
+        },
+        {
+          "method": "getVote",
+          "input": { "id": "vote:us:fixture:removal" },
+          "output": {
+            "vote": {
+              "id": "vote:us:fixture:removal",
+              "billId": "bill:us:119:hr:9000",
+              "amendmentId": "amendment:us:119:samdt:9001",
+              "motion": "On agreeing to S.Amdt. 9001, striking section 900 of S.Amdt. 9000",
+              "result": "passed",
+              "heldAt": "2025-07-01T10:00:00.000Z",
+              "voteType": "roll-call",
+              "yesCount": 99,
+              "noCount": 1,
+              "chamber": "senate",
+              "sourceUrl": "https://example.org/leg-5/restoration/strike-vote"
+            },
+            "positions": [],
+            "positionsTruncated": true
+          }
+        },
+        {
+          "method": "getVote",
+          "input": { "id": "vote:us:fixture:restoration" },
+          "output": {
+            "vote": {
+              "id": "vote:us:fixture:restoration",
+              "billId": "bill:us:119:hr:9000",
+              "amendmentId": "amendment:us:119:samdt:9002",
+              "motion": "On agreeing to S.Amdt. 9002, restoring section 900 of S.Amdt. 9000",
+              "result": "passed",
+              "heldAt": "2025-07-01T11:00:00.000Z",
+              "voteType": "roll-call",
+              "yesCount": 60,
+              "noCount": 40,
+              "chamber": "senate",
+              "sourceUrl": "https://example.org/leg-5/restoration/restore-vote"
+            },
+            "positions": [],
+            "positionsTruncated": true
+          }
+        },
+        {
+          "method": "getVote",
+          "input": { "id": "vote:us:fixture:package" },
+          "output": {
+            "vote": {
+              "id": "vote:us:fixture:package",
+              "billId": "bill:us:119:hr:9000",
+              "amendmentId": "amendment:us:119:samdt:9000",
+              "motion": "On agreeing to S.Amdt. 9000 to H.R. 9000, as amended",
+              "result": "passed",
+              "heldAt": "2025-07-01T12:00:00.000Z",
+              "voteType": "roll-call",
+              "yesCount": 64,
+              "noCount": 36,
+              "chamber": "senate",
+              "sourceUrl": "https://example.org/leg-5/restoration/package-vote"
+            },
+            "positions": [],
+            "positionsTruncated": true
+          }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:9000", "documentId": "document:us:119:hr:9000:eas" },
+          "output": {
+            "billId": "bill:us:119:hr:9000",
+            "document": {
+              "id": "document:us:119:hr:9000:eas",
+              "billId": "bill:us:119:hr:9000",
+              "billIdentifier": "H.R. 9000",
+              "classification": "version",
+              "versionCode": "eas",
+              "documentDate": "2025-07-01",
+              "title": "Synthetic engrossed Senate amendment after restoration",
+              "sourceUrl": "https://example.org/leg-5/restoration/operative-text",
+              "processingStatus": "processed",
+              "sectionCount": 1
+            },
+            "sections": [
+              {
+                "id": "section:fixture:restored-900",
+                "documentId": "document:us:119:hr:9000:eas",
+                "ordinal": 0,
+                "sectionIdentifier": "Section 900",
+                "heading": "Grant eligibility",
+                "text": "SEC. 900. A State regulating artificial intelligence is ineligible for the specified grant."
+              }
+            ],
+            "truncated": false
+          }
+        }
+      ],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": true,
+        "noResearch": false,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "leg5-missing-operative-version",
+      "family": "vote-attribution",
+      "tags": [
+        "leg-5",
+        "semantic",
+        "public-source-derived",
+        "version-mismatch",
+        "controlled-missingness",
+        "proposed-not-enacted"
+      ],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "PROVENANCE: Sources read on 2026-09-19 UTC: House engrossed H.R. 1 https://www.govinfo.gov/content/pkg/BILLS-119hr1eh/html/BILLS-119hr1eh.htm, section 43201(c)(1); Senate roll calls https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml and https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml. Source text was whitespace-normalized into the excerpt, preserving its words and punctuation. The opening of https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm identifies Public Law 119-21, H.R. 1, July 4, 2025; that header proves the bill later became law, not survival of this particular House clause. The Senate engrossed publication https://www.govinfo.gov/content/pkg/BILLS-119hr1eas/html/BILLS-119hr1eas.htm is publicly available; the getBillText error here is an intentional frozen-world missingness control, NOT an observation that the public source or production service is unavailable. All fixture projections and IDs are authored and await independent review.\nSEMANTIC ACCEPTANCE: Explain the supplied House EH section as a proposed 10-year enforcement moratorium, subject to paragraph (2), which is not included in this excerpt. Do not change its enforcement language into a blanket ban on writing all AI laws, omit the exception qualification, or silently treat it as the Senate's later wording. The adopted strike is known; the requested operative Senate version is unread in this case. Package adoption as amended does not establish that the earlier House wording survived, and even a later enactment header would not establish clause survival. Clearly identify the unavailable operative text, partial history and omitted exceptions. Do not fabricate a quotation from the missing document or answer current-law applicability from the earlier House passage. A safe answer can report the known motions and limited proposed effect while withholding unsupported survival and current-law conclusions. Failure to retrieve this controlled fixture is not a negative search result, zero provisions, or evidence that a law was repealed.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I found a 10-year state AI enforcement moratorium in H.R. 1. Did the later vote on the Senate package make that exact clause law? Read get_bill_text for bill:us:119:hr:1 with documentId document:fixture:119hr1:eh, then documentId document:fixture:119hr1:eas. Also read amendment:us:119:samdt:2814 with get_amendment and vote:congress:senate-119-371 with get_vote. Use only these returned records; distinguish the earlier House proposal, the amended Senate motion, and what can actually be established about surviving or enacted text."
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Identifies the retrieved passage as House EH section 43201(c)(1), not the operative Senate substitute or public law.",
+            "Preserves the no-enforcement scope, 10-year proposed duration and explicit paragraph-(2) exception qualification without inventing the omitted exceptions.",
+            "Reconciles adopted S.Amdt. 2814 with the later as-amended package vote and does not assign the earlier clause to that vote.",
+            "Discloses that the operative Senate text could not be read in this fixture; does not quote missing text or infer either survival or enactment of the particular clause.",
+            "Provides useful cited known facts rather than only an error message, while distinguishing a retrieval gap from evidence of absence."
+          ]
+        }
+      ],
+      "fixtures": [
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:1", "documentId": "document:fixture:119hr1:eh" },
+          "output": {
+            "billId": "bill:us:119:hr:1",
+            "document": {
+              "id": "document:fixture:119hr1:eh",
+              "billId": "bill:us:119:hr:1",
+              "billIdentifier": "H.R. 1",
+              "classification": "version",
+              "versionCode": "eh",
+              "title": "H.R. 1 Engrossed in House: selected section 43201(c)(1) excerpt",
+              "sourceUrl": "https://www.govinfo.gov/content/pkg/BILLS-119hr1eh/html/BILLS-119hr1eh.htm",
+              "processingStatus": "processed"
+            },
+            "sections": [
+              {
+                "id": "section:fixture:119hr1:eh:43201-c-1",
+                "documentId": "document:fixture:119hr1:eh",
+                "ordinal": 0,
+                "sectionIdentifier": "Section 43201(c)(1)",
+                "heading": "Moratorium: in general",
+                "text": "(1) In general.--Except as provided in paragraph (2), no State or political subdivision thereof may enforce, during the 10-year period beginning on the date of the enactment of this Act, any law or regulation of that State or a political subdivision thereof limiting, restricting, or otherwise regulating artificial intelligence models, artificial intelligence systems, or automated decision systems entered into interstate commerce."
+              }
+            ],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:1", "documentId": "document:fixture:119hr1:eas" },
+          "error": {
+            "category": "precondition_failed",
+            "message": "Controlled fixture: the requested Senate operative text is not available in this frozen record set."
+          }
+        },
+        {
+          "method": "getAmendment",
+          "input": { "id": "amendment:us:119:samdt:2814" },
+          "output": {
+            "amendment": {
+              "id": "amendment:us:119:samdt:2814",
+              "billId": "bill:us:119:hr:1",
+              "printedIdentifier": "S.Amdt. 2814",
+              "amendmentType": "samdt",
+              "amendmentNumber": "2814",
+              "chamber": "senate",
+              "recordType": "structured",
+              "purpose": "To strike the section relating to support for artificial intelligence.",
+              "description": "Roll call 363 identifies the target as S.Amdt. 2360 to H.R. 1; operative amendment text is not included in this fixture.",
+              "status": "adopted",
+              "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml"
+            },
+            "actions": [
+              {
+                "id": "action:fixture:2814:adoption",
+                "ordinal": 1,
+                "description": "July 1, 2025, 04:08 AM: Amendment Agreed to (99-1), roll call 363.",
+                "actionDate": "2025-07-01",
+                "actionAt": null,
+                "classification": []
+              }
+            ],
+            "materials": [],
+            "votes": [],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getVote",
+          "input": { "id": "vote:congress:senate-119-371" },
+          "output": {
+            "vote": {
+              "id": "vote:congress:senate-119-371",
+              "billId": "bill:us:119:hr:1",
+              "amendmentId": "amendment:us:119:samdt:2360",
+              "motion": "On the Amendment: Amdt. No. 2360, as Amended",
+              "question": "On the Amendment",
+              "result": "Amendment Agreed to (50-50, Vice President of the United States, voted Yea)",
+              "heldDate": "2025-07-01",
+              "heldAt": null,
+              "voteType": "roll-call",
+              "yesCount": 50,
+              "noCount": 50,
+              "chamber": "senate",
+              "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml"
+            },
+            "positions": [],
+            "positionsTruncated": true
+          }
+        }
+      ],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": true,
+        "noResearch": false,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "leg5-voice-vote-no-member-attribution",
+      "family": "vote-attribution",
+      "tags": ["leg-5", "semantic", "synthetic-control", "voice-vote", "unknown-positions", "proposed-not-enacted"],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "PROVENANCE: Procedural rule verified from the official Senate explanation, read on 2026-09-19 UTC: https://www.senate.gov/about/powers-procedures/voting.htm. It states that in a voice vote the names of senators and the tally are not recorded. This source is background for the rubric, NOT evidence that the fictional vote below occurred. All amendment, member, vote, passage and example.org records below are synthetic controls and await independent review.\nFIXTURE FACTS: The fictional amended substitute S.Amdt. 9100 was agreed to by voice vote. No member positions or numeric counts are supplied. Its Senate engrossed section 10 contains a proposed annual grant report. No enacted version is supplied.\nSEMANTIC ACCEPTANCE: Report the collective recorded outcome and the exact motion, but refuse to assign Fictional Senator Rowan or every senator a Yea/Nay. Null counts are not zero, not 100-0 and not unanimity. Voice vote is not interchangeable with a roll call or proof of a particular member's support. The supplied section shows proposed text in this Senate version; neither voice adoption of a package nor the existence of that text establishes every senator's support for that clause or current law. Cite the motion and text. The user request for a definitive individual classification should receive an evidence-limited answer, not an invented supporter/opponent label.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "For these fictional records, did Senator Rowan and all other senators vote for the annual grant-report clause? Read vote:us:fixture:voice-package with get_vote, amendment:us:119:samdt:9100 with get_amendment, and get_bill_text for bill:us:119:hr:9100 with documentId document:us:119:hr:9100:eas. Tell me what the vote actually establishes, whether individual positions are available, and whether agencies must now follow this clause. Use only these records."
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Identifies adoption by voice vote of the amended substitute, with no recorded individual positions or numeric tally.",
+            "Does not turn null counts or an empty positions array into zero opposition, unanimous support, or a vote by Senator Rowan.",
+            "Separates the supplied Senate-version report clause from individual endorsement and from enacted/current legal duties.",
+            "Answers the user's attribution question explicitly with the evidence limitation and cites the available records rather than fabricating a roll call."
+          ]
+        }
+      ],
+      "fixtures": [
+        {
+          "method": "getVote",
+          "input": { "id": "vote:us:fixture:voice-package" },
+          "output": {
+            "vote": {
+              "id": "vote:us:fixture:voice-package",
+              "billId": "bill:us:119:hr:9100",
+              "amendmentId": "amendment:us:119:samdt:9100",
+              "motion": "On agreeing to S.Amdt. 9100 to H.R. 9100, as amended",
+              "question": "On agreeing to the amended substitute",
+              "result": "Agreed to by voice vote",
+              "heldDate": "2025-07-02",
+              "voteType": "voice",
+              "yesCount": null,
+              "noCount": null,
+              "absentCount": null,
+              "chamber": "senate",
+              "sourceUrl": "https://example.org/leg-5/voice/package-vote"
+            },
+            "positions": [],
+            "positionsTruncated": false
+          }
+        },
+        {
+          "method": "getAmendment",
+          "input": { "id": "amendment:us:119:samdt:9100" },
+          "output": {
+            "amendment": {
+              "id": "amendment:us:119:samdt:9100",
+              "billId": "bill:us:119:hr:9100",
+              "printedIdentifier": "S.Amdt. 9100",
+              "amendmentType": "samdt",
+              "amendmentNumber": "9100",
+              "chamber": "senate",
+              "recordType": "structured",
+              "purpose": "Synthetic grant-report substitute.",
+              "status": "adopted",
+              "sourceUrl": "https://example.org/leg-5/voice/package"
+            },
+            "actions": [
+              {
+                "id": "action:fixture:voice-package",
+                "ordinal": 1,
+                "description": "S.Amdt. 9100 agreed to as amended by voice vote.",
+                "actionDate": "2025-07-02",
+                "classification": []
+              }
+            ],
+            "materials": [],
+            "votes": [],
+            "truncated": false
+          }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:9100", "documentId": "document:us:119:hr:9100:eas" },
+          "output": {
+            "billId": "bill:us:119:hr:9100",
+            "document": {
+              "id": "document:us:119:hr:9100:eas",
+              "billId": "bill:us:119:hr:9100",
+              "billIdentifier": "H.R. 9100",
+              "classification": "version",
+              "versionCode": "eas",
+              "documentDate": "2025-07-02",
+              "title": "Synthetic engrossed Senate grant-report amendment",
+              "sourceUrl": "https://example.org/leg-5/voice/operative-text",
+              "processingStatus": "processed",
+              "sectionCount": 1
+            },
+            "sections": [
+              {
+                "id": "section:fixture:voice-10",
+                "documentId": "document:us:119:hr:9100:eas",
+                "ordinal": 0,
+                "sectionIdentifier": "Section 10",
+                "heading": "Annual report",
+                "text": "SEC. 10. The agency shall publish an annual report on grants awarded under this Act."
+              }
+            ],
+            "truncated": false
+          }
+        }
+      ],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": true,
+        "noResearch": false,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "leg5-partial-history-and-positions",
+      "family": "vote-attribution",
+      "tags": [
+        "leg-5",
+        "semantic",
+        "synthetic-control",
+        "partial-history",
+        "partial-positions",
+        "missing-operative-text"
+      ],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "PROVENANCE: Fictional, deliberately incomplete control based on the existing voteAttribution fixture's partial-history/partial-position boundary. Public procedural background read on 2026-09-19 UTC: https://www.senate.gov/about/powers-procedures/voting.htm explains what recorded roll calls establish. The actual strike/package example informing the failure mode is documented by https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml and https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml. These public sources do not authenticate the fictional records here. example.org URLs identify synthetic evidence. No continuation cursor is supplied because the frozen record set intentionally lacks the remainder; no empty successful continuation or invented cursor should be substituted.\nFIXTURE FACTS: One action records adoption of a strike targeting section 900 of S.Amdt. 9200, but the amendment history is marked truncated. A later recorded package vote passed 64-36. Only Fictional Member Avery's Yea on that package is supplied; positionsTruncated is true. Whether later action restored or rewrote the clause is unknown in this case, and operative text is intentionally unavailable. These are epistemic limitations, not findings that the clause was absent or no other positions exist.\nSEMANTIC ACCEPTANCE: State the known strike and package outcome, label Avery's recorded vote as a package vote only, preserve aggregate totals separately from the partial member list, and reject an exhaustive policy-supporter/opponent classification. Do not treat omitted members as No, absent, abstaining, or supporters. Do not infer survival, permanent removal, restoration, enactment, or an exact missing clause quotation from truncated history. Explain specifically which additional evidence is required: complete intervening amendment dispositions, the operative version for the later motion, and remaining member positions. A useful partial answer is correct; an unqualified completed supporter table is not. The authored criteria are not evidence that a production model follows them.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Using these fictional records only, give me all supporters and opponents of the state AI-law grant restriction in the final package. Read amendment:us:119:samdt:9201 with get_amendment, vote:us:fixture:partial-package with get_vote, and get_bill_text for bill:us:119:hr:9200 with documentId document:us:119:hr:9200:eas. If the evidence is incomplete, explain exactly which classifications or conclusions cannot be made rather than filling in missing people or text."
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Reports the known adopted strike and later 64-36 package vote while identifying the truncated intervening history and unread operative version.",
+            "Labels Fictional Member Avery's supplied Yea as a vote on the package, not evidence of support for the targeted clause.",
+            "Keeps aggregate vote counts distinct from the one recorded member row; explicitly labels positions partial and does not classify omitted members.",
+            "Withholds unsupported survival, permanent-removal, restoration and enacted-law conclusions and names the missing evidence needed to resolve them.",
+            "Provides a useful cited partial answer without a fabricated cursor, an exhaustive supporter table, or invented missing text."
+          ]
+        }
+      ],
+      "fixtures": [
+        {
+          "method": "getAmendment",
+          "input": { "id": "amendment:us:119:samdt:9201" },
+          "output": {
+            "amendment": {
+              "id": "amendment:us:119:samdt:9201",
+              "billId": "bill:us:119:hr:9200",
+              "printedIdentifier": "S.Amdt. 9201",
+              "amendmentType": "samdt",
+              "amendmentNumber": "9201",
+              "chamber": "senate",
+              "recordType": "structured",
+              "purpose": "Strike section 900 of S.Amdt. 9200 to H.R. 9200, the state AI-law grant restriction.",
+              "status": "adopted",
+              "description": "Only the strike's adoption action is included. Subsequent amendment history is not complete in this fixture.",
+              "sourceUrl": "https://example.org/leg-5/partial/strike"
+            },
+            "actions": [
+              {
+                "id": "action:fixture:partial-strike",
+                "ordinal": 1,
+                "description": "S.Amdt. 9201 agreed to by recorded vote.",
+                "actionDate": "2025-07-03",
+                "actionAt": "2025-07-03T10:00:00.000Z",
+                "classification": []
+              }
+            ],
+            "materials": [],
+            "votes": [],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getVote",
+          "input": { "id": "vote:us:fixture:partial-package" },
+          "output": {
+            "vote": {
+              "id": "vote:us:fixture:partial-package",
+              "billId": "bill:us:119:hr:9200",
+              "amendmentId": "amendment:us:119:samdt:9200",
+              "motion": "On agreeing to S.Amdt. 9200 to H.R. 9200, as amended",
+              "result": "passed",
+              "heldAt": "2025-07-03T12:00:00.000Z",
+              "voteType": "roll-call",
+              "yesCount": 64,
+              "noCount": 36,
+              "chamber": "senate",
+              "sourceUrl": "https://example.org/leg-5/partial/package-vote"
+            },
+            "positions": [
+              {
+                "person": { "id": "person:fixture:avery", "name": "Fictional Member Avery" },
+                "position": {
+                  "voteId": "vote:us:fixture:partial-package",
+                  "personId": "person:fixture:avery",
+                  "sourceIdentity": "fixture-avery",
+                  "option": "yes"
+                }
+              }
+            ],
+            "positionsTruncated": true
+          }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:9200", "documentId": "document:us:119:hr:9200:eas" },
+          "error": {
+            "category": "precondition_failed",
+            "message": "Controlled fixture: the operative version after the partial amendment history has not been supplied."
+          }
+        }
+      ],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": true,
+        "noResearch": false,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    },
+    {
+      "id": "leg5-source-bound-section-40012-chain",
+      "family": "vote-attribution",
+      "tags": [
+        "leg-5",
+        "semantic",
+        "public-source-derived",
+        "exact-amendment-target",
+        "dated-version-chain",
+        "bounded-operative-excerpts"
+      ],
+      "review": "draft",
+      "provenance": "synthetic",
+      "reference": "SOURCE REVIEW, 2026-09-19 UTC: Six targeted public lookups were used: the official June 30 Congressional Record package metadata twice (the first result was too large to inspect completely), its TEXT OF AMENDMENTS granule, June 28 package metadata, the June 28 TEXT OF AMENDMENTS granule, and the official July 1 Senate engrossed H.R. 1. Discovery metadata: https://www.govinfo.gov/metadata/pkg/CREC-2025-06-30/mods.xml and https://www.govinfo.gov/metadata/pkg/CREC-2025-06-28/mods.xml. Printed S.Amdt. 2360: https://www.govinfo.gov/content/pkg/CREC-2025-06-28/html/CREC-2025-06-28-pt1-PgS3687.htm. Printed S.Amdt. 2814: https://www.govinfo.gov/content/pkg/CREC-2025-06-30/html/CREC-2025-06-30-pt1-PgS4089.htm. Later Senate engrossed version: https://www.govinfo.gov/content/pkg/BILLS-119hr1eas/html/BILLS-119hr1eas.htm. The previously reviewed official vote records are https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml and https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml. All new successful text fixtures below are excerpts actually read from those public publications, with whitespace normalized. Fixture document/material/section IDs, excerpt ordinals and descriptive titles are authored local aliases, not verified production database identities; draft/synthetic provenance remains intentional.\nVERIFIED BOUNDED CHAIN: The June 28 Record introduces SA 2360 as an amendment to H.R. 1 and prints section 40012, headed SUPPORT FOR ARTIFICIAL INTELLIGENCE UNDER THE BROADBAND EQUITY, ACCESS, AND DEPLOYMENT PROGRAM. Its opening amends section 60102 of division F of Public Law 117-58 (47 U.S.C. 1702). The June 30 Record explicitly identifies SA 2814 as an amendment to SA 2360 and gives its entire operative instruction: 'Strike section 40012.' Roll call 363 adopted that amendment on July 1, before roll call 371 adopted SA 2360 as amended. The later EAS document is headed 'July 1 (legislative day, June 30), 2025'; it is a later chamber-engrossed version, not a transcript of the exact text at the instant of roll call 371. Its Commerce title ends with section 40011 and continues directly into Title V and section 50101. Inspection of that published EAS found no numbered section 40012 heading. Its section 50404 is still headed TRANSFORMATIONAL ARTIFICIAL INTELLIGENCE MODELS, so the evidence must not be summarized as removal of all AI-related provisions.\nUNRESOLVED HISTORY: The full sequence of modifications between the original June 28 SA 2360 print, the strike, substitute adoption and later engrossment has not been reconstructed. The supplied opening of original section 40012 is not its complete text or a verified immediately-pre-strike version; it does not support quoting detailed grant conditions, a moratorium duration or exceptions. These records support the precise numbered target, the adopted strike, and its omission at the identified Commerce-title boundary in the later EAS, not a claim that every possible similar provision was absent everywhere or that the EAS was identical to the precise roll-call-371 snapshot. No enrolled/current-law version or later legal developments were reviewed for this case.\nSEMANTIC ACCEPTANCE: Reconcile the printed instruction and both dated versions rather than inferring final text from a roll call. Distinguish Senate section 40012 from earlier House section 43201. Explain that the later package vote is not evidence of support for the original section 40012 as proposed; do not attribute every clause or individual motive to a package vote. State the actual EAS-version boundary and surviving AI-related section 50404 without inventing its unprovided substantive details. Preserve the incomplete intervening-history and enactment limits. Quote only supplied source passages, cite the source text and motions, and do not certify current law. This authored reference is not a model response or evidence of live-model accuracy.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "What exactly did S.Amdt. 2814 strike from S.Amdt. 2360, and what can we establish from the later Senate version rather than from vote totals alone? Read get_supporting_material for material:fixture:crec-2025-06-28-sa2360 and material:fixture:crec-2025-06-30-sa2814; get_bill_text for bill:us:119:hr:1 with documentId document:fixture:119hr1:eas-source-bound; and get_vote for vote:congress:senate-119-363 and vote:congress:senate-119-371. Use only these bounded source excerpts. Explain the precise target, dated version distinctions and unresolved intervening history. Does the later package vote prove support for the original AI section, removal of every AI provision, or current law?"
+        }
+      ],
+      "followUps": [],
+      "turnCriteria": [
+        {
+          "turn": 0,
+          "criteria": [
+            "Identifies the actual printed instruction 'Strike section 40012.' and its target SA 2360 to H.R. 1; does not substitute the earlier House section 43201 or rely solely on the roll-call purpose.",
+            "Distinguishes the original June 28 SA 2360 print from the later July 1 Senate engrossed EAS and preserves the civil-date/legislative-day distinction.",
+            "Uses the quoted section 40011-to-Title-V boundary to describe the later EAS's omission of numbered section 40012, without claiming the EAS is an independently verified instantaneous roll-call-371 text snapshot.",
+            "Recognizes that section 50404 remains AI-related; rejects removal-of-all-AI-provisions and package-vote-equals-original-clause-support conclusions.",
+            "States that the detailed pre-strike wording and intervening amendment history remain unverified; does not invent grant conditions, moratorium duration, exceptions, member motives, or current-law applicability.",
+            "Grounds the bounded conclusion in source-text and motion citations, reports 99-1 on the strike and 50-50 senators plus VP Yea on the package if giving counts, and clearly distinguishes proposed/chamber-adopted text from enacted law."
+          ]
+        }
+      ],
+      "fixtures": [
+        {
+          "method": "getSupportingMaterial",
+          "input": { "id": "material:fixture:crec-2025-06-28-sa2360" },
+          "output": {
+            "material": {
+              "id": "material:fixture:crec-2025-06-28-sa2360",
+              "billId": "bill:us:119:hr:1",
+              "amendmentId": "amendment:us:119:samdt:2360",
+              "title": "Congressional Record, June 28, 2025: S.Amdt. 2360 as printed, selected excerpts",
+              "sourceUrl": "https://www.govinfo.gov/content/pkg/CREC-2025-06-28/html/CREC-2025-06-28-pt1-PgS3687.htm",
+              "processingStatus": "processed"
+            },
+            "sections": [
+              {
+                "id": "section:fixture:sa2360-print-header",
+                "ordinal": 0,
+                "sectionIdentifier": "SA 2360 introductory paragraph",
+                "text": "SA 2360. Mr. THUNE (for Mr. Graham) proposed an amendment to the bill H.R. 1, to provide for reconciliation pursuant to title II of H. Con. Res. 14; as follows:\n\nStrike all after the enacting clause and insert the following:"
+              },
+              {
+                "id": "section:fixture:sa2360-print-40012-opening",
+                "ordinal": 1,
+                "sectionIdentifier": "Section 40012 heading and opening of subsection (a)",
+                "text": "SEC. 40012. SUPPORT FOR ARTIFICIAL INTELLIGENCE UNDER THE BROADBAND EQUITY, ACCESS, AND DEPLOYMENT PROGRAM.\n\n(a) In General.--Section 60102 of division F of Public Law 117-58 (47 U.S.C. 1702) is amended--"
+              }
+            ],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getSupportingMaterial",
+          "input": { "id": "material:fixture:crec-2025-06-30-sa2814" },
+          "output": {
+            "material": {
+              "id": "material:fixture:crec-2025-06-30-sa2814",
+              "billId": "bill:us:119:hr:1",
+              "amendmentId": "amendment:us:119:samdt:2814",
+              "title": "Congressional Record, June 30, 2025: S.Amdt. 2814 to S.Amdt. 2360, operative instruction",
+              "description": "The printed introductory paragraph identifies SA 2814 as an amendment proposed by Mrs. Blackburn to SA 2360 proposed by Mr. Thune for Mr. Graham to H.R. 1. The complete operative instruction follows; neighboring amendments are omitted.",
+              "sourceUrl": "https://www.govinfo.gov/content/pkg/CREC-2025-06-30/html/CREC-2025-06-30-pt1-PgS4089.htm",
+              "processingStatus": "processed"
+            },
+            "sections": [
+              {
+                "id": "section:fixture:sa2814-strike-instruction",
+                "ordinal": 0,
+                "sectionIdentifier": "SA 2814 operative instruction",
+                "text": "Strike section 40012."
+              }
+            ],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getBillText",
+          "input": { "id": "bill:us:119:hr:1", "documentId": "document:fixture:119hr1:eas-source-bound" },
+          "output": {
+            "billId": "bill:us:119:hr:1",
+            "document": {
+              "id": "document:fixture:119hr1:eas-source-bound",
+              "billId": "bill:us:119:hr:1",
+              "billIdentifier": "H.R. 1",
+              "classification": "version",
+              "versionCode": "eas",
+              "documentDate": "2025-07-01",
+              "title": "H.R. 1 Engrossed Amendment Senate: selected dated header and section-boundary excerpts",
+              "sourceUrl": "https://www.govinfo.gov/content/pkg/BILLS-119hr1eas/html/BILLS-119hr1eas.htm",
+              "processingStatus": "processed"
+            },
+            "sections": [
+              {
+                "id": "section:fixture:eas-dated-header",
+                "documentId": "document:fixture:119hr1:eas-source-bound",
+                "ordinal": 0,
+                "sectionIdentifier": "Senate engrossed version dated header",
+                "text": "In the Senate of the United States,\n\nJuly 1 (legislative day, June 30), 2025."
+              },
+              {
+                "id": "section:fixture:eas-commerce-title-boundary",
+                "documentId": "document:fixture:119hr1:eas-source-bound",
+                "ordinal": 1,
+                "sectionIdentifier": "Section 40011 through the opening of Title V",
+                "text": "SEC. 40011. RESCISSION OF AMOUNTS APPROPRIATED TO PUBLIC WIRELESS SUPPLY CHAIN INNOVATION FUND.\n\nOf the unobligated balances of amounts made available under section 106(a) of the CHIPS Act of 2022 (Public Law 117-167; 136 Stat. 1392), $850,000,000 are permanently rescinded.\n\nTITLE V--COMMITTEE ON ENERGY AND NATURAL RESOURCES\n\nSubtitle A--Oil and Gas Leasing\n\nSEC. 50101. ONSHORE OIL AND GAS LEASING."
+              },
+              {
+                "id": "section:fixture:eas-50404-heading",
+                "documentId": "document:fixture:119hr1:eas-source-bound",
+                "ordinal": 2,
+                "sectionIdentifier": "Section 50404 heading only",
+                "text": "SEC. 50404. TRANSFORMATIONAL ARTIFICIAL INTELLIGENCE MODELS."
+              }
+            ],
+            "truncated": true
+          }
+        },
+        {
+          "method": "getVote",
+          "input": { "id": "vote:congress:senate-119-363" },
+          "output": {
+            "vote": {
+              "id": "vote:congress:senate-119-363",
+              "billId": "bill:us:119:hr:1",
+              "amendmentId": "amendment:us:119:samdt:2814",
+              "motion": "On the Amendment: Blackburn Amdt. No. 2814 to S.Amdt. 2360 to H.R. 1",
+              "question": "On the Amendment",
+              "result": "Amendment Agreed to (99-1)",
+              "heldDate": "2025-07-01",
+              "heldAt": null,
+              "voteType": "roll-call",
+              "yesCount": 99,
+              "noCount": 1,
+              "chamber": "senate",
+              "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00363.xml"
+            },
+            "positions": [],
+            "positionsTruncated": true
+          }
+        },
+        {
+          "method": "getVote",
+          "input": { "id": "vote:congress:senate-119-371" },
+          "output": {
+            "vote": {
+              "id": "vote:congress:senate-119-371",
+              "billId": "bill:us:119:hr:1",
+              "amendmentId": "amendment:us:119:samdt:2360",
+              "motion": "On the Amendment: Amdt. No. 2360, as Amended",
+              "question": "On the Amendment",
+              "result": "Amendment Agreed to (50-50, Vice President of the United States, voted Yea)",
+              "heldDate": "2025-07-01",
+              "heldAt": null,
+              "voteType": "roll-call",
+              "yesCount": 50,
+              "noCount": 50,
+              "chamber": "senate",
+              "sourceUrl": "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00371.xml"
+            },
+            "positions": [],
+            "positionsTruncated": true
+          }
+        }
+      ],
+      "expected": {
+        "terminal": "answer",
+        "requiresCitation": true,
+        "noResearch": false,
+        "requiredText": [],
+        "forbiddenText": []
+      }
+    }
+  ]
+}
