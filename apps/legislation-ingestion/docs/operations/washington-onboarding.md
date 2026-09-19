@@ -53,6 +53,24 @@ people revision after a supplementary source change, while still rejecting chang
 tests, types and lint pass; this later fix still requires deployment. Full verification remains unaccepted because
 of the separate web vote-attribution evidence-ID assertions.
 
+Replay fix `5f80b76` is now deployed unpromoted as `20260919.32` (`u2kkr7bk`, manifest
+`29f008edaddf241c94f2e4a24b9bcf1ebaf82068d5df9613bba2087ae6dc92a0`). The first hosted foundation replay
+`run_06gbjp1ti7ric7b2bqgf3sgh01` failed before canonical writes because the history manifest was only local.
+Both validated local lanes were then copied byte-for-byte to Azure, with 200 current-lane and 263 history-lane
+objects verified before publishing their manifests; remote read-back verified 198 current files and 261 history
+files. Corrected replay `run_06gbjplnec119io8tu3snhjg01` was verified executing. Do not dispatch a duplicate.
+
+The eight web assertion failures were traced to the test expecting run-local `e1` identifiers where the production
+model projection intentionally uses stable UUID evidence identities. Commit `a03e0af` corrects that assertion,
+preserving exact data and citation-anchor checks. All 105 focused evidence/vote tests passed (the worker reported a
+shutdown timeout, with exit 0). Repository coverage and Python then passed in the active verification run; database
+checks reported 233 skipped tests and four passes because most test connections were not configured. Acceptance
+was still running at this observation, so this is not full environment acceptance.
+
+The bill source-error retry progressed successfully to 45 promoted batches with one next-batch owner. A read-only
+document-alias audit after HB 1154 is checking 308 candidates across 25 bills; no deletions have been performed in
+that page yet, and the last completed deletion cursor remains HB 1154.
+
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |
 | [x] | Inspect production archive baseline | September 19 2026 read-only query: 16,753 bills across five sessions below; historical-import runs exist for each |
