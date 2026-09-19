@@ -230,5 +230,48 @@
         "reason": "Corry's official biography identifies prior service in district 14 and a transition to district 15 after redistricting. Remove the contradictory continuous prior district 15 assertion that overlaps the supplied district 14 role. Preserve the independently supplied district 14 and current district 15 roles without claiming independent verification of their exact boundary dates."
       }
     ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Tina-Orwall-ef711ad1-b4e6-44c9-a971-7d57e8140f04.yml",
+    "sourceSha256": "4209b761bf911e9d2d61a165f9a3f01532729cc73b8f2ee323b656a94ed0f205",
+    "personId": "ocd-person/ef711ad1-b4e6-44c9-a971-7d57e8140f04",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "33",
+          "start_date": "2009-01-12",
+          "end_date": "2024-12-10"
+        },
+        "after": null,
+        "evidenceUrls": ["https://senatedemocrats.wa.gov/orwall/biography/"],
+        "reason": "Orwall's official biography identifies House service beginning in 2009 and Senate appointment in 2024 after fifteen House years. Remove the erroneous continuous 2009-2024 Senate role, preserving the current Senate role."
+      },
+      {
+        "before": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "33",
+          "start_date": "2021-01-11",
+          "end_date": "2024-12-10"
+        },
+        "after": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "33",
+          "start_date": "2009-01-12",
+          "end_date": "2024-12-10"
+        },
+        "evidenceUrls": [
+          "https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf",
+          "https://senatedemocrats.wa.gov/orwall/biography/",
+          "https://content.govdelivery.com/accounts/WAKING/bulletins/3c7ea39"
+        ],
+        "reason": "The January 12, 2009 House journal lists Orwall for district 33 and records the members' oath. Her official biography confirms fifteen House years before the 2024 Senate appointment; restore the truncated House start. Preserve the supplied December 10, 2024 transition date, corroborated by King County's appointment report."
+      }
+    ]
   }
 ]

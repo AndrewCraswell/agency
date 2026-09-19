@@ -16,7 +16,7 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [x] | Add Washington to shared extraction and promotion | Shared reviewed profiles, source policy and fingerprint checks are implemented; version-pinned hosted bill batches and event windows have promoted successfully. Full inventory acceptance remains separate |
 | [x] | Run isolated bounded bill extraction in both chambers | HB 1000 and SB 5000 retained successfully; this is source extraction only, not canonical promotion or hosted activation |
 | [ ] | Validate bill actions, documents and individual votes | Compare retained cases from both chambers to official pages, including substitutions, engrossments, resolutions and amendments |
-| [ ] | Import and validate people and service history | Production import and replay verified for 337 people and 377 accepted terms; 11 historical conflicts remain quarantined as of the Corry review. Current 147-member roster is complete; history acceptance remains open |
+| [ ] | Import and validate people and service history | Production import and replay verified for 337 people and 378 accepted terms; 10 historical conflicts remain quarantined as of the Orwall review. Current 147-member roster is complete; history acceptance remains open |
 | [x] | Validate current people/committee snapshot with reusable district capacities | Shared validator accepts 98 House members, 49 senators, 51 committees and 609 membership assertions; zero unresolved member references; source snapshot, not production import |
 | [x] | Import committees and memberships | Production import/replay verified for 51 committees and 609 current membership assertions. This does not establish complete committee detail profiles or historical memberships |
 | [ ] | Import meetings and agenda items | Bound event windows, preserve Pacific time, stable source IDs and cancellation evidence; validate related bills/committees |
@@ -27,6 +27,19 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [ ] | Enable and observe regular syncing | Only after acceptance; verify a subsequent scheduled delta run, source failures and freshness reporting |
 
 ## Production baseline (2026-09-19 05:01 UTC)
+
+Orwall review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) records her district
+and January 12 oath; her [official biography](https://senatedemocrats.wa.gov/orwall/biography/) confirms fifteen House
+years before Senate appointment, and [King County's report](https://content.govdelivery.com/accounts/WAKING/bulletins/3c7ea39)
+corroborates the December 10, 2024 transition. The fingerprinted review removes the erroneous 2009-2024 Senate role
+and restores the truncated House start to 2009-01-12. Production import/replay preserved 20 terms across ten reviewed
+people; authenticated `get_person` returned the corrected House term and current Senate term. Twenty-four focused
+review/import/quarantine tests passed. The full verification run remains in progress, not an acceptance pass.
+
+Shewmake remains held: the [Senate announcement dated December 21, 2022](https://senatedemocrats.wa.gov/shewmake/2022/12/21/shewmake-sworn-in-as-new-senator/)
+says she was sworn in that day, whereas the [House announcement for Timmons](https://housedemocrats.wa.gov/blog/2022/12/22/timmons-sworn-into-office-in-olympia/)
+says December 9. The supplied 2023 Senate start and 2022 January House end cannot be accepted by merely removing the
+overlap. Resolve the effective transition using legislative records before applying a correction.
 
 Latest historical review: Corry's [official biography](https://chriscorry.houserepublicans.wa.gov/about/) identifies
 prior district 14 service followed by district 15 after redistricting. The source-fingerprinted review removes the
