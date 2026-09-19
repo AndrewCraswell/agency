@@ -58,7 +58,14 @@ Replay fix `5f80b76` is now deployed unpromoted as `20260919.32` (`u2kkr7bk`, ma
 `run_06gbjp1ti7ric7b2bqgf3sgh01` failed before canonical writes because the history manifest was only local.
 Both validated local lanes were then copied byte-for-byte to Azure, with 200 current-lane and 263 history-lane
 objects verified before publishing their manifests; remote read-back verified 198 current files and 261 history
-files. Corrected replay `run_06gbjplnec119io8tu3snhjg01` was verified executing. Do not dispatch a duplicate.
+files. Corrected replay `run_06gbjplnec119io8tu3snhjg01` completed with `foundation_imported`: 337 people,
+380 terms and committee observations imported. The eight held histories remain excluded; this is not full acceptance.
+
+Repository verification subsequently passed (`pnpm verify`, exit 0). Its default database lane still skipped 233
+tests, so this does not establish database acceptance. A separate disposable PostgreSQL instance then ran the ingestion,
+entity, bill-receipt and organization-dependency integration suites: all 80 tests passed. Two stale test contracts were
+corrected: Open States replay now seeds its required chamber directory, and Congress retry assertions verify the durable
+retry checkpoint and its removal after successful replay. No production retry behavior was changed for these tests.
 
 The eight web assertion failures were traced to the test expecting run-local `e1` identifiers where the production
 model projection intentionally uses stable UUID evidence identities. Commit `a03e0af` corrects that assertion,

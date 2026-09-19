@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import * as schema from "@repo/legislation-core/database/schema/schema"
+import { organizationId } from "@repo/legislation-core/domain/identifiers"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
 import { asc, eq, inArray } from "drizzle-orm"
@@ -2300,6 +2301,18 @@ describePostgres.sequential("legislation PostgreSQL ingestion", () => {
 
   it("replays from the first failed Open States record without duplicating committed records", async () => {
     await seedBillPrerequisites()
+    // Bare organization references require the directory import, just as in the production pipeline.
+    await database
+      .insert(schema.organizations)
+      .values({
+        id: organizationId("openstates", "Washington House of Representatives"),
+        jurisdictionId: "jurisdiction:wa",
+        sourceId: "Washington House of Representatives",
+        name: "Washington House of Representatives",
+        classification: "chamber",
+        chamber: "lower"
+      })
+      .onConflictDoNothing()
     const source = openStatesBillSchema.parse(
       JSON.parse(await readFile(new URL("../../tests/fixtures/openstates/wa-hb-1234.json", import.meta.url), "utf8"))
     )
@@ -2320,6 +2333,7 @@ describePostgres.sequential("legislation PostgreSQL ingestion", () => {
       [source, { identifier: "invalid" }],
       options
     )
+    expect(first.failures).toEqual([expect.objectContaining({ identifier: "invalid" })])
     expect(first).toMatchObject({ checkpoint: { complete: false, index: 1 }, counts: { failed: 1, inserted: 1 } })
 
     const replay = await importOpenStatesRecords(
@@ -2517,14 +2531,17 @@ describePostgres.sequential("legislation PostgreSQL ingestion", () => {
 
     const first = await synchronizeCongress(database, client, options)
     expect(first).toMatchObject({ counts: { failed: 1 }, failures: [{ identifier: "119-HR-4321" }] })
-    expect(first.checkpoint).toBeUndefined()
+    expect(first.checkpoint).toMatchObject({
+      scannedThrough: options.to.toISOString(),
+      recordRetries: [{ reference: references[0], attempts: 1 }]
+    })
     expect(progress.map((event) => event.event)).toEqual(
       expect.arrayContaining(["checkpoint_start", "record_failed", "record_committed"])
     )
 
     const replay = await synchronizeCongress(database, client, options)
     expect(replay).toMatchObject({
-      checkpoint: { canonicalId: "bill:us:119:hr:1234", updateDate: "2025-04-02T00:00:00Z" },
+      checkpoint: { canonicalId: "bill:us:119:hr:1234", updateDate: "2025-04-02T00:00:00Z", recordRetries: [] },
       counts: { failed: 0 }
     })
     expect(progress.map((event) => event.event)).toContain("checkpoint_committed")
