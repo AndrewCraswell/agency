@@ -477,3 +477,23 @@ or scheduled synchronization. People/committee promotion and the 20 quarantined 
 
 Washington continues to use shared canonical persistence, replay receipts, source observation admission, content processing,
 and embedding audits. Washington-specific adapters interpret publisher formats; they do not duplicate those lifecycle rules.
+
+## Production people and committee promotion
+
+The shared `importArchivedStateFoundation` boundary imported the pinned current/history pair into production on
+2026-09-19, then replayed the same pair successfully. The second persisted verification at 08:05:28Z confirmed
+336 expected people, including all 147 active legislators, 51 committees and 609 active membership identities.
+Selected identity, relationship, chamber, district, role, activity and date fields matched the prepared snapshots;
+all 367 expected legislative-term identities were present with matching checked fields. The replay did not create
+extra people or active membership identities within the inspected source scope. This is not a claim that unrelated
+legacy identities or all historical legislative terms have been reconciled.
+
+Twenty source-history records remain quarantined; their disputed history was not promoted. The validated current
+directory supplies current identities independently, so those history issues do not suppress verified current committee
+relationships. Reports are `production-foundation-promotion.json` and `production-foundation-verification.json` in
+the foundation artifact store. No Washington scraper schedule was activated.
+
+The final repository verification passed check/coverage and Python tests (123 run, eight skipped), then failed web
+acceptance startup: `/health` returned 500 because the instrumentation hook rejected a telemetry first-party URL.
+Database suites without configured databases were skipped; this run does not replace the earlier isolated PostgreSQL
+replay checks. The telemetry changes belong to separate work and were not modified for Washington onboarding.
