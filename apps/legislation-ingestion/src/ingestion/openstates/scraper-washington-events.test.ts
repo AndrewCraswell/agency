@@ -163,15 +163,23 @@ it("binds even empty extractions to the exact frozen work item", async () => {
 })
 
 describe("Washington shared event preparation", () => {
-  it("accepts signed publisher committee IDs without claiming unresolved joint links", () => {
+  it("accepts signed publisher committee IDs and emits joint references for canonical resolution", () => {
     const record = fixture()
     record.extras.committees = [
       { id: "-5", agency: "Joint", code: "JLARC", name: "Joint Legislative Audit & Review Committee" }
     ]
     record.participants[0]!.name = record.extras.committees[0]!.name
     const [row] = normalizeWashingtonScraperEvents([record], context)
-    expect(row?.organizationReferences).toEqual([])
-    expect(row?.event.organizationRelationsComplete).toBe(false)
+    expect(row?.organizationReferences).toEqual(["waCommittee:joint:JLARC"])
+    expect(row?.organizationIds).toEqual([])
+    expect(row?.event.organizationRelationsComplete).toBe(true)
+    expect(resolveEventOrganizationReferences([row!], [])[0]?.event.organizationRelationsComplete).toBe(false)
+    const candidate = {
+      id: "organization:fixture:joint",
+      jurisdictionId: "jurisdiction:wa",
+      upstreamIds: { "waCommittee:joint:JLARC": "https://leg.wa.gov/about-the-legislature/committees/joint/jlarc" }
+    }
+    expect(resolveEventOrganizationReferences([row!], [candidate])[0]?.organizationIds).toEqual([candidate.id])
     for (const id of ["0", "-0", "-05", "+5", "5.0", "", "--5"]) {
       record.extras.committees[0]!.id = id
       expect(() => normalizeWashingtonScraperEvents([record], context)).toThrow()

@@ -25,6 +25,17 @@ it("maps Washington official chamber codes without guessing committee names", ()
   }
 })
 
+it("maps explicit Washington joint committee URL codes only to legislative committees", () => {
+  const url = "https://leg.wa.gov/about-the-legislature/committees/joint/vma"
+  expect(washingtonCommitteeIdentifiers([{ url }], "legislature")).toEqual({ "waCommittee:joint:VMA": url })
+  for (const chamber of ["upper", "lower", null]) {
+    expect(washingtonCommitteeIdentifiers([{ url }], chamber)).toEqual({})
+  }
+  for (const invalid of [url + "?code=OTHER", url + "#fragment", url.replace("leg.wa.gov", "example.org")]) {
+    expect(washingtonCommitteeIdentifiers([{ url: invalid }], "legislature")).toEqual({})
+  }
+})
+
 it("retains both session identities independently from homepage selection", () => {
   expect(
     alaskaCommitteeIdentifiers(

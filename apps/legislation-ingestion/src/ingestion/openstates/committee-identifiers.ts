@@ -13,10 +13,12 @@ export function washingtonCommitteeIdentifiers(input: unknown, chamber: string |
       continue
     }
     const match =
-      /^\/about-the-legislature\/committees\/(house-of-representatives|house|senate)\/([a-z0-9]+)\/?$/.exec(
+      /^\/about-the-legislature\/committees\/(house-of-representatives|house|senate|joint)\/([a-z0-9]+)\/?$/.exec(
         parsed.pathname
       ) ?? /^\/(House|Senate)\/Committees\/([A-Z0-9]+)\/?$/.exec(parsed.pathname)
-    const sourceChamber = match?.[1]?.toLowerCase().startsWith("house") ? "house" : "senate"
+    const sourceAgency = match?.[1]?.toLowerCase()
+    const sourceChamber = sourceAgency?.startsWith("house") ? "house" : sourceAgency
+    const expectedChamber = sourceChamber === "house" ? "lower" : sourceChamber === "senate" ? "upper" : "legislature"
     if (
       parsed.origin !== "https://leg.wa.gov" ||
       parsed.username ||
@@ -24,7 +26,7 @@ export function washingtonCommitteeIdentifiers(input: unknown, chamber: string |
       parsed.search ||
       parsed.hash ||
       !match ||
-      (sourceChamber === "house" ? chamber !== "lower" : chamber !== "upper")
+      chamber !== expectedChamber
     )
       continue
     result[`waCommittee:${sourceChamber}:${match[2]!.toUpperCase()}`] = url

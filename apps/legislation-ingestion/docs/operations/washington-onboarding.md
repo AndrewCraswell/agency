@@ -181,6 +181,28 @@ verified EXECUTING on the corrected version. No recurring schedule was created. 
 continuation before closing the calendar failure. Cleanup after HB 1054 is processing a bounded 25-bill page with
 154 provisional pairs; its completed cursor must be observed before advancing to another page.
 
+The calendar recovery and its continuation completed on `20260919.27`, reaching 27/90 committed windows and
+dispatching `run_06gbjb7bluqsaqe313fakh3c01`. Authenticated reads exposed incomplete joint-committee mappings:
+agenda 33394 and 33418 resolve by source URL, but their meeting detail was unavailable. The source adapter now
+recognizes explicit `/committees/joint/<code>` roster URLs and emits matching joint publisher-code references from
+meetings. This extends the existing resolver, not a committee-name exception. Retained-roster preparation yields
+14 joint identifiers; production committee import and exact retained-window relationship reconciliation succeeded,
+and repeated reconciliation preserved two meetings with one organization link. Authenticated MCP now returns
+agenda 33394 with Veterans and Military Affairs and all five agenda items. Agenda 33418 (Civic Health) remains
+unresolved: its code is empty and the retained roster has no matching organization. No readiness check was weakened.
+The new adapter still needs a hosted deployment and complete-window relationship replay before statewide acceptance.
+The successful read also exposes source-normalization follow-ups: duplicated `Joint` in the title, empty location
+components, and unlinked host participants; these are not certified as complete meeting-detail fidelity.
+
+The HB 1055–1079 cleanup page completed 154 verified untouched-alias removals; read-only replay found zero candidates
+or held groups. The next bounded page completed all 138 removals and reported completed cursor
+`bill:wa:2025-2026:hb:1104`. Removed metadata is recoverable from per-alias audit snapshots. Processed HB 1000
+duplicates remain deliberately untouched pending section/vector/search-reference-safe consolidation.
+
+Joint identifier/event/resolver tests passed (19), ingestion types and focused lint passed. The preceding full
+`pnpm verify` ended with eight failures in web `voteAttribution.test.ts` (2,646 web tests passed): the synthesis
+evidence ID assertion at line 446 failed. This is not a green repository result and no unrelated web code was changed.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
