@@ -273,5 +273,47 @@
         "reason": "The January 12, 2009 House journal lists Orwall for district 33 and records the members' oath. Her official biography confirms fifteen House years before the 2024 Senate appointment; restore the truncated House start. Preserve the supplied December 10, 2024 transition date, corroborated by King County's appointment report."
       }
     ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Matt-Boehnke-bfbe4a83-bf2f-45da-83c6-5ac1225ff0b8.yml",
+    "sourceSha256": "9aa778a34c18e461201a44129c730784d897508973cff7b2c30c19db5b1d276d",
+    "personId": "ocd-person/bfbe4a83-bf2f-45da-83c6-5ac1225ff0b8",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "8",
+          "start_date": "2019-01-14",
+          "end_date": "2023-01-08"
+        },
+        "after": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "8",
+          "start_date": "2019-01-14",
+          "end_date": "2023-01-08"
+        },
+        "evidenceUrls": [
+          "https://mattboehnke.src.wastateleg.org/sen-matt-boehnke-takes-oath-office-olympia/",
+          "https://mattboehnke.src.wastateleg.org/about/"
+        ],
+        "reason": "The official January 9, 2023 announcement explicitly identifies the start of Boehnke's first Senate term; his biography identifies two preceding House terms. Correct the prior role's chamber to House. Retain that role's supplied January 14, 2019 start and January 8, 2023 end, the day preceding the documented Senate transition, without claiming separate evidence for the precise House start."
+      },
+      {
+        "before": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "8",
+          "start_date": "2019-01-14",
+          "end_date": "2023-01-11"
+        },
+        "after": null,
+        "evidenceUrls": ["https://mattboehnke.src.wastateleg.org/sen-matt-boehnke-takes-oath-office-olympia/"],
+        "reason": "Remove the duplicate House assertion ending after the documented January 9, 2023 first Senate term began; the corrected prior House role preserves the service period without this contradictory overlap."
+      }
+    ]
   }
 ]

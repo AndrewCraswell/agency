@@ -16,7 +16,7 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [x] | Add Washington to shared extraction and promotion | Shared reviewed profiles, source policy and fingerprint checks are implemented; version-pinned hosted bill batches and event windows have promoted successfully. Full inventory acceptance remains separate |
 | [x] | Run isolated bounded bill extraction in both chambers | HB 1000 and SB 5000 retained successfully; this is source extraction only, not canonical promotion or hosted activation |
 | [ ] | Validate bill actions, documents and individual votes | Compare retained cases from both chambers to official pages, including substitutions, engrossments, resolutions and amendments |
-| [ ] | Import and validate people and service history | Production import and replay verified for 337 people and 378 accepted terms; 10 historical conflicts remain quarantined as of the Orwall review. Current 147-member roster is complete; history acceptance remains open |
+| [ ] | Import and validate people and service history | Production import and replay verified for 337 people and 379 accepted terms; nine historical conflicts remain quarantined as of the Boehnke review. Current 147-member roster is complete; history acceptance remains open |
 | [x] | Validate current people/committee snapshot with reusable district capacities | Shared validator accepts 98 House members, 49 senators, 51 committees and 609 membership assertions; zero unresolved member references; source snapshot, not production import |
 | [x] | Import committees and memberships | Production import/replay verified for 51 committees and 609 current membership assertions. This does not establish complete committee detail profiles or historical memberships |
 | [ ] | Import meetings and agenda items | Bound event windows, preserve Pacific time, stable source IDs and cancellation evidence; validate related bills/committees |
@@ -27,6 +27,13 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [ ] | Enable and observe regular syncing | Only after acceptance; verify a subsequent scheduled delta run, source failures and freshness reporting |
 
 ## Production baseline (2026-09-19 05:01 UTC)
+
+Boehnke review: the [official January 9, 2023 announcement](https://mattboehnke.src.wastateleg.org/sen-matt-boehnke-takes-oath-office-olympia/)
+explicitly identifies his first Senate term; his biography confirms two preceding House terms. The prior role's
+incorrect Senate chamber is corrected to House, retaining its supplied 2019-01-14 through 2023-01-08 boundaries;
+the duplicate House assertion ending after the Senate transition is removed. Twenty-four focused tests passed.
+Production import and replay preserved all 22 canonical terms for eleven reviewed people. Full verification is
+still running and has reported web scenario-policy, API-smoke and Node-telemetry failures; acceptance is not clean.
 
 Verification follow-up: the full run passed types, lint and unused-code checks but stopped at the state extraction
 repair CLI test's aggregate 30-second timeout. Its five sequential subprocess checks have been separated into four
@@ -47,7 +54,10 @@ review/import/quarantine tests passed. The full verification run remains in prog
 Shewmake remains held: the [Senate announcement dated December 21, 2022](https://senatedemocrats.wa.gov/shewmake/2022/12/21/shewmake-sworn-in-as-new-senator/)
 says she was sworn in that day, whereas the [House announcement for Timmons](https://housedemocrats.wa.gov/blog/2022/12/22/timmons-sworn-into-office-in-olympia/)
 says December 9. The supplied 2023 Senate start and 2022 January House end cannot be accepted by merely removing the
-overlap. Resolve the effective transition using legislative records before applying a correction.
+overlap. The [2025 official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf),
+printed page 127 (PDF page 133), explicitly confirms December 9, 2022 swearing-in to serve the unexpired Senate term.
+It records her House resignation without a date. Verify that resignation boundary before applying the full correction;
+do not use the press release's publication date as the effective start.
 
 Latest historical review: Corry's [official biography](https://chriscorry.houserepublicans.wa.gov/about/) identifies
 prior district 14 service followed by district 15 after redistricting. The source-fingerprinted review removes the
