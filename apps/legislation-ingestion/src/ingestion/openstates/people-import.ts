@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
+import { personId } from "@repo/legislation-core/domain/identifiers"
 import { parseDocument } from "yaml"
 import { z } from "zod"
 import { replaceEntitySnapshot } from "../../persistence/entities.js"
@@ -11,6 +12,7 @@ import {
   validatePeopleRepositorySnapshot,
   type PeopleRepositoryFile
 } from "./people-repository.js"
+import { applyReviewedPeopleRoles } from "./people-role-review.js"
 import { planPeopleLegislativeTerms } from "./people-term-plan.js"
 
 const personSchema = z.object({
@@ -40,6 +42,7 @@ export function preparePeopleRepositoryImport(
   }
   const files = [...currentFiles.filter((file) => file.path.startsWith(`data/${state}/legislature/`)), ...retiredFiles]
   const quarantine: Array<{ path: string; sha256: string; reasons: string[] }> = []
+  const appliedReviews: Array<NonNullable<ReturnType<typeof applyReviewedPeopleRoles>["review"]>> = []
   const quarantineFile = (file: PeopleRepositoryFile, reasons: string[]) => {
     quarantine.push({ path: file.path, sha256: createHash("sha256").update(file.content).digest("hex"), reasons })
   }
@@ -65,25 +68,30 @@ export function preparePeopleRepositoryImport(
       identityCounts.set(entry.identity.data.id, (identityCounts.get(entry.identity.data.id) ?? 0) + 1)
     }
   }
-  const candidates = parsed.flatMap(({ file, value, identity }) => {
+  const candidates = parsed.flatMap(({ file: sourceFile, value, identity }) => {
+    let file = sourceFile
     if (!identity.success) {
-      quarantineFile(file, ["invalid_source_identity_or_yaml"])
+      quarantineFile(sourceFile, ["invalid_source_identity_or_yaml"])
       return []
     }
     if (identityCounts.get(identity.data.id) !== 1 || pathCounts.get(file.path) !== 1) {
-      quarantineFile(file, ["duplicate_source_identity_or_path"])
+      quarantineFile(sourceFile, ["duplicate_source_identity_or_path"])
       return []
     }
+    // Review after duplicate-identity preflight, before unchanged history validation.
+    // Fingerprint/identity mismatches fail closed; source bytes remain immutable.
+    const reviewed = applyReviewedPeopleRoles(file, state, revision)
+    file = reviewed.file
     const person = personSchema.safeParse(value)
     if (!person.success) {
-      quarantineFile(file, ["invalid_person_metadata"])
+      quarantineFile(sourceFile, ["invalid_person_metadata"])
       return []
     }
     let inventory: ReturnType<typeof inventoryPeopleHistory>
     try {
       inventory = inventoryPeopleHistory([file], state)
     } catch {
-      quarantineFile(file, ["invalid_role_schema_or_source_path"])
+      quarantineFile(sourceFile, ["invalid_role_schema_or_source_path"])
       return []
     }
     const reasons = inventory.issues.map((issue) => issue.reason)
@@ -102,9 +110,10 @@ export function preparePeopleRepositoryImport(
       reasons.push("ambiguous_term_identity")
     }
     if (reasons.length > 0) {
-      quarantineFile(file, [...new Set(reasons)].sort())
+      quarantineFile(sourceFile, [...new Set(reasons)].sort())
       return []
     }
+    if (reviewed.review) appliedReviews.push(reviewed.review)
     return [{ file, person: person.data }]
   })
   let coverageIssues: string[]
@@ -131,6 +140,25 @@ export function preparePeopleRepositoryImport(
           revision
         )
       : { terms: [] }
+  for (const reviewed of appliedReviews) {
+    for (const change of reviewed.changes) {
+      if (!change.after) continue
+      const sourceId = JSON.stringify([
+        "people-role",
+        state,
+        change.after.type,
+        change.after.district,
+        change.after.start_date
+      ])
+      const term = plan.terms.find(
+        (entry) => entry.personId === personId("openstates", reviewed.personId) && entry.sourceId === sourceId
+      )
+      if (!term) throw new Error("Reviewed people role did not produce its expected term")
+      // The review evidence, not the contradictory upstream file, supplies this correction.
+      term.sourceUrl = change.evidenceUrls[0]!
+      term.sourceIsOfficial = false
+    }
+  }
   const peopleIds = new Set(plan.terms.map((term) => term.personId))
   // A source-complete current directory can establish a current identity and
   // current term even when that person's older role assertions are held for
@@ -179,7 +207,7 @@ export function preparePeopleRepositoryImport(
   const terms = [...plan.terms, ...currentTerms]
   const counts = { people: people.length, terms: terms.length }
   if (people.length === 0) {
-    return { status: "rejected" as const, counts, coverageIssues, quarantine, snapshot: null }
+    return { status: "rejected" as const, counts, coverageIssues, quarantine, appliedReviews, snapshot: null }
   }
   const snapshot: EntitySnapshot = {
     people,
@@ -223,6 +251,7 @@ export function preparePeopleRepositoryImport(
     counts,
     coverageIssues,
     quarantine,
+    appliedReviews,
     snapshot
   }
 }
@@ -255,6 +284,7 @@ export async function importPeopleRepository(
         retrievedAt: retrievedAt.toISOString(),
         complete: result.status === "validated",
         quarantine: result.quarantine,
+        appliedReviews: result.appliedReviews,
         coverageIssues: result.coverageIssues
       }
     }
@@ -263,6 +293,7 @@ export async function importPeopleRepository(
     status: result.status === "partial" ? ("partially_imported" as const) : ("imported" as const),
     counts: result.counts,
     quarantine: result.quarantine,
+    appliedReviews: result.appliedReviews,
     coverageIssues: result.coverageIssues
   }
 }

@@ -858,3 +858,22 @@ Five bill batches have committed (50 of 3,411 inventoried bills). The sixth was 
 `run_06gbia5c4u4093f5prk7u4g301`, pinned to the same candidate. Calendar recovery remains separate: the held window still
 has no retained manifest or settlement marker. An approximate queue count of zero is not sufficient evidence to clear
 ownership; do not infer cloud shutdown from that count or the missing local process alone.
+
+## Replayable historical-role reviews
+
+The shared people importer now consumes repository-reviewed role data from
+`src/ingestion/openstates/review-data/people-roles.json`, rather than person-specific branches in the resolver. Each
+review binds jurisdiction, pinned revision, source path, exact SHA-256, source person ID and exact before-role values.
+Source drift, duplicate targets, invalid dates and conflicting jurisdiction changes fail closed. Existing history
+validation still applies after correction; reviewed data cannot bypass overlaps, duplicate identities or coverage gates.
+Original archive bytes remain untouched. Applied reviews, including reasons and evidence URLs, are recorded in the
+people-history checkpoint. Corrected terms cite the corroborating evidence instead of the contradictory source file;
+unchanged terms keep their original provenance. `sourceIsOfficial` remains false for these derived adjudications.
+
+The first review removes Ramos's contradictory 2019-2025 Senate assertion and corrects the 2025 Senate end date to
+April 19, supported by [Senate Resolution 8659](https://lawfilesext.leg.wa.gov/biennium/2025-26/Pdf/Bills/Senate%20Resolutions/8659-.pdf).
+It does not invent or change the supplied House boundaries. The upstream master file still contains both defects at
+review time. A read-only replay of the exact retained Ramos file produces one person and two terms without quarantine.
+This is not yet a production import, vote-link reconciliation, or closure of the other historical reviews.
+The full checksummed current/history pair also replays successfully: 337 people, 369 terms, 19 quarantined files and
+zero current-roster coverage issues. Twenty-four focused review/import/quarantine tests and ingestion type-checking pass.

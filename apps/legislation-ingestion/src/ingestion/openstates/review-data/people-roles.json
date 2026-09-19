@@ -1,0 +1,44 @@
+[
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/retired/Bill-Ramos-b6f7474d-cf29-42de-9190-08ea9d000779.yml",
+    "sourceSha256": "f007185cc55b0ee39fa65dc0f6325fac3850994c8f9134cfe284ce6ce7246b7e",
+    "personId": "ocd-person/b6f7474d-cf29-42de-9190-08ea9d000779",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "5",
+          "start_date": "2019-01-14",
+          "end_date": "2025-01-12"
+        },
+        "after": null,
+        "evidenceUrls": ["https://lawfilesext.leg.wa.gov/biennium/2025-26/Pdf/Bills/Senate%20Resolutions/8659-.pdf"],
+        "reason": "Senate Resolution 8659 identifies House service from 2019 to 2025 and Senate service starting January 2025. Remove the contradictory pre-2025 Senate assertion; preserve the separate supplied House role without inventing its boundaries."
+      },
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "5",
+          "start_date": "2025-01-13",
+          "end_date": "2025-04-23"
+        },
+        "after": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "5",
+          "start_date": "2025-01-13",
+          "end_date": "2025-04-19"
+        },
+        "evidenceUrls": [
+          "https://lawfilesext.leg.wa.gov/biennium/2025-26/Pdf/Bills/Senate%20Resolutions/8659-.pdf",
+          "https://leg.wa.gov/media/s1wjssrg/2025-senate-journal-vol-1.pdf"
+        ],
+        "reason": "Resolution 8659 records death on April 19 and Senate service through his last day. Preserve the January 13 Senate start from the source and first-day journal."
+      }
+    ]
+  }
+]
