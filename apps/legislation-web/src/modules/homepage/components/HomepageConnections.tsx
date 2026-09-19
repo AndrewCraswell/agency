@@ -70,7 +70,8 @@ const sources = [
     description: "50 states, DC and Puerto Rico",
     categories: ["Bills", "Votes", "Committees", "People", "Meetings", "Documents"],
     plannedCategories: [],
-    status: "Varies by legislature"
+    scope: "50 states, DC and Puerto Rico",
+    status: "Available"
   },
   {
     name: "Congress.gov",
@@ -78,7 +79,8 @@ const sources = [
     description: "Federal legislation and congressional records",
     categories: ["Bills", "Amendments", "Votes", "Committees", "People", "Meetings", "Documents"],
     plannedCategories: [],
-    status: "Congressional records"
+    scope: "U.S. Congress",
+    status: "Available"
   },
   {
     name: "GovInfo.gov",
@@ -86,7 +88,8 @@ const sources = [
     description: "Federal Register, annual CFR and committee directories",
     categories: ["Committees", "Documents", "Regulations"],
     plannedCategories: ["Documents", "Regulations"],
-    status: "Partial coverage"
+    scope: "Federal publications and committees",
+    status: "Partial"
   },
   {
     name: "eCFR.gov",
@@ -94,6 +97,7 @@ const sources = [
     description: "Current consolidated federal regulations",
     categories: ["Regulations"],
     plannedCategories: ["Regulations"],
+    scope: "Federal regulations",
     status: "Coming soon"
   },
   {
@@ -102,6 +106,7 @@ const sources = [
     description: "Rule metadata, agencies and regulatory references",
     categories: ["Documents", "Regulations"],
     plannedCategories: ["Documents", "Regulations"],
+    scope: "Federal Register metadata",
     status: "Coming soon"
   },
   {
@@ -110,6 +115,7 @@ const sources = [
     description: "Dockets, comments and supporting documents",
     categories: ["Documents", "Regulations"],
     plannedCategories: ["Documents", "Regulations"],
+    scope: "Federal dockets and comments",
     status: "Coming soon"
   },
   {
@@ -118,6 +124,7 @@ const sources = [
     description: "Campaign and committee finance filings",
     categories: ["Documents", "Funding"],
     plannedCategories: ["Documents", "Funding"],
+    scope: "Federal campaign finance",
     status: "Coming soon"
   }
 ]
@@ -295,7 +302,7 @@ function Coverage() {
               </TableHead>
             ))}
             <TableHead scope="col" className={styles.statusHead}>
-              Scope
+              Coverage
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -321,7 +328,7 @@ function Coverage() {
                   />
                 </TableCell>
               ))}
-              <TableCell className={styles.statusCell}>{source.status}</TableCell>
+              <TableCell className={styles.statusCell}>{source.scope}</TableCell>
             </TableRow>
           ))}
         </TableBody>
