@@ -399,3 +399,19 @@ The full verification command completed with ingestion/core/MCP coverage, type c
 two tests in the separately modified web `src/modules/evaluations/evaluation.test.ts` (public `conflict` and
 `precondition_failed` message validation). Downstream Python/database/acceptance stages were not reached by that
 command. The focused 15-test PostgreSQL integration run passed separately.
+
+### Bounded production vote refresh underway
+
+A complete read-only preflight verified all 954 bills with archived votes against the retained source. The saved
+before-state includes all vote rows and all 171,876 positions, with plan SHA-256
+`c1d376bbaeb9d362ef4211a97df1fe066c2bb119db3109374f574165e4c5b67e`. The maintenance execution uses the shared aggregate
+writer with current database parent records and only the vote collection supplied, leaving other bill collections,
+documents and vectors untouched. It runs one connection, ten bills per transaction, checks the locked before-state
+and absence of meeting references, and checks exact resulting vote/position facts before committing. Shared immutable
+promotion receipts bind the plan and batch, permitting an interrupted execution to skip already committed work.
+
+The first 40 bills committed and passed their in-transaction checks. This is not a completion claim: all 954 bills and
+the final global comparison still require confirmation. Runtime evidence and the scoped maintenance script are in
+`artifacts/openstates-washington-archive-audit`; the before-state is `reports/production-vote-refresh-plan.json`.
+Old vote rows/positions are atomically replaced; their complete before-state is retained there. Placeholder person
+records themselves are not deleted, but the replacement positions do not assert unsupported person matches.
