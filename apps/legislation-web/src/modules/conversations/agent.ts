@@ -2,7 +2,13 @@ import { propagateAttributes } from "@langfuse/tracing"
 import { hasToolCall, isStepCount, streamText, type LanguageModel, type ModelMessage, type ToolSet } from "ai"
 import { createChatModel, type ChatModelOptions } from "../../services/openrouter/chat-model"
 
-export const researchAgentLimits = { steps: 8, calls: 24, timeoutMs: 120000, outputTokens: 4096 }
+export const researchAgentLimits = {
+  researchSteps: 8,
+  steps: 9,
+  calls: 24,
+  timeoutMs: 120000,
+  outputTokens: 4096
+}
 export const researchModelId = "openai/gpt-5.6-luna-20260709"
 export const researchReasoningEffort = "high"
 
@@ -43,9 +49,11 @@ export function runResearchAgent(options: {
     () =>
       streamText({
         model: options.model,
-        instructions: options.tools.search_web
-          ? `${options.instructions}\n\n${webResearchInstructions}`
-          : options.instructions,
+        instructions: `${
+          options.tools.search_web ? `${options.instructions}\n\n${webResearchInstructions}` : options.instructions
+        }
+
+When tools are disabled, finish with an answer from the evidence already retrieved. Cite supported findings and state what remains unresolved, including failed reads and incomplete coverage. If the evidence is insufficient, explicitly say that the research is incomplete. Do not imply that reaching a research limit proves an absence of evidence.`,
         messages: options.messages,
         tools: options.tools,
         stopWhen: [isStepCount(researchAgentLimits.steps), hasToolCall("ask_clarification")],
@@ -53,7 +61,16 @@ export function runResearchAgent(options: {
         maxRetries: 0,
         telemetry: { recordInputs: false, recordOutputs: false },
         onChunk: options.onChunk,
-        prepareStep: options.prepareStep,
+        prepareStep: async (step) => {
+          const prepared = await options.prepareStep?.(step)
+          const calls = step.steps
+            .flatMap((result) => result.toolCalls)
+            .filter((call) => call.toolName !== "ask_clarification").length
+          if (step.stepNumber >= researchAgentLimits.researchSteps || calls >= researchAgentLimits.calls) {
+            return { ...prepared, toolChoice: "none" as const }
+          }
+          return prepared
+        },
         abortSignal: options.signal
       })
   )

@@ -99,18 +99,20 @@ describe("runResearchAgent", () => {
       { sessionId: "conversation-123", traceName: "legislative-research-conversation" },
       expect.any(Function)
     )
-    expect(streamText).toHaveBeenCalledWith({
-      model: "test-model",
-      instructions: "Pinned instructions",
-      messages: [{ role: "user", content: "Research this bill" }],
-      tools: {},
-      stopWhen: [expect.any(Function), expect.any(Function)],
-      maxOutputTokens: researchAgentLimits.outputTokens,
-      maxRetries: 0,
-      telemetry: { recordInputs: false, recordOutputs: false },
-      onChunk,
-      prepareStep: undefined,
-      abortSignal: signal
-    })
+    expect(streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "test-model",
+        instructions: expect.stringContaining("Pinned instructions"),
+        messages: [{ role: "user", content: "Research this bill" }],
+        tools: {},
+        stopWhen: [expect.any(Function), expect.any(Function)],
+        maxOutputTokens: researchAgentLimits.outputTokens,
+        maxRetries: 0,
+        telemetry: { recordInputs: false, recordOutputs: false },
+        onChunk,
+        prepareStep: expect.any(Function),
+        abortSignal: signal
+      })
+    )
   })
 })

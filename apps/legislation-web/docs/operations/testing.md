@@ -74,8 +74,9 @@ W has no `test:all` script. Its Node webhook receiver remains the separate
 `pnpm --filter legislation-web test:webhook-verification-receiver` command; the root gate does not explicitly invoke
 it. M's built acceptance uses distinct-origin HTTP fixtures, not a running W deployment. Root-coordinated I-to-W
 publication/rights/replay and live M-to-W acceptance are not implied by the scripts above. Skipped environment-gated
-database suites are not passes. Run expensive profiles once and clean up owned processes. Root `pnpm verify` remains
-the broader repository gate, including global formatting; `verify:legislation` does not run formatting.
+database suites are not passes. Run expensive profiles once and clean up owned processes. Root `pnpm verify`
+temporarily delegates to `verify:legislation`, excluding unrelated workspaces. Neither entrypoint runs formatting.
+To restore full-repository verification, change the root `verify` script back to `run-s check test:coverage`.
 
 Each invocation defaults to at most four workers. Override with `VITEST_MAX_WORKERS` or `--maxWorkers` when measuring
 on a dedicated machine. This is not a cross-process lock: wait for an active run to finish before launching another,

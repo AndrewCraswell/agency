@@ -20,6 +20,7 @@ import { contentReferenceSchema, type PresentationContent } from "./presentation
 
 const maximumBlocks = 3
 const maximumPatches = 16
+const incompleteAnswerText = "Research ended before an answer was completed. Narrow the question and try again."
 const unsafeKeys = new Set(["__proto__", "prototype", "constructor", ...Object.getOwnPropertyNames(Object.prototype)])
 const rootSchema = presentationSpecSchema.shape.root.refine((root) => !unsafeKeys.has(root))
 const patchSchema = z.union([
@@ -70,6 +71,7 @@ export function createCompositionStream(
   const roots = new Set<string>()
   const records = new Set<string>()
   const textIds = new Set<string>()
+  const clarificationToolCalls = new Set<string>()
   const encoder = new TextEncoder()
   const source = stream.getReader()
   let pending: PendingBlock | undefined
@@ -87,6 +89,7 @@ export function createCompositionStream(
   let receivedCharacters = 0
   let invalidFence = false
   let invalidBlockId = 0
+  let hasCompletedClarification = false
   const renderedBlocks = new Map<string, PresentationBlock>()
 
   function flushText(controller: ReadableStreamDefaultController<UIMessageChunk>) {
@@ -96,6 +99,29 @@ export function createCompositionStream(
     controller.enqueue(outgoingText)
     outgoingText = undefined
     return true
+  }
+
+  function emitIncompleteAnswer(controller: ReadableStreamDefaultController<UIMessageChunk>) {
+    if (
+      interruption ||
+      renderedText.trim() ||
+      hasCompletedClarification ||
+      [...renderedBlocks.values()].some((block) => block.state === "ready")
+    ) {
+      return
+    }
+    interruption = "Research ended without an answer."
+    report(interruption)
+    let id = "incomplete-answer"
+    while (textIds.has(id)) {
+      nextTextId += 1
+      id = `incomplete-answer-${nextTextId}`
+    }
+    textIds.add(id)
+    renderedText += incompleteAnswerText
+    controller.enqueue({ type: "text-start", id })
+    controller.enqueue({ type: "text-delta", id, delta: incompleteAnswerText })
+    controller.enqueue({ type: "text-end", id })
   }
 
   function complete() {
@@ -407,6 +433,7 @@ export function createCompositionStream(
           if (next.done) {
             flushText(controller)
             seal(controller)
+            emitIncompleteAnswer(controller)
             complete()
             controller.close()
             reader.releaseLock()
@@ -445,6 +472,14 @@ export function createCompositionStream(
           }
           const context = contexts.get(chunk)
           if (context) {
+            if (
+              (context.type === "tool-input-start" || context.type === "tool-input-available") &&
+              context.toolName === "ask_clarification"
+            ) {
+              clarificationToolCalls.add(context.toolCallId)
+            } else if (context.type === "tool-output-available" && clarificationToolCalls.has(context.toolCallId)) {
+              hasCompletedClarification = true
+            }
             if (context.type === "text-start" || context.type === "text-delta" || context.type === "text-end") {
               if (!textChunkSchema.safeParse(context).success) {
                 reject("Invalid presentation text chunk.", controller)
@@ -509,6 +544,9 @@ export function createCompositionStream(
           }
           if (chunk.type === "finish" || chunk.type === "abort" || chunk.type === "error") {
             seal(controller)
+            if (chunk.type === "finish") {
+              emitIncompleteAnswer(controller)
+            }
             isTerminated = true
           }
           controller.enqueue(chunk)

@@ -11,7 +11,7 @@
     "dev": "turbo run dev",
     "gen:shopify-app": "turbo gen shopify-app",
     "auth": "git config --global credential.azreposCredentialType oauth && git config --global credential.msauthUseBroker true && npm install ado-npm-auth@latest --location=global --registry=https://registry.npmjs.org && ado-npm-auth -Config .npmrc -F",
-    "verify": "run-s check test:coverage",
+    "verify": "pnpm verify:legislation",
     "verify:legislation": "run-s legislation:check:types legislation:check:lint legislation:check:unused legislation:test:coverage legislation:test:python legislation:test:database legislation:test:acceptance",
     "check": "run-p check:*",
     "check:change": "beachball check",

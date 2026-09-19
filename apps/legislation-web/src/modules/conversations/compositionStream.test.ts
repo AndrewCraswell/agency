@@ -607,6 +607,97 @@ describe("createCompositionStream", () => {
     }
   })
 
+  it("emits an explicit incomplete outcome when research finishes without an answer", async () => {
+    const ending: UIMessageChunk[] = [
+      {
+        type: "tool-input-available",
+        toolCallId: "failed-search",
+        toolName: "search_bills",
+        input: { query: "accountability" }
+      },
+      { type: "tool-output-error", toolCallId: "failed-search", errorText: "Search failed" },
+      { type: "finish", finishReason: "stop" }
+    ]
+    const onComplete = vi.fn<NonNullable<Parameters<typeof createCompositionStream>[1]["onComplete"]>>()
+    const chunks = await collect(
+      createCompositionStream(textStream([], ending), { resolveRecord: resolver, onComplete })
+    )
+    expect(text(chunks)).toBe("Research ended before an answer was completed. Narrow the question and try again.")
+    expect(chunks.at(-1)).toEqual({ type: "finish", finishReason: "stop" })
+    expect(onComplete).toHaveBeenCalledWith({
+      text: "Research ended before an answer was completed. Narrow the question and try again.",
+      blocks: [],
+      isInterrupted: true
+    })
+  })
+
+  it("preserves a completed clarification as distinct from an incomplete answer", async () => {
+    const chunks = await collect(
+      createCompositionStream(
+        textStream(
+          [],
+          [
+            {
+              type: "tool-input-available",
+              toolCallId: "clarify",
+              toolName: "ask_clarification",
+              input: { question: "Which jurisdiction?" }
+            },
+            { type: "tool-output-available", toolCallId: "clarify", output: { clarificationId: "clarification-1" } },
+            { type: "finish", finishReason: "stop" }
+          ]
+        ),
+        { resolveRecord: resolver }
+      )
+    )
+    expect(text(chunks)).toBe("")
+    expect(chunks.at(-1)).toEqual({ type: "finish", finishReason: "stop" })
+  })
+
+  it.each<UIMessageChunk | undefined>([
+    { type: "finish", finishReason: "tool-calls" },
+    { type: "finish", finishReason: "length" },
+    undefined
+  ])("reports empty completion without guessing the cause from $type", async (ending) => {
+    const onInvalid = vi.fn<(reason: string) => void>()
+    const chunks = await collect(
+      createCompositionStream(textStream(["   "], ending ? [ending] : []), { resolveRecord: resolver, onInvalid })
+    )
+    expect(text(chunks)).toContain("Research ended before an answer was completed.")
+    expect(onInvalid).toHaveBeenCalledExactlyOnceWith("Research ended without an answer.")
+    expect(chunks.filter((chunk) => chunk.type === "finish")).toEqual(ending ? [ending] : [])
+  })
+
+  it("does not label a ready presentation-only answer as incomplete", async () => {
+    const result = await compose(fence([rootPatch(), elementPatch()]))
+    expect(blocks(result.chunks).at(-1)?.state).toBe("ready")
+    expect(text(result.chunks)).not.toContain("Research ended before")
+    expect(result.onInvalid).not.toHaveBeenCalled()
+  })
+
+  it("marks failed-only presentation as incomplete rather than claiming an answer", async () => {
+    const result = await compose(fence([rootPatch()]))
+    expect(blocks(result.chunks).at(-1)?.state).toBe("error")
+    expect(text(result.chunks)).toContain("Research ended before an answer was completed.")
+  })
+
+  it("does not treat a failed clarification call as a delivered question", async () => {
+    const chunks = await collect(
+      createCompositionStream(
+        textStream(
+          [],
+          [
+            { type: "tool-input-available", toolCallId: "clarify", toolName: "ask_clarification", input: {} },
+            { type: "tool-output-error", toolCallId: "clarify", errorText: "Invalid question" },
+            { type: "finish", finishReason: "tool-calls" }
+          ]
+        ),
+        { resolveRecord: resolver }
+      )
+    )
+    expect(text(chunks)).toContain("Research ended before an answer was completed.")
+  })
+
   it("flushes buffered prose before non-text events", async () => {
     const event: UIMessageChunk = { type: "tool-input-start", toolCallId: "call", toolName: "get_bill" }
     const chunks = await collect(
@@ -694,8 +785,9 @@ describe("createCompositionStream", () => {
         { resolveRecord: resolver, onInvalid }
       )
     )
-    expect(chunks).toEqual([other])
-    expect(onInvalid).toHaveBeenCalledTimes(4)
+    expect(chunks[0]).toEqual(other)
+    expect(text(chunks)).toBe("Research ended before an answer was completed. Narrow the question and try again.")
+    expect(onInvalid).toHaveBeenCalledTimes(5)
   })
 
   it("reports discarded malformed fences once and preserves their position without inventing a card", async () => {

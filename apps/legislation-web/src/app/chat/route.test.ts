@@ -77,6 +77,45 @@ afterEach(() => {
   capturedInputs.length = 0
 })
 
+it("streams an explicit incomplete answer and persists its interruption without rewriting the finish reason", async () => {
+  vi.stubEnv("NODE_ENV", "development")
+  vi.stubEnv("OPENROUTER_API_KEY", "fixture")
+  model = new MockLanguageModelV4({
+    doStream: async () => ({
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "stream-start", warnings: [] })
+          controller.enqueue({
+            type: "finish",
+            finishReason: { unified: "stop", raw: "stop" },
+            usage: {
+              inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+              outputTokens: { total: 0, text: 0, reasoning: 0 }
+            }
+          })
+          controller.close()
+        }
+      })
+    })
+  })
+  const response = await POST(
+    new Request("http://localhost:3000/chat", {
+      method: "POST",
+      headers: { origin: "http://localhost:3000", "content-type": "application/json" },
+      body: JSON.stringify({
+        sessionKey: "11111111-1111-4111-8111-111111111111",
+        sessionId: "empty-research",
+        messages: [{ id: "question", role: "user", parts: [{ type: "text", text: "What must agencies disclose?" }] }]
+      })
+    })
+  )
+  expect(response.status).toBe(200)
+  const stream = await response.text()
+  expect(stream).toContain("Research ended before an answer was completed. Narrow the question and try again.")
+  expect(stream).toContain('"finishReason":"stop"')
+  expect([...stored.values()]).toContainEqual(expect.objectContaining({ kind: "research-turn", interrupted: true }))
+})
+
 it("persists a turn and restores it through POST into the next model request and citation stream", async () => {
   vi.stubEnv("NODE_ENV", "development")
   vi.stubEnv("OPENROUTER_API_KEY", "fixture")

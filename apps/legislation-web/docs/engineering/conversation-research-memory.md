@@ -9,6 +9,15 @@ bounded result data, immutable evidence identity and version/provision provenanc
 tool categories. Stream completion does not prove that the research goal was satisfied. Interrupted turns retain
 that qualification. Proposed statutory text must remain distinct from uncertain judicial interpretation.
 
+Each response permits eight tool-capable research steps and reserves a ninth model step for synthesis without tools.
+The separate 24-call budget remains a hard safety bound across those research steps; reaching it disables tools on
+the next step so the model can synthesize without repeatedly making rejected calls. If a non-error response still
+finishes without prose, a completed presentation, or a clarification request, the stream emits an explicit incomplete
+outcome instead of settling as an empty answer. This outcome is reported to composition telemetry and marks the saved
+turn interrupted. The raw model finish reason remains in the server capture; an empty answer alone does not establish
+whether a step limit, call limit, or another condition caused it. Valid clarification and presentation-only responses
+remain distinct from incomplete research.
+
 ## Bounds and lifetime
 
 - Each turn retains at most 24 observations and 96,000 serialized UTF-8 bytes for 24 hours.
@@ -39,5 +48,5 @@ This does not create account-level conversation storage or restore evidence from
 The chat route regression exercises two POST requests with the real SDK and tool adapter, records actual model input,
 and checks that the second request sees prior operative text without another database read. Memory tests cover owner
 and conversation isolation, expiration, colliding markers, byte limits, failures and reload. Citation tests cover
-keyboard activation and retained-source telemetry. Deterministic fixtures establish wiring and evidence availability,
-not live-model legal accuracy or a resumed evaluation campaign.
+keyboard activation and retained-source telemetry. Deterministic fixtures establish wiring, evidence availability,
+final-step synthesis, and explicit empty-answer handling, not live-model legal accuracy or a resumed evaluation campaign.
