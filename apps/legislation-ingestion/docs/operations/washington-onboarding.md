@@ -461,3 +461,19 @@ matching their persisted `not-found` categories. Evidence is `reports/training-d
 archive audit store. This accounts for the two bill identities absent from the live scraper inventory without deleting
 their archive records or creating name-specific download exceptions. These seven failures are missing publisher
 resources, not evidence of OCR or embedding failure; recurring source availability remains subject to normal policy.
+
+## Production verification closure
+
+At 2026-09-19T08:02:37Z, an independent read-only snapshot verified all 2,306 votes and 171,876 positions against
+every normalized canonical field from the retained source archive. All 96 transaction receipts cover the 954 bills
+with votes. The refresh completed; no second import was required when the initial broad verification query timed out.
+Bounded reads of 25 vote identities completed the check. Evidence is `reports/production-vote-refresh-verification.json`
+in the archive audit store, alongside the retained pre-change plan and completion receipt.
+
+The embedding-freshness snapshot at 2026-09-19T07:52:55Z also passed: all 3,413 bill vectors and 92,930 document-section
+vectors match their current input hashes, with zero missing or stale vectors. No re-embedding was necessary for this
+archive snapshot. This does not close live scraper acceptance, lexical/API search acceptance, historical field parity,
+or scheduled synchronization. People/committee promotion and the 20 quarantined historical records remain separate gates.
+
+Washington continues to use shared canonical persistence, replay receipts, source observation admission, content processing,
+and embedding audits. Washington-specific adapters interpret publisher formats; they do not duplicate those lifecycle rules.
