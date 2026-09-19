@@ -380,3 +380,22 @@ transaction, cascading removal of old positions. Therefore a separate identity m
 snapshot writer. A real isolated PostgreSQL regression verifies replacement, a duplicate-free second replay, and
 rollback of both votes and positions when a replacement fails; all 15 receipt integration tests passed. Production
 refresh still needs an explicitly bounded snapshot replay and post-write comparison, including resolved-link handling.
+
+### Full isolated current-session replay
+
+The complete August 24 archive was normalized and persisted twice in the Washington acceptance database, using the
+existing aggregate writer with batches of ten and `preserveResolvedLinks`. Both passes finished with 3,413 bills and
+2,306 votes; vote IDs and facts were identical across passes. All 171,876 named vote positions exactly matched the
+normalized source (vote ID, source identity/name, option and person linkage). The archive supplies 19,498 document
+identities; the database retains 70 additional document identities from earlier live scraper acceptance runs, for
+19,568 total. That count is not a document deduplication acceptance claim.
+
+Evidence is `full-current-session-database-replay.json` and `full-current-session-position-parity.json` in the archive
+audit reports directory. Production still has 171,876 positions attached to name-only placeholder person records;
+those are not verified links to canonical people. A production refresh must preserve the named votes while avoiding
+retention of fabricated person associations. No production rows were changed by this isolated replay.
+
+The full verification command completed with ingestion/core/MCP coverage, type checks and lint passing, but failed on
+two tests in the separately modified web `src/modules/evaluations/evaluation.test.ts` (public `conflict` and
+`precondition_failed` message validation). Downstream Python/database/acceptance stages were not reached by that
+command. The focused 15-test PostgreSQL integration run passed separately.
