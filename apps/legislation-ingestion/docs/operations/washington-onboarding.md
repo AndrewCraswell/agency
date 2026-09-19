@@ -203,6 +203,26 @@ Joint identifier/event/resolver tests passed (19), ingestion types and focused l
 `pnpm verify` ended with eight failures in web `voteAttribution.test.ts` (2,646 web tests passed): the synthesis
 evidence ID assertion at line 446 failed. This is not a green repository result and no unrelated web code was changed.
 
+Joint-code fix `9a9b151` deployed without global promotion as `20260919.28` (70 tasks), after the API/importer
+contract preflight passed: `https://cloud.trigger.dev/projects/v3/proj_bsjukvltatwjsyczuatb/deployments/zimim367`.
+Calendar continuation reached 28/90 on `20260919.27`; its next run is `run_06gbjbf02a5g6jnrtt9maf4a01`. Do not overlap
+that chain merely to switch versions; older admitted windows still require relationship replay on the corrected adapter.
+
+Bill attempt `run_06gbj8h9e5ogegih3kkeudf701` failed for HB 1400–1409. Its immutable retained attempt
+`wa-bill-4655e18bc4eaec0f5907e2d2868dc155` reports `source_timeout`, exit 1, and no bill records. The exact ownership
+receipt is released and production inspection found 40 committed batches and no active bill owner. One idempotent retry,
+`run_06gbjf5lu4jj76i4005g3dkl01`, was submitted and confirmed QUEUED on `20260919.28`; submission does not prove
+promotion. Cleanup after HB 1104 is still processing 217 provisional untouched aliases in its next bounded page.
+
+Civic Health requires a supplemental source-identity decision, not a guessed roster code. The
+[2024 enacted resolution](https://lawfilesext.leg.wa.gov/biennium/2023-24/Htm/Bills/Senate%20Passed%20Legislature/8414.PL.htm)
+established a 13-member joint select committee with expiration before the 2026 session. The
+[2026 enacted resolution](https://lawfilesext.leg.wa.gov/biennium/2025-26/Htm/Bills/Senate%20Passed%20Legislature/8406.PL.htm)
+reestablishes it. Do not infer that a current roster describes the 2025 meeting's membership or conflate terms using
+name matching. Its historical publisher ID 35341 remains retained evidence; no new canonical organization or
+membership was fabricated. Washington's official member site also announces intermittent September 19 maintenance;
+this is possible source-timeout context, not proof of the specific failure's cause.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
