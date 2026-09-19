@@ -705,12 +705,13 @@ function providerFor(sourceUrl: string, upstreamIds: Record<string, string> | un
 
 function isOfficialSource(sourceUrl: string): boolean {
   const host = sourceHost(sourceUrl)
-  return (
-    host === "api.congress.gov" ||
-    host.endsWith(".congress.gov") ||
-    host === "api.govinfo.gov" ||
-    host.endsWith(".govinfo.gov")
-  )
+  const url = new URL(sourceUrl)
+  if ((url.protocol !== "https:" && url.protocol !== "http:") || url.username || url.password) {
+    return false
+  }
+  // Publisher-owned roots, not arbitrary .gov sites or the aggregator that supplied the URL.
+  // Keep domain boundaries: leg.wa.gov.example and notleg.wa.gov are not Washington sources.
+  return ["congress.gov", "govinfo.gov", "leg.wa.gov"].some((domain) => host === domain || host.endsWith(`.${domain}`))
 }
 
 function sourceHost(sourceUrl: string): string {

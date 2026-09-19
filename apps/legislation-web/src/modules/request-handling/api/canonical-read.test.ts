@@ -6,7 +6,8 @@ import {
   projectDocumentSectionRead,
   projectSupportingMaterialDetailRead,
   projectSupportingMaterialSectionRead,
-  projectSupportingMaterialSummaryRead
+  projectSupportingMaterialSummaryRead,
+  sourceProjectionContext
 } from "./canonical-read"
 
 const sourceUrl = "https://api.congress.gov/v3/bill/119/hr/1"
@@ -324,6 +325,36 @@ describe("canonical supporting-material reads", () => {
     expect(() => projectSupportingMaterialSummaryRead(invalid, "https://api.example.test")).toThrow(
       CanonicalProjectionError
     )
+  })
+})
+
+describe("source publisher classification", () => {
+  it.each([
+    "https://congress.gov/bill/1",
+    "https://api.congress.gov/v3/bill/1",
+    "https://govinfo.gov/content/pkg/example",
+    "https://www.govinfo.gov/content/pkg/example",
+    "https://leg.wa.gov/",
+    "http://lawfilesext.leg.wa.gov/Biennium/2025-26/Htm/Bills/House%20Bills/1002.htm",
+    "https://WSLWebServices.LEG.WA.GOV/legislationservice.asmx"
+  ])("recognizes a reviewed publisher URL: %s", (url) => {
+    const context = sourceProjectionContext({ ...supportingMaterialRead(), sourceUrl: url }, "https://api.example.test")
+    expect(context.sources).toEqual([expect.objectContaining({ sourceUrl: url, isOfficial: true })])
+  })
+
+  it.each([
+    "https://leg.wa.gov.example.test/document",
+    "https://notleg.wa.gov/document",
+    "https://example.test/document?source=https://leg.wa.gov",
+    "https://leg.wa.gov@example.test/document",
+    "https://someone:password@leg.wa.gov/document",
+    "ftp://leg.wa.gov/document",
+    "https://unreviewed.gov/document",
+    "https://openstates.org/wa/bills/2025-2026/HB1002/",
+    "https://github.com/openstates/people"
+  ])("does not elevate untrusted or aggregator URLs: %s", (url) => {
+    const context = sourceProjectionContext({ ...supportingMaterialRead(), sourceUrl: url }, "https://api.example.test")
+    expect(context.sources).toEqual([expect.objectContaining({ sourceUrl: url, isOfficial: false })])
   })
 })
 

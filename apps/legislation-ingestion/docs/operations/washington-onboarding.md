@@ -23,12 +23,20 @@ not evidence that the refreshed statewide content backlog or OCR acceptance is f
 Open acceptance findings:
 
 - HB 1002 still has one unlinked sponsor (`Scott`), while the later HB 1480 refresh links Shaun Scott. Reconcile
-  relationships through the shared import/replay path after foundation refresh; do not add a name-specific SQL fix.
+  relationships through the shared import/replay path; do not add a name-specific SQL fix. A read-only production
+  candidate check resolves `Scott` uniquely to Shaun Scott on first reading, January 13, 2025, but returns not-found
+  on prefiling, December 2, 2024. His persisted term starts January 13; Elizabeth Scott's term ended in 2018.
+  The existing shared `sponsorObservationDate` prefers first reading to prefiling and has this date regression test.
+  Replay with current normalization is still required; do not assume the missing link is just stale foundation data.
 - SB 5000 remains unavailable through bill detail because canonical action provenance is not persisted. The full
   bill refresh has not reached this Senate record; verify again after its batch, preserving the fail-closed contract.
 - Washington official document URLs currently project `isOfficial: false`. The document projection's official-source
-  classifier recognizes federal sources only. Resolve the shared provenance policy and tests rather than patching
-  this single bill or treating successful retrieval as fully correct provenance.
+  classifier recognized federal sources only. The shared document projection now recognizes the publisher-owned
+  `leg.wa.gov` root and its subdomains alongside Congress/GovInfo, with HTTP(S)-only, credential-free URLs and exact
+  domain boundaries. The [official legislature site](https://leg.wa.gov/) confirms the publisher domain. Aggregators,
+  lookalike domains and arbitrary government hosts are not elevated. All 24 focused canonical-read tests pass.
+  This corrects document/section projection without rewriting stored provenance for aggregated actions or votes;
+  deployment and authenticated production recheck are still required.
 
 At this inspection the calendar chain had completed 62/90 windows and dispatched
 `run_06gbjva0oeetsjinkbmp2kbo01`. Bill dispatch `run_06gbjv2702micvrg12t8lonj01` completed and launched
