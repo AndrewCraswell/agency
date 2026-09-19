@@ -618,3 +618,29 @@ resolution. Existing tests explicitly assert that policy for Alaska and North Ca
 to make the endpoint succeed: obtain and retain the missing profile/hierarchy facts through a shared source adapter,
 or explicitly revise the public partial-detail contract with its coverage semantics. Washington regular-sync acceptance
 remains open. No production settings or schedules were changed by these checks.
+
+## Isolated search release and live acceptance (2026-09-19)
+
+Railway deployment `3cb2b61c-7302-4797-98bf-25352cca12a6` reached `SUCCESS`. Its source is the previous production
+baseline `71562dd` plus exactly `search.ts` and `semantic-passage-query.test.ts` from `d4faba9`, exported into
+`.codex-deploy/washington-search-d4faba9`. The runtime search blob is
+`c18b92b1cbd563aab4400372810973c4c9ba648e`. Unrelated staged/unstaged telemetry and evaluation work was not uploaded.
+The remote build compiled and type-checked successfully; production `/health` and `/ready` returned HTTP 200.
+
+Authenticated MCP `search_bill_text`, query `housing affordability and residential zoning`, limit three:
+
+| Scope and mode | Observed wall time | Result |
+| --- | ---: | --- |
+| HB 2266, semantic | 2,097 ms | Three canonical HB 2266 passages, embedding and reranking providers completed |
+| Washington 2025-2026, semantic | 10,730 ms | Three correctly scoped passages, no warnings |
+| Washington 2025-2026, hybrid | 6,789 ms | Three correctly scoped passages, no warnings |
+| Washington 2025-2026, lexical | 511 ms | Three correctly scoped passages, no warnings |
+| Same statewide semantic query, returned page-two cursor | 1,998 ms | Three passages, no overlap with page one |
+| Same statewide hybrid query, returned page-two cursor | 1,544 ms | Three passages, no overlap with page one |
+
+Results include canonical bill/document/section IDs and URLs. These requests close the reproduced post-deployment
+semantic/hybrid timeout cases; they are bounded smoke evidence, not a throughput SLA or held-out relevance benchmark.
+No embeddings or indexes were rebuilt. Hosted scraper activation, full-calendar ingestion and scheduled-delta acceptance
+remain separate open gates. The official CommitteeService `GetCommittees?biennium=2025-26` was also inspected: it supplies
+standing committee identifiers, chamber, names, acronym and phone, but does not establish a complete child hierarchy.
+Do not use that response alone to assert full committee-detail completeness.
