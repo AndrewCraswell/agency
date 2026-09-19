@@ -48,6 +48,16 @@ function fixture(directory = "legislature", state = "nc") {
   return { source, path }
 }
 describe("pilot archive", () => {
+  it("archives and replays Washington through the same checksum boundary", async () => {
+    const { source } = fixture("legislature", "wa")
+    const target = new MemoryStore()
+    const archive = await archivePeoplePilot(source, target, "washington", "entities", "wa")
+    const replay = await readArchivedPeoplePilot(target, archive.manifestPath)
+    expect(replay.state).toBe("wa")
+    expect(replay.files[0]?.path).toBe("data/wa/legislature/person.yml")
+    expect(await archivePeoplePilot(source, target, "washington", "entities", "wa")).toEqual(archive)
+    await expect(archivePeoplePilot(source, target, "wrong-state", "entities", "ak")).rejects.toThrow("pattern")
+  })
   it("reuses archive replay for Alaska while rejecting a cross-state source", async () => {
     const { source } = fixture("legislature", "ak")
     const target = new MemoryStore()

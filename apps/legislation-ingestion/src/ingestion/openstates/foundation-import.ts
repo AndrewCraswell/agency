@@ -7,11 +7,12 @@ import type { PeopleRepositoryFile } from "./people-repository.js"
 import { readArchivedPeoplePilot } from "./pilot-archive.js"
 
 type ArchivedPeoplePilot = Awaited<ReturnType<typeof readArchivedPeoplePilot>>
+type FoundationState = ArchivedPeoplePilot["state"]
 type FoundationDependencies = {
   read(store: Pick<ArtifactStore, "read">, manifestPath: string): Promise<ArchivedPeoplePilot>
   importPeople(
     database: LegislationDatabase,
-    state: "ak" | "nc",
+    state: FoundationState,
     currentFiles: readonly PeopleRepositoryFile[],
     historyFiles: readonly PeopleRepositoryFile[],
     retrievedAt: Date,
@@ -19,7 +20,7 @@ type FoundationDependencies = {
   ): Promise<unknown>
   importCommittees(
     database: LegislationDatabase,
-    state: "ak" | "nc",
+    state: FoundationState,
     currentFiles: readonly PeopleRepositoryFile[],
     historyFiles: readonly PeopleRepositoryFile[],
     retrievedAt: Date,
@@ -32,7 +33,7 @@ export async function importArchivedStateFoundation(
   database: LegislationDatabase,
   input: {
     store: Pick<ArtifactStore, "read">
-    state: "ak" | "nc"
+    state: FoundationState
     currentManifestPath: string
     historyManifestPath: string
   },

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
-import { peopleSourceProfiles, type PeopleRepositoryFile } from "./people-repository.js"
+import { peopleSourceProfiles, peopleSourceState, type PeopleRepositoryFile } from "./people-repository.js"
 
 const sourcePaths = {
   entities: /^data\/nc\/(legislature|committees)\/[^/\\]+\.ya?ml$/,
@@ -23,7 +23,7 @@ async function readPilot(
   lane: z.infer<typeof laneSchema>,
   state: keyof typeof peopleSourceProfiles = "nc"
 ) {
-  const profile = peopleSourceProfiles[z.enum(["nc", "ak"]).parse(state)]
+  const profile = peopleSourceProfiles[peopleSourceState.parse(state)]
   const sourcePath = new RegExp(sourcePaths[lane].source.replace("nc", profile.state))
   const reportBytes = await store.read("report.json")
   const report = z
@@ -103,7 +103,7 @@ export async function archivePeoplePilot(
 
 export async function readArchivedPeoplePilot(store: Pick<ArtifactStore, "read">, manifestPath: string) {
   const match =
-    /^openstates\/people\/([a-f0-9]{40})\/(nc|ak)\/(entities|history)\/([a-zA-Z0-9][a-zA-Z0-9-]{0,100})\/complete\.json$/.exec(
+    /^openstates\/people\/([a-f0-9]{40})\/([a-z]{2})\/(entities|history)\/([a-zA-Z0-9][a-zA-Z0-9-]{0,100})\/complete\.json$/.exec(
       manifestPath
     )
   if (!match) {
@@ -123,7 +123,7 @@ export async function readArchivedPeoplePilot(store: Pick<ArtifactStore, "read">
   if (entries.size !== manifest.entries.length) {
     throw new Error("Duplicate archive entry")
   }
-  const state = z.enum(["nc", "ak"]).parse(match[2])
+  const state = peopleSourceState.parse(match[2])
   const lane = laneSchema.parse(match[3])
   const pilot = await readPilot(
     {

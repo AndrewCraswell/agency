@@ -16,6 +16,7 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [ ] | Add Washington to shared extraction and promotion | Extend reviewed jurisdiction profiles and source policy, not a parallel ingestion engine; validate source/dispatch/build fingerprints |
 | [ ] | Validate bill actions, documents and individual votes | Compare retained cases from both chambers to official pages, including substitutions, engrossments, resolutions and amendments |
 | [ ] | Import and validate people and service history | Use retained Open States people data; represent two House seats per district without dropping one or guessing seat identity; quarantine conflicts |
+| [x] | Validate current people/committee snapshot with reusable district capacities | Shared validator accepts 98 House members, 49 senators, 51 committees and 609 membership assertions; zero unresolved member references; source snapshot, not production import |
 | [ ] | Import committees and memberships | Resolve member dependencies; incomplete rosters cannot imply departures or complete membership coverage |
 | [ ] | Import meetings and agenda items | Bound event windows, preserve Pacific time, stable source IDs and cancellation evidence; validate related bills/committees |
 | [ ] | Complete document content pipeline | Extract text, OCR only when needed, preserve versions and source evidence, process eligible remaining content |
@@ -54,9 +55,29 @@ presence, not current actions, votes, documents or text freshness. The next impo
   before changing normalization; do not invent precise times for date-only actions.
 - Events default to today through the next 30 days and skip cancelled meetings. This is not a historical meeting import
   or sufficient cancellation reconciliation. Define explicit windows and retained observations before activation.
-- Shared people coverage currently expects one person per district. Washington's House requires multi-seat district
-  coverage; adding `wa` to an enum alone would incorrectly reject legitimate representatives.
+- Shared people coverage now uses configured district capacities: Washington has two House members and one senator
+  per district; NC/AK retain capacity one. Identity uniqueness and missing/excess occupant checks remain enforced.
+  Capacity does not infer House position numbers or resolve historical role conflicts.
 - Many execution, archive, people, content and schedule boundaries explicitly allow only NC/AK. Extend each reviewed
   boundary with tests; a new profile is not implicit authorization to execute or schedule it.
 
 No Washington production writes, new schedules or scraper runtime activation were performed during this baseline audit.
+
+## Shared foundation validation (2026-09-19)
+
+Washington acquisition, immutable archive/replay, current roster validation and history preparation now use the same
+people profile/schema and functions as NC/AK. Hosted activation remains separate and unchanged. Thirty-one focused
+tests passed, including complete multi-member coverage, missing/excess occupants, duplicate identities/paths and
+checksum-preserving Washington replay. Existing NC and Alaska coverage behavior remains tested.
+
+Live repository revision `677c6d0a566ad9bd62b6324e502af76acc3d22f3` was retained under
+`artifacts/openstates-washington-foundation`. Both archive manifests use
+`openstates/people/<revision>/wa/{entities,history}/source-677c6d0a566ad9bd/complete.json` and replayed successfully:
+198 current files and 261 historical files. Current snapshot validation found 147 legislators, 51 committees and
+609 membership assertions, with no coverage or unresolved-reference issues.
+
+History preparation accepted 336 people and 367 terms while quarantining 20 people for overlapping roles, ambiguous
+term identities or reversed dates. This is a partial preparation, not canonical import. Review source precision and
+generic period handling before considering source corrections; do not add person-name exceptions to the engine.
+The retained `reports/foundation-validation.json` includes each quarantined path and content hash. No production
+people/committee changes or schedules were made.

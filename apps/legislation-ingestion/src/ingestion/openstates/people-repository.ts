@@ -12,6 +12,7 @@ export const peopleSourceProfiles = {
   nc: {
     ...northCarolinaPeopleSource,
     officeTitles: { upper: "Senator", lower: "Representative" },
+    seatsPerDistrict: { lower: 1, upper: 1 },
     districts: {
       lower: Array.from({ length: 120 }, (_, i) => String(i + 1)),
       upper: Array.from({ length: 50 }, (_, i) => String(i + 1))
@@ -20,11 +21,25 @@ export const peopleSourceProfiles = {
   ak: {
     state: "ak",
     officeTitles: { upper: "Senator", lower: "Representative" },
+    seatsPerDistrict: { lower: 1, upper: 1 },
     jurisdiction: "ocd-jurisdiction/country:us/state:ak/government",
     revision: northCarolinaPeopleSource.revision,
     districts: { lower: Array.from({ length: 40 }, (_, i) => String(i + 1)), upper: Array.from("ABCDEFGHIJKLMNOPQRST") }
+  },
+  wa: {
+    state: "wa",
+    officeTitles: { upper: "Senator", lower: "Representative" },
+    seatsPerDistrict: { lower: 2, upper: 1 },
+    jurisdiction: "ocd-jurisdiction/country:us/state:wa/government",
+    revision: northCarolinaPeopleSource.revision,
+    districts: {
+      lower: Array.from({ length: 49 }, (_, i) => String(i + 1)),
+      upper: Array.from({ length: 49 }, (_, i) => String(i + 1))
+    }
   }
 } as const
+
+export const peopleSourceState = z.enum(["nc", "ak", "wa"])
 
 const roleSchema = z.object({
   district: z.string().optional(),
@@ -68,7 +83,7 @@ export function validatePeopleRepositorySnapshot(
   retrievedAt: Date,
   state: keyof typeof peopleSourceProfiles = "nc"
 ) {
-  const source = peopleSourceProfiles[z.enum(["nc", "ak"]).parse(state)]
+  const source = peopleSourceProfiles[peopleSourceState.parse(state)]
   const peopleInputs = []
   const committeeInputs = []
   const paths = new Set<string>()
@@ -142,8 +157,8 @@ export function validatePeopleRepositorySnapshot(
     people: peopleInputs.length,
     upper: peopleInputs.filter((person) => person.current_role.org_classification === "upper").length
   }
-  // Reviewed profiles have single-member districts. A missing seat requires explicit review, even
-  // if it is a genuine vacancy; neither a vacancy nor its occupant is inferred.
+  // Capacity is jurisdiction configuration, not inferred from observed occupants. A missing seat
+  // requires review even for a genuine vacancy; this check never invents seat/position identities.
   const coverageIssues: Array<{ chamber: string; district: string; count: number }> = []
   for (const chamber of ["lower", "upper"] as const) {
     const districts = new Map<string, number>()
@@ -156,7 +171,7 @@ export function validatePeopleRepositorySnapshot(
     const expected = new Set<string>(source.districts[chamber])
     for (const district of new Set([...expected, ...districts.keys()])) {
       const count = districts.get(district) ?? 0
-      if (count !== 1 || !expected.has(district)) {
+      if (count !== source.seatsPerDistrict[chamber] || !expected.has(district)) {
         coverageIssues.push({ chamber, district, count })
       }
     }

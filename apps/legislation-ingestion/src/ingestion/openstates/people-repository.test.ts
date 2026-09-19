@@ -24,6 +24,49 @@ const files = [
   { path: "data/nc/committees/pilot.yml", content: JSON.stringify(committee) }
 ]
 const now = new Date("2026-09-14T00:00:00Z")
+it("validates configured multi-member districts without inventing positions or accepting missing/excess occupants", () => {
+  const source = peopleSourceProfiles.wa
+  const roster = (["lower", "upper"] as const).flatMap((chamber) =>
+    source.districts[chamber].flatMap((district) =>
+      Array.from({ length: source.seatsPerDistrict[chamber] }, (_, index) => ({
+        path: `data/wa/legislature/${chamber}-${district}-${index}.yml`,
+        content: JSON.stringify({
+          ...person,
+          id: `ocd-person/${chamber}-${district}-${index}`,
+          roles: [{ type: chamber, district, jurisdiction: source.jurisdiction }]
+        })
+      }))
+    )
+  )
+  const panel = {
+    path: "data/wa/committees/test.yml",
+    content: JSON.stringify({
+      ...committee,
+      jurisdiction: source.jurisdiction,
+      members: [{ name: person.name, person_id: "ocd-person/lower-1-0", role: "member" }]
+    })
+  }
+  const result = validatePeopleRepositorySnapshot([...roster, panel], now, "wa")
+  expect(result.status).toBe("validated")
+  expect(result.counts).toMatchObject({ people: 147, lower: 98, upper: 49 })
+  expect(validatePeopleRepositorySnapshot([...roster.slice(1), panel], now, "wa").coverageIssues).toContainEqual({
+    chamber: "lower",
+    district: "1",
+    count: 1
+  })
+  const extra = {
+    path: "data/wa/legislature/extra.yml",
+    content: JSON.stringify({
+      ...person,
+      id: "ocd-person/extra",
+      roles: [{ type: "lower", district: "1", jurisdiction: source.jurisdiction }]
+    })
+  }
+  expect(validatePeopleRepositorySnapshot([...roster, extra, panel], now, "wa").coverageIssues).toEqual([
+    { chamber: "lower", district: "1", count: 3 }
+  ])
+  expect(() => validatePeopleRepositorySnapshot([...roster, roster[0]!, panel], now, "wa")).toThrow("duplicate")
+})
 it("reuses the validator for Alaska lettered Senate districts without accepting another state's committees", () => {
   const source = peopleSourceProfiles.ak
   const roster = (["lower", "upper"] as const).flatMap((chamber) =>

@@ -1,6 +1,6 @@
 import { parseDocument } from "yaml"
 import { z } from "zod"
-import { peopleSourceProfiles, type PeopleRepositoryFile } from "./people-repository.js"
+import { peopleSourceProfiles, peopleSourceState, type PeopleRepositoryFile } from "./people-repository.js"
 
 // Keep publisher precision. Calendar validation must not turn a year into Jan 1.
 const dateSchema = z.union([z.iso.date(), z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), z.string().regex(/^\d{4}$/)])
@@ -23,7 +23,7 @@ export function inventoryPeopleHistory(
   files: readonly PeopleRepositoryFile[],
   state: keyof typeof peopleSourceProfiles = "nc"
 ) {
-  const source = peopleSourceProfiles[z.enum(["nc", "ak"]).parse(state)]
+  const source = peopleSourceProfiles[peopleSourceState.parse(state)]
   const ids = new Set<string>()
   const roles = []
   const issues: Array<{ path: string; reason: string }> = []

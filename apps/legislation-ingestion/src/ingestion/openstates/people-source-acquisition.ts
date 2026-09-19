@@ -2,11 +2,11 @@ import { createHash } from "node:crypto"
 import { unzipSync } from "fflate"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
-import type { PeopleRepositoryFile } from "./people-repository.js"
+import { peopleSourceState, type PeopleRepositoryFile } from "./people-repository.js"
 import { archivePeoplePilot } from "./pilot-archive.js"
 
 const revisionSchema = z.string().regex(/^[a-f0-9]{40}$/)
-const stateSchema = z.enum(["ak", "nc"])
+const stateSchema = peopleSourceState
 const maximumArchiveBytes = 100 * 1024 * 1024
 const maximumExpandedBytes = 200 * 1024 * 1024
 
@@ -60,7 +60,10 @@ export async function downloadPeopleRepositoryRevision(
   for (const [archivePath, bytes] of Object.entries(archive)) {
     if (!archivePath.startsWith(root)) continue
     const path = archivePath.slice(root.length)
-    if (!/^data\/(ak|nc)\/(legislature|committees|retired|executive|municipalities)\/[^/\\]+\.ya?ml$/.test(path)) {
+    const match = /^data\/([a-z]{2})\/(legislature|committees|retired|executive|municipalities)\/[^/\\]+\.ya?ml$/.exec(
+      path
+    )
+    if (!match || !stateSchema.safeParse(match[1]).success) {
       continue
     }
     expandedBytes += bytes.length
@@ -81,7 +84,7 @@ export async function archivePeopleRepositoryRevision(
     files: readonly PeopleRepositoryFile[]
     retrievedAt: Date
     revision: string
-    state: "ak" | "nc"
+    state: z.infer<typeof stateSchema>
   }
 ) {
   const revision = revisionSchema.parse(input.revision)
@@ -114,7 +117,7 @@ function createLaneStore(
   files: readonly PeopleRepositoryFile[],
   revision: string,
   retrievedAt: Date,
-  state: "ak" | "nc",
+  state: z.infer<typeof stateSchema>,
   lane: "entities" | "history"
 ): Pick<ArtifactStore, "read"> {
   const lanePattern =
