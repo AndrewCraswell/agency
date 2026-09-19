@@ -5,6 +5,24 @@ document/OCR, embedding and search pipelines. Do not activate schedules until th
 Initial extraction concurrency is one; retain the existing global content-worker ceiling and publisher limits while
 North Carolina drains. No new provider, database or embedding model is approved by this onboarding.
 
+### Latest verified release and replay checkpoint
+
+Railway deployment `d2080fd2-f894-4727-8901-f236cc4a47c2` of committed fix `7a7e523` is successful.
+The final full `pnpm verify` run (25266) passed before deployment. An authenticated production MCP
+`get_bill_text` recheck for HB 1002's exact HTML document returned both nonempty sections with
+`isOfficial: true`, no warnings, and no next page. This closes the official-document projection finding below;
+it does not close statewide content or OCR acceptance.
+
+The HB 1230-1254 alias page completed its guarded apply (72173), removing 163 untouched duplicate document
+rows. A same-cursor repeat dry run returned zero candidates, zero held groups, and `pageComplete: true`.
+The last verified completed cleanup cursor is now `bill:wa:2025-2026:hb:1254`. Removed rows remain recoverable
+from reconciliation audit checkpoints. Processed aliases are still held rather than losing dependent content.
+
+Keep Washington DRY: source adapters and jurisdiction configuration describe source differences; shared ownership,
+replay, person reconciliation, document/OCR, embedding, search, and acceptance components own the workflow.
+Source-backed historical corrections belong in the existing fingerprint-bound review data, not identity-specific
+branches in the ingestion engine. Regular Washington syncing remains gated on complete acceptance.
+
 ### Authenticated bill, vote and document acceptance
 
 The post-activation-fix full `pnpm verify` run completed successfully (session 69406). Its default positive
