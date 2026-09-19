@@ -52,7 +52,17 @@ const clients = [
     docs: "https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp"
   }
 ]
-const categories = ["Bills", "Amendments", "Votes", "Committees", "People", "Meetings", "Documents", "Rules", "Funding"]
+const categories = [
+  "Bills",
+  "Amendments",
+  "Votes",
+  "Committees",
+  "People",
+  "Meetings",
+  "Documents",
+  "Regulations",
+  "Funding"
+]
 const sources = [
   {
     name: "Open States",
@@ -74,32 +84,32 @@ const sources = [
     name: "GovInfo.gov",
     href: "https://www.govinfo.gov",
     description: "Federal Register, annual CFR and committee directories",
-    categories: ["Committees", "Documents", "Rules"],
-    plannedCategories: ["Documents", "Rules"],
+    categories: ["Committees", "Documents", "Regulations"],
+    plannedCategories: ["Documents", "Regulations"],
     status: "Partial coverage"
   },
   {
     name: "eCFR.gov",
     href: "https://www.ecfr.gov",
     description: "Current consolidated federal regulations",
-    categories: ["Rules"],
-    plannedCategories: ["Rules"],
+    categories: ["Regulations"],
+    plannedCategories: ["Regulations"],
     status: "Coming soon"
   },
   {
     name: "FederalRegister.gov",
     href: "https://www.federalregister.gov",
     description: "Rule metadata, agencies and regulatory references",
-    categories: ["Documents", "Rules"],
-    plannedCategories: ["Documents", "Rules"],
+    categories: ["Documents", "Regulations"],
+    plannedCategories: ["Documents", "Regulations"],
     status: "Coming soon"
   },
   {
     name: "Regulations.gov",
     href: "https://www.regulations.gov",
     description: "Dockets, comments and supporting documents",
-    categories: ["Documents", "Rules"],
-    plannedCategories: ["Documents", "Rules"],
+    categories: ["Documents", "Regulations"],
+    plannedCategories: ["Documents", "Regulations"],
     status: "Coming soon"
   },
   {
