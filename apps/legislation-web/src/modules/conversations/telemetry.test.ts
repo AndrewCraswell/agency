@@ -1,6 +1,6 @@
 import { MockLanguageModelV4 } from "ai/test"
 import { expect, it } from "vitest"
-import { startLangfuseTelemetry } from "../../services/langfuse/telemetry"
+import { startNodeTelemetry } from "../../services/sentry/nodeTelemetry"
 import { runResearchAgent } from "./agent"
 import { observeChatResponse } from "./capture"
 import { redactCredentials } from "./redactCredentials"
@@ -23,32 +23,34 @@ it("groups streamed model calls by conversation and redacts credentials without 
     source: unknown
     attributes: unknown
   }[] = []
-  const telemetry = startLangfuseTelemetry({
-    publicKey: "test-public",
-    secretKey: "test-secret",
-    mediaUploadEnabled: false,
-    mask: ({ data }) => redactCredentials(data),
-    exporter: {
-      export(batch, callback) {
-        for (const span of batch) {
-          spans.push({
-            sessionId: span.attributes["session.id"],
-            traceId: span.spanContext().traceId,
-            traceName: span.attributes["langfuse.trace.name"],
-            observationType: span.attributes["gen_ai.operation.name"],
-            parentId: span.parentSpanContext?.spanId,
-            name: span.name,
-            input: span.attributes["langfuse.observation.input"],
-            output: span.attributes["langfuse.observation.output"],
-            captureId: span.attributes["langfuse.trace.metadata.captureId"],
-            source: span.attributes["langfuse.trace.metadata.source"],
-            attributes: span.attributes
-          })
+  const telemetry = startNodeTelemetry({
+    langfuse: {
+      publicKey: "test-public",
+      secretKey: "test-secret",
+      mediaUploadEnabled: false,
+      mask: ({ data }) => redactCredentials(data),
+      exporter: {
+        export(batch, callback) {
+          for (const span of batch) {
+            spans.push({
+              sessionId: span.attributes["session.id"],
+              traceId: span.spanContext().traceId,
+              traceName: span.attributes["langfuse.trace.name"],
+              observationType: span.attributes["gen_ai.operation.name"],
+              parentId: span.parentSpanContext?.spanId,
+              name: span.name,
+              input: span.attributes["langfuse.observation.input"],
+              output: span.attributes["langfuse.observation.output"],
+              captureId: span.attributes["langfuse.trace.metadata.captureId"],
+              source: span.attributes["langfuse.trace.metadata.source"],
+              attributes: span.attributes
+            })
+          }
+          callback({ code: 0 })
+        },
+        async shutdown() {
+          return undefined
         }
-        callback({ code: 0 })
-      },
-      async shutdown() {
-        return undefined
       }
     }
   })

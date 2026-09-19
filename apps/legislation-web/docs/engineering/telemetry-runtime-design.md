@@ -10,13 +10,11 @@ Reviewed installed public interfaces and implementation behavior for `@sentry/ne
 10.73.0, `@langfuse/otel` 5.11.1 and `@opentelemetry/sdk-node` 0.221.0. The installed SDK uses OpenTelemetry API 1.9.1
 and trace-base 2.10.0. Recheck resolved versions when changing manifests; do not rely on an older integration example.
 
-Today [Next instrumentation](../../src/instrumentation.ts) starts
-[conversation telemetry](../../src/modules/conversations/telemetry.ts), whose
-[Langfuse service](../../src/services/langfuse/telemetry.ts) owns a global NodeSDK, before initializing Sentry.
-Node and edge Sentry skip their own OpenTelemetry setup. Replace this split ownership, rather than starting a second
-provider or preserving parallel initialization paths.
+At the original design baseline, Next instrumentation started a Langfuse-owned NodeSDK before separate Sentry
+initialization. The [shared Node implementation](node-telemetry.md) now replaces that split with one provider and
+explicit registration checks; the [edge implementation](edge-telemetry.md) retains its own runtime-specific owner.
 
-The intended sole Node owner lives at the existing Sentry/service boundary and returns one flush/shutdown handle.
+The sole Node owner lives at the existing Sentry/service boundary and returns one flush/shutdown handle.
 Langfuse constructs its processor/integration through that owner; its service no longer registers a global provider.
 Conversation call sites consume the shared lifecycle instead of creating runtime infrastructure.
 
@@ -28,7 +26,8 @@ Conversation call sites consume the shared lifecycle instead of creating runtime
    `SentryContextManager` export with the pinned SDK; do not hand-roll async context or copy deprecated wrappers.
 3. Construct the Langfuse processor only when configured and permitted. Register the existing AI SDK telemetry
    integration once. Keep media upload disabled and its existing content-policy mask explicitly configured.
-4. Register exactly one NodeSDK with the composite sampling/processor policy below. Preserve required HTTP request
+4. Register exactly one provider with the composite sampling/processor policy below. The implementation uses public
+   `BasicTracerProvider` registration APIs rather than NodeSDK so conflicts are observable. Preserve required HTTP request
    isolation and fetch propagation instrumentation while avoiding duplicate auto/manual spans.
 5. Validate Sentry's OpenTelemetry setup before serving requests. Import instrumented application/dependency modules
    after instrumentation; select one ESM-loader owner and do not register both Sentry and separate loader hooks.
@@ -114,10 +113,9 @@ condition separately with synthetic request-isolation and propagation cases; pro
 
 ## Dependencies and implementation gates
 
-No dependency was added for this design. The installed transitive packages supply the probe interfaces. Production
-imports must declare direct dependencies rather than relying on hoisting: assess `@sentry/opentelemetry`,
-`@opentelemetry/api` and `@opentelemetry/sdk-trace-base` at versions compatible with the installed SDK graph.
-Obtain the required dependency approval before changing manifests, and align Sentry package versions.
+No dependency was added for the design probe. The user subsequently approved direct declarations of
+`@sentry/opentelemetry`, `@opentelemetry/api` and `@opentelemetry/sdk-trace-base` at their installed versions for the
+[Node implementation](node-telemetry.md). Production imports no longer rely on their incidental hoisting.
 
 Foundation implementation must prove hot-reload/concurrent initialization, real Next request isolation, allowed
 network propagation, arbitrary parent sampling, exporter failures, snapshot immutability, AI-envelope filtering,

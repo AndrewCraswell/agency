@@ -79,7 +79,7 @@ describe("edge-owned telemetry configuration", () => {
     "https://api.example.test/?secret=private",
     "https://api.example.test/#private"
   ])("rejects invalid propagation configuration without echoing it", (url) => {
-    expect(() => fixture({ NODE_ENV: "production", LEGISLATION_PUBLIC_API_BASE_URL: url })).toThrow("Edge telemetry")
+    expect(() => fixture({ NODE_ENV: "production", LEGISLATION_PUBLIC_API_BASE_URL: url })).toThrow("Telemetry")
   })
 
   it("permits explicit loopback HTTP only outside production", () => {

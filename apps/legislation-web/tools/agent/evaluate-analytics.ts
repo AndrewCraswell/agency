@@ -20,7 +20,7 @@ import { modelInputSchema } from "../../src/modules/conversations/research"
 import { analyticsMetricProjection } from "../../src/modules/evaluations/analyticsChecks"
 import { LegislationQueryService } from "../../src/modules/legislation/query-service"
 import { langfuseSettings } from "../../src/services/langfuse/client"
-import { startLangfuseTelemetry } from "../../src/services/langfuse/telemetry"
+import { startNodeTelemetry } from "../../src/services/sentry/nodeTelemetry"
 import { analyticsCases, type AnalyticsCase } from "./analytics-cases"
 
 const { values } = parseArgs({
@@ -139,11 +139,13 @@ async function main() {
   const prompt = hasLiveModel ? await getResearchPrompt(process.env, AbortSignal.timeout(15000)) : undefined
   const telemetry = !hasLiveModel
     ? undefined
-    : startLangfuseTelemetry({
-        ...langfuseSettings(process.env),
-        environment: "analytics-acceptance",
-        mediaUploadEnabled: false,
-        mask: ({ data }) => sanitizeTelemetry(data)
+    : startNodeTelemetry({
+        langfuse: {
+          ...langfuseSettings(process.env),
+          environment: "analytics-acceptance",
+          mediaUploadEnabled: false,
+          mask: ({ data }) => sanitizeTelemetry(data)
+        }
       })
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,

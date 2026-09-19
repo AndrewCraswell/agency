@@ -2,7 +2,7 @@ import { LangfuseClient } from "@langfuse/client"
 import { getActiveSpanId, propagateAttributes, startActiveObservation } from "@langfuse/tracing"
 import { z } from "zod"
 import { createLangfuseClient, langfuseSettings, type LangfuseEnvironment } from "../../services/langfuse/client"
-import { startLangfuseTelemetry } from "../../services/langfuse/telemetry"
+import { startNodeTelemetry } from "../../services/sentry/nodeTelemetry"
 import { redactCredentials } from "../conversations/redactCredentials"
 import { assertSafeArtifact, datasetSchema, digest, type EvalCase, type EvalScore } from "./contracts"
 
@@ -239,10 +239,12 @@ export function createEvalLangfuse(environment: LangfuseEnvironment) {
       return { judge: await get("legislative-research-judge"), critic: await get("legislative-research-critic") }
     },
     startTracing() {
-      const telemetry = startLangfuseTelemetry({
-        ...langfuseSettings(environment),
-        environment: "evaluation",
-        mediaUploadEnabled: false
+      const telemetry = startNodeTelemetry({
+        langfuse: {
+          ...langfuseSettings(environment),
+          environment: "evaluation",
+          mediaUploadEnabled: false
+        }
       })
       return { shutdown: telemetry.shutdown }
     }

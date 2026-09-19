@@ -69,3 +69,7 @@ Next route/page paths through the runtime normalizer, not Markdown tables.
 Coverage acceptance stays `pending`: query descriptors are inputs for future saved-query implementation, not existing
 Sentry dashboards. All new collection remains unwired until the privacy, runtime, consent and feature tasks install
 their respective adapters/producers and complete browser/vendor acceptance.
+
+The [browser runtime](browser-telemetry.md) now provides the native Web Vitals producer, still behind the disabled
+metric switch. Its metric schemas require a native `hard`/`back_forward` navigation dimension; soft route spans are
+not additional native Web Vital page visits.

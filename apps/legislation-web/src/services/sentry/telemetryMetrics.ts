@@ -16,6 +16,7 @@ const outcome = { outcome: f.outcome }
 const chat = { origin: f.origin, outcome: f.responseOutcome }
 const tool = { tool_name: f.tool }
 const api = { ...route, method: f.method, status_class: f.statusClass, caller: f.caller }
+const webVital = { ...route, device: f.device, navigation: z.enum(["hard", "back_forward"]) }
 
 export const telemetryMetrics = {
   "rostra.page.view": metric("counter", "none", "web", { ...route, navigation: f.navigation, device: f.device }),
@@ -32,9 +33,9 @@ export const telemetryMetrics = {
     ...outcome,
     device: f.device
   }),
-  "rostra.web_vital.lcp": metric("distribution", "millisecond", "web", { ...route, device: f.device }),
-  "rostra.web_vital.inp": metric("distribution", "millisecond", "web", { ...route, device: f.device }),
-  "rostra.web_vital.cls": metric("distribution", "none", "web", { ...route, device: f.device }),
+  "rostra.web_vital.lcp": metric("distribution", "millisecond", "web", webVital),
+  "rostra.web_vital.inp": metric("distribution", "millisecond", "web", webVital),
+  "rostra.web_vital.cls": metric("distribution", "none", "web", webVital),
   "rostra.search.duration": metric("distribution", "millisecond", "platform", {
     search_kind: f.searchKind,
     origin: f.origin,

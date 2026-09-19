@@ -1,6 +1,6 @@
 import { propagateAttributes } from "@langfuse/tracing"
 import { expect, it, vi } from "vitest"
-import { startLangfuseTelemetry } from "../../services/langfuse/telemetry"
+import { startNodeTelemetry } from "../../services/sentry/nodeTelemetry"
 import { createAnalyticsTelemetry } from "./analytics-telemetry"
 
 const sentry = vi.hoisted(() => ({
@@ -9,25 +9,28 @@ const sentry = vi.hoisted(() => ({
   setAttribute: vi.fn<(...parameters: unknown[]) => void>(),
   setAttributes: vi.fn<(...parameters: unknown[]) => void>()
 }))
-vi.mock("@sentry/core", () => ({
+vi.mock("@sentry/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@sentry/core")>()),
   captureException: sentry.captureException,
   startSpan: async (_options: unknown, operation: (span: typeof sentry) => Promise<unknown>) => await operation(sentry)
 }))
 
 it("exports correlated analytics stages and scrubbed failure metadata", async () => {
   const spans: { name: string; attributes: Readonly<Record<string, unknown>>; traceId: string }[] = []
-  const exporter = startLangfuseTelemetry({
-    publicKey: "test-public",
-    secretKey: "test-secret",
-    mediaUploadEnabled: false,
-    exporter: {
-      export(batch, callback) {
-        for (const span of batch) {
-          spans.push({ name: span.name, attributes: span.attributes, traceId: span.spanContext().traceId })
-        }
-        callback({ code: 0 })
-      },
-      shutdown: async () => undefined
+  const exporter = startNodeTelemetry({
+    langfuse: {
+      publicKey: "test-public",
+      secretKey: "test-secret",
+      mediaUploadEnabled: false,
+      exporter: {
+        export(batch, callback) {
+          for (const span of batch) {
+            spans.push({ name: span.name, attributes: span.attributes, traceId: span.spanContext().traceId })
+          }
+          callback({ code: 0 })
+        },
+        shutdown: async () => undefined
+      }
     }
   })
   const telemetry = createAnalyticsTelemetry()

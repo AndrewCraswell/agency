@@ -25,7 +25,7 @@ Enabling one requires its own data contract and envelope tests, not only an SDK 
 | Signal | Retained | Removed |
 | --- | --- | --- |
 | Errors | Native/registered error type, bounded cause chain, line/column, debug IDs, approved operational tags and numeric measurements | Arbitrary messages, raw error objects, user/request/extra contexts, source text, locals, function/module text, arbitrary fingerprints |
-| Stack locations | Hex-named Next static chunks without origin/query/fragment; recognized compiled app paths normalized to route templates | External/source paths and filenames outside the bounded asset contract, credentials and path identifiers |
+| Stack locations | Hex or 13-character Turbopack-hash Next static chunks without origin/query/fragment; recognized compiled app paths normalized to route templates | External/source paths and filenames outside the bounded asset contract, credentials and path identifiers |
 | Citation errors | Existing static citation-resolution fingerprint and approved outcome/count metadata | Citation hashes, source text and selected record identity |
 | Traces | Trace/span/parent IDs, finite times, fixed operation names, approved numeric/enum metadata | SQL, prompts, outputs, raw span descriptions, URLs, arbitrary links/events and inherited content |
 | Logs | Complete registered semantic event, validated metadata and its per-event attributes | Free-form/parameterized messages, unknown fields, SDK user/request metadata |

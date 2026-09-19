@@ -1,5 +1,6 @@
 import type { ErrorEvent, Log, SpanJSON, TransactionEvent } from "@sentry/core"
 import { describe, expect, it, vi } from "vitest"
+import { safeCodeLocation } from "./sentryPayloadFields"
 import { createSentryPrivacy } from "./sentryPrivacy"
 import { projectSentrySpan } from "./sentrySignalProjection"
 
@@ -160,6 +161,15 @@ function logFixture(): Log {
 }
 
 describe("allowlisted Sentry payloads", () => {
+  it("retains actual Turbopack chunk hashes without retaining arbitrary source paths", () => {
+    expect(safeCodeLocation("http://user:secret@localhost/_next/static/chunks/293gsag4bq8qh.js?token=PRIVATE")).toBe(
+      "/_next/static/chunks/293gsag4bq8qh.js"
+    )
+    expect(safeCodeLocation("http://localhost/_next/static/chunks/0-z3mje-s-poc.js")).toBe(
+      "/_next/static/chunks/0-z3mje-s-poc.js"
+    )
+    expect(safeCodeLocation("http://localhost/_next/static/chunks/PRIVATE_RESEARCH.js")).toBeUndefined()
+  })
   it("rejects malformed event roots instead of fabricating error events", () => {
     const onDiagnostic = spy()
     const privacy = createSentryPrivacy({ onDiagnostic })

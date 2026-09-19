@@ -497,3 +497,15 @@ The final repository verification passed check/coverage and Python tests (123 ru
 acceptance startup: `/health` returned 500 because the instrumentation hook rejected a telemetry first-party URL.
 Database suites without configured databases were skipped; this run does not replace the earlier isolated PostgreSQL
 replay checks. The telemetry changes belong to separate work and were not modified for Washington onboarding.
+
+## Production meeting canary
+
+At 2026-09-19T08:07:38Z, the retained approved runner extraction for January 13, 2025 was promoted through
+`prepareWashingtonEventWindow` and the shared `upsertEventSnapshots` writer. Production contained all 11 expected
+meetings and 35 agenda items, with 11 resolved committee links and zero incomplete host relationships. Checked names,
+statuses, start instants, publisher-local dates and timezones matched preparation. A repeated call with the same
+immutable receipt was a no-op. Evidence is `reports/production-canary.json` in the event-window artifact store.
+
+This is a bounded production canary, not full calendar coverage, cancellation coverage for this particular day,
+or proof that every agenda bill relationship resolves. The prior isolated multi-day fixture covers cancellation behavior.
+Hosted execution, complete planned windows, authenticated retrieval and recurring synchronization remain open.

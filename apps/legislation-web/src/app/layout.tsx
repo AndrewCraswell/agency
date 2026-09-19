@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Fraunces, IBM_Plex_Mono, Newsreader, Public_Sans } from "next/font/google"
 import Script from "next/script"
 import type { ReactNode } from "react"
+import { BrowserWebVitals } from "../components/telemetry/BrowserWebVitals"
 import { themeInitializationScript } from "../components/theme/theme"
 import { ChatProviders } from "../modules/conversations/components/ChatProviders"
 import "./styles.css"
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </Script>
       </head>
       <body>
+        <BrowserWebVitals />
         <ChatProviders>{children}</ChatProviders>
       </body>
     </html>

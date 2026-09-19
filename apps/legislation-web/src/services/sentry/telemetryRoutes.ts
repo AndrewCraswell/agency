@@ -147,7 +147,7 @@ export function resolveTelemetryRoute(pathname: string) {
   )
   const route = match?.route ?? (path.startsWith("/api/") ? "/api/[...path]" : "/_unmatched")
   const surface = surfaceForRoute(route)
-  return { route_template: route, surface }
+  return { route_template: route, surface } as const
 }
 
 function surfaceForRoute(route: z.infer<typeof telemetryRouteSchema>): z.infer<typeof telemetrySurfaceSchema> {

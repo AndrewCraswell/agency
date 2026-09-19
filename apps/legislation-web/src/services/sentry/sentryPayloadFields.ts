@@ -132,6 +132,7 @@ const metadataFields = {
   outcome: z.union([f.outcome, f.responseOutcome, z.enum(["success", "error"])]),
   "http.request.method": f.method,
   "http.response.status_code": z.number().int().min(100).max(599),
+  "rostra.navigation.kind": f.navigation,
   "analytics.duration_ms": f.duration,
   "analytics.row_count": f.count,
   "analytics.database_rows": f.count,
@@ -155,7 +156,7 @@ export function safeCodeLocation(value: unknown): string | undefined {
     return undefined
   }
   const path = value.replaceAll("\\", "/").split(/[?#]/u)[0] ?? ""
-  const asset = /(?:^|\/)(_next\/static\/chunks\/[a-f0-9]{8,64}\.(?:js|mjs))$/u.exec(path)?.[1]
+  const asset = /(?:^|\/)(_next\/static\/chunks\/(?:[a-f0-9]{8,64}|[a-z0-9_-]{13})\.(?:js|mjs))$/u.exec(path)?.[1]
   if (asset) {
     return `/${asset}`
   }
