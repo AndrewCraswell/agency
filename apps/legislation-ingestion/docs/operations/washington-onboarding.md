@@ -816,3 +816,14 @@ only deeply equal observations with the same stable observation key. Conflicting
 the immutable source archive preserves every occurrence. Nine normalization tests and ingestion type-checking passed.
 Read-only normalization of the actual failed archive now accepts all ten requested bills, HB 1010 through HB 1019.
 Deployment and resumed hosted promotion are still required; no production records were written by this replay.
+
+Candidate `20260919.22` (`movd9unx`) deployed successfully without promotion, including sponsorship-date selection,
+bounded reconciliation queries and exact-duplicate sponsorship handling. After confirming the previous second-batch run
+was terminal `FAILED`, one idempotent corrected retry was submitted as `run_06gbi7ej2292ne2qhls69ank01`, pinned to that
+version and the same frozen batch. It was observed `EXECUTING`; this is not yet a committed promotion receipt.
+
+Calendar receipts now confirm 13 completed windows and 77 pending. The local operator process (PID 71844) is absent,
+but window `37548bc9ec87d291f52b2fa135a85ee0e65aa6557507934ff22da00ea3a79528` retains unreleased ownership for
+`wa-event-fc8e8e7b-eb2f-45a0-a045-0b0ee667b0f8`, with no retained manifest or settlement marker. No ownership was
+cleared and no duplicate calendar execution was launched. Safe recovery must establish dispatch/worker settlement,
+not assume lease age or a missing local process means a cloud request cannot still execute.
