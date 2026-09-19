@@ -2,7 +2,9 @@
 
 Proposed September 18, 2026. Implements the [telemetry specification](../engineering/telemetry-spec.md) and
 [coverage catalog](../engineering/telemetry-events.md). Targets below are initial engineering proposals, not measured
-baselines, contractual SLOs or claims about the current Sentry plan.
+baselines, contractual SLOs or claims about the current Sentry plan. The September 19, 2026 UTC
+[approved policy and named accountability](../engineering/telemetry-spec.md#approved-policy-limits) supersede earlier
+retention/budget proposals, but do not establish configured controls, free entitlements or rollout readiness.
 The [conversation and composer contract](../engineering/conversation-telemetry.md) adds its detailed funnel, latency
 waterfall, reference-use, clarification and recovery dashboard plus interaction-level acceptance cases.
 The [tool execution contract](../engineering/tool-execution-telemetry.md) adds per-tool latency/outcome/size views,
@@ -22,7 +24,7 @@ Exclude illustrative homepage answers and evidence from live research activation
 | Are visitors reaching value? | Sessions with a completed substantive answer rendered / sessions with a conversation submission, within 30 minutes of first submission | Also report clarification, partial, cancelled, exhausted, failed and unknown; this is perceived completion, not evaluated correctness |
 | Are users checking evidence? | Sessions with a citation/source opened after a rendered answer / sessions with a rendered cited answer, within the same 30-minute window | Opening is not reading, agreement or verification |
 | Does search help? | Successful zero-result searches / successful searches; result-selection rate for displayed result sets; reformulation frequency | No query text; cancellation and failure are not zero results; result click is not relevance proof |
-| How many active users? | Distinct approved authenticated pseudonyms with a meaningful action per UTC day and trailing 7/30 days | No stable ID approval means session counts only, not DAU/WAU/MAU; distinguish authenticated from anonymous |
+| How many active users? | Distinct approved authenticated pseudonyms with a meaningful action per UTC day and trailing 7/30 days | Pseudonymous usage policy is approved; until identity/consent/storage controls pass, use session counts only, not DAU/WAU/MAU; distinguish authenticated from anonymous |
 | Do researchers return? | Users with another meaningful action in days 7-13 or 30-36 after first observed meaningful action / eligible first-action cohort with a fully elapsed window | Requires retained, unsampled, deduplicated identity-bearing events; first observed is not necessarily first-ever use |
 | Where does a journey stop? | Ordered, same-session home view -> conversation submission -> answer rendered -> evidence opened, within 30 minutes; report direct entries separately | Missing next event means "not observed", not deliberate abandonment; background tabs and blocking can cause loss |
 | Are future paid workflows useful? | Issue reuse, reviewed brief output, follow-to-reviewed-update and authorized team review, when those workflows ship | Define denominators from actual eligible users/workspaces; do not graph unshipped features as zero adoption |
@@ -69,6 +71,10 @@ Rate-limit denial has its own rate and reason, including intentional customer li
 
 ## Dashboards and alerts
 
+Andrew Craswell is the confirmed accountable owner for the platform, web, research, product, privacy, on-call/alerts
+and budget roles. Dashboard roles below identify responsibilities, not automatic implementation assignments. Release
+execution and each report's evidence still require an explicit handoff.
+
 | Dashboard | Required panels | Owner |
 | --- | --- | --- |
 | Product usage | Observed sessions, feature initiation/completion, activation, evidence use, search zero results, qualified funnels/retention | Product |
@@ -93,7 +99,9 @@ Initial alert policy, subject to on-call approval:
 - **Ticket:** p95 latency exceeds its approved target for 30 minutes with >=100 measurements, or the comparable
   release cohort is >20% slower with >=200 measurements in both cohorts. Small samples show insufficient data.
 - **Ticket:** telemetry canary missing for 10 minutes, drop/rejection rate >1% for 15 minutes with >=100 emissions,
-  or projected monthly spend/volume exceeds 80% of the approved budget.
+  or usage reaches 80% of a verified Sentry free/trial or Langfuse Core included allowance. Only the existing Core
+  $29/month base is approved; stop before additional charges, overages or trial conversion. Alerts are not hard caps
+  and never establish spending authorization or no-overage enforcement.
 - **Privacy incident:** any confirmed prohibited content in an exported payload stops the affected signal immediately
   and invokes incident/deletion handling. Do not resend the payload to another diagnostic system.
 
@@ -103,7 +111,8 @@ identity data. Use an independent monitor for collector failure rather than trus
 
 ## Sampling, costs and overhead
 
-Initial proposal for an approved production pilot:
+Production sampling proposals below are not authorization to enable production collection. The only current external
+validation authorization is the bounded nonproduction canary described below, after instrumentation/masking readiness.
 
 | Signal | Collection policy |
 | --- | --- |
@@ -114,16 +123,40 @@ Initial proposal for an approved production pilot:
 | Traces | 10% root sampling, consistent parent decisions on trusted internal traffic, bounded local override; exclude routine health/static asset noise |
 | Web Vitals | One finalized measurement per eligible page/vital; emit without trace sampling; consent policy still applies |
 | Replay | Off initially; after privacy acceptance, at most 1% of consenting sessions and 10% error-buffer sessions |
-| Local/test environments | No external collection by default; explicit synthetic validation cohort uses full sampling in a nonproduction project |
+| Local/test environments | No external collection by default; only the explicitly bounded nonproduction synthetic canary below is conditionally authorized |
 
 Head sampling cannot recover a discarded successful/slow/error trace later. Errors can be captured independently;
 missing linked traces are expected and must be labeled. Raising sampling for a canary is time-bounded and must not
 override consent. Keep vendor-default log/AI/replay integrations explicit so an SDK upgrade cannot expand collection.
 
-Before rollout, measure a representative day: metric records, log bytes, sampled traces/spans, replay minutes, eligible
-sessions and per-session egress. Forecast monthly use as daily measured volume times 30 times expected traffic growth,
-then price each signal using the actual account contract. Include logs+metrics duplication, Langfuse and headroom.
-Privacy and platform owners approve a currency budget and per-signal quotas; none are presumed here.
+Sentry is free/trial only. Keeping the existing Langfuse Core $29/month base is the sole paid exception; no additional
+paid telemetry, overages, purchases, upgrades or paid model calls for the canary are authorized. Hypothetical paid plans
+remain unapproved. The manager verified Core and displayed usage of 17,858 for September 18 to October 18, 2026;
+that dated snapshot is neither a remaining-allowance calculation nor proof of a hard cap.
+
+Before any external collection, verify remaining Sentry free/trial and Langfuse Core included allowances, trial expiry
+and controls preventing additional charges; recheck US Sentry configuration. Stop if compliant limits cannot be proved:
+billing alerts do not enforce a hard cap. The retention maxima in the parent specification are ceilings, not evidence
+that the account supports or enforces them. Aggregate `traceMetric` retention up to 396 days requires verified absence
+of user/workspace/session/trace IDs and research content; the internal field name alone does not prove a separate or
+non-identifying storage class. Application Metrics stay at 30 days; the 396-day aggregate exception cannot be applied
+to that class merely because an internal retention field has a different name.
+
+Estimate signal volume and egress offline first. Include logs/metrics duplication, each destination, Langfuse and
+headroom. A representative production day and production traffic-growth forecast remain future acceptance work,
+not permission to exceed the currently authorized synthetic canary.
+
+### Authorized nonproduction canary
+
+After instrumentation and masking readiness, at most **100 application telemetry events/observations total plus one
+synthetic replay lasting at most two minutes** may be sent. Account for every application event/observation across
+signals and destinations, including retries/duplicate exports, within the shared cap; the replay is the sole separately
+bounded artifact. Establish stop controls and remaining approved included allowances before sending anything.
+
+Use synthetic data only, no real customer data or paid model calls. No additional paid telemetry beyond the existing
+Langfuse Core $29/month base, overages, purchases, upgrades or production enablement. If readiness, masking, remaining
+approved allowances or enforceable no-overage controls remain unverified, do not
+start. Approval of this small validation exercise is not completed canary evidence or full rollout acceptance.
 
 Overhead acceptance against telemetry-off baseline on the same build/device/network:
 
@@ -141,12 +174,12 @@ If a budget fails, reduce payloads/sampling or defer the signal; do not silently
 
 | Gate | Deliverable and evidence |
 | --- | --- |
-| 1. Approve collection | Named owners, field catalog, consent/identity/retention policy, region/plan capabilities, query feasibility and cost ceiling |
+| 1. Approve collection | Named accountability, US region, retention/pseudonym policy, Sentry free/trial and existing Langfuse Core $29/month base are approved; no additional paid telemetry or overages. Field catalog, actual consent/identity/retention/masking controls, remaining allowances, query feasibility and no-overage enforcement still require evidence |
 | 2. Wire foundations | One provider per runtime, destination-filtered Sentry/Langfuse exports, browser-to-server correlation, concurrent-request isolation and safe failure handling |
 | 3. Cover current surfaces | Every shipped catalog row mapped to its producer, meaningful actions, terminal states, metrics, query and verification evidence; API-only routes explicitly included |
 | 4. Validate reports | Synthetic known-count dataset proves deduplication, metric denominators, percentiles, consent cohorts and proposed funnel/retention queries; expected values documented |
-| 5. Production canary | Authorized internal cohort first, then 10% of eligible consenting usage sessions for seven days; operational coverage governed separately; show actual ingest, privacy and cost evidence |
-| 6. Expand and maintain | Expand only with approval and all gates met; remaining shipped surfaces cannot be marked complete until their rows pass; review catalog on each feature change |
+| 5. Nonproduction canary | Only after readiness: the 100-event/observation total and one synthetic replay of at most two minutes above; retain actual ingest, masking, quota and stop evidence |
+| 6. Production and expansion | Not authorized by this policy approval; obtain separate authorization after all relevant gates pass, without additional paid collection beyond the existing Core base or overages; remaining shipped rows must pass and the catalog must track feature changes |
 
 Implementation tests cover executable event contracts and emitters, not this prose:
 

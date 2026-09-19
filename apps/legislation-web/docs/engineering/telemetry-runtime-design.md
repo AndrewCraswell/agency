@@ -1,14 +1,18 @@
 # Telemetry runtime ownership and sampling
 
 Implementation design for LEG-25, September 18, 2026. This resolves the runtime design in the
-[telemetry specification](telemetry-spec.md); it does not approve production collection, a new dependency or a budget.
+[telemetry specification](telemetry-spec.md); this design does not itself approve production collection or a new dependency.
+The parent specification records the approved US/retention policy, Sentry free/trial restriction, existing Langfuse
+Core $29/month base exception and bounded nonproduction canary. No additional paid telemetry or overages are approved;
+the verified Core plan/usage snapshot does not establish enforceable caps or implementation readiness.
 Implement through the existing foundation tasks, with the full [acceptance gate](../operations/telemetry-acceptance.md).
 
 ## Pinned interfaces and current ownership
 
-Reviewed installed public interfaces and implementation behavior for `@sentry/nextjs` / `@sentry/opentelemetry`
-10.73.0, `@langfuse/otel` 5.11.1 and `@opentelemetry/sdk-node` 0.221.0. The installed SDK uses OpenTelemetry API 1.9.1
-and trace-base 2.10.0. Recheck resolved versions when changing manifests; do not rely on an older integration example.
+The original design probe reviewed installed public interfaces and implementation behavior for
+`@sentry/nextjs` / `@sentry/opentelemetry` 10.73.0, `@langfuse/otel` 5.11.1 and `@opentelemetry/sdk-node` 0.221.0,
+with OpenTelemetry API 1.9.1 and trace-base 2.10.0. The Node implementation below replaces NodeSDK and removes that
+dependency. Recheck resolved versions when changing manifests; do not rely on an older integration example.
 
 At the original design baseline, Next instrumentation started a Langfuse-owned NodeSDK before separate Sentry
 initialization. The [shared Node implementation](node-telemetry.md) now replaces that split with one provider and
@@ -23,7 +27,8 @@ Conversation call sites consume the shared lifecycle instead of creating runtime
 1. From Next's Node-only `register` branch, validate configuration and initialize the Sentry client with automatic
    provider setup skipped. Enable only audited integrations, not the full automatic AI/console/body collection set.
 2. Construct the SDK-supported Sentry context manager, propagator, sampler and span processor. Use the supported
-   `SentryContextManager` export with the pinned SDK; do not hand-roll async context or copy deprecated wrappers.
+   `SentryAsyncLocalStorageContextManager` export from `@sentry/opentelemetry`, as documented in the
+   [Node owner](node-telemetry.md); do not hand-roll async context or copy deprecated wrappers.
 3. Construct the Langfuse processor only when configured and permitted. Register the existing AI SDK telemetry
    integration once. Keep media upload disabled and its existing content-policy mask explicitly configured.
 4. Register exactly one provider with the composite sampling/processor policy below. The implementation uses public

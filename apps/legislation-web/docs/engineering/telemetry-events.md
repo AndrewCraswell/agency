@@ -10,6 +10,11 @@ wrapper/dependency stages, retries and performance attribution.
 
 ## Current application coverage
 
+Andrew Craswell is the confirmed accountable platform, web, research, product, privacy, on-call/alerts and budget
+owner for this catalog. Platform owns HTTP/runtime boundaries; web owns browser intent/render observations; research
+owns domain/tool/model outcomes; product owns report meanings; privacy owns permitted collection; on-call owns alerts.
+This is role accountability, not automatic implementation assignment or accepted instrumentation evidence.
+
 Source inventory as of September 18, 2026. Implemented code does not establish live deployment, enabled credentials,
 data coverage or customer acceptance. The current browser is primarily home, conversation and contextual record
 profiles; the HTTP API is substantially broader. Both are in scope.

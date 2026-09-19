@@ -1,8 +1,9 @@
 # Web application telemetry specification
 
-Status: proposed implementation contract, September 18, 2026. Scope: Rostra's `legislation-web` browser, Next.js
-server/edge runtimes, HTTP API and their dependency boundaries. This document does not enable collection, approve a
-vendor plan or claim production coverage. "Full coverage" means every shipped workflow has usage, outcome,
+Status: implementation contract proposed September 18, 2026; policy and accountability approved September 19, 2026 UTC
+as recorded below. Scope: Rostra's `legislation-web` browser, Next.js server/edge runtimes, HTTP API and their dependency
+boundaries. This document does not enable collection, approve a new paid vendor plan or claim production coverage.
+"Full coverage" means every shipped workflow has usage, outcome,
 performance and failure visibility, not recording every click or collecting research content.
 
 Companion contracts: [event and coverage catalog](telemetry-events.md) and
@@ -151,24 +152,54 @@ Field allowlists are the primary defense; existing credential redactors are defe
 | AI | Safe model/provider IDs, token counts, timing and outcome only; no reasoning or prompts/outputs in Sentry; existing Langfuse content policy requires separate access/retention review |
 
 Separate essential operational collection from optional usage/replay under a privacy-owner-approved lawful basis and
-regional consent policy. Until approved, optional usage and replay remain off. Do not start error-buffered replay before
-consent. Honor applicable opt-out/GPC requirements; withdrawal stops optional emission/recording and clears queued
+regional consent policy. The approved limits below do not establish implemented consent or legal/compliance controls;
+optional usage and replay remain off until those gates pass. Do not start error-buffered replay before consent.
+Honor applicable opt-out/GPC requirements; withdrawal stops optional emission/recording and clears queued
 optional events and local identifiers. Sign-out/account or workspace switches clear context; no cross-user attribution.
 
 Anonymous usage uses a random per-tab telemetry session, rotated after 30 minutes of inactivity, on sign-out or after
 24 hours maximum. No fingerprinting, IP identity or cross-device stitching. Authenticated retention/unique-user reports
 require a server-derived, environment-specific keyed pseudonym with approved purpose and retention; hashing an email
 is not sufficient. Keys stay server-side. Do not retroactively link pre-consent or anonymous history at sign-in.
-Workspace segmentation is off until an authorized workspace actually exists and its privacy/access policy is approved.
+Pseudonymous user/workspace usage is approved within the limits below, without names, emails or research text.
+Workspace segmentation stays off until an authorized workspace actually exists and its access/isolation controls pass;
+policy approval does not ship a workspace feature.
 
 Replay remains disabled until text/input masking, media blocking, sensitive-container blocking, safe URL handling and
 disabled body/header/console capture pass envelope inspection. Conversation, search, address, settings/secrets and
 future issue/brief content need explicit blocking even when text masking is on. Replay is never an audit trail.
 
-Proposed maximum vendor retention: replay 7 days, logs and traces 30 days, errors 90 days, anonymous aggregate metrics
-90 days. Identity-bearing usage records may extend to 90 days only with approval for 30-day retention reporting.
-Verify plan support, region, deletion support and access controls; shorter supported retention is acceptable with
-documented reporting limitations. Unsupported required deletion/retention blocks that signal, not a best-effort promise.
+### Approved policy limits
+
+Andrew Craswell approved US Sentry and the following maximum retention on September 19, 2026 UTC:
+
+| Data class | Approved maximum and restrictions |
+| --- | --- |
+| Masked replay | 90 days; masking and sensitive-container blocking must pass before recording |
+| Pseudonymous user/workspace usage | 90 days; no names, emails, raw identities or research text |
+| Logs, detailed spans and Application Metrics | 30 days |
+| Errors | 90 days |
+| Aggregate `traceMetric` | 396 days only after verifying absence of user, workspace, session and trace IDs, including pseudonyms, and all research content |
+
+The usage ceiling does not override its storage class: usage held in logs remains limited to 30 days. An internal
+`traceMetric` retention field alone does not prove a representation is separate from Application Metrics or
+non-identifying. Verify the actual retained aggregate before applying the 396-day exception; if identifier/content
+exclusion cannot be proved, disable that path until compliant handling is verified.
+
+Sentry remains free/trial only. The sole approved paid exception is keeping the existing Langfuse Core **$29/month
+base**; no additional paid telemetry, overages, new purchases or upgrades are authorized. Previously hypothetical paid
+plans are not approved. The manager verified the actual Core plan and displayed usage of 17,858 for the September 18
+to October 18, 2026 period after authenticating billing. This is a dated usage snapshot, not a remaining-allowance
+calculation or evidence of a hard spending cap.
+
+Collection must fit verified Sentry free/trial entitlements or the existing Langfuse Core included allowance, with
+controls preventing additional charges. Billing alerts are not hard caps. Trial expiration or exhausted allowance
+must stop affected collection before additional billing, not trigger automatic conversion or an upgrade.
+Before collection, recheck the approved US region and verify actual retention/deletion settings, masking, access
+controls, remaining included allowances and no-overage enforcement. Shorter supported retention is acceptable with
+documented reporting limits.
+Unsupported required controls block that signal, not a best-effort promise or permission to buy support.
+
 Engineering/on-call gets operational access; product gets aggregate usage; content-bearing Langfuse and replay access
 is separately restricted. Document subject deletion, incident cleanup, backups/vendor limitations and retention-key
 rotation before collecting stable actor identifiers.
@@ -177,14 +208,21 @@ rotation before collecting stable actor identifiers.
 
 Application platform owns initialization, contracts, correlation and collector health. Feature owners own catalog rows
 and truthful outcomes. Product owns KPI definitions; privacy owns collection/identity/retention; on-call owns alerts.
-Assign named owners in the implementation work items before rollout.
+Andrew Craswell is the user-confirmed accountable owner for platform, web, research, product, privacy, on-call/alerts
+and budget. This confirms the role ownership of the current coverage catalog, not implementation assignment of every
+issue to Andrew. Individual implementation assignees and acceptance evidence remain separate.
 
-Approval gates: lawful basis/consent and identity policy; vendor region/retention/quotas and monthly budget; whether
-Sentry can actually compute the requested funnels/cohorts; replay masking; and the shared OpenTelemetry sampling plan.
-Defaults and thresholds in this specification are proposals, not contractual SLOs or authorization to purchase tools.
+The region, retention, pseudonymous usage and budget decisions above, including the existing Langfuse Core base
+exception, are approved policy. Remaining gates
+include lawful-basis/consent controls, verified vendor capabilities/settings, query feasibility, replay masking, runtime
+isolation and sampling acceptance. Other defaults and thresholds remain proposals, not contractual SLOs.
 
 Implementation proceeds through privacy/runtime foundations, current-workflow coverage, dashboards/alerts and a
-measured production canary. Future product workflows add their catalog rows when shipped. See
+conditionally authorized nonproduction synthetic canary: at most 100 application telemetry events/observations total
+plus one synthetic replay of at most two minutes, only after instrumentation and masking readiness. No real customer
+data, paid model calls, overages or production enablement are authorized. No canary has been run by this documentation
+approval; rollout readiness is not established. Production collection/canary requires separate authorization.
+Future product workflows add their catalog rows when shipped. See
 [acceptance and rollout](../operations/telemetry-acceptance.md) for gates and rollback.
 
 ## Vendor references
