@@ -7,6 +7,18 @@ North Carolina drains. No new provider, database or embedding model is approved 
 
 ### Latest verified release and replay checkpoint
 
+All 90 initial calendar windows have committed, verified receipts. The second retained replay canary
+`run_06gbkfn6qdifo75cihsbolq401` completed with 86 events, 86 organization links and 344 bill links; independent
+PostgreSQL read-back confirmed those counts against its retained source IDs. After confirming no active calendar
+or replay runs and validating all plan receipts, all 90 replay identities were dispatched on version 36 using
+global per-window idempotency keys (the two canaries reused their existing runs). Dispatch 49027 completed.
+Latest task inventory: four completed, one executing, 85 queued, no failures; actual concurrency is one.
+The final queued run is `run_06gbkgdd64533pmrj8394vn201`. Full replay acceptance remains open until all results
+and unresolved source relationships are inspected. Bills are at 77/342 committed batches with one live owner.
+Full `pnpm verify` including the new persistence test passed (88420); its default database skips do not replace
+the explicit positive isolated PostgreSQL run described below. Alias dry run 34440 completed through HB 1329;
+guarded apply is active as 2901. Keep the verified cleanup cursor at HB 1304 until apply and repeat dry run finish.
+
 Trigger `20260919.36` deployed without promotion (`hx6dcxkp`, 71 tasks,
 image `24e1187ae6892ffc53bc058ae5b1860203bc859029d51973eeb309ec91a492a6`). Retained replay canary
 `run_06gbkf7vr8hosh58qsj92qdt01` completed: 39 events, 38 organization links, zero bill links.
