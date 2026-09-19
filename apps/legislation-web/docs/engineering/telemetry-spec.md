@@ -11,6 +11,8 @@ The [conversation and composer contract](conversation-telemetry.md) defines deta
 turn correlation, streaming/render milestones, clarification and recovery without collecting private text.
 The [tool execution contract](tool-execution-telemetry.md) owns per-call outcomes, stage timing, retries, parallelism,
 result budgets and tool/model cost attribution.
+The [runtime ownership design](telemetry-runtime-design.md) resolves pinned-SDK provider initialization,
+sink-independent sampling and export isolation, with local feasibility evidence.
 The [product specification](../product/product-spec.md) continues to own product scope. Telemetry must not ship a
 planned product feature merely to fill a dashboard.
 
