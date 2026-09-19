@@ -536,3 +536,16 @@ that assertion to the shared resolver, which marks the collection complete only 
 uniquely in its jurisdiction/session. Existing adapters retain their prior completeness claims unless they explicitly
 opt into the verified-list contract. Nineteen focused tests, ingestion type-check and scoped lint passed; full repository
 verification is running. Production replay/API verification of this fix remains pending.
+
+Production replay of that fix passed at 2026-09-19T08:14:06Z: 11 meetings, 35 agenda items, 11 committee links and
+13 bill links; all 35 agenda bill-reference collections were complete, including source-declared empty collections.
+Authenticated `get_event` then returned the House Housing agenda's exact canonical bill IDs: HB 1003, HB 1096 and
+HB 1217. The correction replay has its own immutable receipt and a second invocation was a no-op. Evidence is
+`reports/production-agenda-resolution.json` in the event-window artifact store. This closes the observed canary agenda
+exposure defect, not full-calendar ingestion or all relationship acceptance cases.
+
+A sequential semantic passage request scoped to HB 2266 alone also failed after approximately 16 seconds. The failure
+is therefore not limited to concurrent Washington-wide searches. Inspection of `buildSemanticPassageSearchQuery` shows
+bill/document filters are applied after a global bounded nearest-neighbor candidate scan; a bill-scoped request does not
+first restrict the vector population to that bill. Query-plan and latency evidence are still needed before selecting a
+replacement strategy. Do not mask the failure by raising timeouts or claim the cause proven from code inspection alone.
