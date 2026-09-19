@@ -160,3 +160,7 @@ preserves validated current identities/terms while holding conflicting older his
 were added. All 51 current committee rosters passed dependency checks. The 20 historical quarantines remain open.
 Reports: `artifacts/openstates-washington-foundation/reports/isolated-foundation-replay.json` and
 `isolated-membership-replay.json`. These local checks do not establish production import or complete service history.
+
+The cloud bill-request boundary also uses the shared session/identifier profiles. Washington bill requests pass the
+same unique-ID, single-chamber and ten-item limits; Washington events remain rejected. Focused cloud tests and
+ingestion type-checking passed. This does not change hosted activation, approved deployment fingerprints or schedules.

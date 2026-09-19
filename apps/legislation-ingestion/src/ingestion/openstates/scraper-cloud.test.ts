@@ -34,6 +34,17 @@ const request = () => alaskaEventCloudRequest(["H:L&C:2025-01-22T13:30:00-09:00"
 const credential = { getToken: vi.fn(async () => ({ token: "token" })) }
 
 describe("cloud scraper dispatch", () => {
+  it("uses the shared Washington bill profile without admitting unsupported meetings or mixed batches", () => {
+    const washington = billCloudRequest("wa", ["HB 1000", "HB 1001"])
+    expect(washington).toMatchObject({ jurisdiction: "wa", domain: "bills", session: "2025-2026" })
+    expect(scraperCloudPaths("wa-run", washington).manifestPath).toContain("/wa/bills/wa-run/")
+    for (const ids of [["HB1000"], ["HB 1000", "SB 5000"], ["HB 1000", "HB 1000"], []]) {
+      expect(() => billCloudRequest("wa", ids)).toThrow()
+    }
+    expect(() => scraperCloudPaths("wa-run", { ...washington, session: "2025" })).toThrow()
+    expect(() => scraperCloudPaths("wa-run", { ...washington, domain: "events", bill_ids: null })).toThrow()
+  })
+
   it("enqueues one strict extraction request and accepts matching settlement", async () => {
     const store = new Store()
     const paths = scraperCloudPaths("run-1", request())

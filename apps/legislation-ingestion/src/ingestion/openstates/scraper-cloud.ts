@@ -1,13 +1,14 @@
 import { z } from "zod"
 import { createLazyAzureCredential } from "../azure-credential.js"
 import type { ArtifactStore } from "../documents/artifact-store.js"
+import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
 const revision = "d43f853796ceeeb49205f7d144790647764ce105"
 const runIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]{0,100}$/)
 const requestSchema = z
   .strictObject({
-    jurisdiction: z.enum(["ak", "nc"]),
+    jurisdiction: z.enum(["ak", "nc", "wa"]),
     domain: z.enum(["bills", "events"]),
     session: z.string().nullable(),
     timeout_seconds: z.number().int().min(1).max(1500),
@@ -27,12 +28,8 @@ const requestSchema = z
       request.bill_ids !== undefined &&
       new Set(request.bill_ids).size === request.bill_ids.length &&
       new Set(request.bill_ids.map((id) => id[0])).size === 1 &&
-      ((request.jurisdiction === "ak" &&
-        request.session === "34" &&
-        request.bill_ids.every((id) => /^[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}$/.test(id))) ||
-        (request.jurisdiction === "nc" &&
-          request.session === "2025" &&
-          request.bill_ids.every((id) => /^[HS][1-9][0-9]{0,4}$/.test(id))))
+      request.session === scraperBillProfiles[request.jurisdiction].session &&
+      request.bill_ids.every((id) => scraperBillProfiles[request.jurisdiction].identifier.test(id))
     ) {
       return
     }
@@ -175,11 +172,14 @@ export function northCarolinaEventCloudRequest(): CloudScraperRequest {
   })
 }
 
-export function billCloudRequest(jurisdiction: "ak" | "nc", billIds: string[]): CloudScraperRequest {
+export function billCloudRequest(
+  jurisdiction: keyof typeof scraperBillProfiles,
+  billIds: string[]
+): CloudScraperRequest {
   return requestSchema.parse({
     jurisdiction,
     domain: "bills",
-    session: jurisdiction === "ak" ? "34" : "2025",
+    session: scraperBillProfiles[jurisdiction].session,
     timeout_seconds: 1500,
     revision,
     bill_ids: billIds
