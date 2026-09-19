@@ -15,6 +15,10 @@ An unrelated future-state entry cannot disable NC/AK, and unsupported requested 
 Seventeen focused policy/task tests passed. This fix requires deployment and deliberate resumption of terminal failed
 NC scopes after checking current ownership; immutable old workers are not repaired by a local code change. No NC run
 was restarted or cancelled during this inspection.
+The follow-up server-filtered Trigger inspection returned no executing, waiting, queued, delayed, reattempting or
+pending-version content controllers/workers (no further pages). Database inspection found no content locks for
+`nc:all`, `nc:2003` or `nc:2011`. Candidate `20260919.33` is building without promotion after the deployed importer
+contract check passed; successful deployment and resumed-run results are still required.
 
 ## Requirements and evidence
 
@@ -89,7 +93,8 @@ The bill source-error retry progressed successfully; the latest receipt inspecti
 with one next-batch owner. Calendar receipts report 60/90 completed windows. No recurring schedule is enabled.
 The document-alias page after HB 1154 completed 308 audited removals through HB 1179. Read-only replay of that exact
 page found zero remaining candidates and no held groups. Canonical documents and dependent content were preserved.
-The next 25-bill page is undergoing read-only byte verification (193 candidates); its deletions have not begun.
+The following 25-bill page completed 193 audited removals through HB 1204; read-only replay found zero candidates and
+no held groups. The page after HB 1204 is undergoing read-only verification of 307 candidates, with no deletions yet.
 The full ingestion database project also ran against the isolated database: 80 passed and 83 regulatory-specific
 tests skipped because their separate connections were not configured. Those skips are not accepted as passing tests.
 Additional isolated API/database checks passed 18/19 tests. The supporting-material lexical pagination fixture failed
