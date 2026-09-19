@@ -74,9 +74,17 @@ shutdown timeout, with exit 0). Repository coverage and Python then passed in th
 checks reported 233 skipped tests and four passes because most test connections were not configured. Acceptance
 was still running at this observation, so this is not full environment acceptance.
 
-The bill source-error retry progressed successfully to 45 promoted batches with one next-batch owner. A read-only
-document-alias audit after HB 1154 is checking 308 candidates across 25 bills; no deletions have been performed in
-that page yet, and the last completed deletion cursor remains HB 1154.
+The bill source-error retry progressed successfully; the latest receipt inspection reports 48/342 promoted batches
+with one next-batch owner. Calendar receipts report 60/90 completed windows. No recurring schedule is enabled.
+The document-alias page after HB 1154 completed 308 audited removals through HB 1179. Read-only replay of that exact
+page found zero remaining candidates and no held groups. Canonical documents and dependent content were preserved.
+The next 25-bill page is undergoing read-only byte verification (193 candidates); its deletions have not begun.
+The full ingestion database project also ran against the isolated database: 80 passed and 83 regulatory-specific
+tests skipped because their separate connections were not configured. Those skips are not accepted as passing tests.
+Additional isolated API/database checks passed 18/19 tests. The supporting-material lexical pagination fixture failed
+at `schema.integration.test.ts:784`: its first equal-score page returned material 1100 instead of expected 1099 at
+the boundary. This is an open deterministic-pagination acceptance issue, not a production-data finding. The unrelated
+dirty search implementation remains untouched; no broad search acceptance is claimed from these checks.
 
 | Complete | Requirement | Evidence or remaining work |
 | --- | --- | --- |
