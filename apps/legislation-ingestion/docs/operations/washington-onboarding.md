@@ -775,3 +775,14 @@ This establishes the hosted promotion-to-refill path, not full-session completio
 The separate receipt-driven calendar operator has committed eight of 90 windows and remains active.
 Final person reconciliation, document extraction/OCR, embeddings, search synchronization, replay validation and
 authenticated retrieval still require session-wide acceptance before recurring syncing is enabled.
+
+Read-only replay of the first retained batch resolved 780 of 784 vote positions. All four remaining positions identify
+Ramos (HB 1003, 1006, 1007 and 1009), consistent with the held history above. The unresolved sponsor is Scott on HB 1002.
+The publisher's [original HB 1002 text](https://lawfilesext.leg.wa.gov/biennium/2025-26/Htm/Bills/House%20Bills/1002.htm)
+lists Scott and distinguishes prefiling on 2024-12-02 from first reading on 2025-01-13. The retained normalized actions
+preserve those classifications as `filing` and `reading-1`, respectively. The shared aggregate resolver falls back to the
+earliest action when `introducedAt` is absent; reconciliation independently uses the minimum action date. Both therefore
+use the prefiling date for sponsorship tenure. A shared, evidence-based sponsorship observation-date correction is needed
+in both paths, with tests for prefiling, ordinary introductions and unresolved/ambiguous identities. Do not change vote
+dates, invent tenure boundaries, or add a Scott-specific exception. This diagnosis has not yet changed canonical mappings.
+Read-only evidence: `artifacts/openstates-washington-hosted/first-batch-people.json`.
