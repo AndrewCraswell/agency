@@ -19,6 +19,11 @@ param stateSourceContainer string = 'state-sources'
 param dispatchQueueName string = 'openstates-scraper-dispatch'
 param jobName string = 'leg-dev-openstates-scraper'
 
+@description('Maximum simultaneous extraction executions for this queue. Keep canary queues at one.')
+@minValue(1)
+@maxValue(3)
+param maxExecutions int = 3
+
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' existing = {
   name: environmentName
 }
@@ -54,7 +59,7 @@ resource scraper 'Microsoft.App/jobs@2025-01-01' = {
         scale: {
           pollingInterval: 30
           minExecutions: 0
-          maxExecutions: 3
+          maxExecutions: maxExecutions
           rules: [{
             name: 'scraper-queue'
             type: 'azure-queue'

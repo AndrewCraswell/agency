@@ -19,5 +19,11 @@ az deployment group create --resource-group legislation-dev --template-file infr
   image=acrr2jsh7uot4legdev.azurecr.io/openstates-scraper@sha256:<digest>
 ```
 
-The job starts at zero executions and scales to at most three. Per-jurisdiction/domain database ownership remains the
-authoritative non-overlap control; queue scaling is only a global capacity limit.
+The job starts at zero executions and scales to `maxExecutions` (default three, allowed one to three).
+Per-jurisdiction/domain database ownership remains the authoritative non-overlap control; queue scaling is only a
+capacity limit for this queue. Separate jobs do not establish a shared global publisher limit.
+
+For an isolated candidate, reuse this template with a distinct `jobName` and `dispatchQueueName`, plus
+`maxExecutions=1`. Create the queue first and inspect a deployment what-if before applying. Verify the existing job's
+image and queue remain unchanged after deployment. The candidate must use the same pinned build, retained-source
+validation and canonical-promotion boundaries; a successful extraction is not permission to activate regular syncing.
