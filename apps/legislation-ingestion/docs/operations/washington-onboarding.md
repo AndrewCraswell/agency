@@ -167,6 +167,12 @@ Eighteen focused event/window tests, types and lint passed. Reprocessing the exa
 validates both agendas (33418 and 33394, with two and five items); both honestly retain incomplete organization
 relations. Deployment and the resumed hosted calendar receipt remain required before closing this failure.
 
+The HB 1030–1054 cleanup page completed another 123 byte-verified removals and a read-only replay found zero remaining
+candidates or held groups in that page. Resume subsequent cleanup after `bill:wa:2025-2026:hb:1054`; all removed rows
+remain recoverable from audit snapshots. Authenticated HB 1054 detail succeeds with nine documents. Bill receipts have
+reached 40 committed batches with a new active owner. Calendar fix commit `909c726` is building as an unpromoted
+`20260919.27` candidate after the deployed API/importer contract preflight passed; it is not yet calendar acceptance.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
