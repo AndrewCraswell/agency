@@ -3,6 +3,64 @@
 from pathlib import Path
 
 PATCHES = {
+    "scrapers/wa/events.py": [
+        ('''        now = datetime.datetime.now()
+        print_format = "%Y-%m-%d"
+
+        if start is None:
+            start = now.strftime(print_format)
+        else:
+            start = datetime.datetime.strptime(start, "%Y-%m-%d").strftime(print_format)
+
+        if end is None:
+            end = (now + timedelta(days=30)).strftime(print_format)
+        else:
+            end = datetime.datetime.strptime(end, "%Y-%m-%d").strftime(print_format)
+''', '''        # The coordinator owns discovery windows; never silently scrape only future meetings.
+        if not isinstance(start, str) or not isinstance(end, str):
+            raise ValueError("explicit_event_window_required")
+        begin = datetime.date.fromisoformat(start)
+        finish = datetime.date.fromisoformat(end)
+        if begin.isoformat() != start or finish.isoformat() != end or not 0 <= (finish - begin).days <= 6:
+            raise ValueError("invalid_event_window")
+        self.meetings = None
+'''),
+        ('''        event_url = (
+''', '''        if self.meetings is not None:
+            return self.meetings
+        event_url = (
+'''),
+        ('''            if event_cancelled == "true":
+                continue
+''', '''            if event_cancelled not in ("true", "false"):
+                raise ValueError("invalid_event_cancellation")
+'''),
+        ('            event_date = self._tz.localize(event_date)\n',
+         '            if not start <= event_date.date().isoformat() <= end:\n'
+         '                raise ValueError("event_outside_requested_window")\n'
+         '            event_date = self._tz.localize(event_date, is_dst=None)\n'),
+        ('            agenda_id = xpath(row, "string(wa:AgendaId)")\n',
+         '            agenda_id = xpath(row, "string(wa:AgendaId)")\n'
+         '            if not agenda_id.isascii() or not agenda_id.isdecimal() or int(agenda_id) <= 0:\n'
+         '                raise ValueError("invalid_agenda_identity")\n'),
+        ('''                description=notes,
+''', '''                description=notes,
+                status="cancelled" if event_cancelled == "true" else "confirmed",
+                classification="committee-meeting",
+                upstream_id=agenda_id,
+'''),
+        ('''            if bill_id:
+                if bill_id.startswith(("ESB ", "SSB ", "EHB ", "SHB ")):
+                    bill_id = bill_id[1:]
+                item = event.add_agenda_item(desc)
+                item.add_bill(bill_id)
+''', '''            item = event.add_agenda_item(desc)
+            if bill_id:
+                if bill_id.startswith(("ESB ", "SSB ", "EHB ", "SHB ")):
+                    bill_id = bill_id[1:]
+                item.add_bill(bill_id)
+'''),
+    ],
     "scrapers/wa/__init__.py": [
         ("settings = dict(SCRAPELIB_TIMEOUT=300)", "settings = dict(SCRAPELIB_TIMEOUT=60)"),
     ],

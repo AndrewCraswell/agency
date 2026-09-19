@@ -218,3 +218,24 @@ database or Washington-specific persistence pipeline is needed. Events remain di
 
 The preceding full `pnpm verify` run completed successfully. Its optional positive disposable-corpus API acceptance
 was skipped; this is not proof of authenticated Washington retrieval.
+
+## Meeting extraction acceptance (2026-09-19)
+
+The source adapter now requires explicit windows of at most seven inclusive days, reuses one inventory per scrape,
+preserves cancellations and agenda items without bill links, and exports the publisher agenda ID. Invalid cancellation
+values, invalid agenda IDs, out-of-window records and ambiguous/nonexistent Pacific local times fail closed.
+These changes are applied to the digest-verified pinned source, not a separate persistence implementation.
+
+Twenty-six focused Python tests passed inside the existing dependency runtime, including tests exercising the real
+patched scraper and Open States event objects. An offline image rebuild passed source verification and startup smoke.
+The new local runtime is `legislation-openstates-adapter:washington-meeting-fidelity`; it is not a hosted deployment.
+
+A bounded live canary for January 13-19, 2025 extracted 77 distinct agenda IDs, one cancelled meeting and 287 agenda
+items, including 122 items without bill links. Comparison against all retained official XML responses found zero
+meeting identity differences and exact agenda totals. The scraper made 78 requests: one inventory and one per agenda.
+Source bodies, response hashes, extracted events and counts are retained under
+`artifacts/openstates-washington-meeting-canary/`. No canonical database writes were performed.
+
+This closes source-extraction fidelity for that window, not Washington event onboarding. The shared execution boundary,
+immutable window planning, canonical identity/relationship mapping, duplicate-free database replay, hosted deployment
+and recurring event sync remain open. The full repository verification is running after this implementation.
