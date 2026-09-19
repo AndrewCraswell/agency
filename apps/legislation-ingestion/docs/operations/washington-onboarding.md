@@ -133,6 +133,13 @@ tools/openstates/reconcile-document-alias.ts --session-id session:wa:2025-2026 -
 Add `--apply` only to apply the freshly verified repairs. This operator does not introduce a Washington-only cleanup
 engine, extra embeddings, parallel publisher requests or a new recurring schedule.
 
+First bounded production page, HB 1000 through HB 1004: dry-run verified 19 candidates, apply removed all 19 untouched
+aliases, and repeated apply found zero candidates. The two already-processed HB 1000 pairs remained held. Authenticated
+MCP subsequently returned HB 1001 / HB 1003 / HB 1004 successfully with 3 / 10 / 6 documents respectively. Removed
+metadata remains recoverable in the per-alias audit snapshots. The completed cursor is `bill:wa:2025-2026:hb:1004`;
+the next page has not yet been applied. Twenty focused unit tests, ingestion type-check and lint passed. A new full
+verification run passed types/lint/unused checks and is still in coverage; this is not a full green acceptance claim.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
