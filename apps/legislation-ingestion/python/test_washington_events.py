@@ -62,6 +62,7 @@ class WashingtonEventTests(unittest.TestCase):
         event = events[0]
         self.assertEqual(event.status, "cancelled")
         self.assertEqual(event.upstream_id, "32346")
+        self.assertEqual(event.extras["publisher_start_date"], "2025-01-14T13:30:00-08:00")
         self.assertEqual(event.extras["committees"], [{"id": "31641", "agency": "House", "code": "ED", "name": "Education"}])
         self.assertEqual(event.start_date.utcoffset(), datetime.timedelta(hours=-8))
         self.assertEqual(len(event.agenda), 2)
@@ -108,6 +109,15 @@ class WashingtonEventTests(unittest.TestCase):
         scraper = self.scraper()
         with self.assertRaisesRegex(ValueError, "event_outside_requested_window"):
             list(scraper.scrape(start="2025-01-15", end="2025-01-15"))
+
+    def test_explicit_empty_inventory_is_valid_but_unknown_document_is_not(self):
+        scraper = self.scraper()
+        scraper.get = Mock(return_value=SimpleNamespace(content=b'<ArrayOfCommitteeMeeting xmlns="http://WSLWebServices.leg.wa.gov/"/>'))
+        self.assertEqual(list(scraper.scrape(start="2025-01-14", end="2025-01-14")), [])
+        self.assertEqual(scraper.get.call_count, 1)
+        scraper.get = Mock(return_value=SimpleNamespace(content=b'<html/>'))
+        with self.assertRaisesRegex(ValueError, "invalid_meeting_inventory"):
+            list(scraper.scrape(start="2025-01-14", end="2025-01-14"))
 
 
 if __name__ == "__main__":

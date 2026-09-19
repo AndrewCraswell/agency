@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { scraperBillProfiles } from "./scraper-bill-profiles.js"
+import { washingtonEventWindow } from "./scraper-event-window.js"
 
 const revision = "d43f853796ceeeb49205f7d144790647764ce105"
 const runIdSchema = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{0,100}$/)
@@ -33,6 +34,7 @@ const requestSchema = z
     // Older immutable canary evidence predates batching; this reader does not authorize execution.
     bill_ids: z.array(z.string().min(1)).min(1).max(10).nullable().optional(),
     revision: z.literal(revision),
+    event_window: washingtonEventWindow.optional(),
     event_keys: z
       .array(z.string().regex(/^[HSJ]:[A-Z0-9&]+:[0-9T:+.-]+$/))
       .min(1)
@@ -40,13 +42,14 @@ const requestSchema = z
       .optional()
   })
   .refine((request) =>
-    request.domain === "bills" || request.jurisdiction === "ak" ? request.session !== null : request.session === null
+    request.domain === "bills" || request.jurisdiction !== "nc" ? request.session !== null : request.session === null
   )
   .refine((request) =>
     request.jurisdiction === "wa"
-      ? request.domain === "bills" &&
-        request.session === scraperBillProfiles.wa.session &&
-        !!request.bill_ids?.every((id) => scraperBillProfiles.wa.identifier.test(id))
+      ? request.session === scraperBillProfiles.wa.session &&
+        (request.domain === "bills"
+          ? !!request.bill_ids?.every((id) => scraperBillProfiles.wa.identifier.test(id))
+          : request.bill_ids === null && request.event_window !== undefined)
       : request.jurisdiction === "ak"
         ? request.session === "34" &&
           (request.domain === "events"
@@ -57,6 +60,9 @@ const requestSchema = z
         : request.session !== "34" &&
           request.session !== "2025-2026" &&
           (request.bill_ids?.every((id) => scraperBillProfiles.nc.identifier.test(id)) ?? true)
+  )
+  .refine(
+    (request) => request.event_window === undefined || (request.jurisdiction === "wa" && request.domain === "events")
   )
   .refine(
     (request) => request.event_keys === undefined || (request.jurisdiction === "ak" && request.domain === "events")

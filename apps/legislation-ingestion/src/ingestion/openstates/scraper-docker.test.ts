@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 import { archiveNcBillPlan } from "./scraper-batches.js"
 import { archiveScraperBillDispatch } from "./scraper-dispatch.js"
-import { createScraperDockerAdapter, extractAlaskaEventsDocker } from "./scraper-docker.js"
+import {
+  createScraperDockerAdapter,
+  extractAlaskaEventsDocker,
+  extractWashingtonEventsDocker
+} from "./scraper-docker.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
 async function fixture() {
@@ -48,6 +52,17 @@ async function fixture() {
 }
 
 describe("local Docker extraction boundary", () => {
+  it("rejects unbounded Washington windows before invoking Docker", async () => {
+    const { options, command, request } = await fixture()
+    expect(() =>
+      extractWashingtonEventsDocker(
+        options,
+        { ...request, eventWindow: { start: "2025-01-01", end: "2025-01-08" } },
+        command
+      )
+    ).toThrow()
+    expect(command).not.toHaveBeenCalled()
+  })
   it("uses the same shutdown boundary for bounded event keys without shell interpretation", async () => {
     const { options, command } = await fixture()
     await expect(

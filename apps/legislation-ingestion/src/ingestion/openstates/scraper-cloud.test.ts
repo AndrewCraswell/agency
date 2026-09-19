@@ -43,6 +43,18 @@ describe("cloud scraper dispatch", () => {
     }
     expect(() => scraperCloudPaths("wa-run", { ...washington, session: "2025" })).toThrow()
     expect(() => scraperCloudPaths("wa-run", { ...washington, domain: "events", bill_ids: null })).toThrow()
+    const meeting = {
+      ...washington,
+      domain: "events" as const,
+      bill_ids: null,
+      event_window: { start: "2025-01-13", end: "2025-01-19" }
+    }
+    expect(scraperCloudPaths("wa-events", meeting).manifestPath).toContain("/wa/events/wa-events/")
+    expect(() =>
+      scraperCloudPaths("wa-events", { ...meeting, event_window: { ...meeting.event_window, end: "2025-01-20" } })
+    ).toThrow()
+    expect(() => scraperCloudPaths("wa-events", { ...meeting, jurisdiction: "nc" })).toThrow()
+    expect(() => scraperCloudPaths("wa-events", { ...washington, event_window: meeting.event_window })).toThrow()
   })
 
   it("enqueues one strict extraction request and accepts matching settlement", async () => {

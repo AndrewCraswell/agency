@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import { resolveAgendaBillReferences } from "../../persistence/event-bill-references.js"
 import { resolveEventOrganizationReferences } from "../../persistence/event-organization-references.js"
-import { normalizeWashingtonScraperEvents } from "./scraper-washington-events.js"
+import { archiveScraperAttempt } from "./scraper-archive.js"
+import { normalizeWashingtonScraperEvents, prepareWashingtonEventWindow } from "./scraper-washington-events.js"
 
 const context = { start: "2025-01-13", end: "2025-01-19", retrievedAt: new Date("2026-09-19T00:00:00Z") }
 function fixture() {
@@ -13,7 +15,11 @@ function fixture() {
     status: "cancelled",
     classification: "committee-meeting",
     sources: [{ url: "https://app.leg.wa.gov/committeeschedules/Home/Agenda/32346" }],
-    extras: { agendaId: "32346", committees: [{ id: "31641", agency: "House", code: "ED", name: "House Education" }] },
+    extras: {
+      publisher_start_date: "2025-01-14T13:30:00-08:00",
+      agendaId: "32346",
+      committees: [{ id: "31641", agency: "House", code: "ED", name: "House Education" }]
+    },
     participants: [
       { name: "House Education", entity_type: "committee", note: "host", organization: { id: "untrusted" } }
     ],
@@ -27,7 +33,100 @@ function fixture() {
   }
 }
 
+async function archivedWindow(ids: string[], records: unknown[]) {
+  const objects = new Map<string, Uint8Array>()
+  const store = {
+    exists: async (path: string) => objects.has(path),
+    read: async (path: string) => {
+      const bytes = objects.get(path)
+      if (!bytes) throw new Error("missing")
+      return bytes
+    },
+    put: async (path: string, bytes: Uint8Array) => {
+      if (objects.has(path)) return false
+      objects.set(path, bytes)
+      return true
+    }
+  }
+  const entries = [
+    {
+      path: "_data/wa/meeting_window.json",
+      value: {
+        start: context.start,
+        end: context.end,
+        complete: true,
+        source_url: `https://wslwebservices.leg.wa.gov/CommitteeMeetingService.asmx/GetCommitteeMeetings?beginDate=${context.start}&endDate=${context.end}`,
+        source_sha256: "b".repeat(64),
+        agenda_ids: ids
+      }
+    },
+    ...records.map((value, index) => ({ path: `_data/wa/event_${index}.json`, value }))
+  ]
+  const files = entries.map(({ path, value }) => {
+    const bytes = Buffer.from(JSON.stringify(value))
+    objects.set(path, bytes)
+    return { path, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") }
+  })
+  const revision = "d43f853796ceeeb49205f7d144790647764ce105"
+  objects.set(
+    "attempt.json",
+    Buffer.from(
+      JSON.stringify({
+        work_directory: "/tmp/test",
+        status: "extracted",
+        exit_code: 0,
+        reason: null,
+        revision,
+        canonical_writes: false,
+        semantically_validated: false,
+        build_inputs_sha256: "a".repeat(64),
+        files,
+        request: {
+          jurisdiction: "wa",
+          domain: "events",
+          session: "2025-2026",
+          bill_ids: null,
+          timeout_seconds: 600,
+          revision,
+          event_window: { start: context.start, end: context.end }
+        }
+      })
+    )
+  )
+  const retained = await archiveScraperAttempt(store, store, "wa-events-test")
+  return { store, manifestPath: retained.manifestPath, approvedBuild: "a".repeat(64), retrievedAt: context.retrievedAt }
+}
+
+it("admits complete retained windows, including empty windows, but never partial inventories", async () => {
+  expect((await prepareWashingtonEventWindow(await archivedWindow(["32346"], [fixture()]))).snapshots).toHaveLength(1)
+  const empty = await prepareWashingtonEventWindow(await archivedWindow([], []))
+  expect(empty.snapshots).toEqual([])
+  expect(empty.completeSnapshot).toBe(false)
+  for (const [ids, records] of [
+    [["32346"], []],
+    [[], [fixture()]],
+    [["32346", "32346"], [fixture()]]
+  ] as const)
+    await expect(prepareWashingtonEventWindow(await archivedWindow([...ids], [...records]))).rejects.toThrow()
+  const input = await archivedWindow(["32346"], [fixture()])
+  await expect(prepareWashingtonEventWindow({ ...input, approvedBuild: "c".repeat(64) })).rejects.toThrow(/approved/)
+})
+
 describe("Washington shared event preparation", () => {
+  it("preserves publisher date when UTC serialization crosses midnight", () => {
+    const [row] = normalizeWashingtonScraperEvents(
+      [
+        {
+          ...fixture(),
+          start_date: "2025-01-15T00:00:00+00:00",
+          extras: { ...fixture().extras, publisher_start_date: "2025-01-14T16:00:00-08:00" }
+        }
+      ],
+      { ...context, start: "2025-01-14", end: "2025-01-14" }
+    )
+    expect(row?.event.publisherLocalDate).toBe("2025-01-14")
+    expect(row?.event.startAt?.toISOString()).toBe("2025-01-15T00:00:00.000Z")
+  })
   it("preserves cancellations, non-bill agenda, provenance and publisher time", () => {
     const [row] = normalizeWashingtonScraperEvents([fixture()], context)
     expect(row?.event).toMatchObject({
@@ -61,7 +160,15 @@ describe("Washington shared event preparation", () => {
   it("keeps meeting identity when a new extraction changes UUID, title or scheduled time", () => {
     const [first] = normalizeWashingtonScraperEvents([fixture()], context)
     const [changed] = normalizeWashingtonScraperEvents(
-      [{ ...fixture(), _id: "new-uuid", name: "New title", start_date: "2025-01-15T14:00:00-08:00" }],
+      [
+        {
+          ...fixture(),
+          _id: "new-uuid",
+          name: "New title",
+          start_date: "2025-01-15T14:00:00-08:00",
+          extras: { ...fixture().extras, publisher_start_date: "2025-01-15T14:00:00-08:00" }
+        }
+      ],
       context
     )
     expect(changed?.event.id).toBe(first?.event.id)
@@ -76,7 +183,7 @@ describe("Washington shared event preparation", () => {
     ])
       expect(() => normalizeWashingtonScraperEvents([{ ...fixture(), ...change }], context)).toThrow()
     expect(() => normalizeWashingtonScraperEvents([fixture(), fixture()], context)).toThrow(/unique/)
-    expect(() => normalizeWashingtonScraperEvents([], { ...context, end: "2025-01-20" })).toThrow(/bound/)
+    expect(() => normalizeWashingtonScraperEvents([], { ...context, end: "2025-01-20" })).toThrow(/seven/)
     expect(() => normalizeWashingtonScraperEvents([], { ...context, start: "2024-01-01", end: "2024-01-01" })).toThrow(
       /session/
     )

@@ -8,6 +8,18 @@ from openstates_runner import REVISION, child_environment, command, execute, fai
 
 
 class RunnerContractTests(unittest.TestCase):
+    def test_washington_events_require_explicit_bounded_windows(self):
+        value = self.request(jurisdiction="wa", domain="events", session="2025-2026", bill_ids=None,
+                             event_window={"start": "2025-01-13", "end": "2025-01-19"})
+        self.assertEqual(command(value)[-3:], ["session=2025-2026", "start=2025-01-13", "end=2025-01-19"])
+        for window in ({"start": "2025-01-13", "end": "2025-01-20"}, {"start": "2025-01-13", "end": "2025-01-12"},
+                       {"start": "2024-01-01", "end": "2024-01-01"}, {"start": "2025-02-30", "end": "2025-03-01"},
+                       {"start": "2025-01-13", "end": "2025-01-19", "extra": True}, None):
+            with self.subTest(window=window), self.assertRaises(ValueError):
+                validate_request(dict(value, event_window=window))
+        with self.assertRaises(ValueError):
+            validate_request(dict(value, jurisdiction="nc"))
+
     def test_washington_uses_shared_bounded_runner_without_enabling_events(self):
         value = self.request(jurisdiction="wa", session="2025-2026", bill_ids=["HB 1002", "HB 1000"])
         self.assertEqual(command(value)[-2:], ["session=2025-2026", "bill_ids=HB 1000,HB 1002"])

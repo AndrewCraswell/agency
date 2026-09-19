@@ -258,3 +258,27 @@ remaining bill relationships are not claimed complete. Evidence: `database-repla
 The prior full repository verification passed (optional unconfigured database/corpus cases skipped). Focused mapper,
 committee and Alaska regression checks cover the new shared preparation. Washington's execution-window contract,
 durable dispatch/continuation and production acceptance still need implementation before enabling event sync.
+
+## Shared meeting execution boundary (2026-09-19)
+
+Washington event windows now use the shared Python runner, Docker shutdown/resource safeguards, cloud-request
+validation and immutable attempt archive. One strict window contract is reused by TypeScript admission, archive
+reading and canonical preparation. The approved source emits an inventory receipt only after complete traversal;
+preparation requires exact agreement between its agenda IDs and retained events. Valid empty windows are permitted,
+but never interpreted as a complete statewide snapshot or permission to delete meetings.
+
+A real runner canary exposed Open States' UTC serialization: a 4pm Pacific meeting serialized at midnight the next
+UTC day. The adapter now preserves the original offset timestamp in source extras. Preparation verifies equal instants
+and the Pacific offset, retaining the publisher's calendar date. A focused regression covers this boundary.
+
+The corrected local image `legislation-openstates-adapter:washington-publisher-clocks` passed offline startup checks.
+Build-input digest: `3556d11cfa4010e0e8909e14b551f054e2b84a3d7deb0a242d62101e5bc8156e`.
+The shared runner's 600-second canary extracted and archived all 11 meetings for January 13, 2025. Canonical preparation
+accepted the exact inventory; replay through the existing writer left the prior 77 meetings and 287 agenda IDs/dates
+unchanged, including across a second replay. Reports are under
+`artifacts/openstates-washington-event-windows/reports/`; the successful attempt is `wa-meeting-clock-canary-20260919`.
+
+Forty focused TypeScript tests, fifty Python tests inside the pinned dependency runtime, ingestion type-check and lint
+passed. Full verification encountered the unrelated `browserTelemetry.ts` route-template type error. Durable window
+planning, leases, continuation and hosted acceptance are still open; neither cloud-request support nor this local
+canary activates production jobs or schedules.

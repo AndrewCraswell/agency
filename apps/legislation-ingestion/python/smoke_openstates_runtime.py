@@ -34,6 +34,9 @@ def smoke(inputs):
                 key = "H:FIN:2025-01-22T13:30:00-09:00"
                 request.update(session="34", event_keys=[key])
                 expected = [domain, "session=34", "event_keys=" + key]
+            if state == "wa" and domain == "events":
+                request.update(session=profile["session"], event_window={"start": "2025-01-13", "end": "2025-01-19"})
+                expected = [domain, "session=" + profile["session"], "start=2025-01-13", "end=2025-01-19"]
             sys.argv = ["openstates"] + command(request)[3:]
             args, other = parse_args()
             if args.actions != ["scrape"] or args.module != state or not args.strict or args.SCRAPELIB_VERIFY is not True:

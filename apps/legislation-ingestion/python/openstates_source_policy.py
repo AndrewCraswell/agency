@@ -4,6 +4,7 @@ from pathlib import Path
 
 PATCHES = {
     "scrapers/wa/events.py": [
+        ('from utils import LXMLMixin\n', 'from utils import LXMLMixin\nimport json\nimport hashlib\nfrom pathlib import Path\n'),
         ('''        now = datetime.datetime.now()
         print_format = "%Y-%m-%d"
 
@@ -29,6 +30,25 @@ PATCHES = {
 ''', '''        if self.meetings is not None:
             return self.meetings
         event_url = (
+'''),
+        ('''        page = self.get(url).content
+        page = lxml.etree.fromstring(page)
+''', '''        data = self.get(url).content
+        page = lxml.etree.fromstring(data)
+        if page.tag != "{http://WSLWebServices.leg.wa.gov/}ArrayOfCommitteeMeeting":
+            raise ValueError("invalid_meeting_inventory")
+        self.window_evidence = {"start": start, "end": end, "source_url": url,
+                                "source_sha256": hashlib.sha256(data).hexdigest(),
+                                "agenda_ids": xpath(page, "//wa:CommitteeMeeting/wa:AgendaId/text()")}
+'''),
+        ('''        if event_count < 1:
+            raise EmptyScrape
+''', '''        expected = self.window_evidence["agenda_ids"]
+        if len(set(expected)) != len(expected) or event_count != len(expected):
+            raise ValueError("incomplete_meeting_window")
+        path = Path("_data/wa/meeting_window.json")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(dict(self.window_evidence, complete=True)), encoding="utf8")
 '''),
         ('''            if event_cancelled == "true":
                 continue
@@ -59,6 +79,7 @@ PATCHES = {
                 hosts.append(host)
                 event.add_participant(host["name"], type="committee", note="host")
             event.extras["committees"] = hosts
+            event.extras["publisher_start_date"] = event_date.isoformat()
 '''),
         ('''            if bill_id:
                 if bill_id.startswith(("ESB ", "SSB ", "EHB ", "SHB ")):

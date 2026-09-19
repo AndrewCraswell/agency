@@ -2,6 +2,7 @@ import { z } from "zod"
 import { createLazyAzureCredential } from "../azure-credential.js"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { scraperBillProfiles } from "./scraper-bill-profiles.js"
+import { washingtonEventWindow } from "./scraper-event-window.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
 const revision = "d43f853796ceeeb49205f7d144790647764ce105"
@@ -14,6 +15,7 @@ const requestSchema = z
     timeout_seconds: z.number().int().min(1).max(1500),
     revision: z.literal(revision),
     bill_ids: z.array(z.string()).min(1).max(10).nullable(),
+    event_window: washingtonEventWindow.optional(),
     event_keys: z
       .array(z.string().regex(/^[HSJ]:[A-Z0-9&]+:[0-9T:+.-]+$/))
       .min(1)
@@ -21,6 +23,18 @@ const requestSchema = z
       .optional()
   })
   .superRefine((request, context) => {
+    if (request.event_window !== undefined) {
+      if (
+        request.jurisdiction === "wa" &&
+        request.domain === "events" &&
+        request.session === scraperBillProfiles.wa.session &&
+        request.bill_ids === null &&
+        request.event_keys === undefined
+      )
+        return
+      context.addIssue({ code: "custom", message: "Unexpected scraper meeting window" })
+      return
+    }
     if (
       request.domain === "bills" &&
       request.event_keys === undefined &&

@@ -10,6 +10,7 @@ import { archiveScraperAttempt, readArchivedScraperAttempt } from "./scraper-arc
 import { scraperAttemptDirectory } from "./scraper-attempt-directory.js"
 import { readScraperBillPlan } from "./scraper-batches.js"
 import { readScraperBillDispatch } from "./scraper-dispatch.js"
+import { washingtonEventWindow } from "./scraper-event-window.js"
 import type { executeScraperBillBatch } from "./scraper-execution.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
@@ -84,6 +85,32 @@ export async function extractAlaskaEventsDocker(
   )
 }
 
+/** Uses the same resource limits, immutable archive and shutdown confirmation as bill and Alaska event runs. */
+export function extractWashingtonEventsDocker(
+  options: { store: ArtifactStore; imageId: string; network: "none" | "bridge" },
+  request: {
+    runId: string
+    runtimeId: string
+    maxDurationSeconds: number
+    eventWindow: { start: string; end: string }
+  },
+  command: DockerCommand = docker
+) {
+  const window = washingtonEventWindow.parse(request.eventWindow)
+  return runScraperContainer(
+    options,
+    request,
+    {
+      jurisdiction: "wa",
+      domain: "events",
+      session: "2025-2026",
+      bill_ids: null,
+      event_window: window
+    },
+    command
+  )
+}
+
 async function runScraperContainer(
   options: { store: ArtifactStore; imageId: string; network: "none" | "bridge" },
   request: { runId: string; runtimeId?: string; maxDurationSeconds: number },
@@ -93,6 +120,7 @@ async function runScraperContainer(
     session: string
     bill_ids: readonly string[] | null
     event_keys?: string[]
+    event_window?: { start: string; end: string }
   },
   command: DockerCommand
 ) {

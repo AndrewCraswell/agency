@@ -1,8 +1,63 @@
 import { legislativeSessionId } from "@repo/legislation-core/domain/identifiers"
 import { z } from "zod"
+import type { ArtifactStore } from "../documents/artifact-store.js"
 import { normalizeOpenStatesEvent } from "./events.js"
+import { readArchivedScraperAttempt } from "./scraper-archive.js"
 import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 import { scraperEventBillReferences } from "./scraper-event-bill-references.js"
+import { washingtonEventWindow } from "./scraper-event-window.js"
+
+/** A successful child must cover exactly the publisher inventory, including cancellations and empty windows. */
+export async function prepareWashingtonEventWindow(input: {
+  store: Pick<ArtifactStore, "read">
+  manifestPath: string
+  approvedBuild: string
+  retrievedAt: Date
+}) {
+  z.string()
+    .regex(/^[a-f0-9]{64}$/)
+    .parse(input.approvedBuild)
+  const archive = await readArchivedScraperAttempt(input.store, input.manifestPath)
+  const attempt = archive.attempt
+  if (
+    attempt.status !== "extracted" ||
+    attempt.build_inputs_sha256 !== input.approvedBuild ||
+    attempt.request.jurisdiction !== "wa" ||
+    attempt.request.domain !== "events"
+  ) {
+    throw new Error("Washington meeting window is not an approved successful extraction")
+  }
+  const window = washingtonEventWindow.parse(attempt.request.event_window)
+  const report = z
+    .object({
+      start: z.string(),
+      end: z.string(),
+      complete: z.literal(true),
+      source_url: z.string(),
+      source_sha256: z.string().regex(/^[a-f0-9]{64}$/),
+      agenda_ids: z.array(z.string().regex(/^[1-9][0-9]*$/))
+    })
+    .parse(archive.records.find((entry) => entry.path === "_data/wa/meeting_window.json")?.value)
+  const expectedUrl = `https://wslwebservices.leg.wa.gov/CommitteeMeetingService.asmx/GetCommitteeMeetings?beginDate=${window.start}&endDate=${window.end}`
+  if (
+    report.start !== window.start ||
+    report.end !== window.end ||
+    report.source_url !== expectedUrl ||
+    new Set(report.agenda_ids).size !== report.agenda_ids.length
+  ) {
+    throw new Error("Washington meeting inventory differs from requested window")
+  }
+  const snapshots = normalizeWashingtonScraperEvents(
+    archive.records.filter((entry) => entry.path.startsWith("_data/wa/event_")).map((entry) => entry.value),
+    { ...window, retrievedAt: input.retrievedAt }
+  )
+  if (
+    JSON.stringify(snapshots.map((row) => row.event.sourceId).sort()) !== JSON.stringify([...report.agenda_ids].sort())
+  ) {
+    throw new Error("Washington meeting window is missing or contains extra agenda records")
+  }
+  return { snapshots, window, completeWindow: true as const, completeSnapshot: false as const }
+}
 
 const host = z.object({
   id: z.string().regex(/^[1-9][0-9]*$/),
@@ -19,7 +74,11 @@ const recordSchema = z
       .pipe(z.iso.datetime({ offset: true })),
     status: z.enum(["confirmed", "cancelled"]),
     sources: z.array(z.object({ url: z.url() })),
-    extras: z.object({ agendaId: z.string(), committees: z.array(host).min(1) }),
+    extras: z.object({
+      agendaId: z.string(),
+      committees: z.array(host).min(1),
+      publisher_start_date: z.iso.datetime({ offset: true })
+    }),
     participants: z.array(
       z.object({ name: z.string(), entity_type: z.literal("committee"), note: z.literal("host") }).passthrough()
     ),
@@ -47,13 +106,8 @@ export function normalizeWashingtonScraperEvents(
     retrievedAt: Date
   }
 ) {
-  const start = z.iso.date().parse(input.start)
-  const end = z.iso.date().parse(input.end)
+  const { start, end } = washingtonEventWindow.parse({ start: input.start, end: input.end })
   z.date().parse(input.retrievedAt)
-  const days = (Date.parse(end) - Date.parse(start)) / 86_400_000
-  if (days < 0 || days > 6 || start < "2025-01-01" || end > "2026-12-31") {
-    throw new Error("Washington meeting window is outside the reviewed session or batch bound")
-  }
   const seen = new Set<string>()
   return records.map((raw) => {
     const record = recordSchema.parse(raw)
@@ -66,9 +120,15 @@ export function normalizeWashingtonScraperEvents(
       throw new Error("Washington meeting lacks a unique matching official agenda identity")
     }
     seen.add(record.upstream_id)
-    const day = record.start_date.slice(0, 10)
+    const publisherDate = record.extras.publisher_start_date
+    const day = publisherDate.slice(0, 10)
     const timestamp = new Date(record.start_date)
-    if (day < start || day > end || pacific.format(timestamp).replace(" ", "T") !== record.start_date.slice(0, 19)) {
+    if (
+      day < start ||
+      day > end ||
+      Date.parse(publisherDate) !== timestamp.getTime() ||
+      pacific.format(timestamp).replace(" ", "T") !== publisherDate.slice(0, 19)
+    ) {
       throw new Error("Washington meeting clock disagrees with Pacific time or requested window")
     }
     const hosts = record.extras.committees
@@ -82,6 +142,7 @@ export function normalizeWashingtonScraperEvents(
     const result = normalizeOpenStatesEvent(
       {
         ...record,
+        start_date: publisherDate,
         id: `wa-agenda-${record.upstream_id}`,
         timezone: "America/Los_Angeles",
         sources: [{ url: expectedSource }],

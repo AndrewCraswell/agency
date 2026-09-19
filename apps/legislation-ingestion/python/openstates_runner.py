@@ -1,6 +1,7 @@
 """Extraction boundary. No canonical DB or cloud-storage credentials enter the child."""
 
 import json
+import datetime
 import hashlib
 import os
 from pathlib import Path
@@ -16,7 +17,7 @@ REVISION = "d43f853796ceeeb49205f7d144790647764ce105"
 PROFILES = {
     "nc": {"session": "2025", "bill_pattern": r"[HS][1-9][0-9]{0,4}", "domains": ("bills", "events")},
     "ak": {"session": "34", "bill_pattern": r"[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}", "domains": ("bills", "events")},
-    "wa": {"session": "2025-2026", "bill_pattern": r"[HS](?:B|CR|JM|JR|R) [1-9][0-9]{0,4}", "domains": ("bills",)},
+    "wa": {"session": "2025-2026", "bill_pattern": r"[HS](?:B|CR|JM|JR|R) [1-9][0-9]{0,4}", "domains": ("bills", "events")},
 }
 
 
@@ -115,7 +116,7 @@ def output_inventory(work, jurisdiction="nc"):
 
 def validate_request(value):
     required = {"jurisdiction", "domain", "session", "timeout_seconds", "revision", "bill_ids"}
-    if not isinstance(value, dict) or not required.issubset(value) or set(value) - required - {"event_keys"}:
+    if not isinstance(value, dict) or not required.issubset(value) or set(value) - required - {"event_keys", "event_window"}:
         raise ValueError("invalid_request_fields")
     profile = PROFILES.get(value["jurisdiction"]) if isinstance(value["jurisdiction"], str) else None
     if not profile or value["domain"] not in profile["domains"]:
@@ -125,6 +126,20 @@ def validate_request(value):
     timeout = value["timeout_seconds"]
     if type(timeout) is not int or not 1 <= timeout <= 1500:
         raise ValueError("invalid_timeout")
+    if value["jurisdiction"] == "wa" and value["domain"] == "events":
+        window = value.get("event_window")
+        if (value["session"] != profile["session"] or value["bill_ids"] is not None or "event_keys" in value
+                or not isinstance(window, dict) or set(window) != {"start", "end"}
+                or any(not isinstance(window[key], str) for key in ("start", "end"))):
+            raise ValueError("invalid_event_window")
+        start, end = (datetime.date.fromisoformat(window[key]) for key in ("start", "end"))
+        if (start.isoformat() != window["start"] or end.isoformat() != window["end"]
+                or not 0 <= (end - start).days <= 6 or start < datetime.date(2025, 1, 1)
+                or end > datetime.date(2026, 12, 31)):
+            raise ValueError("invalid_event_window")
+        return value
+    if "event_window" in value:
+        raise ValueError("unexpected_event_window")
     if value["jurisdiction"] == "ak" and value["domain"] == "events":
         keys = value.get("event_keys")
         if (value["session"] != "34" or value["bill_ids"] is not None
@@ -158,6 +173,9 @@ def command(request):
         args.append("bill_ids=" + ",".join(sorted(request["bill_ids"], key=lambda item: (item[0], int(re.search(r"[0-9]+$", item).group())))))
     elif request["jurisdiction"] == "ak":
         args.extend(["session=34", "event_keys=" + ",".join(sorted(request["event_keys"]))])
+    elif request["jurisdiction"] == "wa":
+        args.extend(["session=" + request["session"], "start=" + request["event_window"]["start"],
+                     "end=" + request["event_window"]["end"]])
     return args
 
 
