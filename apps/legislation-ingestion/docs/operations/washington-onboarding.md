@@ -20,7 +20,9 @@ that date remains an open evidence item and this is not a claim of fully verifie
 
 Full retained-pair preparation produces 337 people, 383 terms, 14 applied reviews, six structural history holds,
 and zero coverage issues. Christian has exactly three prepared roles. Twelve focused review/refresh tests pass;
-full verification is running as 89272. No production foundation import or deployment has applied this new review.
+full `pnpm verify` (89272) completed successfully, including built MCP acceptance. The optional positive disposable-
+corpus acceptance remains explicitly skipped, not proven by this run. No production foundation import or deployment
+has applied this new review.
 
 Host-reference fix `41af79f` passed full `pnpm verify` (86708), including 240 API acceptance cases and built MCP
 acceptance; optional database and positive-corpus skips remain explicit. It has not been deployed.
@@ -52,7 +54,7 @@ The Washington event adapter now preserves signed, biennium/agency-scoped publis
 are created and no code-only alias is admitted for these categories. Eighteen focused tests pass, including
 missing/ambiguous matches, wrong jurisdiction, wrong biennium and abbreviation-only candidates. A real retained
 SAO meeting (32331) now emits `waCommitteeId:2025-26:other:21488` and remains unready with no accepted mapping.
-Full verification is running as 86708; the change is not yet deployed. Publisher host-catalog ingestion remains open.
+Full verification (86708) passed; the change is not yet deployed. Publisher host-catalog ingestion remains open.
 
 Primary-source research confirms the missing hosts cannot simply be mapped onto JLARC: the official SAO agenda
 names its own audit-hearing body, and the Legislature has a separate archived profile for the aging/disability
