@@ -14,6 +14,7 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [x] | Review pinned scraper and live source access | Pinned revision `d43f853796ceeeb49205f7d144790647764ce105` has bill and event scrapers; both 2025 and 2026 official bill inventory requests returned HTTP 200 without credentials |
 | [ ] | Freeze bounded current-session bill inventory | Normalize both years, retain source hashes and exclusion counts, partition exact disjoint batches; fail on malformed or unexpected records |
 | [ ] | Add Washington to shared extraction and promotion | Extend reviewed jurisdiction profiles and source policy, not a parallel ingestion engine; validate source/dispatch/build fingerprints |
+| [x] | Run isolated bounded bill extraction in both chambers | HB 1000 and SB 5000 retained successfully; this is source extraction only, not canonical promotion or hosted activation |
 | [ ] | Validate bill actions, documents and individual votes | Compare retained cases from both chambers to official pages, including substitutions, engrossments, resolutions and amendments |
 | [ ] | Import and validate people and service history | Use retained Open States people data; represent two House seats per district without dropping one or guessing seat identity; quarantine conflicts |
 | [x] | Validate current people/committee snapshot with reusable district capacities | Shared validator accepts 98 House members, 49 senators, 51 committees and 609 membership assertions; zero unresolved member references; source snapshot, not production import |
@@ -81,3 +82,50 @@ term identities or reversed dates. This is a partial preparation, not canonical 
 generic period handling before considering source corrections; do not add person-name exceptions to the engine.
 The retained `reports/foundation-validation.json` includes each quarantined path and content hash. No production
 people/committee changes or schedules were made.
+
+## Frozen bill discovery (2026-09-19)
+
+The shared discovery entry point now supports Washington's two annual XML inventories. Its source adapter validates
+the biennium, chamber, bill number and legislation type before combining carryovers/substitutions into canonical bill
+identifiers. Appointments and initiatives remain explicitly outside this bill-scraper lane. Unknown or conflicting
+identities stop discovery instead of silently reducing coverage.
+
+All three states now share immutable source/plan publication, ten-item single-chamber partitioning, exact-batch scope
+checks and checksum replay. Reviewed bill sessions/identifier patterns live in one capability profile; this does not
+enable hosted activation. Runtime extraction, normalization and downstream acceptance still require Washington work.
+
+Live acquisition retained 3,411 unique bills (1,904 House, 1,507 Senate), in 342 batches of at most ten, under
+`artifacts/openstates-washington-bills/openstates/scraper-plans/wa/2025-2026/wa-bills-971060d118727f4b4dc6195f4b5b7fc7/plan.json`.
+Inventory ID: `093b6b38e2ef0dbb94458f1a3048605297487bc46085f42cf402bcd28c168517`.
+Replay reconstructed the exact plan from retained publisher XML. No scraper execution or canonical writes occurred.
+
+## Isolated runtime canaries (2026-09-19)
+
+The shared Python runner now admits Washington bill-only batches for session 2025-2026. Events remain disabled.
+The digest-verified source policy accepts 1-10 unique, single-chamber bill IDs, bypasses upstream full-session
+discovery, resets document/version collections per attempt and sets a 60-second source timeout. No new dependencies
+were installed. The acceptance image reuses the inspected existing dependency image and passes offline startup checks.
+
+An initial House attempt failed on a missing digest directory instead of silently truncating document discovery.
+The publisher's parent directory lists only Senate digests. The revised adapter checks the published parent listing,
+records each advertised/absent child directory in retained `document_directories.json`, and propagates transport
+failures or unrecognized listing pages. There is no hardcoded House/digest skip.
+
+Retained successful attempts under `artifacts/openstates-washington-canary`:
+
+- `openstates-wa-r03x544f`: HB 1000, 3 actions, 8 sponsors, 1 version with HTML/PDF links.
+- `openstates-wa-w0wnezva`: SB 5000, 22 actions, 1 version, 1 supporting document, 2 roll calls.
+
+Both use build-input hash `35cb745c411e7c08bcfe35d0b18762380480da69e406615263ee52afeccbd653` and the local
+`legislation-openstates-adapter:washington-directory-aware` image. Both ran sequentially, with one CPU, 1 GiB memory
+and a 300-second attempt deadline; neither had database/cloud credentials. The 28 runner/source-policy tests passed
+inside the network-disabled image without skips. Existing failed artifacts remain untouched.
+
+Fresh official roll-call XML matched both SB 5000 vote dates, motions, source chambers, totals and all 49 named
+positions per vote. The comparison and XML are retained in `source-comparisons/sb5000-rollcalls.{json,xml}`.
+This does not approve the upstream majority-inferred outcomes, broad vote coverage, identity resolution, canonical
+normalization, duplicate-free database replay, hosted deployment or content/search completion; those gates remain open.
+
+Repository `pnpm verify` passed for this slice, including 1,929 ingestion tests and 122 Python tests (7 platform/runtime
+skips on Windows, with the 28 relevant runner/policy cases passing unskipped in Docker). Unconfigured database suites
+and the optional positive disposable-corpus acceptance were skipped, not evidence of Washington database readiness.

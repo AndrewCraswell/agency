@@ -88,7 +88,7 @@ async function runScraperContainer(
   options: { store: ArtifactStore; imageId: string; network: "none" | "bridge" },
   request: { runId: string; runtimeId?: string; maxDurationSeconds: number },
   scope: {
-    jurisdiction: "nc" | "ak"
+    jurisdiction: "nc" | "ak" | "wa"
     domain: "bills" | "events"
     session: string
     bill_ids: readonly string[] | null

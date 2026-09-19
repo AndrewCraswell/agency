@@ -8,6 +8,15 @@ from openstates_runner import REVISION, child_environment, command, execute, fai
 
 
 class RunnerContractTests(unittest.TestCase):
+    def test_washington_uses_shared_bounded_runner_without_enabling_events(self):
+        value = self.request(jurisdiction="wa", session="2025-2026", bill_ids=["HB 1002", "HB 1000"])
+        self.assertEqual(command(value)[-2:], ["session=2025-2026", "bill_ids=HB 1000,HB 1002"])
+        for changes in ({"bill_ids": ["HB1000"]}, {"bill_ids": ["HB 1000", "SB 5000"]},
+                        {"bill_ids": ["HB 1000"] * 11}, {"session": "2023-2024"},
+                        {"domain": "events", "bill_ids": None}):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                validate_request(dict(value, **changes))
+
     def test_alaska_events_require_bounded_explicit_occurrences(self):
         key = "H:L&C:2025-01-22T13:30:00-09:00"
         value = self.request(jurisdiction="ak", domain="events", session="34", bill_ids=None, event_keys=[key])

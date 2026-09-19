@@ -1,13 +1,17 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { upsertBillAggregates } from "../../persistence/bill-aggregates.js"
+import { scraperBillProfiles } from "./scraper-bill-profiles.js"
 import { prepareArchivedScraperBillBatch } from "./scraper-normalize.js"
 import { resolveScraperAggregatePeople } from "./scraper-person-resolution.js"
 
 /** Short admission lock groups disjoint batches from one frozen inventory; it is not held during extraction. */
 export const ncBillPromotionOwnership = { source: "openstates", stream: "ownership:nc-bills:2025" } as const
 
-export function scraperBillPromotionOwnership(scope: { jurisdiction: "nc" | "ak"; session: string }) {
-  if (scope.session !== (scope.jurisdiction === "nc" ? "2025" : "34")) {
+export function scraperBillPromotionOwnership(scope: {
+  jurisdiction: keyof typeof scraperBillProfiles
+  session: string
+}) {
+  if (scope.session !== scraperBillProfiles[scope.jurisdiction].session) {
     throw new Error("Unsupported scraper ownership scope")
   }
   return { source: "openstates", stream: `ownership:${scope.jurisdiction}-bills:${scope.session}` }

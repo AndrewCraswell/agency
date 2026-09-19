@@ -16,6 +16,7 @@ REVISION = "d43f853796ceeeb49205f7d144790647764ce105"
 PROFILES = {
     "nc": {"session": "2025", "bill_pattern": r"[HS][1-9][0-9]{0,4}", "domains": ("bills", "events")},
     "ak": {"session": "34", "bill_pattern": r"[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}", "domains": ("bills", "events")},
+    "wa": {"session": "2025-2026", "bill_pattern": r"[HS](?:B|CR|JM|JR|R) [1-9][0-9]{0,4}", "domains": ("bills",)},
 }
 
 

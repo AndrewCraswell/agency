@@ -3,6 +3,101 @@
 from pathlib import Path
 
 PATCHES = {
+    "scrapers/wa/__init__.py": [
+        ("settings = dict(SCRAPELIB_TIMEOUT=300)", "settings = dict(SCRAPELIB_TIMEOUT=60)"),
+    ],
+    "scrapers/wa/bills.py": [
+        ("import requests\n", "import requests\nimport json\nfrom pathlib import Path\nfrom urllib.parse import urljoin, urlsplit, unquote\n"),
+        ('''    def scrape(self, chamber=None, session=None):
+        chambers = [chamber] if chamber else ["upper", "lower"]
+
+        year = int(session[0:4])
+
+        self._bill_id_list = self.get_prefiles(chamber, session, year)
+        self.biennium = "%s-%s" % (session[0:4], session[7:9])
+
+        for chamber in chambers:
+            self.scrape_chamber(chamber, session)
+
+        # uncomment the line below to scrape a single bill
+        # self._bill_id_list = ["HB 1146"]
+
+        # de-dup bill_id
+        for bill_id in list(set(self._bill_id_list)):
+            yield from self.scrape_bill(chamber, session, bill_id, year)
+''', '''    def scrape(self, chamber=None, session=None, bill_ids=None):
+        selected = bill_ids.split(",") if isinstance(bill_ids, str) else []
+        if (session != "2025-2026" or not 1 <= len(selected) <= 10
+                or any(not re.fullmatch(r"[HS](?:B|CR|JM|JR|R) [1-9][0-9]{0,4}", value) for value in selected)
+                or len(set(selected)) != len(selected) or len({value[0] for value in selected}) != 1):
+            raise ValueError("invalid_bill_batch")
+        selected_chamber = "lower" if selected[0].startswith("H") else "upper"
+        if chamber is not None and chamber != selected_chamber:
+            raise ValueError("invalid_bill_chamber")
+        self.biennium = "2025-26"
+        self.versions = {}
+        self.documents = {}
+        # Discovery is frozen by the coordinator, never repeated as an unbounded child scrape.
+        self._load_versions(selected_chamber)
+        self._load_documents(selected_chamber)
+        for bill_id in sorted(selected):
+            yield from self.scrape_bill(selected_chamber, session, bill_id, 2025)
+'''),
+        ('base_url = "http://lawfilesext.leg.wa.gov/Biennium/"',
+         'base_url = "https://lawfilesext.leg.wa.gov/Biennium/"'),
+        ('                "http://lawfilesext.leg.wa.gov/Biennium/"',
+         '                "https://lawfilesext.leg.wa.gov/Biennium/"'),
+        ('''        self.documents = {}
+
+        document_types''', '''        self.documents = {}
+        directory_coverage = []
+
+        document_types'''),
+        ('''                doc = self.lxmlize(base_url + chamber + " " + bill_type)
+            except scrapelib.HTTPError:
+                return
+''', '''                doc = self.lxmlize(base_url + chamber + " " + bill_type)
+            except scrapelib.HTTPError:
+                raise
+'''),
+        ('''            try:
+                doc = self.lxmlize(url)
+            except scrapelib.HTTPError:
+                return
+''', '''            parent_url = url.rsplit("/", 2)[0] + "/"
+            parent = self.lxmlize(parent_url)
+            expected_path = unquote(urlsplit(parent_url).path)
+            if expected_path not in parent.xpath("string(//h1)"):
+                raise ValueError("unrecognized_document_directory")
+            advertised = {
+                unquote(urlsplit(urljoin(parent_url, href)).path)
+                for href in parent.xpath("//a/@href")
+                if urlsplit(urljoin(parent_url, href)).netloc == urlsplit(parent_url).netloc
+            }
+            available = unquote(urlsplit(url).path) in advertised
+            directory_coverage.append({"parent_url": parent_url, "directory_url": url, "advertised": available})
+            if not available:
+                continue
+            doc = self.lxmlize(url)
+'''),
+        ('''    def get_prefiles(self, chamber, session, year):
+''', '''        coverage_path = Path("_data/wa/document_directories.json")
+        coverage_path.parent.mkdir(parents=True, exist_ok=True)
+        coverage_path.write_text(json.dumps(directory_coverage), encoding="utf8")
+
+    def get_prefiles(self, chamber, session, year):
+'''),
+        ('''            page = requests.get(url)
+            page = lxml.etree.fromstring(page.content)
+''', '''            page = requests.get(url, verify=True, timeout=(10, 60))
+            page = lxml.etree.fromstring(page.content)
+'''),
+        ('''            page = requests.get(url)
+        except requests.exceptions.HTTPError:
+''', '''            page = requests.get(url, verify=True, timeout=(10, 60))
+        except requests.exceptions.HTTPError:
+'''),
+    ],
     "scrapers/ak/events.py": [
         ('        r = requests.head(video_url)\n', '        r = requests.head(video_url, verify=True, timeout=(10, 60))\n'),
         ('''        page = self.get(url, params=args, headers=headers, verify=False)

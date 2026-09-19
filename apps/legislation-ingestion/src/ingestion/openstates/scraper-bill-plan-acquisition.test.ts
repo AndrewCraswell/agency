@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { ArtifactStore } from "../documents/artifact-store.js"
+import { assertScraperBillBatchScope, planWaBillBatches, readScraperBillPlan } from "./scraper-batches.js"
 import { acquireStateBillPlan } from "./scraper-bill-plan-acquisition.js"
 
 class Store implements ArtifactStore {
@@ -22,8 +23,83 @@ class Store implements ArtifactStore {
 
 const akHtml = `<table><tr><td><nobr><a href="/basis/Bill/Detail/34?Root=HB1">HB1</a></nobr></td></tr><tr><td><nobr><a href="/basis/Bill/Detail/34?Root=SB2">SB2</a></nobr></td></tr></table>`
 const feed = (bill: string) => `<rss><channel><item><bill>${bill}</bill></item></channel></rss>`
+const waRow = (id: string, number: number, chamber = "House", type = "B") =>
+  "<LegislationInfo><Biennium>2025-26</Biennium><BillId>" +
+  id +
+  "</BillId><BillNumber>" +
+  number +
+  "</BillNumber><OriginalAgency>" +
+  chamber +
+  "</OriginalAgency><ShortLegislationType><ShortLegislationType>" +
+  type +
+  "</ShortLegislationType></ShortLegislationType></LegislationInfo>"
+const waFeed = (rows: string[]) =>
+  '<ArrayOfLegislationInfo xmlns="http://WSLWebServices.leg.wa.gov/">' + rows.join("") + "</ArrayOfLegislationInfo>"
 
 describe("acquireStateBillPlan", () => {
+  it("freezes and replays both Washington years with deduplicated carryovers and bounded chamber batches", async () => {
+    const store = new Store()
+    const house = Array.from({ length: 12 }, (_, index) => waRow("HB " + (1000 + index), 1000 + index))
+    const first = waFeed([...house, waRow("SB 5000", 5000, "Senate")])
+    const second = waFeed([
+      waRow("E2SHB 1000", 1000),
+      waRow("2ESSB 5000", 5000, "Senate"),
+      waRow("HJR 4000", 4000, "House", "JR"),
+      waRow("SGA 9000", 9000, "Senate", "GA"),
+      waRow("HI IL26-001", 26001, "House", "I")
+    ])
+    const request = vi.fn<typeof fetch>(
+      async (input) =>
+        new Response(String(input).endsWith("2025") ? first : second, { headers: { "content-type": "text/xml" } })
+    )
+    const result = await acquireStateBillPlan(store, "wa", { fetch: request, refreshDate: "2026-09-19" })
+    expect(result).toMatchObject({ bills: 14, batches: 3, state: "wa", session: "2025-2026" })
+    expect(request).toHaveBeenCalledTimes(2)
+    const plan = await readScraperBillPlan(store, result.planPath)
+    expect(plan.batches.map((batch) => batch.billIds.length)).toEqual([10, 3, 1])
+    expect(plan.inventories[0]?.ids).toContain("HB 1000")
+    const batch = plan.batches[0]!
+    expect(
+      assertScraperBillBatchScope(plan, batch.id, {
+        jurisdiction: "wa",
+        session: "2025-2026",
+        domain: "bills",
+        bill_ids: batch.billIds
+      })
+    ).toEqual(batch)
+    expect(await acquireStateBillPlan(store, "wa", { fetch: request, refreshDate: "2026-09-19" })).toEqual(result)
+    store.values.set(
+      result.planPath.replace("plan.json", "2026.xml"),
+      Buffer.from(second.replace("HJR 4000", "HJR 4001").replace("<BillNumber>4000", "<BillNumber>4001"))
+    )
+    await expect(readScraperBillPlan(store, result.planPath)).rejects.toThrow("checksum mismatch")
+  })
+
+  it("rejects Washington source mismatches and incomplete or unsafe inventories", () => {
+    const valid = waFeed([waRow("HB 1000", 1000), waRow("SB 5000", 5000, "Senate")])
+    for (const invalid of [
+      valid.replace("2025-26", "2023-24"),
+      valid.replace("HB 1000", "HB 1001"),
+      valid.replace("House", "Senate"),
+      valid.replace("HB 1000", "UNKNOWN 1000"),
+      valid.replace("http://WSLWebServices.leg.wa.gov/", "https://example.org/"),
+      "<!DOCTYPE test>" + valid,
+      waFeed([]),
+      waFeed([waRow("SGA 1234", 1234, "Senate", "GA")]),
+      waFeed([waRow("HI 2", 1, "House", "I")])
+    ]) {
+      expect(() => planWaBillBatches({ "2025": invalid, "2026": valid }, "cycle")).toThrow()
+    }
+    const houseOnly = waFeed([waRow("HB 1000", 1000)])
+    expect(() => planWaBillBatches({ "2025": houseOnly, "2026": houseOnly }, "cycle")).toThrow(
+      "Missing Washington chamber"
+    )
+    const reordered = waFeed([waRow("SB 5000", 5000, "Senate"), waRow("SHB 1000", 1000)])
+    const first = planWaBillBatches({ "2025": valid, "2026": valid }, "cycle")
+    const second = planWaBillBatches({ "2025": reordered, "2026": valid }, "cycle")
+    expect(second.batches).toEqual(first.batches)
+    expect(second.inventoryId).toBe(first.inventoryId)
+  })
   it("freezes Alaska publisher discovery before returning a batch plan", async () => {
     const store = new Store()
     const request = vi.fn<typeof fetch>(

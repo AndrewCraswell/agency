@@ -5,11 +5,58 @@ from pathlib import Path
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock
+from urllib.parse import urljoin, urlsplit, unquote
 
 from openstates_source_policy import PATCHES, harden_source
 
 
 class SourcePolicyTests(unittest.TestCase):
+    def test_washington_dispatch_uses_only_selected_chamber_and_bills(self):
+        namespace = {"re": re}
+        replacement = next(after for before, after in PATCHES["scrapers/wa/bills.py"] if before.startswith("    def scrape("))
+        exec("class Policy:\n" + replacement, namespace)
+        policy = namespace["Policy"]()
+        policy._load_versions = Mock()
+        policy._load_documents = Mock()
+        policy.scrape_bill = Mock(side_effect=lambda *args: iter([args[2]]))
+        self.assertEqual(list(policy.scrape(session="2025-2026", bill_ids="SB 5001,SB 5000")), ["SB 5000", "SB 5001"])
+        policy._load_versions.assert_called_once_with("upper")
+        policy._load_documents.assert_called_once_with("upper")
+        self.assertEqual(policy.scrape_bill.call_count, 2)
+        policy.scrape_bill.assert_any_call("upper", "2025-2026", "SB 5000", 2025)
+        for changes in ({"bill_ids": None}, {"bill_ids": "HB 1000,SB 5000"},
+                        {"bill_ids": "SB 5000,SB 5000"}, {"chamber": "lower"},
+                        {"session": "2023-2024"}, {"bill_ids": "SB 5000 --import"}):
+            policy._load_versions.reset_mock()
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                list(policy.scrape(**dict({"session": "2025-2026", "bill_ids": "SB 5000"}, **changes)))
+            policy._load_versions.assert_not_called()
+
+    def test_washington_directory_absence_requires_publisher_listing(self):
+        replacement = next(after for before, after in PATCHES["scrapers/wa/bills.py"] if "parent_url =" in after)
+        namespace = {"urljoin": urljoin, "urlsplit": urlsplit, "unquote": unquote}
+        exec("class Policy:\n    def fetch(self, url):\n        directory_coverage = []\n        for _ in [0]:\n" +
+             replacement + "        return directory_coverage\n", namespace)
+        policy = namespace["Policy"]()
+        url = "https://lawfilesext.leg.wa.gov/Biennium/2025-26/Htm/Digests/House/"
+        heading = "/Biennium/2025-26/Htm/Digests/"
+        links = [heading + "Senate/"]
+        parent = SimpleNamespace(xpath=lambda expression: heading if expression == "string(//h1)" else links)
+        policy.lxmlize = Mock(return_value=parent)
+        self.assertFalse(policy.fetch(url)[0]["advertised"])
+        self.assertEqual(policy.lxmlize.call_count, 1)
+        links.append(heading + "House/")
+        policy.lxmlize.reset_mock()
+        self.assertTrue(policy.fetch(url)[0]["advertised"])
+        self.assertEqual(policy.lxmlize.call_count, 2)
+        policy.lxmlize.side_effect = ConnectionError("transport")
+        with self.assertRaises(ConnectionError):
+            policy.fetch(url)
+        policy.lxmlize.side_effect = None
+        heading = "Login"
+        with self.assertRaisesRegex(ValueError, "unrecognized_document_directory"):
+            policy.fetch(url)
+
     def test_nc_vote_groups_accept_extra_and_reordered_class_tokens(self):
         try:
             from lxml import html

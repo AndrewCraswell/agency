@@ -26,7 +26,7 @@ def smoke(inputs):
             raise ValueError("missing_pilot_session")
         for domain in profile["domains"]:
             session = profile["session"] if domain == "bills" else None
-            identifier = "S1" if state == "nc" else "SB1"
+            identifier = {"nc": "S1", "ak": "SB1", "wa": "SB 5000"}[state]
             request = {"jurisdiction": state, "domain": domain, "session": session,
                        "timeout_seconds": 1200, "revision": REVISION, "bill_ids": [identifier] if session else None}
             expected = [domain] + (["session=" + session, "bill_ids=" + identifier] if session else [])
