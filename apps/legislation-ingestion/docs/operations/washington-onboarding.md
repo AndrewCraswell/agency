@@ -529,3 +529,10 @@ Two acceptance failures remain actionable:
   references from malformed/missing source references, rather than unconditionally setting the flag or guessing from prose.
 
 Do not activate recurring Washington synchronization until these and the remaining ingestion gates pass.
+
+The agenda fix now separates source-reference completeness from successful canonical resolution. The shared selector
+parser reports malformed, missing and inconsistent references without discarding valid siblings. Washington propagates
+that assertion to the shared resolver, which marks the collection complete only when every explicit reference resolves
+uniquely in its jurisdiction/session. Existing adapters retain their prior completeness claims unless they explicitly
+opt into the verified-list contract. Nineteen focused tests, ingestion type-check and scoped lint passed; full repository
+verification is running. Production replay/API verification of this fix remains pending.

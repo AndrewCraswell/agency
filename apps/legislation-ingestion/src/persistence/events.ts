@@ -39,6 +39,8 @@ export interface EventAgendaItemSnapshot {
   materialIds: readonly string[]
   /** Explicit source identifiers only; never inferred from agenda prose. */
   billReferences?: readonly { identifier: string; sessionId: string; jurisdictionId: string }[]
+  /** Adapter verified the complete explicit bill-reference list, including a known empty list. */
+  billReferencesComplete?: boolean
 }
 
 /** Reconcile unchanged admitted snapshots. Readiness refresh is explicit; source facts are never rewritten. */

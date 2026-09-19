@@ -70,7 +70,7 @@ export function normalizeAlaskaScraperEvent(input: unknown, retrievedAt: Date) {
       state: "ak",
       session: "34",
       identifier: /^[HS](?:B|R|JR|J|CR|SC|SCR) [1-9][0-9]{0,4}$/
-    })
+    }).references
   }
   return result
 }

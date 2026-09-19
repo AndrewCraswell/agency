@@ -18,6 +18,18 @@ export function resolveAgendaBillReferences(
     ...snapshot,
     agendaItems: snapshot.agendaItems.map((item) => ({
       ...item,
+      agendaItem: {
+        ...item.agendaItem,
+        billRelationsComplete:
+          item.billReferencesComplete === undefined
+            ? item.agendaItem.billRelationsComplete
+            : item.billReferencesComplete &&
+              item.billReferences !== undefined &&
+              item.billReferences.every(
+                (reference) =>
+                  reference.jurisdictionId === snapshot.event.jurisdictionId && matches.get(key(reference))?.size === 1
+              )
+      },
       billIds: [
         ...new Set([
           ...item.billIds,

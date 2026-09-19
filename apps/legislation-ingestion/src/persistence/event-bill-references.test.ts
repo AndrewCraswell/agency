@@ -39,6 +39,25 @@ it("does not choose between ambiguous canonical records", () => {
     resolveAgendaBillReferences([fixture()], [bill, { ...bill, id: "bill:other" }])[0]?.agendaItems[0]?.billIds
   ).toEqual([])
 })
+
+it("admits completeness only for a complete source list with every reference uniquely resolved", () => {
+  const source = fixture()
+  const item = source.agendaItems[0]!
+  item.billReferencesComplete = true
+  expect(resolveAgendaBillReferences([source], [bill])[0]?.agendaItems[0]?.agendaItem.billRelationsComplete).toBe(true)
+  expect(resolveAgendaBillReferences([source], [])[0]?.agendaItems[0]?.agendaItem.billRelationsComplete).toBe(false)
+  expect(
+    resolveAgendaBillReferences([source], [bill, { ...bill, id: "ambiguous" }])[0]?.agendaItems[0]?.agendaItem
+      .billRelationsComplete
+  ).toBe(false)
+  item.billReferencesComplete = false
+  expect(resolveAgendaBillReferences([source], [bill])[0]?.agendaItems[0]?.agendaItem.billRelationsComplete).toBe(false)
+  item.billReferencesComplete = true
+  item.billReferences = []
+  expect(resolveAgendaBillReferences([source], [])[0]?.agendaItems[0]?.agendaItem.billRelationsComplete).toBe(true)
+  item.billReferences = undefined
+  expect(resolveAgendaBillReferences([source], [])[0]?.agendaItems[0]?.agendaItem.billRelationsComplete).toBe(false)
+})
 it("does not match other sessions, jurisdictions or identifiers", () => {
   const candidates = [
     { ...bill, sessionId: "session:ak:33" },

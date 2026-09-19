@@ -7,20 +7,30 @@ export function scraperEventBillReferences(
   scope: { state: string; session: string; identifier: RegExp }
 ) {
   const entities = z.array(z.unknown()).safeParse(input)
-  if (!entities.success) return []
-  return entities.data.flatMap((entity) => {
+  if (!entities.success) return { references: [], complete: false }
+  let complete = true
+  const references = entities.data.flatMap((entity) => {
+    const kind = z.object({ entity_type: z.string() }).safeParse(entity)
+    if (kind.success && kind.data.entity_type !== "bill") return []
     const reference = z
       .object({ entity_type: z.literal("bill"), bill_id: z.string(), name: z.string() })
       .safeParse(entity)
-    if (!reference.success || !reference.data.bill_id.startsWith("~")) return []
+    if (!reference.success || !reference.data.bill_id.startsWith("~")) {
+      complete = false
+      return []
+    }
     let selector: unknown
     try {
       selector = JSON.parse(reference.data.bill_id.slice(1))
     } catch {
+      complete = false
       return []
     }
     const explicit = z.strictObject({ identifier: z.string().regex(scope.identifier) }).safeParse(selector)
-    if (!explicit.success || explicit.data.identifier !== reference.data.name) return []
+    if (!explicit.success || explicit.data.identifier !== reference.data.name) {
+      complete = false
+      return []
+    }
     return [
       {
         identifier: explicit.data.identifier,
@@ -29,4 +39,5 @@ export function scraperEventBillReferences(
       }
     ]
   })
+  return { references, complete }
 }

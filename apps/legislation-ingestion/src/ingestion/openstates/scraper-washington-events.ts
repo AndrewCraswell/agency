@@ -189,12 +189,15 @@ export function normalizeWashingtonScraperEvents(
     result.event.canonicalFactsComplete = true
     for (const [order, item] of record.agenda.entries()) {
       const agenda = result.agendaItems.find((entry) => entry.agendaItem.ordinal === order)
-      if (agenda)
-        agenda.billReferences = scraperEventBillReferences(item.related_entities ?? [], {
+      if (agenda) {
+        const references = scraperEventBillReferences(item.related_entities, {
           state: "wa",
           session: scraperBillProfiles.wa.session,
           identifier: scraperBillProfiles.wa.identifier
         })
+        agenda.billReferences = references.references
+        agenda.billReferencesComplete = references.complete
+      }
     }
     return result
   })
