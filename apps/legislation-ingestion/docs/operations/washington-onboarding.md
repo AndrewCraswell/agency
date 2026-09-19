@@ -16,7 +16,7 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [x] | Add Washington to shared extraction and promotion | Shared reviewed profiles, source policy and fingerprint checks are implemented; version-pinned hosted bill batches and event windows have promoted successfully. Full inventory acceptance remains separate |
 | [x] | Run isolated bounded bill extraction in both chambers | HB 1000 and SB 5000 retained successfully; this is source extraction only, not canonical promotion or hosted activation |
 | [ ] | Validate bill actions, documents and individual votes | Compare retained cases from both chambers to official pages, including substitutions, engrossments, resolutions and amendments |
-| [ ] | Import and validate people and service history | Production import and replay verified for 337 people and 379 accepted terms; nine historical conflicts remain quarantined as of the Boehnke review. Current 147-member roster is complete; history acceptance remains open |
+| [ ] | Import and validate people and service history | Production import and replay verified for 337 people and 380 accepted terms; eight historical conflicts remain quarantined as of the Short review. Current 147-member roster is complete; history acceptance remains open |
 | [x] | Validate current people/committee snapshot with reusable district capacities | Shared validator accepts 98 House members, 49 senators, 51 committees and 609 membership assertions; zero unresolved member references; source snapshot, not production import |
 | [x] | Import committees and memberships | Production import/replay verified for 51 committees and 609 current membership assertions. This does not establish complete committee detail profiles or historical memberships |
 | [ ] | Import meetings and agenda items | Bound event windows, preserve Pacific time, stable source IDs and cancellation evidence; validate related bills/committees |
@@ -27,6 +27,15 @@ North Carolina drains. No new provider, database or embedding model is approved 
 | [ ] | Enable and observe regular syncing | Only after acceptance; verify a subsequent scheduled delta run, source failures and freshness reporting |
 
 ## Production baseline (2026-09-19 05:01 UTC)
+
+Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
+January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
+distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled
+prior Senate assertion to House service and removes the duplicate House assertion extending into 2018. The supplied
+February 1 House end remains retained, not independently certified as the exact resignation date. Production import
+and replay preserved all 24 terms across twelve reviewed people; authenticated MCP returned the corrected House term
+and current Senate term. All 24 focused tests passed. This adds source-fingerprinted review data, not person-specific
+engine logic. Full verification remains unclean, with web test failures; statewide acceptance is still open.
 
 Boehnke review: the [official January 9, 2023 announcement](https://mattboehnke.src.wastateleg.org/sen-matt-boehnke-takes-oath-office-olympia/)
 explicitly identifies his first Senate term; his biography confirms two preceding House terms. The prior role's

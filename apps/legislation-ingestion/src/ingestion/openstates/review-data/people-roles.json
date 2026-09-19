@@ -315,5 +315,48 @@
         "reason": "Remove the duplicate House assertion ending after the documented January 9, 2023 first Senate term began; the corrected prior House role preserves the service period without this contradictory overlap."
       }
     ]
+  },
+  {
+    "state": "wa",
+    "revision": "677c6d0a566ad9bd62b6324e502af76acc3d22f3",
+    "path": "data/wa/legislature/Shelly-Short-a45d8fe7-d052-4d18-bc5f-b5911948d42c.yml",
+    "sourceSha256": "a000a3fed03693e50730d1f2b6a820e8a83c7a977068f38e71df432e413e150d",
+    "personId": "ocd-person/a45d8fe7-d052-4d18-bc5f-b5911948d42c",
+    "changes": [
+      {
+        "before": {
+          "type": "upper",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "7",
+          "start_date": "2009-01-01",
+          "end_date": "2017-02-01"
+        },
+        "after": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "7",
+          "start_date": "2009-01-12",
+          "end_date": "2017-02-01"
+        },
+        "evidenceUrls": [
+          "https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf",
+          "https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf",
+          "https://shellyshort.src.wastateleg.org/short-sworn-7th-district-senator/"
+        ],
+        "reason": "The January 12, 2009 House journal lists Short for district 7 and records the members' oath. The official historical reference lists her House service beginning in 2009 and Senate appointment January 30, 2017, followed by swearing-in February 1; the official announcement corroborates the latter. Correct the prior chamber and House start. Retain the supplied February 1 House end and current Senate swearing-in start; the exact House resignation date has not been independently established."
+      },
+      {
+        "before": {
+          "type": "lower",
+          "jurisdiction": "ocd-jurisdiction/country:us/state:wa/government",
+          "district": "7",
+          "start_date": "2011-01-01",
+          "end_date": "2018-12-31"
+        },
+        "after": null,
+        "evidenceUrls": ["https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf"],
+        "reason": "Remove the duplicate House role with a truncated 2011 start and 2018 end contradicting the documented 2017 Senate transition and Maycumber's February 1, 2017 appointment as House successor. The corrected prior role retains Short's House service."
+      }
+    ]
   }
 ]
