@@ -84,6 +84,24 @@ The handoff subsequently completed and dispatched `run_06gbj0tii21vi6vtkve2thjc0
 `3c9bd59e7175d8dbefa61cf5eb4e00321153a5f631e7fd22ea1e07700493a1bb`. The version switch is verified; inspect its
 completed receipt and persisted documents before claiming corrected production writes. Global promotion remains off.
 
+That child has now completed on `20260919.25`: ten bills promoted, zero unresolved sponsors/positions, and refill
+`run_06gbj1ft54lhjdbagfq2d1mm01` dispatched. Its retained manifest checksum is
+`5b69dd96a3bb9503b1c2e97591937b289402e6e7c894a0046209b6601412ca7d`. This proves continuation/promotion, not yet a
+full document-level audit of the corrected batch.
+
+The shared `tools/openstates/reconcile-document-alias.ts` now supports an explicit bill/keep/remove pair, defaulting
+to validation only. It freshly downloads the keeper's source, verifies the byte hash, locks the parent and document
+rows, rejects processed/attempted aliases and dependent sections/search rows, and checks the actual FK inventory.
+Applying retains the complete removed row in `sync_checkpoints` under `document-alias-reconciliation` before deleting
+only the untouched alias. It never deletes the keeper's text, sections or vectors. Thirty-seven focused tests passed,
+including real PostgreSQL vector preservation, failed-hash rollback, dry-run preservation and repeated-apply no-op;
+type-check and focused lint passed. The FK audit uses explicit schema names independent of connection search paths.
+
+Production canary: HB 1002 PDF alias `bill:wa:2025-2026:hb:1002:document:cc7ec2ff472bd8de2a9a273f` was removed after
+fresh hash `082cb9c3aace0c2988a4c7a7f9f6f263d6c5cf6197ae53ac591b96cf98d32070` matched the processed keeper
+`bill:wa:2025-2026:hb:1002:document:97dd5a60fe4ef21157c8027e`. Its row is recoverable from the transactional audit.
+The broader duplicate census, processed-duplicate pairs and public bill-detail acceptance remain open.
+
 Short review: the [2009 first-day House journal](https://leg.wa.gov/media/5i5d4cum/hj_09_001.pdf) establishes her
 January 12 House oath. The [official historical reference](https://leg.wa.gov/media/s4gf4suc/members-of-the-legislature-1889-2025.pdf)
 distinguishes Senate appointment on January 30, 2017 from swearing-in on February 1. The review corrects the mislabeled

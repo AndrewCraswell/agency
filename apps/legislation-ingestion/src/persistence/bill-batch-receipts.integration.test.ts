@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import * as schema from "@repo/legislation-core/database/schema/schema"
 import { and, eq, sql } from "drizzle-orm"
@@ -7,6 +8,7 @@ import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { upsertBillAggregate, upsertBillAggregates } from "./bill-aggregates.js"
 import { assertBillBatchOwnership, claimBillBatchOwnership, releaseBillBatchOwnership } from "./bill-batch-ownership.js"
+import { reconcileUntouchedDocumentAlias } from "./document-alias-reconciliation.js"
 import { commitOwnedEmptyPromotion } from "./promotion-receipt.js"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
@@ -99,6 +101,106 @@ describePostgres.sequential("atomic bill batch receipts", () => {
     const rows = await database.select().from(schema.billDocuments).where(eq(schema.billDocuments.billId, bill.bill.id))
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({ ...original, title: "Current title", sourceUrl: "https://example.test/1000.pdf" })
+  })
+  it("audits untouched alias removal, preserves processed sections and vectors, and replays as a no-op", async () => {
+    const bill = aggregate("alias-repair")
+    const bytes = Buffer.from("Verified source bytes")
+    const contentHash = createHash("sha256").update(bytes).digest("hex")
+    const keeper = {
+      id: `${bill.bill.id}:old`,
+      billId: bill.bill.id,
+      classification: "version",
+      title: "Bill",
+      sourceUrl: "http://example.test/repair.pdf",
+      processingStatus: "processed",
+      contentHash,
+      text: "Text"
+    }
+    await upsertBillAggregate(database, { ...bill, documents: [{ document: keeper }] })
+    const removeId = `${bill.bill.id}:new`
+    const stream = `untouched-document-alias:${removeId}`
+    await database
+      .delete(schema.syncCheckpoints)
+      .where(
+        and(
+          eq(schema.syncCheckpoints.source, "document-alias-reconciliation"),
+          eq(schema.syncCheckpoints.stream, stream)
+        )
+      )
+    await database.insert(schema.billDocuments).values({
+      ...keeper,
+      id: removeId,
+      sourceUrl: "https://example.test/repair.pdf",
+      processingStatus: "pending",
+      contentHash: null,
+      text: null
+    })
+    await database.insert(schema.documentSections).values({
+      id: `${keeper.id}:section`,
+      documentId: keeper.id,
+      ordinal: 0,
+      text: "Text",
+      contentHash,
+      sourceStartOffset: 0,
+      sourceEndOffset: 4,
+      embedding: Array.from({ length: 1536 }, (_, index) => (index === 0 ? 1 : 0)),
+      embeddingModel: "retained-model"
+    })
+    const before = await database
+      .select()
+      .from(schema.documentSections)
+      .where(eq(schema.documentSections.documentId, keeper.id))
+    const client = await pool.connect()
+    const input = {
+      billId: bill.bill.id,
+      keepId: keeper.id,
+      removeId,
+      sourceUrl: "https://example.test/repair.pdf",
+      bytes,
+      apply: false
+    }
+    try {
+      await expect(reconcileUntouchedDocumentAlias(client, input)).resolves.toMatchObject({ status: "eligible" })
+      expect(
+        await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, removeId) })
+      ).toBeDefined()
+      await expect(
+        reconcileUntouchedDocumentAlias(client, { ...input, bytes: Buffer.from("changed"), apply: true })
+      ).rejects.toThrow("downloaded source")
+      await expect(reconcileUntouchedDocumentAlias(client, { ...input, apply: true })).resolves.toMatchObject({
+        status: "reconciled"
+      })
+      await expect(reconcileUntouchedDocumentAlias(client, { ...input, apply: true })).resolves.toMatchObject({
+        status: "already_reconciled"
+      })
+      expect(
+        await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, removeId) })
+      ).toBeUndefined()
+      expect(
+        await database.select().from(schema.documentSections).where(eq(schema.documentSections.documentId, keeper.id))
+      ).toEqual(before)
+      const receipt = await database.query.syncCheckpoints.findFirst({
+        where: and(
+          eq(schema.syncCheckpoints.source, "document-alias-reconciliation"),
+          eq(schema.syncCheckpoints.stream, stream)
+        )
+      })
+      expect(receipt?.cursor).toMatchObject({
+        keepId: keeper.id,
+        downloadedHash: contentHash,
+        removedRow: { id: removeId, processing_status: "pending" }
+      })
+    } finally {
+      client.release()
+      await database
+        .delete(schema.syncCheckpoints)
+        .where(
+          and(
+            eq(schema.syncCheckpoints.source, "document-alias-reconciliation"),
+            eq(schema.syncCheckpoints.stream, stream)
+          )
+        )
+    }
   })
   beforeAll(async () => {
     await migrate(database, {
