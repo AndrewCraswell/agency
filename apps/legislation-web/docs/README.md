@@ -91,7 +91,8 @@ Migrations live once in C and release explicitly through `pnpm --filter legislat
 - [Civic graph/events and persisted provenance](engineering/api/civic-graph-and-events.md),
   [membership projection](engineering/committee-membership-history.md)
 - [Legislative records](engineering/api/legislative-records.md), [HTTP schemas](engineering/api/schemas.md)
-- [Search/diffs](engineering/api/search-and-diffs.md), [subscriptions/webhooks](engineering/api/subscriptions-and-webhooks.md)
+- [Search/diffs and canonical model execution metadata](engineering/api/search-and-diffs.md),
+  [subscriptions/webhooks](engineering/api/subscriptions-and-webhooks.md)
 - [Amendment search projection](engineering/amendment-search-projection.md), [ranked-search evidence](research/ranked-search.md)
 - [API smoke](operations/http-api-local-smoke.md)
 - [Development representative lookup](operations/representative-lookup.md): Geocodio location resolution and exact-ID

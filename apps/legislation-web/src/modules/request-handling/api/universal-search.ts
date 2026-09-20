@@ -10,6 +10,7 @@ import {
   sendApiJson,
   type HttpApiHandler
 } from "./http"
+import { searchExecution, type SearchModel } from "./search-execution"
 
 const RECORD_TYPES = [
   "bill",
@@ -25,13 +26,6 @@ const modes = ["lexical", "semantic", "hybrid"] as const
 
 export type UniversalRecordType = (typeof RECORD_TYPES)[number]
 export type UniversalSearchMode = (typeof modes)[number]
-
-export type SearchModel = Readonly<{
-  dimensions: 1_024 | 1_536 | null
-  model: "cohere/rerank-v3.5" | "openai/text-embedding-3-small" | "voyageai/voyage-4"
-  provider: "cohere" | "openai" | "voyageai"
-  purpose: "embedding" | "reranking"
-}>
 
 export type UniversalSearchCandidate = Readonly<{
   lexicalScore: number | null
@@ -464,37 +458,27 @@ function modelsUsed(
   const unique = [
     ...new Map(models.map((model) => [`${model.provider}:${model.model}:${model.purpose}`, model])).values()
   ]
-  if (unique.some((model) => model.purpose === "embedding" && model.dimensions === null)) {
-    throw new LegislationError("unprocessable", "embedding model dimensions are required")
-  }
   return unique
 }
 
 function validateModels(type: UniversalRecordType, models: readonly SearchModel[], mode: UniversalSearchMode): void {
-  if (LEXICAL_ONLY_TYPES.has(type)) {
+  if (type === "person" || type === "organization" || type === "meeting") {
     if (models.length > 0) {
       throw new LegislationError("unprocessable", "lexical-only products must not report model use")
     }
     return
   }
-  const expectedEmbedding =
-    type === "bill" || type === "supporting-material" ? "voyageai/voyage-4" : "openai/text-embedding-3-small"
-  const expectedDimensions = expectedEmbedding === "voyageai/voyage-4" ? 1_024 : 1_536
-  const embeddings = models.filter((model) => model.purpose === "embedding")
-  const rerankers = models.filter((model) => model.purpose === "reranking")
+  const validated = searchExecution(
+    { isReranked: models.some((model) => model.purpose === "reranking"), models },
+    mode,
+    type
+  )
   if (
-    embeddings.length !== 1 ||
-    embeddings[0]?.model !== expectedEmbedding ||
-    embeddings[0].dimensions !== expectedDimensions
+    models.some(
+      (model, index) =>
+        model.dimensions !== validated.models[index]?.dimensions || model.provider !== validated.models[index]?.provider
+    )
   ) {
-    throw new LegislationError("unprocessable", `${type} ${mode} search model metadata is incomplete`)
-  }
-  const mayRerank = type === "bill" || type === "passage"
-  if (
-    rerankers.length > 1 ||
-    (!mayRerank && rerankers.length > 0) ||
-    rerankers.some((model) => model.model !== "cohere/rerank-v3.5" || model.dimensions !== null)
-  ) {
-    throw new LegislationError("unprocessable", `${type} search reranking metadata is not configured`)
+    throw new LegislationError("unprocessable", "Universal search requires complete public model metadata")
   }
 }

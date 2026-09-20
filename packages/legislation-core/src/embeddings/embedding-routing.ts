@@ -14,6 +14,7 @@ export interface RerankRoute {
   candidateLimit: 25
   inputMaximumCharacters: 4_000
   model: "cohere/rerank-v3.5"
+  provider: "cohere"
 }
 
 export interface EmbeddingRoute {
@@ -24,6 +25,7 @@ export interface EmbeddingRoute {
   embeddingInputContract: string
   model: "openai/text-embedding-3-small" | "voyageai/voyage-4"
   product: EmbeddingRouteProduct
+  provider: "openai" | "voyageai"
   queryInputType?: "query"
   storageTable:
     | "amendment_embeddings"
@@ -51,19 +53,22 @@ export interface EmbeddingQueryRoute {
 const COHERE_RERANK = {
   candidateLimit: 25,
   inputMaximumCharacters: 4_000,
-  model: "cohere/rerank-v3.5"
+  model: "cohere/rerank-v3.5",
+  provider: "cohere"
 } as const
 
 const OPENAI_SMALL = {
   dimensions: 1_536,
   dimensionsParameter: true,
-  model: "openai/text-embedding-3-small"
+  model: "openai/text-embedding-3-small",
+  provider: "openai"
 } as const
 
 const VOYAGE_4 = {
   dimensions: 1_024,
   documentInputType: "document",
   model: "voyageai/voyage-4",
+  provider: "voyageai",
   queryInputType: "query"
 } as const
 

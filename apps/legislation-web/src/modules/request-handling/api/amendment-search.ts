@@ -16,6 +16,7 @@ import {
   sendApiJson,
   type HttpApiHandler
 } from "./http"
+import { searchExecution } from "./search-execution"
 
 export interface AmendmentSearchApi {
   searchAmendmentHits: (
@@ -99,7 +100,7 @@ export function createAmendmentSearchApiHandler(
         throw new LegislationError("invalid_request", "cursor must be a valid amendment search cursor")
       }
       const page = await service.searchAmendmentHits(input)
-      const search = responseSearchExecution(page, mode)
+      const search = searchExecution(page.search, mode, "amendment")
       sendApiJson(
         response,
         200,
@@ -134,30 +135,6 @@ function limitFor(mode: AmendmentSearchMode, requested: number | undefined): num
     throw new LegislationError("invalid_request", "limit must be between 1 and 25 for semantic or hybrid search")
   }
   return limit
-}
-
-function responseSearchExecution(page: AmendmentSearchPage<unknown>, mode: AmendmentSearchMode) {
-  if (page.search.isReranked) {
-    throw new LegislationError("unprocessable", "Amendment search must not report reranking")
-  }
-  if (mode === "lexical") {
-    if (page.search.models.length !== 0) {
-      throw new LegislationError("unprocessable", "Lexical amendment search must not report model use")
-    }
-    return { isReranked: false, models: [] as const }
-  }
-  const embedding = page.search.models[0]
-  if (
-    page.search.models.length !== 1 ||
-    embedding?.model !== "openai/text-embedding-3-small" ||
-    embedding.purpose !== "embedding"
-  ) {
-    throw new LegislationError("unprocessable", "Amendment search model execution metadata is incomplete")
-  }
-  return {
-    isReranked: false,
-    models: [{ dimensions: 1_536, model: embedding.model, provider: "openai", purpose: "embedding" as const }]
-  }
 }
 
 function validateOrder(from: string | undefined, to: string | undefined, fromName: string, toName: string): void {

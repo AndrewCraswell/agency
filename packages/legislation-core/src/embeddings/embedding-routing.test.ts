@@ -18,12 +18,14 @@ describe("embedding routing contract", () => {
       dimensions: 1024,
       documentInputType: "document",
       model: "voyageai/voyage-4",
+      provider: "voyageai",
       queryInputType: "query",
       storageTable: "bill_embeddings"
     })
     expect(embeddingRouteFor("document-section")).toMatchObject({
       dimensions: 1536,
       model: "openai/text-embedding-3-small",
+      provider: "openai",
       storageTable: "document_section_embeddings"
     })
     const amendment = embeddingRouteFor("structured-amendment")
@@ -87,7 +89,8 @@ describe("embedding routing contract", () => {
     expect(embeddingQueryRouteFor("search_bills").rerank).toEqual({
       candidateLimit: 25,
       inputMaximumCharacters: 4000,
-      model: "cohere/rerank-v3.5"
+      model: "cohere/rerank-v3.5",
+      provider: "cohere"
     })
     expect(embeddingQueryRouteFor("search_bill_text").rerank).toEqual(embeddingQueryRouteFor("search_bills").rerank)
     expect(embeddingQueryRouteFor("search_amendments")).toEqual({

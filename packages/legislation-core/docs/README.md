@@ -9,7 +9,7 @@ environment, pools, credentials and telemetry. Never import an app from C.
 | Relationship queries, aggregates and validation | [Relationship analytics](engineering/relationship-analytics.md) |
 | Identity, entity taxonomy and minimum bill | [Civic identity](engineering/identity.md) |
 | Membership dates and tenure identity | [Membership history](engineering/committee-membership-history.md) |
-| Model/input/tokenizer/storage agreement | [Embedding contracts](engineering/embeddings.md) |
+| Model/provider/input/tokenizer/storage agreement | [Embedding contracts](engineering/embeddings.md) |
 | Amendment and legal search schema | [Search projections](engineering/search-projections.md) |
 | Legal identities, editions, temporal semantics and rights | [Regulatory data](regulations/data-contract.md) |
 | Lossless text, blocks and continuation | [Reader contract](regulations/reader-contract.md) |

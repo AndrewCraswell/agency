@@ -26,24 +26,14 @@ import {
   sendApiJson,
   type HttpApiHandler
 } from "./http"
+import { searchExecution, type SearchExecution, type SearchMode, type SearchProduct } from "./search-execution"
 
 type QueryPage<T> = Readonly<{
   items: readonly T[]
   nextCursor?: string
-  search?: Readonly<{ isReranked: boolean; models: readonly unknown[] }>
+  search?: SearchExecution
   truncated: boolean
   warnings?: readonly string[]
-}>
-
-type SearchMode = "hybrid" | "lexical" | "semantic"
-type SearchProduct = "bill" | "supporting-material"
-type SearchModelPurpose = "embedding" | "reranking"
-
-type ModelUsage = Readonly<{
-  dimensions: 1_024 | 1_536 | null
-  model: "cohere/rerank-v3.5" | "voyageai/voyage-4"
-  provider: "cohere" | "voyageai"
-  purpose: SearchModelPurpose
 }>
 
 export type CivicSearchApi = Readonly<{
@@ -175,64 +165,6 @@ function searchPage<T>(
     ...searchExecution(page.search, mode, product),
     mode
   })
-}
-
-/**
- * Query services retain the compact execution facts needed for ranking. The
- * HTTP boundary expands and validates them against the public ModelUsage
- * contract, so a lexical result cannot accidentally claim an AI model and an
- * embedded result cannot omit its model provenance.
- */
-function searchExecution(
-  execution: QueryPage<unknown>["search"],
-  mode: SearchMode,
-  product: SearchProduct
-): Readonly<{ isReranked: boolean; models: readonly ModelUsage[] }> {
-  const rawModels = execution?.models ?? []
-  const isReranked = execution?.isReranked ?? false
-  if (mode === "lexical") {
-    if (isReranked || rawModels.length > 0) {
-      throw new CanonicalProjectionError("lexical search must not report model use or reranking")
-    }
-    return { isReranked: false, models: [] }
-  }
-
-  const models = rawModels.map(modelUsage)
-  const embeddingModels = models.filter((model) => model.purpose === "embedding")
-  const rerankingModels = models.filter((model) => model.purpose === "reranking")
-  if (
-    embeddingModels.length !== 1 ||
-    embeddingModels[0]?.model !== "voyageai/voyage-4" ||
-    embeddingModels[0].dimensions !== 1_024
-  ) {
-    throw new CanonicalProjectionError(`${product} ${mode} search must report its Voyage embedding model`)
-  }
-
-  if (product === "supporting-material") {
-    if (isReranked || rerankingModels.length > 0) {
-      throw new CanonicalProjectionError("supporting material search must not report reranking")
-    }
-    return { isReranked: false, models }
-  }
-
-  if (isReranked !== (rerankingModels.length === 1) || rerankingModels.length > 1) {
-    throw new CanonicalProjectionError("bill search reranking metadata does not match execution")
-  }
-  return { isReranked, models }
-}
-
-function modelUsage(value: unknown): ModelUsage {
-  if (typeof value !== "object" || value === null || !("model" in value) || !("purpose" in value)) {
-    throw new CanonicalProjectionError("search model metadata is invalid")
-  }
-  const { model, purpose } = value
-  if (model === "voyageai/voyage-4" && purpose === "embedding") {
-    return { dimensions: 1_024, model, provider: "voyageai", purpose }
-  }
-  if (model === "cohere/rerank-v3.5" && purpose === "reranking") {
-    return { dimensions: null, model, provider: "cohere", purpose }
-  }
-  throw new CanonicalProjectionError("search model metadata does not match the configured route")
 }
 
 function searchInput(

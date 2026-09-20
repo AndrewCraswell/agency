@@ -67,6 +67,12 @@ The response `meta.models` records only models actually used. Lexical mode has a
 reranking. RRF uses `1 / (60 + rank)`; default lexical and semantic weights are both 1.0. Semantic and hybrid products
 retrieve and, where applicable, rerank at most 25 candidates, matching the approved rollout contract.
 
+The shared search-execution projector validates each product against C's canonical embedding/query routes and expands
+the executed model IDs with their route-owned provider and dimension facts. Product endpoints, universal search and
+research evidence retrieval use this same boundary. Unknown models, wrong product routes, duplicate model purposes,
+contradictory provider/dimension facts and mismatched reranking flags fail with `422 unprocessable`. A configured
+reranker is not reported when no candidates were reranked.
+
 For lexical bill search, each lexical match source considers at most 1,000 candidates. This is a bounded result window:
 when that bound prevents a continuation, the response sets `meta.truncated` to `true` and returns no continuation
 (`meta.nextCursor` and `links.next` are `null`). Clients must refine the query or filters before continuing. A lexical

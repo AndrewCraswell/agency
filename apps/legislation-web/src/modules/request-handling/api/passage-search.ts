@@ -16,6 +16,7 @@ import {
   sendApiJson,
   type HttpApiHandler
 } from "./http"
+import { searchExecution } from "./search-execution"
 
 type SearchMode = "hybrid" | "lexical" | "semantic"
 
@@ -137,30 +138,6 @@ function limitFor(mode: SearchMode, requested: number | undefined): number {
   return limit
 }
 
-function modelsFor(page: PassageSearchResultPage, mode: SearchMode) {
-  if (mode === "lexical") {
-    if (page.search.isReranked || page.search.models.length !== 0) {
-      throw new LegislationError("unprocessable", "Lexical passage search must not report model use")
-    }
-    return { isReranked: false, models: [] as const }
-  }
-  const models = page.search.models.map((model) => {
-    if (model.model === "openai/text-embedding-3-small" && model.purpose === "embedding") {
-      return { dimensions: 1_536, model: model.model, provider: "openai", purpose: model.purpose } as const
-    }
-    if (model.model === "cohere/rerank-v3.5" && model.purpose === "reranking") {
-      return { dimensions: null, model: model.model, provider: "cohere", purpose: model.purpose } as const
-    }
-    throw new LegislationError("unprocessable", "Passage search model metadata is not configured")
-  })
-  const embeddings = models.filter((model) => model.purpose === "embedding")
-  const rerankers = models.filter((model) => model.purpose === "reranking")
-  if (embeddings.length !== 1 || rerankers.length > 1 || page.search.isReranked !== (rerankers.length === 1)) {
-    throw new LegislationError("unprocessable", "Passage search model execution metadata is incomplete")
-  }
-  return { isReranked: page.search.isReranked, models }
-}
-
 export function projectPassageSearchHit(
   candidate: PassageSearchResultPage["items"][number],
   rank: number,
@@ -261,7 +238,7 @@ export function createPassageSearchApiHandler(
         throw new LegislationError("invalid_request", "cursor must be a valid passage search cursor")
       }
       const page = await service.searchBillText(input)
-      const execution = modelsFor(page, mode)
+      const execution = searchExecution(page.search, mode, "passage")
       sendApiJson(
         response,
         200,

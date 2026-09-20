@@ -27,6 +27,10 @@ current inputs. The September exact-input integrity finding overrides historical
 Full provider/model IDs are fixed contracts, not environment overrides: OpenAI Small 1,536 dimensions, Voyage 4 1,024
 dimensions with document/query roles, and Cohere Rerank 3.5, all through OpenRouter. Credentials/base URL remain app-owned.
 
+The route definitions also own provider metadata. W uses the query route to validate actual search execution and
+project public model usage consistently across product search, universal search and research retrieval. Route
+configuration alone does not establish that a model ran.
+
 | Data indexed | Embedding input | Embedding model | Reranker | Expanded-bakeoff basis |
 | --- | --- | --- | --- | --- |
 | Bills | Current title, summary, and subjects | `voyageai/voyage-4` | `cohere/rerank-v3.5` for natural-language discovery | Voyage improved nDCG@10 by 0.027 over OpenAI Small; reranking added another 0.041. |

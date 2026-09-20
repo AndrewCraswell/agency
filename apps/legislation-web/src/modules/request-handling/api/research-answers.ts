@@ -18,6 +18,7 @@ import {
   sendApiJson,
   type HttpApiHandler
 } from "./http"
+import { searchExecution, type SearchExecution } from "./search-execution"
 
 type SearchMode = "hybrid" | "lexical" | "semantic"
 type ResearchRecordType = "amendment" | "bill" | "passage" | "supporting-material"
@@ -157,7 +158,7 @@ export function createCanonicalResearchEvidenceRetriever(
                 .filter((hit) => billMatchesScope(hit.record, input.scope))
                 .map((hit) => citationFromBillHit(hit))
             )
-            recordSearchModels(page.search, models, rerankedProducts, "bill")
+            recordSearchModels(page.search, models, rerankedProducts, "bill", input.retrieval.mode)
             break
           }
           case "passage": {
@@ -176,7 +177,7 @@ export function createCanonicalResearchEvidenceRetriever(
             evidenceByProduct.push(
               page.items.filter((item) => billMatchesScope(item.bill, input.scope)).map(citationFromPassage)
             )
-            recordSearchModels(page.search, models, rerankedProducts, "passage")
+            recordSearchModels(page.search, models, rerankedProducts, "passage", input.retrieval.mode)
             break
           }
           case "supporting-material": {
@@ -211,7 +212,7 @@ export function createCanonicalResearchEvidenceRetriever(
                 citationFromMaterialHit
               )
             )
-            recordSearchModels(page.search, models, rerankedProducts, "supporting-material")
+            recordSearchModels(page.search, models, rerankedProducts, "supporting-material", input.retrieval.mode)
             break
           }
           case "amendment": {
@@ -234,7 +235,7 @@ export function createCanonicalResearchEvidenceRetriever(
             })
             candidateCount += page.items.length
             evidenceByProduct.push(page.items.map((item) => citationFromAmendment(item, apiBaseUrl)))
-            recordSearchModels(page.search, models, rerankedProducts, "amendment")
+            recordSearchModels(page.search, models, rerankedProducts, "amendment", input.retrieval.mode)
             break
           }
         }
@@ -689,49 +690,30 @@ function isResearchSourceDocument(value: unknown): value is SourceDocument & Rec
 }
 
 function recordSearchModels(
-  execution: Readonly<{ isReranked: boolean; models: readonly unknown[] }> | undefined,
+  execution: SearchExecution | undefined,
   destination: ModelUsage[],
   rerankedProducts: Array<"bill" | "passage">,
-  product: "amendment" | "bill" | "passage" | "supporting-material"
+  product: ResearchRecordType,
+  mode: SearchMode
 ): void {
-  if (execution === undefined) {
-    return
-  }
-  for (const value of execution.models) {
-    if (typeof value !== "object" || value === null || !("model" in value) || !("purpose" in value)) {
-      throw new LegislationError("unprocessable", "Canonical search returned invalid model metadata")
-    }
-    const model = value.model
-    const purpose = value.purpose
-    if (typeof model !== "string" || (purpose !== "embedding" && purpose !== "reranking")) {
-      throw new LegislationError("unprocessable", "Canonical search returned invalid model metadata")
-    }
-    destination.push(modelUsageFor(model, purpose))
-  }
-  if (execution.isReranked) {
-    if (product !== "bill" && product !== "passage") {
-      throw new LegislationError("unprocessable", "Canonical research retrieval reported unsupported reranking")
-    }
+  const validated = searchExecution(execution, mode, product)
+  destination.push(...validated.models)
+  if (validated.isReranked && (product === "bill" || product === "passage")) {
     rerankedProducts.push(product)
   }
 }
 
-function modelUsageFor(model: string, purpose: "embedding" | "reranking"): ModelUsage {
+function generationModelUsage(model: string): ModelUsage {
   if (model.startsWith("openai/")) {
-    return { dimensions: purpose === "embedding" ? 1_536 : null, model, provider: "openai", purpose }
+    return { dimensions: null, model, provider: "openai", purpose: "generation" }
   }
   if (model.startsWith("voyageai/")) {
-    return { dimensions: purpose === "embedding" ? 1_024 : null, model, provider: "voyageai", purpose }
+    return { dimensions: null, model, provider: "voyageai", purpose: "generation" }
   }
   if (model.startsWith("cohere/")) {
-    return { dimensions: null, model, provider: "cohere", purpose }
+    return { dimensions: null, model, provider: "cohere", purpose: "generation" }
   }
   throw new LegislationError("dependency_unavailable", "The configured model cannot be represented by the research API")
-}
-
-function generationModelUsage(model: string): ModelUsage {
-  const usage = modelUsageFor(model, "embedding")
-  return { ...usage, dimensions: null, purpose: "generation" }
 }
 
 function uniqueModels(models: readonly ModelUsage[]): ModelUsage[] {

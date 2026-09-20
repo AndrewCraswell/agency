@@ -12,12 +12,12 @@ import { projectMeetingRead } from "./meeting-read-projection"
 import { projectOrganizationRow } from "./organization-summary-read-projection"
 import { projectPassageSearchHit } from "./passage-search"
 import { projectPersonRead } from "./people-read-routes"
+import { searchExecution } from "./search-execution"
 import {
   type UniversalProductPage,
   type UniversalProductSearchInput,
   type UniversalSearchApi,
-  type UniversalSearchCandidate,
-  type SearchModel
+  type UniversalSearchCandidate
 } from "./universal-search"
 
 type SearchServices = CivicSearchApi & AmendmentSearchApi
@@ -77,7 +77,7 @@ async function searchBills(service: SearchServices, apiBaseUrl: string, input: U
   })
   return {
     items: projectBillSearchHits(page.items, input.mode, apiBaseUrl).map(candidateFromHit),
-    models: searchModels(page.search?.models ?? []),
+    models: searchExecution(page.search, input.mode, "bill").models,
     truncated: page.truncated
   }
 }
@@ -100,7 +100,7 @@ async function searchAmendments(service: SearchServices, apiBaseUrl: string, inp
   })
   return {
     items: projectAmendmentSearchHits(page.items, input.mode, apiBaseUrl).map(candidateFromHit),
-    models: searchModels(page.search.models),
+    models: searchExecution(page.search, input.mode, "amendment").models,
     truncated: page.truncated
   }
 }
@@ -126,7 +126,7 @@ async function searchPassages(service: SearchServices, apiBaseUrl: string, input
     items: page.items.map((item, index) =>
       candidateFromHit(projectPassageSearchHit(item, index + 1, apiBaseUrl, input.mode, input.query, false))
     ),
-    models: searchModels(page.search.models),
+    models: searchExecution(page.search, input.mode, "passage").models,
     truncated: page.truncated
   }
 }
@@ -150,7 +150,7 @@ async function searchMaterials(service: SearchServices, apiBaseUrl: string, inpu
   })
   return {
     items: projectSupportingMaterialSearchHits(page.items, input.mode, apiBaseUrl).map(candidateFromHit),
-    models: searchModels(page.search.models),
+    models: searchExecution(page.search, input.mode, "supporting-material").models,
     truncated: page.truncated
   }
 }
@@ -283,24 +283,6 @@ function candidateFromHit(hit: {
   return { ...hit.match, record: hit.record, recordId: hit.recordId, recordType: hit.recordType, sources: hit.sources }
 }
 
-function searchModels(models: readonly unknown[]): SearchModel[] {
-  return models.map((model) => {
-    if (!isSearchModel(model)) {
-      throw new LegislationError("unprocessable", "search model metadata is not configured")
-    }
-    if (model.model === "voyageai/voyage-4" && model.purpose === "embedding") {
-      return { dimensions: 1_024, model: "voyageai/voyage-4", provider: "voyageai", purpose: "embedding" }
-    }
-    if (model.model === "openai/text-embedding-3-small" && model.purpose === "embedding") {
-      return { dimensions: 1_536, model: "openai/text-embedding-3-small", provider: "openai", purpose: "embedding" }
-    }
-    if (model.model === "cohere/rerank-v3.5" && model.purpose === "reranking") {
-      return { dimensions: null, model: "cohere/rerank-v3.5", provider: "cohere", purpose: "reranking" }
-    }
-    throw new LegislationError("unprocessable", "search model metadata is not configured")
-  })
-}
-
 function updatedRange(from: string | null, to: string | null) {
   if (from === null && to === null) {
     return {}
@@ -414,13 +396,4 @@ function meetingStatuses(
     return values
   }
   throw new LegislationError("unprocessable", "meeting.statuses is not supported")
-}
-
-function isSearchModel(value: unknown): value is { model: string; purpose: "embedding" | "reranking" } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    (Reflect.get(value, "purpose") === "embedding" || Reflect.get(value, "purpose") === "reranking") &&
-    typeof Reflect.get(value, "model") === "string"
-  )
 }
