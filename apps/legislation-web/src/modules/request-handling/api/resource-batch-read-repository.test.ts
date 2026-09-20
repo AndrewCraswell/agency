@@ -60,6 +60,7 @@ const documentRead = {
 }
 
 const supportingMaterialRead = {
+  linksTruncated: false,
   amendmentIds: ["amendment:us:119:1"],
   billIds: ["bill:us:119:hr:1"],
   byteSize: null,

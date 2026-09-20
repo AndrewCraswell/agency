@@ -77,7 +77,8 @@ export const recordCollectionSchema = z
       "amendment-votes",
       "amendment-materials",
       "document-sections",
-      "material-sections"
+      "material-sections",
+      "material-links"
     ]),
     recordId: text,
     cursor: z.string().min(1).max(16384).optional(),
@@ -86,6 +87,12 @@ export const recordCollectionSchema = z
     textOffset: z.number().int().min(0).max(100000000).optional()
   })
   .superRefine((input, context) => {
+    if (input.collection === "material-links" && !/^material:[a-z0-9-]+(?::[^:]+)*$/.test(input.recordId))
+      context.addIssue({
+        code: "custom",
+        path: ["recordId"],
+        message: "Material links require a canonical material ID."
+      })
     if (
       (input.sectionId !== undefined || input.textOffset !== undefined) &&
       input.collection !== "document-sections" &&

@@ -256,6 +256,7 @@ describe("canonical legislative projections", () => {
     const detail = projectSupportingMaterialDetail(
       {
         ...input,
+        linksTruncated: true,
         storedUrl: null,
         byteSize: 1200,
         pageCount: 3,
@@ -270,7 +271,7 @@ describe("canonical legislative projections", () => {
       amendmentIds: [amendmentInput.id],
       documentDate: null
     })
-    expect(detail).toMatchObject({ storedUrl: null, pageCount: 3, sectionCount: 4 })
+    expect(detail).toMatchObject({ storedUrl: null, pageCount: 3, sectionCount: 4, linksTruncated: true })
   })
 
   it("projects supporting material sections to a real singular retrieval route", () => {

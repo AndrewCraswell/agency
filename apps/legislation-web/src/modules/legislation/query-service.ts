@@ -48,7 +48,7 @@ import {
 import { analyzeLegislation } from "@repo/legislation-core/research/analytics"
 import { describeAnalytics } from "@repo/legislation-core/research/analytics-catalog"
 import type { AnalyticsQuery } from "@repo/legislation-core/research/analytics-contract"
-import { readRecordCollection } from "@repo/legislation-core/research/record-collections"
+import { readRecordCollection, readSupportingMaterialLinks } from "@repo/legislation-core/research/record-collections"
 import type { RecordCollectionInput, RecordResolutionInput } from "@repo/legislation-core/research/record-contracts"
 import { resolveRecord, publishedNameMatches } from "@repo/legislation-core/research/record-resolution"
 import {
@@ -113,6 +113,7 @@ import { voteDateBound, voteSortTimestamp } from "./persistence/queries/vote-occ
 
 const CHILD_LIMIT = 100
 const SECTION_LIMIT = 50
+const MATERIAL_LINK_PREVIEW_LIMIT = 25
 const DETAIL_PREVIEW_LIMIT = 1000
 const { text: _documentText, ...documentMetadataColumns } = getTableColumns(billDocuments)
 const DETAIL_RESPONSE_TARGET_BYTES = 750_000
@@ -2926,21 +2927,8 @@ export class LegislationQueryService {
     }
     const limit = Math.min(Math.max(lookup.limit ?? SECTION_LIMIT, 1), SECTION_LIMIT)
     const offset = decodeOffset(lookup.cursor)
-    const [links, sections, aggregate] = await Promise.all([
-      this.#database
-        .select({
-          ...getTableColumns(supportingMaterialLinks),
-          billIdentifier: bills.identifier,
-          amendmentIdentifier: amendments.printedIdentifier,
-          meetingName: legislativeEvents.name,
-          organizationName: organizations.name
-        })
-        .from(supportingMaterialLinks)
-        .leftJoin(bills, eq(bills.id, supportingMaterialLinks.billId))
-        .leftJoin(amendments, eq(amendments.id, supportingMaterialLinks.amendmentId))
-        .leftJoin(legislativeEvents, eq(legislativeEvents.id, supportingMaterialLinks.eventId))
-        .leftJoin(organizations, eq(organizations.id, supportingMaterialLinks.organizationId))
-        .where(eq(supportingMaterialLinks.materialId, lookup.id)),
+    const [linkRows, sections, aggregate] = await Promise.all([
+      readSupportingMaterialLinks(this.#database, lookup.id, MATERIAL_LINK_PREVIEW_LIMIT + 1),
       this.#database
         .select()
         .from(supportingMaterialSections)
@@ -2956,20 +2944,24 @@ export class LegislationQueryService {
         .from(supportingMaterialSections)
         .where(eq(supportingMaterialSections.materialId, lookup.id))
     ])
-    const truncated = sections.length > limit
+    const sectionsTruncated = sections.length > limit
+    const linksTruncated = linkRows.length > MATERIAL_LINK_PREVIEW_LIMIT
+    const links = linkRows.slice(0, MATERIAL_LINK_PREVIEW_LIMIT)
     const materialRead = this.#supportingMaterialRead(material[0], links)
     return {
       links,
+      linksTruncated,
       material: {
         ...materialRead,
+        linksTruncated,
         byteSize: null,
         sectionCount: aggregate[0]?.sectionCount ?? 0,
         storedUrl: null,
         textCharacterCount: aggregate[0]?.textCharacterCount ?? 0
       },
-      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      nextCursor: sectionsTruncated ? encodeOffset(offset + limit) : undefined,
       sections: sections.slice(0, limit),
-      truncated
+      truncated: sectionsTruncated || linksTruncated
     }
   }
 

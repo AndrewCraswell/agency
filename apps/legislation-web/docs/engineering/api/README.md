@@ -28,6 +28,7 @@ The contract is split into focused pages:
 
 - [Shared schemas and protocol behavior](schemas.md)
 - [Legislative records and documents](legislative-records.md)
+- [Record collection continuation and material link previews](record-collections.md)
 - [People, organizations and meetings](civic-graph-and-events.md)
 - [Search, research answers, and document comparison](search-and-diffs.md)
 - [Subscriptions, deliveries, and webhooks](subscriptions-and-webhooks.md)

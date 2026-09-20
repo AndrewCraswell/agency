@@ -994,7 +994,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
     "get_organization",
     {
       description:
-        "Get a canonical legislature, chamber, committee, or subcommittee with membership and bill activity.",
+        "Get a canonical legislature, chamber, committee, or subcommittee with bounded relationship previews. Previews may be partial or omitted; use continuations for complete first-page collection reads.",
       inputSchema: entityLookupSchema("organization").strict(),
       outputSchema
     },
@@ -1029,7 +1029,8 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   server.registerTool(
     "get_event",
     {
-      description: "Get a legislative event with agenda, participants, documents, and related bills.",
+      description:
+        "Get a legislative event with bounded agenda, participant, document, outcome, and related-bill previews. Previews may be partial or omitted; use continuations for complete first-page collection reads.",
       inputSchema: entityLookupSchema("event"),
       outputSchema
     },
@@ -1218,7 +1219,8 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   server.registerTool(
     "get_supporting_material",
     {
-      description: "Get one supporting material record, canonical links, and paginated extracted sections.",
+      description:
+        "Get one supporting material record, bounded canonical-link previews, and paginated extracted sections. Follow nextCursor for sections and continuations.links for a complete first-page link collection read.",
       inputSchema: entityLookupSchema("material").extend(pageSchema),
       outputSchema
     },

@@ -261,12 +261,17 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
     getPerson: async ({ id }) => resourceData(await api.getPerson(id, undefined, requestOptions())),
     getSupportingMaterial: async ({ id, ...input }) => {
       const detail = resourceData(await api.getSupportingMaterial(id, undefined, requestOptions()))
+      const linkState = z.object({ linksTruncated: z.boolean() }).safeParse(detail)
+      if (!linkState.success) {
+        throw new LegislationApiProtocolError("The API returned invalid material link pagination")
+      }
       const sections = await api.listSupportingMaterialSections(id, query(input), requestOptions())
       return {
         material: detail,
+        linksTruncated: linkState.data.linksTruncated,
         sections: sections.data,
         nextCursor: sections.meta.nextCursor,
-        truncated: sections.meta.truncated
+        truncated: sections.meta.truncated || linkState.data.linksTruncated
       }
     },
     getVote: async ({ id }) => {

@@ -400,6 +400,7 @@ export interface SupportingMaterialSummary extends CanonicalFields {
 }
 
 export interface SupportingMaterialDetail extends SupportingMaterialSummary {
+  linksTruncated: boolean
   storedUrl: string | null
   byteSize: number | null
   pageCount: number | null
@@ -699,6 +700,7 @@ export type SupportingMaterialSummaryProjectionInput = SourceRecord & {
 }
 
 export type SupportingMaterialDetailProjectionInput = SupportingMaterialSummaryProjectionInput & {
+  linksTruncated: boolean
   storedUrl: string | null
   byteSize: number | null
   pageCount: number | null
@@ -1234,6 +1236,7 @@ export function projectSupportingMaterialDetail(
 ): SupportingMaterialDetail {
   return {
     ...projectSupportingMaterialSummary(input, context),
+    linksTruncated: input.linksTruncated,
     storedUrl: optionalAbsoluteUrl(input.storedUrl, "supporting material storedUrl"),
     byteSize: nullableNonnegativeInteger(input.byteSize, "supporting material byteSize"),
     pageCount: nullableNonnegativeInteger(input.pageCount, "supporting material pageCount"),

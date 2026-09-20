@@ -85,6 +85,15 @@ related bills with relationship type, relevance score when applicable, and relev
 
 ## Data-expansion tools
 
+### `read_record_collection`
+
+The shared schema includes `material-links` for complete supporting-material relationship retrieval. It accepts a
+canonical material ID as `recordId`, optional `limit` (1–100, default 25) and an independently bound `cursor`.
+Items retain the detail's joined link fields and material `sourceUrl`; follow `nextCursor` until absent.
+`get_supporting_material` exposes `linksTruncated` separately from its section cursor and includes it in overall
+`truncated`. Its relationship-ID arrays are only a preview when that flag is true. See
+[collection continuation](../../../legislation-web/docs/engineering/api/record-collections.md) for ordering and cursor scope.
+
 ### `search_people` and `get_person`
 
 Discovery accepts bounded name or party text plus optional jurisdiction, organization-membership, and active-status

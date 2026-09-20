@@ -4,15 +4,18 @@ import { z } from "zod"
 import type { LegislationDatabase } from "../database/database"
 import {
   amendmentActions,
+  amendments,
   billActions,
   billDocuments,
   billSponsors,
+  bills,
   documentSections,
   eventAgendaItems,
   eventBills,
   eventDocuments,
   eventOutcomeLinks,
   eventParticipants,
+  legislativeEvents,
   legislativeTerms,
   organizations,
   supportingMaterialLinks,
@@ -23,6 +26,40 @@ import {
 } from "../database/schema/schema"
 import { LegislationError } from "../domain/errors"
 import { recordCollectionSchema, type RecordCollectionInput } from "./record-contracts"
+
+export function readSupportingMaterialLinks(
+  database: LegislationDatabase,
+  materialId: string,
+  limit: number,
+  offset = 0
+) {
+  return database
+    .select({
+      ...getTableColumns(supportingMaterialLinks),
+      billIdentifier: bills.identifier,
+      amendmentIdentifier: amendments.printedIdentifier,
+      meetingName: legislativeEvents.name,
+      organizationName: organizations.name,
+      sourceUrl: supportingMaterials.sourceUrl
+    })
+    .from(supportingMaterialLinks)
+    .innerJoin(supportingMaterials, eq(supportingMaterials.id, supportingMaterialLinks.materialId))
+    .leftJoin(bills, eq(bills.id, supportingMaterialLinks.billId))
+    .leftJoin(amendments, eq(amendments.id, supportingMaterialLinks.amendmentId))
+    .leftJoin(legislativeEvents, eq(legislativeEvents.id, supportingMaterialLinks.eventId))
+    .leftJoin(organizations, eq(organizations.id, supportingMaterialLinks.organizationId))
+    .where(eq(supportingMaterialLinks.materialId, materialId))
+    .orderBy(
+      asc(supportingMaterialLinks.billId),
+      asc(supportingMaterialLinks.amendmentId),
+      asc(supportingMaterialLinks.eventId),
+      asc(supportingMaterialLinks.organizationId),
+      asc(supportingMaterialLinks.classification),
+      asc(supportingMaterialLinks.createdAt)
+    )
+    .limit(limit)
+    .offset(offset)
+}
 
 export async function readRecordCollection(database: LegislationDatabase, value: RecordCollectionInput) {
   const input = recordCollectionSchema.parse(value)
@@ -159,6 +196,8 @@ export async function readRecordCollection(database: LegislationDatabase, value:
       .orderBy(asc(table.ordinal), asc(table.id))
       .limit(limit + 1)
       .offset(offset)
+  } else if (input.collection === "material-links") {
+    items = await readSupportingMaterialLinks(database, input.recordId, limit + 1, offset)
   } else {
     const definition = definitions[input.collection]
     items = await database

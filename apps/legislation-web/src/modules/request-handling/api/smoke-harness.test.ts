@@ -157,6 +157,7 @@ function billSummaryRead(id: string): BillSummaryRead {
 
 function supportingMaterialRead(id: string): SupportingMaterialDetailRead {
   return {
+    linksTruncated: false,
     ...canonical(id),
     amendmentIds: ["amendment:fixture"],
     billIds: ["bill:fixture"],

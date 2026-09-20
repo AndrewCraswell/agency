@@ -41,18 +41,27 @@ evidence that legal duties are absent.
 The chat boundary enforces 180,000 UTF-8 bytes for the prepared core `structuredContent`, then separately for the
 actual model-visible tool text after evidence, presentation choices, result snapshots and record links are added.
 The shared paginator also accepts the consumer's serialized-output measurement. Chat uses the same enrichment and
-serialization for sizing and delivery across existing item pages, bill-text sections and vote-position pages.
+serialization for sizing and delivery across item pages, bill-text and supporting-material sections, bill-timeline
+events and vote-position pages. The named collections are selected explicitly; a cursor input alone does not establish
+byte-safe pagination.
 Oversized candidates are halved in memory until a complete page fits; this makes no additional dependency requests.
 Sizing previews do not retain result snapshots, consume citation references or publish presentation content.
 All omitted records/positions remain accessible through the existing bound continuations, with vote snapshot
 validation unchanged. An indivisible oversized record or position remains a reported, non-retryable core error.
 Unpaginated detail contracts still require explicit narrower reads; the paginator does not invent new tool inputs.
-`get_person` uses that same budget check to shorten inline terms, memberships and sponsored-bill previews, down to
-identity-only when necessary. Identity and provenance remain intact. Root and collection truncation flags distinguish
-unread relationships from absence. Its `continuations` name existing tools and first-page inputs; read each full
-collection from the beginning, then follow that tool's cursors. Nested preview cursors are not exposed as collection
-continuations. The ID-only input contract and the profile drawer's direct service read are unchanged. An oversized
-identity still fails explicitly, with recovery pointing to supported collection reads rather than unsupported limits.
+`get_person`, `get_organization` and `get_event` use that same budget check to shorten inline relationship previews,
+down to identity-only when necessary. One shared helper handles arrays and nested item pages. Identity, provenance
+and warnings remain intact. Root and collection truncation flags distinguish unread relationships from absence.
+Their `continuations` name existing tools and first-page inputs; read each full collection from the beginning, then
+follow that tool's cursors. Nested preview cursors are not exposed as collection continuations. The ID-only contracts
+are unchanged. Oversized identity/context still fails explicitly, with recovery pointing to supported collection
+reads rather than unsupported limits.
+
+Supporting-material links are a count-bounded service preview with a complete `material-links` collection read.
+Research output sizes that preview jointly with the current section page: links can be omitted while retaining at
+least one section, or an empty terminal section collection. `nextCursor` continues sections; `continuations.links`
+starts the independent link collection. A short link preview never means that all links were read. One indivisible
+section still fails explicitly, with recovery pointing to `material-sections` and its section/text-offset inputs.
 The final serialization is also guarded. Rejected enrichment is not turned into a successful empty result, stripped
 of provenance, or retried automatically. No successful memory observation or presentation content is published for
 an oversized projection. A `result_limit` error offers an explicit `narrow` recovery: restart without a cursor at
@@ -92,6 +101,10 @@ preservation, static catalog operation without a database connection, grounded a
 material failures. The timeline service already normalizes timestamp and date branches to text before `COALESCE`;
 its existing integration fixture covers UTC ordering and multi-page/null cases. No new timeline implementation fix or
 historical production root cause is claimed.
+LEG-82/LEG-84/LEG-85 regressions exercise raw and enrichment-only overflow through the actual model serializer,
+complete section/event/relationship traversal, upstream continuations, tool/selection cursor binding, shared nested
+preview sizing, joint material section/link fitting and supported oversized-identity recovery. No paid model calls
+are needed to verify these boundaries.
 
 Mocked fixtures do not establish live-model compliance, provider availability, browser accessibility or substantive
 legal conclusions. Manager review, centralized execution of behavioral tests and applicable browser acceptance remain

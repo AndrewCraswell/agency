@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
 import { LegislationError } from "../domain/errors"
+import type { RecordCollectionInput } from "./record-contracts"
 
 type JSONValue = z.infer<ReturnType<typeof z.json>>
 export type ResultPageMeasurement = (data: JSONValue) => number
@@ -115,57 +116,78 @@ function selectResultPage(
   throw new LegislationError("payload_too_large", message, { details: { retryable: false } })
 }
 
-function preparePersonPreview(
-  name: string,
-  input: Readonly<Record<string, unknown>>,
-  data: { [key: string]: JSONValue },
-  measureResult?: ResultPageMeasurement
-): JSONValue {
-  if (!isRecord(data.person) || typeof data.person.id !== "string") return data
-  const personId = data.person.id
-  const terms = Array.isArray(data.terms) ? data.terms : []
-  const collections = ["memberships", "sponsoredBills"] as const
+function detailPreview(name: string, data: { [key: string]: JSONValue }) {
+  const roots: Record<string, string> = {
+    get_person: "person",
+    get_organization: "organization",
+    get_event: "event",
+    get_supporting_material: "material"
+  }
+  const rootKey = roots[name]
+  const identity = rootKey ? data[rootKey] : undefined
+  if (!isRecord(identity) || typeof identity.id !== "string") return undefined
+  const id = identity.id
+  const collection = (collection: RecordCollectionInput["collection"]) => ({
+    tool: "read_record_collection",
+    input: { collection, recordId: id }
+  })
+  const continuations: Record<string, JSONValue> =
+    name === "get_person"
+      ? {
+          terms: collection("person-terms"),
+          memberships: { tool: "get_memberships", input: { personId: id } },
+          sponsoredBills: { tool: "get_sponsored_bills", input: { id } }
+        }
+      : name === "get_organization"
+        ? {
+            children: collection("organization-children"),
+            memberships: { tool: "get_memberships", input: { organizationId: id } },
+            billActivity: { tool: "get_committee_bills", input: { id } }
+          }
+        : name === "get_event"
+          ? {
+              agendaItems: collection("meeting-agenda"),
+              documents: collection("meeting-documents"),
+              outcomes: collection("meeting-outcomes"),
+              participants: collection("meeting-participants"),
+              relatedBills: collection("meeting-bills")
+            }
+          : { links: collection("material-links") }
+  const collections = Object.keys(continuations)
   const length = Math.max(
-    terms.length,
+    0,
     ...collections.map((key) => {
       const page = data[key]
-      return isRecord(page) && Array.isArray(page.items) ? page.items.length : 0
+      return Array.isArray(page) ? page.length : isRecord(page) && Array.isArray(page.items) ? page.items.length : 0
     })
   )
-  const candidate = (limit: number): JSONValue => {
+  const candidate = (limit: number): { [key: string]: JSONValue } => {
     const preview = { ...data }
-    let omitted = false
-    if (Array.isArray(data.terms)) {
-      preview.terms = terms.slice(0, limit)
-      preview.termsTruncated = data.termsTruncated === true || terms.length > limit
-      omitted ||= terms.length > limit
-    }
+    let truncated = data.truncated === true
     for (const key of collections) {
       const page = data[key]
-      if (!isRecord(page) || !Array.isArray(page.items)) continue
-      const { nextCursor: _nextCursor, ...metadata } = page
-      const truncated = page.truncated === true || typeof page.nextCursor === "string" || page.items.length > limit
-      preview[key] = { ...metadata, items: page.items.slice(0, limit), truncated }
-      omitted ||= truncated
+      if (Array.isArray(page)) {
+        const flag = `${key}Truncated`
+        preview[key] = page.slice(0, limit)
+        preview[flag] =
+          data[flag] === true || (data[flag] === undefined && data.truncated === true) || page.length > limit
+        truncated ||= preview[flag] === true
+      } else if (isRecord(page) && Array.isArray(page.items)) {
+        const { nextCursor: _nextCursor, ...metadata } = page
+        const partial = page.truncated === true || typeof page.nextCursor === "string" || page.items.length > limit
+        preview[key] = { ...metadata, items: page.items.slice(0, limit), truncated: partial }
+        truncated ||= partial
+      }
     }
-    preview.truncated = data.truncated === true || preview.termsTruncated === true || omitted
+    preview.truncated = truncated
     // These are fresh collection reads, not offsets into the shortened previews.
     preview.continuations = {
       ...(isRecord(data.continuations) ? data.continuations : {}),
-      terms: { tool: "read_record_collection", input: { collection: "person-terms", recordId: personId } },
-      memberships: { tool: "get_memberships", input: { personId } },
-      sponsoredBills: { tool: "get_sponsored_bills", input: { id: personId } }
+      ...continuations
     }
     return preview
   }
-  return selectResultPage(
-    0,
-    length,
-    candidate,
-    (page) => resultPageFits(name, input, page, measureResult),
-    "The person identity or its provenance exceeds the response budget. Read its relationships with the collection tools instead.",
-    0
-  )
+  return { length, candidate }
 }
 
 function prepareVotePage(
@@ -273,27 +295,42 @@ function prepareContentPage(
     return prepareVotePage(name, input, value, offset, snapshot, measureResult)
   }
   const data = projectDiscoveryRecord(value, name !== "get_bill_text")
-  const collection = name === "get_bill_text" ? "sections" : "items"
+  const collection =
+    name === "get_bill_text" || name === "get_supporting_material"
+      ? "sections"
+      : name === "get_bill_timeline"
+        ? "events"
+        : "items"
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
     return data
   }
-  if (name === "get_person") {
-    return preparePersonPreview(name, input, data, measureResult)
+  const preview = detailPreview(name, data)
+  function fits(value: JSONValue) {
+    return resultPageFits(name, input, value, measureResult)
   }
   const records = data[collection]
   if (!Array.isArray(records)) {
-    return data
+    return preview
+      ? selectResultPage(
+          0,
+          preview.length,
+          preview.candidate,
+          fits,
+          "The record identity or its context exceeds the response budget. Read its relationships with the collection tools instead.",
+          0
+        )
+      : data
   }
   if (offset > 0 && offset >= records.length) {
     throw new LegislationError("invalid_request", "The result page changed. Start the search again.")
   }
-  function fits(value: JSONValue) {
-    return resultPageFits(name, input, value, measureResult)
+  const complete = preview ? preview.candidate(preview.length) : data
+  if (offset === 0 && fits(complete)) {
+    return complete
   }
-  if (offset === 0 && fits(data)) {
-    return data
-  }
-  const candidate = (end: number) => {
+  const candidate = (count: number) => {
+    // Detail previews may be omitted, but a section page must make forward progress.
+    const end = offset + Math.max(1, count)
     const hasRemaining = end < records.length
     const cursor = `${prefix}${Buffer.from(
       JSON.stringify({
@@ -303,17 +340,18 @@ function prepareContentPage(
       })
     ).toString("base64url")}`
     return {
-      ...data,
+      ...(preview ? preview.candidate(count) : data),
       [collection]: records.slice(offset, end),
       ...(hasRemaining ? { nextCursor: cursor, truncated: true } : {})
     }
   }
   return selectResultPage(
-    offset,
-    records.length,
+    0,
+    Math.max(records.length - offset, preview?.length ?? 0),
     candidate,
     fits,
-    "One result or its attribution exceeds the response budget. Read selected source passages instead."
+    "One result or its attribution exceeds the response budget. Read selected source passages instead.",
+    preview ? 0 : 1
   )
 }
 

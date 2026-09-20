@@ -35,6 +35,15 @@ export function researchLimitRecovery(name: string): ResearchRecovery {
   } else if (name === "get_person") {
     instruction =
       "The person identity or its provenance exceeds the budget even without relationship previews. Do not retry get_person with limit, childLimit or cursor; those inputs are unsupported. Read get_memberships with personId, get_sponsored_bills with id, or read_record_collection with collection: person-terms and recordId, starting at limit: 1. The failed identity preview was not read; disclose incomplete coverage."
+  } else if (name === "get_organization") {
+    instruction =
+      "The organization identity or its context exceeds the budget even without relationship previews. Do not retry get_organization with limit, childLimit or cursor; those inputs are unsupported. Read get_memberships with organizationId, get_committee_bills with id, or read_record_collection with collection: organization-children and recordId, starting at limit: 1. Disclose that the failed detail was not read."
+  } else if (name === "get_event") {
+    instruction =
+      "The event identity or its context exceeds the budget even without relationship previews. Do not retry get_event with limit, childLimit or cursor; those inputs are unsupported. Read read_record_collection with the event ID as recordId and collection: meeting-agenda, meeting-documents, meeting-participants, meeting-bills or meeting-outcomes, starting at limit: 1. Disclose that the failed detail was not read."
+  } else if (name === "get_supporting_material") {
+    instruction =
+      "Restart get_supporting_material without cursor and with limit: 1. If one section or the material identity still exceeds the budget, use read_record_collection with recordId and collection: material-sections, selecting sectionId and textOffset for long text. Read relationships with collection: material-links. Disclose unread coverage; do not infer an absence of evidence."
   }
   return { action: "narrow", instruction }
 }

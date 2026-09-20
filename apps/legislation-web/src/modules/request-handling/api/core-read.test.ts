@@ -44,6 +44,7 @@ function bill(id = "bill:us:119:hr:1") {
 
 function supportingMaterial(id = "material:us:119:committee-report:1") {
   return {
+    linksTruncated: true,
     amendmentIds: ["amendment:us:119:hamdt:1"],
     billIds: ["bill:us:119:hr:1"],
     byteSize: null,
@@ -541,6 +542,7 @@ describe("core read API handler", () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toMatchObject({
       data: {
+        linksTruncated: true,
         byteSize: null,
         canonicalUrl: "http://127.0.0.1:3100/api/supporting-materials/material%3Aus%3A119%3Acommittee-report%3A1",
         pageCount: null,

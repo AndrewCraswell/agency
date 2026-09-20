@@ -55,3 +55,28 @@ it("forwards section window selection without dropping the text offset", async (
   expect(response.status).toBe(200)
   expect(read).toHaveBeenCalledWith(input)
 })
+
+it("forwards material-link continuation and rejects other record kinds", async () => {
+  const read = vi.fn<Parameters<typeof createRecordCollectionHandler>[0]>(async () => ({
+    items: [],
+    truncated: false
+  }))
+  for (const recordId of ["material:us:report", "bill:us:119:hr:1"]) {
+    const input = { collection: "material-links", recordId, cursor: "collection-cursor", limit: 10 }
+    const response = await executeNextHttpApiHandler(
+      new Request("http://localhost/api/records/collection", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input)
+      }),
+      createRecordCollectionHandler(read)
+    )
+    expect(response.status).toBe(recordId.startsWith("material:") ? 200 : 400)
+  }
+  expect(read).toHaveBeenCalledExactlyOnceWith({
+    collection: "material-links",
+    recordId: "material:us:report",
+    cursor: "collection-cursor",
+    limit: 10
+  })
+})

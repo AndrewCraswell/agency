@@ -309,6 +309,7 @@ function isSupportingMaterialDetailRead(value: unknown): value is SupportingMate
   }
   const read = (name: string) => Reflect.get(value, name)
   return (
+    typeof read("linksTruncated") === "boolean" &&
     read("byteSize") === null &&
     read("pageCount") === null &&
     read("storedUrl") === null &&

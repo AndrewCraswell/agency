@@ -206,7 +206,7 @@ type DocumentSummary = CanonicalFields & { type: "document"; billId: string | nu
 type DocumentDetail = DocumentSummary & { byteSize: number | null; pageCount: number | null; sectionCount: number; textCharacterCount: number; failureCategory: string | null }
 type DocumentSection = CanonicalFields & { type: "document-section"; documentId: string; billId: string | null; ordinal: number; heading: string | null; text: string; startOffset: number; endOffset: number; pageStart: number | null; pageEnd: number | null; contentHash: string; sourceUrl: string }
 type SupportingMaterialSummary = CanonicalFields & { type: "supporting-material"; jurisdictionId: string; classification: string; title: string; billIds: string[]; amendmentIds: string[]; meetingIds: string[]; organizationIds: string[]; documentDate: string | null; sourceUrl: string; mimeType: string | null; processingStatus: ProcessingStatus }
-type SupportingMaterialDetail = SupportingMaterialSummary & { storedUrl: string | null; byteSize: number | null; pageCount: number | null; sectionCount: number; textCharacterCount: number }
+type SupportingMaterialDetail = SupportingMaterialSummary & { linksTruncated: boolean; storedUrl: string | null; byteSize: number | null; pageCount: number | null; sectionCount: number; textCharacterCount: number }
 type SupportingMaterialSection = CanonicalFields & { type: "supporting-material-section"; materialId: string; ordinal: number; heading: string | null; text: string; pageStart: number | null; pageEnd: number | null; contentHash: string; sourceUrl: string }
 ```
 

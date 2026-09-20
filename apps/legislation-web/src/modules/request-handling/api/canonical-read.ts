@@ -88,6 +88,7 @@ export interface SupportingMaterialRead extends SourceDocument {
 }
 
 export interface SupportingMaterialDetailRead extends SupportingMaterialRead {
+  linksTruncated: boolean
   byteSize: null
   pageCount: null
   sectionCount: number
@@ -205,6 +206,7 @@ export function projectSupportingMaterialDetailRead(
       amendmentIds: value.amendmentIds,
       billIds: value.billIds,
       byteSize: value.byteSize,
+      linksTruncated: value.linksTruncated,
       classification: requiredString(value, "classification", "supporting material classification"),
       documentDate: value.documentDate,
       id: requiredString(value, "id", "supporting material ID"),

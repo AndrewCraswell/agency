@@ -175,6 +175,7 @@ function vote(id: number) {
 
 function supportingMaterialRead() {
   return {
+    linksTruncated: true,
     amendmentIds: ["amendment:us:119:hr:1"],
     billIds: ["bill:us:119:hr:1"],
     byteSize: null,
@@ -312,6 +313,7 @@ describe("canonical supporting-material reads", () => {
       type: "supporting-material"
     })
     expect(projectSupportingMaterialDetailRead(read, "https://api.example.test")).toMatchObject({
+      linksTruncated: true,
       byteSize: null,
       pageCount: null,
       sectionCount: 3,

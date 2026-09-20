@@ -359,12 +359,18 @@ describe("shared research definitions", () => {
       true
     )
   })
-  it.each(["search_bills", "get_bill_text"])("applies consumer sizing to %s without losing records", async (name) => {
+  it.each([
+    { name: "search_bills", collection: "items", selection: { query: "housing" } },
+    { name: "get_bill_text", collection: "sections", selection: { id: "bill:us:119:hr:1" } },
+    { name: "get_bill_timeline", collection: "events", selection: { id: "bill:us:119:hr:1" } },
+    { name: "get_supporting_material", collection: "sections", selection: { id: "material:us:one" } }
+  ])("applies consumer sizing to $name without losing records", async ({ name, collection, selection }) => {
     const records = Array.from({ length: 5 }, (_, index) => ({ id: String(index), text: "x".repeat(10000) }))
-    const collection = name === "get_bill_text" ? "sections" : "items"
     const read = vi.fn(async () => ({ [collection]: records, nextCursor: null, truncated: false }))
-    const tool = definition({ ...service(), searchBills: read, getBillText: read }, name)
-    const selection = name === "get_bill_text" ? { id: "bill:us:119:hr:1" } : { query: "housing" }
+    const tool = definition(
+      { ...service(), searchBills: read, getBillText: read, getBillTimeline: read, getSupportingMaterial: read },
+      name
+    )
     const measure = (data: unknown) => Buffer.byteLength(JSON.stringify({ data, attribution: "x".repeat(160000) }))
     const collected: unknown[] = []
     let cursor: unknown
@@ -384,6 +390,194 @@ describe("shared research definitions", () => {
     expect(collected).toEqual(records)
     expect(pages).toBeGreaterThan(1)
     expect(read).toHaveBeenCalledTimes(pages)
+  })
+  it.each([
+    { name: "get_bill_timeline", collection: "events", id: "bill:us:119:hr:1" },
+    { name: "get_supporting_material", collection: "sections", id: "material:us:one" }
+  ])("preserves metadata and upstream pages when $name exceeds the raw budget", async ({ name, collection, id }) => {
+    const records = [0, 1, 2].map((ordinal) => ({
+      ordinal,
+      text: "x".repeat(100000),
+      sourceUrl: "https://example.gov"
+    }))
+    const metadata = { billId: "bill:us:119:hr:1", warnings: ["Source coverage"] }
+    const read = vi.fn(async (input: { cursor?: string }) => ({
+      ...metadata,
+      [collection]: input.cursor === "upstream" ? records.slice(2) : records.slice(0, 2),
+      ...(input.cursor === "upstream" ? { truncated: false } : { nextCursor: "upstream", truncated: true })
+    }))
+    const api = { ...service(), getBillTimeline: read, getSupportingMaterial: read }
+    const tool = definition(api, name)
+    const collected: unknown[] = []
+    let cursor: unknown
+    let pages = 0
+    do {
+      const result = await tool.execute({ id, limit: 2, cursor })
+      assert.ok("structuredContent" in result)
+      const data = result.structuredContent.data
+      assert.ok(data && typeof data === "object" && !Array.isArray(data))
+      const records = data[collection]
+      assert.ok(Array.isArray(records))
+      expect(data).toMatchObject(metadata)
+      expect(Buffer.byteLength(JSON.stringify(result.structuredContent))).toBeLessThanOrEqual(researchResultByteLimit)
+      collected.push(...records)
+      cursor = data.nextCursor
+      if (pages === 0) {
+        expect(await tool.execute({ id, limit: 1, cursor })).toHaveProperty("isError", true)
+        const other = name === "get_bill_timeline" ? "get_supporting_material" : "get_bill_timeline"
+        expect(
+          await definition(api, other).execute({
+            id: other === "get_bill_timeline" ? metadata.billId : "material:us:one",
+            limit: 2,
+            cursor
+          })
+        ).toHaveProperty("isError", true)
+      }
+      expect(++pages).toBeLessThanOrEqual(3)
+    } while (cursor)
+    expect(collected).toEqual(records)
+    expect(read).toHaveBeenCalledTimes(3)
+    expect(read).toHaveBeenLastCalledWith({ id, limit: 2, cursor: "upstream" })
+    const oversized = vi.fn(async () => ({ [collection]: [{ text: "x".repeat(researchResultByteLimit) }] }))
+    const failure = await definition(
+      { ...service(), getBillTimeline: oversized, getSupportingMaterial: oversized },
+      name
+    ).execute({ id })
+    expect(failure).toHaveProperty("isError", true)
+    expect(JSON.parse(failure.content[0]!.text)).toMatchObject({ error: "payload_too_large", retryable: false })
+  })
+
+  it.each([
+    {
+      name: "get_organization",
+      root: "organization",
+      key: "children",
+      collection: "organization-children",
+      id: "organization:us:one"
+    },
+    { name: "get_event", root: "event", key: "agendaItems", collection: "meeting-agenda", id: "event:us:one" },
+    {
+      name: "get_supporting_material",
+      root: "material",
+      key: "links",
+      collection: "material-links",
+      id: "material:us:one"
+    }
+  ])("bounds $name previews and retains supported collection handoffs", async ({ name, root, key, collection, id }) => {
+    const identity = { id, name: "Source record", sourceUrl: "https://example.gov/record" }
+    const records = [0, 1].map((index) => ({ id: String(index), text: "x".repeat(100000) }))
+    const data = { [root]: identity, [key]: records, warnings: ["Partial upstream coverage"], truncated: false }
+    const read = vi.fn(async () => data)
+    const readRecordCollection = vi.fn<NonNullable<LegislationQueryApi["readRecordCollection"]>>(async () => ({
+      items: []
+    }))
+    const api = {
+      ...service(),
+      getOrganization: read,
+      getEvent: read,
+      getSupportingMaterial: read,
+      readRecordCollection
+    }
+    const tool = definition(api, name)
+    const result = await tool.execute({ id })
+    assert.ok("structuredContent" in result)
+    const preview = result.structuredContent.data
+    assert.ok(preview && typeof preview === "object" && !Array.isArray(preview))
+    expect(Buffer.byteLength(JSON.stringify(result.structuredContent))).toBeLessThanOrEqual(researchResultByteLimit)
+    expect(preview[root]).toEqual(identity)
+    expect(preview[key]).toEqual(records.slice(0, 1))
+    expect(preview[`${key}Truncated`]).toBe(true)
+    expect(preview.truncated).toBe(true)
+    expect(preview.warnings).toEqual(data.warnings)
+    const handoffs = preview.continuations
+    assert.ok(handoffs && typeof handoffs === "object" && !Array.isArray(handoffs))
+    const handoff = handoffs[key]
+    assert.ok(handoff && typeof handoff === "object" && !Array.isArray(handoff) && typeof handoff.tool === "string")
+    await definition(api, handoff.tool).execute(handoff.input)
+    expect(readRecordCollection).toHaveBeenCalledExactlyOnceWith({ collection, recordId: id })
+    expect(data[key]).toEqual(records)
+    const identityOnly = await tool.execute({ id }, (value) =>
+      Buffer.byteLength(JSON.stringify({ data: value, attribution: "x".repeat(170000) }))
+    )
+    expect(identityOnly).toHaveProperty(`structuredContent.data.${key}`, [])
+    const failure = await tool.execute({ id }, () => researchResultByteLimit + 1)
+    expect(failure).toHaveProperty("isError", true)
+    expect(JSON.parse(failure.content[0]!.text)).toMatchObject({ error: "payload_too_large", retryable: false })
+  })
+
+  it("jointly sizes material links and section pages without losing a section or source metadata", async () => {
+    const material = { id: "material:us:one", sourceUrl: "https://example.gov/report" }
+    const sections = [0, 1].map((index) => ({ id: `section:${index}`, text: "x".repeat(100000) }))
+    const links = [{ billId: "bill:us:119:hr:1", title: "x".repeat(100000) }]
+    const data = { material, sections, links, truncated: false }
+    const getSupportingMaterial = vi.fn(async () => data)
+    const tool = definition({ ...service(), getSupportingMaterial }, "get_supporting_material")
+    const collected: unknown[] = []
+    let cursor: unknown
+    let pages = 0
+    do {
+      const result = await tool.execute({ id: material.id, cursor })
+      assert.ok("structuredContent" in result)
+      const page = result.structuredContent.data
+      assert.ok(page && typeof page === "object" && !Array.isArray(page) && Array.isArray(page.sections))
+      expect(page.material).toEqual(material)
+      expect(page.links).toEqual([])
+      expect(page.linksTruncated).toBe(true)
+      expect(page.continuations).toMatchObject({
+        links: { tool: "read_record_collection", input: { collection: "material-links", recordId: material.id } }
+      })
+      expect(Buffer.byteLength(JSON.stringify(result.structuredContent))).toBeLessThanOrEqual(researchResultByteLimit)
+      collected.push(...page.sections)
+      cursor = page.nextCursor
+      expect(++pages).toBeLessThanOrEqual(2)
+    } while (cursor)
+    expect(collected).toEqual(sections)
+    expect(data.links).toEqual(links)
+    expect(data.sections).toEqual(sections)
+  })
+
+  it("keeps organization page metadata but replaces preview cursors with the correct collection tools", async () => {
+    const id = "organization:us:one"
+    const data = {
+      organization: { id, name: "Committee" },
+      children: [],
+      memberships: { items: [{ id: "member:one" }], nextCursor: "members", warnings: ["Coverage"], truncated: true },
+      billActivity: {
+        items: [{ bill: { id: "bill:us:119:hr:1", title: "Bill" } }],
+        nextCursor: "bills",
+        truncated: true
+      },
+      nextMeeting: null,
+      truncated: true
+    }
+    const getMemberships = vi.fn<NonNullable<LegislationQueryApi["getMemberships"]>>(async () => ({ items: [] }))
+    const getCommitteeBillActivity = vi.fn<NonNullable<LegislationQueryApi["getCommitteeBillActivity"]>>(async () => ({
+      items: []
+    }))
+    const api = { ...service(), getOrganization: async () => data, getMemberships, getCommitteeBillActivity }
+    const result = await definition(api, "get_organization").execute({ id })
+    assert.ok("structuredContent" in result)
+    const preview = result.structuredContent.data
+    assert.ok(preview && typeof preview === "object" && !Array.isArray(preview))
+    expect(preview.memberships).toMatchObject({
+      items: data.memberships.items,
+      warnings: ["Coverage"],
+      truncated: true
+    })
+    expect(preview.memberships).not.toHaveProperty("nextCursor")
+    expect(preview.billActivity).not.toHaveProperty("nextCursor")
+    expect(preview.nextMeeting).toBeNull()
+    const continuations = preview.continuations
+    assert.ok(continuations && typeof continuations === "object" && !Array.isArray(continuations))
+    for (const key of ["memberships", "billActivity"]) {
+      const handoff = continuations[key]
+      assert.ok(handoff && typeof handoff === "object" && !Array.isArray(handoff) && typeof handoff.tool === "string")
+      await definition(api, handoff.tool).execute(handoff.input)
+    }
+    expect(getMemberships).toHaveBeenCalledExactlyOnceWith({ organizationId: id })
+    expect(getCommitteeBillActivity).toHaveBeenCalledExactlyOnceWith({ id })
+    expect(data.memberships.nextCursor).toBe("members")
+    expect(data.billActivity.nextCursor).toBe("bills")
   })
   it("returns a non-retryable failure when a single position cannot fit the consumer budget", async () => {
     const getVote = vi.fn(async () => ({ vote: { id: "vote:us:one" }, positions: [{ sourceIdentity: "one" }] }))

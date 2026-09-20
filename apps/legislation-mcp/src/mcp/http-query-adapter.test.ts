@@ -697,7 +697,7 @@ describe("createMcpHttpQueryAdapter", () => {
     ],
     [
       "get_supporting_material",
-      resourceResponse({}),
+      resourceResponse({ linksTruncated: false }),
       (adapter: ReturnType<typeof createMcpHttpQueryAdapter>) => adapter.getSupportingMaterial({ id: "material:1" }),
       "/api/supporting-materials/material%3A1",
       "GET",
@@ -819,23 +819,74 @@ describe("createMcpHttpQueryAdapter", () => {
     expect(init?.body === undefined ? undefined : JSON.parse(String(init.body))).toEqual(body)
   })
 
-  it("forwards supporting-material section cursors and limits", async () => {
+  it.each([false, true])(
+    "preserves material link truncation (%s) separately from section cursors",
+    async (linksTruncated) => {
+      const fetch = vi
+        .fn<FetchLike>()
+        .mockResolvedValueOnce(resourceResponse({ id: "material:1", linksTruncated }))
+        .mockResolvedValueOnce(pageResponse())
+      const adapter = createMcpHttpQueryAdapter({
+        apiBaseUrl: "https://legislation.example.test",
+        fetch,
+        getApiAccessToken: () => "api-m2m-token"
+      })
+      const result = await runWithRequestContext(
+        { correlationId },
+        async () => await adapter.getSupportingMaterial({ id: "material:1", cursor: "next-sections", limit: 2 })
+      )
+      const target = new URL(String(fetch.mock.calls[1]?.[0]))
+      expect(target.pathname).toBe("/api/supporting-materials/material%3A1/sections")
+      expect(Object.fromEntries(target.searchParams)).toEqual({ cursor: "next-sections", limit: "2" })
+      expect(result).toMatchObject({
+        linksTruncated,
+        truncated: linksTruncated,
+        nextCursor: null,
+        material: { id: "material:1", linksTruncated }
+      })
+    }
+  )
+
+  it("advertises and forwards material-link collection selection through the shared API contract", async () => {
+    const input = { collection: "material-links", recordId: "material:us:report", limit: 10 }
+    const page = { collection: input.collection, recordId: input.recordId, items: [], truncated: false }
     const fetch = vi
       .fn<FetchLike>()
-      .mockResolvedValueOnce(resourceResponse({ id: "material:1" }))
-      .mockResolvedValueOnce(pageResponse())
+      .mockResolvedValueOnce(
+        resourceResponse({
+          ...page,
+          items: [{ materialId: input.recordId, organizationId: "organization:us:committee" }],
+          nextCursor: "links-cursor",
+          truncated: true
+        })
+      )
+      .mockResolvedValueOnce(resourceResponse(page))
     const adapter = createMcpHttpQueryAdapter({
       apiBaseUrl: "https://legislation.example.test",
       fetch,
       getApiAccessToken: () => "api-m2m-token"
     })
-    await runWithRequestContext(
-      { correlationId },
-      async () => await adapter.getSupportingMaterial({ id: "material:1", cursor: "next-sections", limit: 2 })
-    )
-    const target = new URL(String(fetch.mock.calls[1]?.[0]))
-    expect(target.pathname).toBe("/api/supporting-materials/material%3A1/sections")
-    expect(Object.fromEntries(target.searchParams)).toEqual({ cursor: "next-sections", limit: "2" })
+    const tool = createLegislationResearchTools(
+      adapter,
+      createLogger({ level: "error", service: "mcp-material-links-test", write: () => undefined })
+    ).find((definition) => definition.name === "read_record_collection")
+    expect(tool).toBeDefined()
+    const first = await runWithRequestContext({ correlationId }, async () => await tool?.execute(input))
+    expect(first).not.toMatchObject({ isError: true })
+    const cursor = z
+      .object({ structuredContent: z.object({ data: z.object({ nextCursor: z.string() }) }) })
+      .parse(first).structuredContent.data.nextCursor
+    expect(cursor).not.toBe("links-cursor")
+    const result = await runWithRequestContext({ correlationId }, async () => await tool?.execute({ ...input, cursor }))
+    expect(result).not.toMatchObject({ isError: true })
+    expect(result).toMatchObject({ structuredContent: { data: page } })
+    expect(fetch).toHaveBeenCalledTimes(2)
+    for (const [index, expected] of [input, { ...input, cursor: "links-cursor" }].entries()) {
+      const [url, init] = fetch.mock.calls[index] ?? []
+      expect(new URL(String(url)).pathname).toBe("/api/records/collection")
+      expect(init?.method).toBe("POST")
+      expect(JSON.parse(String(init?.body))).toEqual(expected)
+    }
   })
 
   it("maps API error categories and retryability for MCP tool responses", async () => {

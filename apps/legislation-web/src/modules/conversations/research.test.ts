@@ -985,6 +985,186 @@ it("pages search results that overflow after enrichment without dropping evidenc
   expect(fixture.report).not.toHaveBeenCalled()
 })
 
+it.each(
+  [
+    { name: "get_bill_timeline", collection: "events", textKey: "sourceUrl", id: selectionBillId },
+    { name: "get_supporting_material", collection: "sections", textKey: "text", id: "material:us:one" }
+  ].flatMap((tool) => [178500, 320000].map((bytes) => ({ ...tool, bytes })))
+)(
+  "delivers every $name record from $bytes raw bytes through the model serializer",
+  async ({ name, collection, textKey, id, bytes }) => {
+    vi.spyOn(resultStore, "persist").mockResolvedValue(undefined)
+    const records = Array.from({ length: name === "get_bill_timeline" ? 100 : 5 }, (_, index) => ({
+      id: `section:${index}`,
+      title: `Source passage ${index}`,
+      ordinal: index,
+      type: "action",
+      description: "Recorded action",
+      date: index === 0 ? null : "2025-01-01",
+      sourceUrl: `https://example.gov/report#${index}`,
+      [textKey]: textKey === "sourceUrl" ? `https://example.gov/report#${index}` : ""
+    }))
+    const metadata =
+      name === "get_bill_timeline"
+        ? { billId: id, warnings: [] }
+        : {
+            material: { id, title: "Report", sourceUrl: "https://example.gov/report" },
+            links: [],
+            linksTruncated: false
+          }
+    const data = { ...metadata, [collection]: records, truncated: false }
+    const padding = Math.floor((bytes - Buffer.byteLength(JSON.stringify({ data }))) / records.length)
+    for (const record of records) {
+      record[textKey] = `${record[textKey]}${"x".repeat(padding)}`
+    }
+    expect(Buffer.byteLength(JSON.stringify({ data }))).toBeGreaterThanOrEqual(bytes - records.length)
+    expect(Buffer.byteLength(JSON.stringify({ data }))).toBeLessThanOrEqual(bytes)
+    const read = vi.fn<LegislationQueryApi["getBillTimeline"]>(async () => data)
+    const fixture = selectionTools(
+      { getBillTimeline: read, getSupportingMaterial: read },
+      {
+        sessionKey: crypto.randomUUID(),
+        onResultSet: () => "r1",
+        onContents: vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
+      }
+    )
+    const collected: unknown[] = []
+    let cursor: string | undefined
+    let pages = 0
+    do {
+      const output = await callWebTool(name, { id, limit: records.length, cursor }, fixture.tools)
+      const page = z.object({ data: z.record(z.string(), z.json()), evidence: z.array(z.unknown()) }).parse(output)
+      const items = z.array(z.json()).parse(page.data[collection])
+      expect(page.data).toMatchObject(metadata)
+      expect(page.evidence.length).toBeGreaterThan(0)
+      expect(Buffer.byteLength(researchModelOutput({ output }).value)).toBeLessThanOrEqual(researchResultByteLimit)
+      expect(items.length).toBeGreaterThan(0)
+      collected.push(...items)
+      cursor = z.string().optional().parse(page.data.nextCursor)
+      expect(++pages).toBeLessThanOrEqual(records.length)
+    } while (cursor)
+    expect(pages).toBeGreaterThan(1)
+    expect(collected).toEqual(records)
+    expect(read).toHaveBeenCalledTimes(pages)
+    expect(fixture.record).toHaveBeenCalledTimes(pages)
+    expect(fixture.report).not.toHaveBeenCalled()
+  }
+)
+
+it.each(
+  [
+    {
+      name: "get_organization",
+      root: "organization",
+      key: "children",
+      collection: "organization-children",
+      id: "organization:us:one"
+    },
+    { name: "get_event", root: "event", key: "agendaItems", collection: "meeting-agenda", id: "event:us:one" },
+    {
+      name: "get_supporting_material",
+      root: "material",
+      key: "links",
+      collection: "material-links",
+      id: "material:us:one"
+    }
+  ].flatMap((tool) => [178500, 320000].map((bytes) => ({ ...tool, bytes })))
+)(
+  "delivers $name previews from $bytes raw bytes with complete relationship reads",
+  async ({ name, root, key, collection, id, bytes }) => {
+    vi.spyOn(resultStore, "persist").mockResolvedValue(undefined)
+    const identity = { id, name: "Source record", title: "Source record", sourceUrl: "https://example.gov/record" }
+    const records = Array.from({ length: 5 }, (_, index) => ({
+      id: `record:${index}`,
+      title: `Relationship ${index}`,
+      sourceUrl: `https://example.gov/record#${index}`,
+      text: ""
+    }))
+    const data = { [root]: identity, [key]: records, truncated: false }
+    const padding = Math.floor((bytes - Buffer.byteLength(JSON.stringify({ data }))) / records.length)
+    for (const record of records) {
+      record.text = "x".repeat(padding)
+    }
+    expect(Buffer.byteLength(JSON.stringify({ data }))).toBeGreaterThanOrEqual(bytes - records.length)
+    expect(Buffer.byteLength(JSON.stringify({ data }))).toBeLessThanOrEqual(bytes)
+    const read = vi.fn<LegislationQueryApi["getOrganization"]>(async () => data)
+    const readRecordCollection = vi.fn<NonNullable<LegislationQueryApi["readRecordCollection"]>>(async () => ({
+      items: records,
+      truncated: false
+    }))
+    const fixture = selectionTools(
+      { getOrganization: read, getEvent: read, getSupportingMaterial: read, readRecordCollection },
+      {
+        sessionKey: crypto.randomUUID(),
+        onResultSet: () => "r1",
+        onContents: vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
+      }
+    )
+    const output = await callWebTool(name, { id }, fixture.tools)
+    const preview = z
+      .object({
+        data: z.record(z.string(), z.json()),
+        resultHandle: z.string(),
+        evidence: z.array(z.unknown())
+      })
+      .parse(output)
+    expect(preview.data[root]).toEqual(identity)
+    expect(preview.data.truncated).toBe(true)
+    expect(z.array(z.json()).parse(preview.data[key]).length).toBeLessThan(records.length)
+    expect(preview.evidence.length).toBeGreaterThan(0)
+    const serialized = researchModelOutput({ output }).value
+    expect(Buffer.byteLength(serialized)).toBeLessThanOrEqual(researchResultByteLimit)
+    expect(JSON.parse(serialized)).toMatchObject({
+      recordLinks: expect.any(Array),
+      presentationOptions: expect.any(Array)
+    })
+    expect(read).toHaveBeenCalledOnce()
+    expect(readRecordCollection).not.toHaveBeenCalled()
+    const handoff = z
+      .record(z.string(), z.object({ tool: z.string(), input: z.record(z.string(), z.unknown()) }))
+      .parse(preview.data.continuations)[key]
+    expect(handoff).toEqual({ tool: "read_record_collection", input: { collection, recordId: id } })
+    if (!handoff) {
+      throw new Error("Missing collection handoff")
+    }
+    const collected: unknown[] = []
+    let cursor: string | undefined
+    let pages = 0
+    do {
+      const output = await callWebTool(handoff.tool, { ...handoff.input, cursor }, fixture.tools)
+      expect(Buffer.byteLength(researchModelOutput({ output }).value)).toBeLessThanOrEqual(researchResultByteLimit)
+      const page = z
+        .object({ data: z.object({ items: z.array(z.json()), nextCursor: z.string().optional() }) })
+        .parse(output)
+      collected.push(...page.data.items)
+      cursor = page.data.nextCursor
+      expect(++pages).toBeLessThanOrEqual(records.length)
+    } while (cursor)
+    expect(collected).toEqual(records)
+    expect(readRecordCollection).toHaveBeenCalledTimes(pages)
+    expect(fixture.report).not.toHaveBeenCalled()
+  }
+)
+
+it.each([
+  { name: "get_organization", root: "organization", id: "organization:us:one", collection: "organization-children" },
+  { name: "get_event", root: "event", id: "event:us:one", collection: "meeting-agenda" },
+  { name: "get_supporting_material", root: "material", id: "material:us:one", collection: "material-sections" }
+])("offers supported recovery when $name identity cannot fit", async ({ name, root, id, collection }) => {
+  const read = vi.fn<LegislationQueryApi["getOrganization"]>(async () => ({
+    [root]: { id, description: "x".repeat(researchResultByteLimit) }
+  }))
+  const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
+  const fixture = selectionTools({ getOrganization: read, getEvent: read, getSupportingMaterial: read }, { onContents })
+  await expect(callWebTool(name, { id }, fixture.tools)).rejects.toMatchObject({
+    code: "result_limit",
+    recovery: { action: "narrow", instruction: expect.stringContaining(collection) }
+  })
+  expect(read).toHaveBeenCalledOnce()
+  expect(onContents).not.toHaveBeenCalled()
+  expect(fixture.record).toHaveBeenCalledWith(expect.objectContaining({ failure: "result_limit" }))
+})
+
 it.each([178500, 320000])(
   "delivers a bounded person preview and complete collection reads from %i raw bytes",
   async (bytes) => {
