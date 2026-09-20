@@ -10,7 +10,12 @@ import pg from "pg"
 import { afterAll, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import type { RankedPassageSearch } from "../search/ranked-passage-search"
-import { buildLexicalPassageSearchQuery, lexicalBillSearch, semanticBillSearch } from "../search/search"
+import {
+  buildLexicalPassageSearchQuery,
+  buildSemanticSupportingMaterialSearchQuery,
+  lexicalBillSearch,
+  semanticBillSearch
+} from "../search/search"
 import {
   billSearchExecution,
   amendmentSearchPageState,
@@ -32,6 +37,7 @@ import {
   lexicalSupportingMaterialPageState,
   LegislationQueryService,
   projectDocumentBackedAmendment,
+  resolveSupportingMaterialHybridBranches,
   type SupportingMaterialSearchInput
 } from "./query-service"
 
@@ -1132,6 +1138,84 @@ describe("lexical supporting material candidate search", () => {
     expect(rendered.sql.indexOf("section_candidates as")).toBeLessThan(rendered.sql.indexOf("ts_headline("))
     expect(rendered.sql).not.toContain('inner join "legislation"."supporting_materials" on')
     expect(rendered.sql).not.toContain('left join "legislation"."supporting_material_links"')
+  })
+
+  describe("semantic supporting material search", () => {
+    it("filters relationships through one correlated existence check without expanding ranked rows", () => {
+      const rendered = buildSemanticSupportingMaterialSearchQuery(database, {
+        amendmentIds: ["amendment:fixture"],
+        billIds: ["bill:fixture"],
+        embedding: Array.from({ length: 1024 }, () => 0),
+        eventIds: ["event:fixture"],
+        jurisdictionIds: ["jurisdiction:fixture"],
+        limit: 20,
+        organizationIds: ["organization:fixture"],
+        sessionIds: ["session:fixture"]
+      }).toSQL()
+
+      expect(rendered.sql).toContain(
+        'exists (select "legislation"."supporting_material_links"."material_id" from "legislation"."supporting_material_links" left join "legislation"."bills"'
+      )
+      expect(rendered.sql).toContain(
+        '"legislation"."supporting_material_links"."material_id" = "legislation"."supporting_materials"."id"'
+      )
+      expect(rendered.sql).toContain('with "nearest_supporting_material_sections" as')
+      const relationshipScope = rendered.sql.indexOf("exists (select")
+      expect(relationshipScope).toBeGreaterThan(-1)
+      expect(relationshipScope).toBeLessThan(rendered.sql.indexOf("order by"))
+      expect(rendered.sql.slice(0, relationshipScope)).not.toContain(
+        'left join "legislation"."supporting_material_links"'
+      )
+      const nearestOrder = rendered.sql.indexOf(
+        'order by "legislation"."supporting_material_section_embeddings"."embedding" <=>'
+      )
+      const nearestLimit = rendered.sql.indexOf("limit", nearestOrder)
+      expect(rendered.sql.slice(nearestOrder, nearestLimit)).not.toContain(
+        '"legislation"."supporting_material_sections"."id"'
+      )
+      expect(rendered.sql).toContain('order by "distance" asc, "nearest_supporting_material_sections"."id" asc')
+    })
+
+    it("keeps the successful branch when one hybrid retrieval branch times out", () => {
+      const timeout = Object.assign(new Error("private database message"), { code: "57014" })
+
+      expect(
+        resolveSupportingMaterialHybridBranches(
+          { status: "rejected", reason: timeout },
+          { status: "fulfilled", value: ["lexical"] }
+        )
+      ).toEqual({
+        lexical: ["lexical"],
+        warnings: ["Semantic retrieval timed out. Results use lexical matching only."]
+      })
+      expect(
+        resolveSupportingMaterialHybridBranches(
+          { status: "fulfilled", value: ["semantic"] },
+          { status: "rejected", reason: timeout }
+        )
+      ).toEqual({
+        semantic: ["semantic"],
+        warnings: ["Lexical retrieval timed out. Results use semantic matching only."]
+      })
+    })
+
+    it("does not hide deterministic or complete hybrid retrieval failures", () => {
+      const timeout = Object.assign(new Error("private database message"), { code: "57014" })
+      const invalid = new LegislationError("invalid_request", "Invalid filter")
+
+      expect(() =>
+        resolveSupportingMaterialHybridBranches(
+          { status: "rejected", reason: invalid },
+          { status: "fulfilled", value: ["lexical"] }
+        )
+      ).toThrow(invalid)
+      expect(() =>
+        resolveSupportingMaterialHybridBranches(
+          { status: "rejected", reason: timeout },
+          { status: "rejected", reason: timeout }
+        )
+      ).toThrow(timeout)
+    })
   })
 
   it("calculates exact best-section ranks only within the declared stable section sample", () => {

@@ -145,6 +145,49 @@ function coverageWarnings(itemCount: number, domain: string): string[] {
     : []
 }
 
+function isTransientSupportingMaterialSearchFailure(error: unknown): boolean {
+  if (error instanceof LegislationError) {
+    return error.category === "dependency_unavailable" && error.details?.retryable === true
+  }
+  const code = postgresErrorCode(error)
+  return (
+    code === "57014" ||
+    code === "53300" ||
+    code === "57P01" ||
+    code === "57P02" ||
+    code === "57P03" ||
+    code?.startsWith("08") === true
+  )
+}
+
+export function resolveSupportingMaterialHybridBranches<Semantic, Lexical>(
+  semanticResult: PromiseSettledResult<Semantic>,
+  lexicalResult: PromiseSettledResult<Lexical>
+): Readonly<{ lexical?: Lexical; semantic?: Semantic; warnings: string[] }> {
+  if (semanticResult.status === "rejected" && !isTransientSupportingMaterialSearchFailure(semanticResult.reason)) {
+    throw semanticResult.reason
+  }
+  if (lexicalResult.status === "rejected" && !isTransientSupportingMaterialSearchFailure(lexicalResult.reason)) {
+    throw lexicalResult.reason
+  }
+  if (semanticResult.status === "rejected" && lexicalResult.status === "rejected") {
+    throw semanticResult.reason
+  }
+  if (semanticResult.status === "rejected") {
+    return {
+      lexical: lexicalResult.status === "fulfilled" ? lexicalResult.value : undefined,
+      warnings: ["Semantic retrieval timed out. Results use lexical matching only."]
+    }
+  }
+  if (lexicalResult.status === "rejected") {
+    return {
+      semantic: semanticResult.value,
+      warnings: ["Lexical retrieval timed out. Results use semantic matching only."]
+    }
+  }
+  return { lexical: lexicalResult.value, semantic: semanticResult.value, warnings: [] }
+}
+
 async function lexicalAmendmentCandidates(
   database: LegislationDatabase,
   input: ApiAmendmentSearchInput,
@@ -2637,27 +2680,57 @@ export class LegislationQueryService {
       return await this.#searchLexicalSupportingMaterials(input)
     }
     if (input.query !== undefined && mode !== "lexical") {
+      const query = input.query
       const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
       const offset = decodeSupportingMaterialSearchCursor(input.cursor, input)
       const candidateLimit = embeddingQueryRouteFor("search_supporting_materials").candidateLimit
-      const queryEmbedding = await this.#embedQueryWithModel("search_supporting_materials", input.query)
-      const semanticRows = await semanticSupportingMaterialSearch(this.#database, {
-        amendmentIds: supportingMaterialFilterValues(input.amendmentIds, input.amendmentId),
-        billIds: supportingMaterialFilterValues(input.billIds, input.billId),
-        classifications: supportingMaterialFilterValues(input.classifications, input.classification),
-        documentFrom: input.documentFrom,
-        documentTo: input.documentTo,
-        embedding: queryEmbedding.embedding,
-        eventIds: supportingMaterialFilterValues(input.eventIds, input.eventId),
-        jurisdictionIds: supportingMaterialFilterValues(input.jurisdictionIds, input.jurisdictionId),
-        limit: candidateLimit,
-        organizationIds: supportingMaterialFilterValues(input.organizationIds, input.organizationId),
-        processingStatus: input.processingStatus,
-        sessionIds: input.sessionIds,
-        updatedFrom: input.updatedFrom,
-        updatedTo: input.updatedTo,
-        updatedToExclusive: input.updatedToExclusive
-      })
+      const semanticSearch = async () => {
+        const queryEmbedding = await this.#embedQueryWithModel("search_supporting_materials", query)
+        const rows = await semanticSupportingMaterialSearch(this.#database, {
+          amendmentIds: supportingMaterialFilterValues(input.amendmentIds, input.amendmentId),
+          billIds: supportingMaterialFilterValues(input.billIds, input.billId),
+          classifications: supportingMaterialFilterValues(input.classifications, input.classification),
+          documentFrom: input.documentFrom,
+          documentTo: input.documentTo,
+          embedding: queryEmbedding.embedding,
+          eventIds: supportingMaterialFilterValues(input.eventIds, input.eventId),
+          jurisdictionIds: supportingMaterialFilterValues(input.jurisdictionIds, input.jurisdictionId),
+          limit: candidateLimit,
+          organizationIds: supportingMaterialFilterValues(input.organizationIds, input.organizationId),
+          processingStatus: input.processingStatus,
+          sessionIds: input.sessionIds,
+          updatedFrom: input.updatedFrom,
+          updatedTo: input.updatedTo,
+          updatedToExclusive: input.updatedToExclusive
+        })
+        return { model: queryEmbedding.model, rows }
+      }
+      const lexicalSearch = async () =>
+        (
+          await this.searchSupportingMaterials({
+            ...input,
+            cursor: undefined,
+            limit: candidateLimit,
+            mode: "lexical"
+          })
+        ).items.map(
+          ({
+            amendmentIds: _amendmentIds,
+            billIds: _billIds,
+            meetingIds: _meetingIds,
+            organizationIds: _organizationIds,
+            ...item
+          }) => ({ ...item, id: item.id })
+        )
+      const [semanticResult, lexicalResult] =
+        mode === "hybrid"
+          ? await Promise.allSettled([semanticSearch(), lexicalSearch()])
+          : [await semanticSearch().then((value) => ({ status: "fulfilled" as const, value })), undefined]
+      const branches =
+        lexicalResult === undefined
+          ? { semantic: semanticResult.status === "fulfilled" ? semanticResult.value : undefined, warnings: [] }
+          : resolveSupportingMaterialHybridBranches(semanticResult, lexicalResult)
+      const semanticRows = branches.semantic?.rows ?? []
       const semantic: SupportingMaterialRanked[] = [
         ...new Map(
           semanticRows.map(
@@ -2669,26 +2742,7 @@ export class LegislationQueryService {
       const ranked: SupportingMaterialRanked[] =
         mode === "semantic"
           ? semantic
-          : reciprocalRankFusionWithScores(
-              (
-                await this.searchSupportingMaterials({
-                  ...input,
-                  cursor: undefined,
-                  limit: candidateLimit,
-                  mode: "lexical"
-                })
-              ).items.map(
-                ({
-                  amendmentIds: _amendmentIds,
-                  billIds: _billIds,
-                  meetingIds: _meetingIds,
-                  organizationIds: _organizationIds,
-                  ...item
-                }) => ({ ...item, id: item.id })
-              ),
-              semantic,
-              candidateLimit
-            )
+          : reciprocalRankFusionWithScores(branches.lexical ?? [], semantic, candidateLimit)
       const semanticById = new Map(semantic.map((item) => [item.id, item]))
       const page = paginateCappedSearchRows(
         ranked.map((item) => {
@@ -2713,8 +2767,14 @@ export class LegislationQueryService {
           page.nextCursor === undefined
             ? undefined
             : encodeSupportingMaterialSearchCursor(offset + items.length, input),
-        search: { isReranked: false, models: [{ model: queryEmbedding.model, purpose: "embedding" as const }] },
-        warnings: coverageWarnings(items.length, "supporting materials")
+        search:
+          branches.semantic === undefined
+            ? undefined
+            : {
+                isReranked: false,
+                models: [{ model: branches.semantic.model, purpose: "embedding" as const }]
+              },
+        warnings: [...branches.warnings, ...coverageWarnings(items.length, "supporting materials")]
       }
     }
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
