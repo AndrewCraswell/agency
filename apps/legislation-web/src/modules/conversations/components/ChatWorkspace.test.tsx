@@ -11,6 +11,7 @@ import { incompleteAnswerText } from "../responseOutcome"
 import { ChatProviders } from "./ChatProviders"
 import { ChatWorkspace } from "./ChatWorkspace"
 import { useConversationSession } from "./ConversationSession"
+import { ReferencePicker } from "./ReferencePicker"
 import * as composerStyles from "./ChatComposer.css"
 
 const navigation = vi.hoisted(() => ({ push: vi.fn<(url: string) => void>() }))
@@ -333,7 +334,12 @@ describe("ChatWorkspace", () => {
     }
   }
 
-  it.each([12, 13])("applies the homepage submission limit to %s staged references", async (count) => {
+  it.each([
+    { count: 12, homepage: true },
+    { count: 13, homepage: true },
+    { count: 12, homepage: false },
+    { count: 13, homepage: false }
+  ])("applies the $count-reference limit with homepage=$homepage", async ({ count, homepage }) => {
     const references = Array.from(
       { length: count },
       (_, index): StagedReference => ({
@@ -345,16 +351,20 @@ describe("ChatWorkspace", () => {
     function StagedHomepage() {
       const session = useConversationSession()
       return (
-        <HomepageLanding isAvailable>
+        <>
+          {homepage ? <HomepageLanding isAvailable /> : <ChatWorkspace isAvailable conversationId={session.chat.id} />}
           <button
             onClick={() => {
               session.setReferences(references)
-              session.setDraft([{ type: "text", text: "Compare these sponsors" }])
+              session.setDraft([
+                { type: "text", text: "Compare these sponsors" },
+                { type: "mention", reference: references[0]! }
+              ])
             }}
           >
             Stage references
           </button>
-        </HomepageLanding>
+        </>
       )
     }
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => streamedAnswer("References received"))
@@ -363,20 +373,53 @@ describe("ChatWorkspace", () => {
     const view = render(<StagedHomepage />, { wrapper: ChatProviders })
     await user.click(screen.getByRole("button", { name: "Stage references" }))
     const input = await screen.findByRole("textbox", { name: "Your question" })
-    await waitFor(() => expect(input.textContent).toBe("Compare these sponsors"))
+    await waitFor(() => expect(input.textContent).toContain("Compare these sponsors"))
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "Send question" }).disabled).toBe(count > 12)
     await user.click(input)
     await user.keyboard("{Enter}")
-    await waitFor(() => expect(navigation.push).toHaveBeenCalledTimes(count > 12 ? 0 : 1))
-    expect(fetchMock).toHaveBeenCalledTimes(count > 12 ? 0 : 1)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(count > 12 ? 0 : 1))
+    expect(navigation.push).toHaveBeenCalledTimes(count > 12 || !homepage ? 0 : 1)
     if (count > 12) {
       return
     }
     const submission = chatRequestSchema.parse(JSON.parse(z.string().parse(fetchMock.mock.calls[0]?.[1]?.body)))
     expect(submission.references).toEqual(references.map(({ resultId, recordId }) => ({ resultId, recordId })))
-    view.rerender(<ChatWorkspace isAvailable conversationId={navigatedConversationId()} />)
+    if (homepage) {
+      view.rerender(<ChatWorkspace isAvailable conversationId={navigatedConversationId()} />)
+    }
     await screen.findByText("References received")
-    expect(screen.getByRole("list", { name: "Submitted references" }).children).toHaveLength(12)
+    expect(screen.getByRole("list", { name: "Submitted references" }).children).toHaveLength(11)
+  })
+
+  it("counts inline references in the library and permits selecting an existing identity at the limit", async () => {
+    const inlineReferences = Array.from(
+      { length: 12 },
+      (_, index): StagedReference => ({
+        ...person,
+        recordId: `person:inline-${index}`,
+        record: { ...person.record, id: `person:inline-${index}`, title: `Inline person ${index}` }
+      })
+    )
+    const onApply = vi.fn<(references: StagedReference[]) => void>()
+    const user = userEvent.setup()
+    render(
+      <ReferencePicker
+        draft={inlineReferences.map((reference) => ({ type: "mention", reference }))}
+        initial={[inlineReferences[0]!, inlineReferences[0]!]}
+        available={[inlineReferences[1]!, committee]}
+        mention={false}
+        onApply={onApply}
+        onClose={vi.fn<() => void>()}
+        returnFocus={vi.fn<() => void>()}
+      />,
+      { wrapper: ChatProviders }
+    )
+    expect(screen.getByRole<HTMLButtonElement>("checkbox", { name: committee.record.title }).disabled).toBe(true)
+    const existing = screen.getByRole<HTMLButtonElement>("checkbox", { name: "Inline person 1" })
+    expect(existing.disabled).toBe(false)
+    await user.click(existing)
+    await user.click(screen.getByRole("button", { name: "Add references" }))
+    expect(onApply).toHaveBeenCalledWith([inlineReferences[0], inlineReferences[1]])
   })
 
   it("does not submit an empty or whitespace-only homepage question", async () => {

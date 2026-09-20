@@ -1,6 +1,6 @@
 import { safeValidateUIMessages, type UIMessage } from "ai"
 import { z } from "zod"
-import { stagedReferenceSchema, type StagedReference } from "./chatRequest"
+import { MAX_CONVERSATION_REFERENCES, stagedReferenceSchema, type StagedReference } from "./chatRequest"
 import { clarificationRequestSchema, clarificationResponseSchema, type ClarificationResponse } from "./clarification"
 import { composerDraftSchema, type ComposerDraft } from "./composerDraft"
 import { presentationBlockSchema } from "./composition"
@@ -14,7 +14,7 @@ const snapshotSchema = z.object({
   id: z.string().min(1).max(128),
   sessionKey: z.uuid(),
   draft: composerDraftSchema,
-  references: z.array(stagedReferenceSchema).max(12).optional(),
+  references: z.array(stagedReferenceSchema).max(MAX_CONVERSATION_REFERENCES).optional(),
   messages: z.array(z.unknown()),
   clarificationAnswers: z.record(z.string(), clarificationResponseSchema),
   interruptedMessageId: z.string().optional()

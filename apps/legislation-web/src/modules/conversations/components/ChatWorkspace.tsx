@@ -17,7 +17,8 @@ import { cn } from "../../../components/ui/utils"
 import { diagnosticBreadcrumb } from "../../../services/sentry/diagnosticBreadcrumb"
 import type { StagedReference } from "../chatRequest"
 import { isClarificationSubmission } from "../chatRequest"
-import { composerDraftText, composerMessageMetadata, composerReferences, messageComposerDraft } from "../composerDraft"
+import { composerDraftText, composerMessageMetadata, messageComposerDraft } from "../composerDraft"
+import { composerSubmissionBlockedReason } from "../composerPolicy"
 import { createConversationExport, downloadConversationExport } from "../conversationExport"
 import { entityPageSchema } from "../entityResults"
 import { messageResponseOutcome, responseIsIncomplete } from "../responseOutcome"
@@ -90,6 +91,14 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
   const outcomeNotice = outcomeNotices[lastOutcome?.status ?? "unknown"]
   const composer = useRef<ComposerHandle>(null)
   const isExportCommand = composerDraftText(draft).trim() === "/export"
+  const submissionBlockedReason = composerSubmissionBlockedReason({
+    draft,
+    references,
+    isAvailable: isAvailable || isExportCommand,
+    isRunning: isRunning && !isExportCommand,
+    isRestoring: isRestoringConversation,
+    isConfirmingClarification: isConfirmingClarification && !isExportCommand
+  })
 
   function handleSend() {
     if (isExportCommand) {
@@ -122,23 +131,8 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
       return
     }
     setExportStatus(undefined)
-    if (
-      !isAvailable ||
-      isBusy ||
-      !composerDraftText(draft).trim() ||
-      composerReferences(draft, references).length > 12
-    ) {
-      let reason = "empty"
-      if (!isAvailable) {
-        reason = "unavailable"
-      } else if (isRestoringConversation) {
-        reason = "restoring"
-      } else if (isBusy) {
-        reason = "busy"
-      } else if (composerReferences(draft, references).length > 12) {
-        reason = "reference_limit"
-      }
-      diagnosticBreadcrumb("composer.submit_blocked", { reason, origin: "browser" })
+    if (submissionBlockedReason !== undefined) {
+      diagnosticBreadcrumb("composer.submit_blocked", { reason: submissionBlockedReason, origin: "browser" })
       return
     }
     if (!hasSession) {
@@ -289,7 +283,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
               onDraftChange={setDraft}
               composerRef={composer}
               onSend={handleSend}
-              isAvailable={isAvailable || isExportCommand}
+              submissionBlockedReason={submissionBlockedReason}
               isRunning={isRestoringConversation || (isBusy && !isExportCommand)}
               messageHistory={messageHistory}
               onStop={handleStop}
@@ -310,6 +304,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
       />
       {isReferencePickerOpen && (
         <ReferencePicker
+          draft={draft}
           initial={references}
           available={[...availableReferences.values()]}
           mention={false}

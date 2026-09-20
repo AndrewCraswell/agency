@@ -17,7 +17,7 @@ import {
   type Ref
 } from "react"
 import { createPortal } from "react-dom"
-import type { StagedReference } from "../chatRequest"
+import { MAX_CONVERSATION_REFERENCES, type StagedReference } from "../chatRequest"
 import {
   composerDocument,
   composerDraftText,
@@ -25,6 +25,7 @@ import {
   readComposerDraft,
   type ComposerDraft
 } from "../composerDraft"
+import { canAddComposerReference } from "../composerPolicy"
 import { MentionSuggestions } from "./MentionSuggestions"
 import * as styles from "./ComposerInput.css"
 
@@ -55,14 +56,6 @@ const InlineMention = Mention.extend<MentionOptions<StagedReference, MentionAttr
   }
 })
 
-function canSelect(reference: StagedReference, draft: ComposerDraft, staged: readonly StagedReference[]) {
-  const references = composerReferences(draft, staged)
-  return (
-    references.length < 12 ||
-    references.some((item) => item.recordId === reference.recordId && item.record.kind === reference.record.kind)
-  )
-}
-
 export function ComposerInput(props: ComposerInputProps) {
   const id = useId()
   const current = useRef(props)
@@ -90,7 +83,7 @@ export function ComposerInput(props: ComposerInputProps) {
     if (
       !suggestions ||
       suggestions.loading ||
-      !canSelect(reference, current.current.draft, current.current.references)
+      !canAddComposerReference(reference, current.current.draft, current.current.references)
     ) {
       return
     }
@@ -372,8 +365,8 @@ export function ComposerInput(props: ComposerInputProps) {
             activeIndex={menu.index}
             isLoading={suggestions.loading}
             hasFailed={failure === suggestions.query}
-            isAtLimit={composerReferences(props.draft, props.references).length >= 12}
-            canSelect={(reference) => canSelect(reference, props.draft, props.references)}
+            isAtLimit={composerReferences(props.draft, props.references).length >= MAX_CONVERSATION_REFERENCES}
+            canSelect={(reference) => canAddComposerReference(reference, props.draft, props.references)}
             onSelect={choose}
             onActivate={(index) => {
               activeIndex.current = index

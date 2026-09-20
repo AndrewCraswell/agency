@@ -10,6 +10,7 @@ import { ChatComposer } from "../components/ChatComposer"
 import type { ComposerHandle } from "../components/ComposerInput"
 import { ReferencePicker } from "../components/ReferencePicker"
 import { composerDraftText, textDraft, type ComposerDraft } from "../composerDraft"
+import { composerSubmissionBlockedReason } from "../composerPolicy"
 import { researchSuggestionsSchema } from "../suggestions"
 import { DrawerExample } from "./drawerExamples"
 import { capturedCards } from "./reviewFixtures"
@@ -136,6 +137,7 @@ function MentionComposerExample({
           </p>
         )}
         <ChatComposer
+          submissionBlockedReason={composerSubmissionBlockedReason({ draft, isAvailable: true })}
           focusOnMount
           draft={draft}
           onDraftChange={setDraft}
@@ -177,6 +179,12 @@ function ComposerExample({
   return (
     <>
       <ChatComposer
+        submissionBlockedReason={composerSubmissionBlockedReason({
+          draft,
+          references: selected,
+          isAvailable: true,
+          isRunning: running
+        })}
         draft={draft}
         onDraftChange={setDraft}
         onSend={() => setDraft([])}
@@ -192,6 +200,7 @@ function ComposerExample({
       />
       {open && (
         <ReferencePicker
+          draft={draft}
           initial={selected}
           available={references}
           mention={false}

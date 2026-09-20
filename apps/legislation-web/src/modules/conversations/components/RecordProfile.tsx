@@ -8,6 +8,7 @@ import { AppShell } from "../../../components/shell/AppShell"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible"
+import { canAddComposerReference } from "../composerPolicy"
 import { ResultExpiredError } from "../entityResults"
 import { evidenceSourceUrl } from "../evidence"
 import type { ProfileDetails } from "../recordDetails"
@@ -35,7 +36,8 @@ export function RecordProfile({
   resultId?: string
   parentRecordId?: string
 }>) {
-  const { chat, loadProfileDetails, isRestoringConversation, references, setReferences } = useConversationSession()
+  const { chat, draft, loadProfileDetails, isRestoringConversation, references, setReferences } =
+    useConversationSession()
   const router = useRouter()
   const load = useEffectEvent(loadProfileDetails)
   const [details, setDetails] = useState<ProfileDetails>()
@@ -46,13 +48,16 @@ export function RecordProfile({
   const [pageFailed, setPageFailed] = useState(false)
   const notice = useRef<HTMLDivElement>(null)
   const moreRequest = useRef<AbortController | null>(null)
-  const isReferenceSelected = references.some((reference) => reference.recordId === recordId)
+  const reference = resultId && details ? { resultId, recordId, record: details.record } : undefined
+  const canAskAboutRecord =
+    reference !== undefined && !parentRecordId && canAddComposerReference(reference, draft, references)
+  const isReferenceSelected = references.some((item) => item.recordId === recordId && item.record.kind === kind)
   function askAboutRecord() {
-    if (!resultId || !details || parentRecordId || (!isReferenceSelected && references.length >= 12)) {
+    if (!reference || !canAskAboutRecord) {
       return
     }
     if (!isReferenceSelected) {
-      setReferences([...references, { resultId, recordId, record: details.record }])
+      setReferences([...references, reference])
     }
     router.push(`/conversations/${encodeURIComponent(chat.id)}`)
   }
@@ -170,11 +175,7 @@ export function RecordProfile({
               <div className={styles.titleRow}>
                 <h1 className={styles.title}>{details.record.title}</h1>
                 {!parentRecordId && (
-                  <Button
-                    className="h-11 shrink-0"
-                    disabled={!isReferenceSelected && references.length >= 12}
-                    onClick={askAboutRecord}
-                  >
+                  <Button className="h-11 shrink-0" disabled={!canAskAboutRecord} onClick={askAboutRecord}>
                     <MessageSquareText aria-hidden="true" />
                     Ask
                   </Button>

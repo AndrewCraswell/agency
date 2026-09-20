@@ -11,6 +11,7 @@ import { z } from "zod"
 import { correlatedFetch } from "../../../services/sentry/correlatedFetch"
 import { diagnosticBreadcrumb } from "../../../services/sentry/diagnosticBreadcrumb"
 import {
+  MAX_CONVERSATION_REFERENCES,
   conversationTextMessages,
   conversationReferenceSchema,
   stagedReferenceSchema,
@@ -68,7 +69,7 @@ function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string
       isExplicitlyCancelled = false
       isRetry = trigger === "regenerate-message"
       const metadata = z
-        .object({ references: z.array(conversationReferenceSchema).max(12) })
+        .object({ references: z.array(conversationReferenceSchema).max(MAX_CONVERSATION_REFERENCES) })
         .safeParse(messages.findLast((message) => message.role === "user")?.metadata)
       return {
         body: {
@@ -486,7 +487,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
       setClarificationAnswers((answers) => ({ ...answers, [accepted.requestId]: accepted }))
       diagnosticBreadcrumb("conversation.clarification_finished", { outcome: "succeeded", origin: "browser" })
       const originalReferences = z
-        .object({ references: z.array(conversationReferenceSchema).max(12) })
+        .object({ references: z.array(conversationReferenceSchema).max(MAX_CONVERSATION_REFERENCES) })
         .safeParse(chat.messages.findLast((message) => message.role === "user")?.metadata)
       void chat.sendMessage(
         {

@@ -184,6 +184,13 @@ combine explicit references with remaining inline tags, capped at 12 distinct re
 alongside plain message text. The server resolves those IDs against the session-owned result store before adding them
 as identity context, never as instructions, citations, or corpus restrictions. Expired or foreign references fail closed.
 
+`composerSubmissionBlockedReason` is the shared submission policy: homepage and follow-up controls and defensive
+submit handlers consume its explicit unavailable, restoring, busy, reference-limit, or empty reason. Running research
+and clarification confirmation are busy states. `/export` eligibility remains a workspace concern, as do session and
+navigation guards. `MAX_CONVERSATION_REFERENCES` in the request contract owns the limit across request validation,
+checkpoints, and reference selection. Inline suggestions, the reference library, and profile Ask actions count the
+distinct union of inline and staged identities; selecting an existing kind/record pair at the cap remains allowed.
+
 History recall and development checkpoints retain structured draft segments rather than guessing identity from names.
 Pasted markup cannot manufacture trusted mention nodes. The input stories use the production composer with isolated
 fixture search, including loading, failure/retry, empty, keyboard, and selected states. Enter chooses an active suggestion

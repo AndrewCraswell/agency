@@ -7,7 +7,8 @@ import { Button } from "../../../components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip"
 import { cn } from "../../../components/ui/utils"
 import type { StagedReference } from "../chatRequest"
-import { composerDraftText, composerReferences, type ComposerDraft } from "../composerDraft"
+import type { ComposerDraft } from "../composerDraft"
+import type { ComposerSubmissionBlockedReason } from "../composerPolicy"
 import { ComposerInput, type ComposerHandle } from "./ComposerInput"
 import * as styles from "./ChatComposer.css"
 import * as referenceStyles from "./ReferencePicker.css"
@@ -19,7 +20,7 @@ type ChatComposerProps = Readonly<{
   onStop?: () => void
   onReferenceRequested?: () => void
   isRunning?: boolean
-  isAvailable?: boolean
+  submissionBlockedReason: ComposerSubmissionBlockedReason | undefined
   hasHomepageGlow?: boolean
   status?: string
   composerRef?: Ref<ComposerHandle>
@@ -37,7 +38,7 @@ export function ChatComposer({
   onStop,
   onReferenceRequested,
   isRunning = false,
-  isAvailable = true,
+  submissionBlockedReason,
   hasHomepageGlow = false,
   status,
   composerRef,
@@ -49,14 +50,12 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const id = useId()
   const isMobile = useMediaQuery("(max-width: 40rem)", true)
-  const canSend =
-    isAvailable &&
-    !isRunning &&
-    composerDraftText(draft).trim().length > 0 &&
-    composerReferences(draft, references).length <= 12
+  const canSend = submissionBlockedReason === undefined
 
   function submit() {
-    onSend()
+    if (canSend) {
+      onSend()
+    }
   }
 
   return (
@@ -65,9 +64,7 @@ export function ChatComposer({
         className={cn(styles.composer, hasHomepageGlow && styles.homepageGlow)}
         onSubmit={(event) => {
           event.preventDefault()
-          if (canSend) {
-            submit()
-          }
+          submit()
         }}
       >
         <ComposerInput

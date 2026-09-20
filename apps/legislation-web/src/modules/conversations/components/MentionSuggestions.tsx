@@ -5,7 +5,7 @@ import type { ReactNode, Ref } from "react"
 import { Button } from "../../../components/ui/button"
 import { Skeleton } from "../../../components/ui/skeleton"
 import { cn } from "../../../components/ui/utils"
-import type { StagedReference } from "../chatRequest"
+import { MAX_CONVERSATION_REFERENCES, type StagedReference } from "../chatRequest"
 import * as styles from "./ComposerInput.css"
 
 export function MentionSuggestions({
@@ -123,7 +123,9 @@ export function MentionSuggestions({
       {!isInitialQuery && !isLoading && !hasFailed && items.length === 0 && (
         <output className={styles.status}>No matching people or committees.</output>
       )}
-      {isAtLimit && <output className={styles.status}>You can add up to 12 references.</output>}
+      {isAtLimit && (
+        <output className={styles.status}>You can add up to {MAX_CONVERSATION_REFERENCES} references.</output>
+      )}
     </section>
   )
 }

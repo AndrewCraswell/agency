@@ -4,6 +4,7 @@ import { expect, fn, waitFor, within } from "storybook/test"
 import type { StagedReference } from "../chatRequest"
 import { ChatComposer } from "../components/ChatComposer"
 import { textDraft, type ComposerDraft } from "../composerDraft"
+import { composerSubmissionBlockedReason } from "../composerPolicy"
 import * as styles from "./MentionComposerExample.css"
 
 function reference(
@@ -72,6 +73,7 @@ function SuggestionsExample({
     <div className={styles.stage}>
       <div className={styles.workspace}>
         <ChatComposer
+          submissionBlockedReason={composerSubmissionBlockedReason({ draft, isAvailable: true })}
           focusOnMount
           draft={draft}
           onDraftChange={setDraft}

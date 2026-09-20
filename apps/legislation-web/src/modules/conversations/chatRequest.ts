@@ -5,6 +5,7 @@ import { presentationHistoryText } from "./composition"
 import { entityCardSchema, entityKindSchema } from "./entityResults"
 
 const clarificationSubmissionMetadata = z.object({ clarificationRequestId: z.uuid() })
+export const MAX_CONVERSATION_REFERENCES = 12
 
 export const conversationReferenceSchema = z.object({
   resultId: z.uuid(),
@@ -17,7 +18,9 @@ export function referenceMessageMetadata(references: readonly StagedReference[])
 }
 
 export function messageReferenceSnapshots(message: UIMessage) {
-  const metadata = z.object({ references: z.array(stagedReferenceSchema).max(12) }).safeParse(message.metadata)
+  const metadata = z
+    .object({ references: z.array(stagedReferenceSchema).max(MAX_CONVERSATION_REFERENCES) })
+    .safeParse(message.metadata)
   return metadata.success ? metadata.data.references : []
 }
 
@@ -90,7 +93,7 @@ export const chatRequestSchema = z
       .max(128)
       .regex(/^[a-zA-Z0-9_-]+$/),
     clarificationId: z.uuid().optional(),
-    references: z.array(conversationReferenceSchema).max(12).optional(),
+    references: z.array(conversationReferenceSchema).max(MAX_CONVERSATION_REFERENCES).optional(),
     messages: z
       .array(
         z.object({

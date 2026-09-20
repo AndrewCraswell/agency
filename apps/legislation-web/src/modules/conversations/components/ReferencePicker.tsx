@@ -8,6 +8,8 @@ import { Dialog, DialogClose, DialogContent, DialogTitle } from "../../../compon
 import { Input } from "../../../components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select"
 import { refreshStagedReferences, type StagedReference } from "../chatRequest"
+import { composerReferences, type ComposerDraft } from "../composerDraft"
+import { canAddComposerReference } from "../composerPolicy"
 import { entityLabels } from "../entityResults"
 import { useConversationSession } from "./ConversationSession"
 import * as styles from "./ReferencePicker.css"
@@ -24,6 +26,7 @@ const icons = {
 }
 
 export function ReferencePicker({
+  draft = [],
   initial,
   available,
   mention,
@@ -31,6 +34,7 @@ export function ReferencePicker({
   onClose,
   returnFocus
 }: Readonly<{
+  draft?: ComposerDraft
   initial: StagedReference[]
   available: StagedReference[]
   mention: boolean
@@ -39,7 +43,7 @@ export function ReferencePicker({
   returnFocus: () => void
 }>) {
   const { searchReferences } = useConversationSession()
-  const [selected, setSelected] = useState(initial)
+  const [selected, setSelected] = useState(() => composerReferences([], initial))
   const [query, setQuery] = useState("")
   const [kind, setKind] = useState(mention ? "person" : "all")
   const [results, setResults] = useState<StagedReference[]>([])
@@ -183,16 +187,18 @@ export function ReferencePicker({
               <Checkbox
                 className={styles.selection}
                 checked={isSelected}
-                disabled={!isSelected && selected.length >= 12}
+                disabled={!canAddComposerReference(item, draft, selected)}
                 onCheckedChange={(checked) =>
-                  setSelected((current) =>
-                    checked === true
-                      ? [...current, item]
-                      : current.filter(
-                          (reference) =>
-                            reference.recordId !== item.recordId || reference.record.kind !== item.record.kind
-                        )
-                  )
+                  setSelected((current) => {
+                    if (checked === true) {
+                      return canAddComposerReference(item, draft, current)
+                        ? composerReferences([], [...current, item])
+                        : current
+                    }
+                    return current.filter(
+                      (reference) => reference.recordId !== item.recordId || reference.record.kind !== item.record.kind
+                    )
+                  })
                 }
                 aria-label={item.record.title}
               />

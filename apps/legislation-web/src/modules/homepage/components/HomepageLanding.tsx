@@ -7,13 +7,14 @@ import { Suspense, use, useRef, useState, type MouseEvent, type ReactNode } from
 import { AppShell } from "../../../components/shell/AppShell"
 import { Button } from "../../../components/ui/button"
 import { Skeleton } from "../../../components/ui/skeleton"
-import type { StagedReference } from "../../conversations/chatRequest"
+import { MAX_CONVERSATION_REFERENCES, type StagedReference } from "../../conversations/chatRequest"
 import { ChatComposer } from "../../conversations/components/ChatComposer"
 import type { ComposerHandle } from "../../conversations/components/ComposerInput"
 import { useConversationSession } from "../../conversations/components/ConversationSession"
 import { ReferencePicker } from "../../conversations/components/ReferencePicker"
-import { composerDraftText, composerReferences, textDraft } from "../../conversations/composerDraft"
+import { composerReferences, textDraft } from "../../conversations/composerDraft"
 import type { ComposerDraft } from "../../conversations/composerDraft"
+import { composerSubmissionBlockedReason } from "../../conversations/composerPolicy"
 import type { ResearchSuggestion } from "../../conversations/suggestions"
 import { HomepageConnections } from "./HomepageConnections"
 import { HomepageProof } from "./HomepageProof"
@@ -65,20 +66,17 @@ export function HomepageLanding({
   const composer = useRef<ComposerHandle>(null)
   const isNavigating = useRef(false)
   const [isPickerOpen, setPickerOpen] = useState(false)
-  const isBusy =
-    status === "submitted" ||
-    status === "streaming" ||
-    session.isRestoringConversation ||
-    session.isConfirmingClarification
+  const submissionBlockedReason = composerSubmissionBlockedReason({
+    draft: session.draft,
+    references: session.references,
+    isAvailable,
+    isRunning: status === "submitted" || status === "streaming",
+    isRestoring: session.isRestoringConversation,
+    isConfirmingClarification: session.isConfirmingClarification
+  })
 
   function send() {
-    if (
-      !isAvailable ||
-      isBusy ||
-      isNavigating.current ||
-      !composerDraftText(session.draft).trim() ||
-      composerReferences(session.draft, session.references).length > 12
-    ) {
+    if (submissionBlockedReason !== undefined || isNavigating.current) {
       return
     }
     isNavigating.current = true
@@ -108,7 +106,7 @@ export function HomepageLanding({
     const existing = composerReferences(session.draft, session.references)
     const draft: ComposerDraft = [...session.draft]
     for (const reference of references) {
-      if (existing.length >= 12) {
+      if (existing.length >= MAX_CONVERSATION_REFERENCES) {
         break
       }
       if (existing.some((item) => item.recordId === reference.recordId && item.record.kind === reference.record.kind)) {
@@ -146,7 +144,7 @@ export function HomepageLanding({
                 draft={session.draft}
                 onDraftChange={session.setDraft}
                 onSend={send}
-                isAvailable={isAvailable && !isBusy}
+                submissionBlockedReason={submissionBlockedReason}
                 hasHomepageGlow
                 composerRef={composer}
                 references={session.references}
@@ -187,6 +185,7 @@ export function HomepageLanding({
       </main>
       {isPickerOpen && (
         <ReferencePicker
+          draft={session.draft}
           initial={session.references}
           available={[]}
           mention={false}
