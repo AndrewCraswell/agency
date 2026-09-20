@@ -8,6 +8,7 @@ over HTTPS, never databases, models or source providers. C supplies shared schem
 | Configuration, build/start, health/readiness and smoke | [Runtime README](../README.md) |
 | Failure diagnostics, correlation and redaction | [Sentry telemetry](operations/telemetry.md) |
 | Resource registration and pending browser consent | [Authentication](operations/authentication.md) |
+| Staging, previews and production deployment | [Environments and deployments](../../../docs/environments-and-deployments.md) |
 | Registered baseline tools | [Tool contracts](engineering/tool-contracts.md) |
 | Relationship listings, counts, rates and rankings | [Analytics contract](../../../packages/legislation-core/docs/engineering/relationship-analytics.md) |
 | Regulatory mapping and exact-text transport | [Legal tools](engineering/legal-tools.md) |

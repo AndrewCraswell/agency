@@ -1,4 +1,4 @@
-name: Release
+name: Package publication
 
 on:
   push:
@@ -14,12 +14,16 @@ permissions:
   contents: write
 
 env:
+  # The committed .npmrc supports development behind the work VPN. CI uses
+  # pnpm's higher-precedence override and does not need Azure credentials.
+  PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
   # Turbo Remote Cache (see CI workflow) speeds up the build before publishing.
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
 jobs:
   release:
+    name: Publish packages
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

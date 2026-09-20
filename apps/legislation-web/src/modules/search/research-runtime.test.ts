@@ -55,7 +55,12 @@ it("honors configured capacity and defers acquisition to SQL execution", async (
   const runtime = getResearchRuntime()
   await expect(runtime.run(async () => result)).resolves.toBe(result)
   expect(createDatabase).toHaveBeenCalledExactlyOnceWith(configuration.database, { waitForConnection: true })
-  expect(createReadOnlyDatabase).toHaveBeenCalledExactlyOnceWith(expect.any(Object), 15000, undefined)
+  expect(createReadOnlyDatabase).toHaveBeenCalledExactlyOnceWith(
+    expect.any(Object),
+    15000,
+    undefined,
+    expect.any(Function)
+  )
   expect(getResearchRuntime()).toBe(runtime)
 })
 
@@ -66,8 +71,20 @@ it("passes cancellation to both data stores and retrieval without clamping capac
   expect(createDatabase).toHaveBeenNthCalledWith(2, configuration.passageSearch.database, {
     waitForConnection: true
   })
-  expect(createReadOnlyDatabase).toHaveBeenNthCalledWith(1, expect.any(Object), 15000, caller.signal)
-  expect(createReadOnlyDatabase).toHaveBeenNthCalledWith(2, expect.any(Object), 10000, caller.signal)
+  expect(createReadOnlyDatabase).toHaveBeenNthCalledWith(
+    1,
+    expect.any(Object),
+    15000,
+    caller.signal,
+    expect.any(Function)
+  )
+  expect(createReadOnlyDatabase).toHaveBeenNthCalledWith(
+    2,
+    expect.any(Object),
+    10000,
+    caller.signal,
+    expect.any(Function)
+  )
   expect(retrieval).toHaveBeenCalledWith(
     expect.objectContaining({
       signal: caller.signal,

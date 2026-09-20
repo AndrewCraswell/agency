@@ -348,6 +348,9 @@ at the repository root and explicitly configure that path; nested config is not 
 Before release, verify the effective service uses the Dockerfile builder, `apps/legislation-web/Dockerfile`, and `/ready`
 health check. Railway injects `PORT`; the service binds it on `0.0.0.0`. Apply migrations as a separate, explicit
 release operation with `pnpm --filter legislation-web db:migrate`; neither image build nor W/I/M startup runs migrations.
+The target staging, preview, migration, CDN and production-promotion workflow is defined in
+[environments and deployments](../../../../docs/environments-and-deployments.md). It remains a target contract until its
+activation checklist passes.
 
 Use the [API contract](../engineering/api/README.md) for current behavior
 and [Next.js runtime](#nextjs-runtime) for the active runtime contract. Do not copy historical deployment IDs into a

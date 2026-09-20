@@ -69,6 +69,7 @@ Start with [the telemetry specification](engineering/telemetry-spec.md). Support
 
 ## Operations
 
+- [Environments and deployments](../../../docs/environments-and-deployments.md)
 - [HTTP API smoke checks](operations/http-api-local-smoke.md)
 - [Representative lookup diagnostic](operations/representative-lookup.md)
 - [Telemetry acceptance](operations/telemetry-acceptance.md)

@@ -24,6 +24,7 @@ its app consumers and Storybook prototypes do not perform legal interpretation o
 | [typescript.md](typescript.md)   | TypeScript/type conventions **and** the type-helper libraries (`ts-extras`, `ts-pattern`, `tiny-invariant`, `zod`) — read before writing a new type helper. |
 | [hooks.md](hooks.md)             | React hook conventions **and** the full `@mantine/hooks` catalog — read before writing a new hook.                                                          |
 | [database-performance.md](database-performance.md) | Privacy-safe PostgreSQL query statistics and the targeted AI diagnosis workflow. |
+| [environments-and-deployments.md](environments-and-deployments.md) | Legislation CI/CD, Railway environments, database refreshes, migration ownership, previews and CDN policy. |
 | [shopify-app-generator.md](../packages/fc-theme-base/docs/shopify-app-generator.md) | Creating a neutral embedded Shopify app with the local Turbo generator.                                                               |
 | [shopify-policy-pages.md](../packages/fc-theme-base/docs/shopify-policy-pages.md) | Policy page templates, store-managed content, responsive reading, and footer menu wiring. |
 | [shopify-content-installation.md](../packages/fc-theme-base/docs/shopify-content-installation.md) | Fencing Club migration content, portable manifests, menu wiring, and safe reruns. |
