@@ -70,6 +70,12 @@ import {
 import { alias, unionAll } from "drizzle-orm/pg-core"
 import type { RetrievalModelClient } from "../../services/openrouter/openrouter-retrieval"
 import {
+  observeDatabaseQueryWithoutTelemetry,
+  type DatabasePoolName,
+  type DatabaseQueryName,
+  type DatabaseQueryObserver
+} from "../../services/sentry/databaseQueryTelemetry"
+import {
   decodeAmendmentSearchCursor,
   encodeAmendmentSearchCursor,
   fuseAmendmentSearchCandidates,
@@ -1732,17 +1738,28 @@ export class LegislationQueryService {
     return await resolveRecord(this.#database, input)
   }
   readonly #database: LegislationDatabase
+  readonly #observeDatabaseQuery: DatabaseQueryObserver
   readonly #rankedPassageSearch?: RankedPassageSearch
   readonly #retrievalClient?: RetrievalModelClient
 
   constructor(
     database: LegislationDatabase,
     retrievalClient?: RetrievalModelClient,
-    rankedPassageSearch?: RankedPassageSearch
+    rankedPassageSearch?: RankedPassageSearch,
+    observeDatabaseQuery: DatabaseQueryObserver = observeDatabaseQueryWithoutTelemetry
   ) {
     this.#database = database
+    this.#observeDatabaseQuery = observeDatabaseQuery
     this.#rankedPassageSearch = rankedPassageSearch
     this.#retrievalClient = retrievalClient
+  }
+
+  async #observeQuery<Result>(
+    name: DatabaseQueryName,
+    pool: DatabasePoolName,
+    operation: () => Promise<Result>
+  ): Promise<Result> {
+    return await this.#observeDatabaseQuery({ name, pool, revision: 1 }, operation)
   }
 
   async searchChanges(input: ChangeSearchInput) {
@@ -2677,7 +2694,9 @@ export class LegislationQueryService {
   async searchSupportingMaterials(input: SupportingMaterialSearchInput): Promise<SupportingMaterialSearchResult> {
     const mode = input.mode ?? "lexical"
     if (input.query !== undefined && mode === "lexical") {
-      return await this.#searchLexicalSupportingMaterials(input)
+      return await this.#observeQuery("supporting_material.search.lexical", "canonical", async () =>
+        this.#searchLexicalSupportingMaterials(input)
+      )
     }
     if (input.query !== undefined && mode !== "lexical") {
       const query = input.query
@@ -2686,23 +2705,25 @@ export class LegislationQueryService {
       const candidateLimit = embeddingQueryRouteFor("search_supporting_materials").candidateLimit
       const semanticSearch = async () => {
         const queryEmbedding = await this.#embedQueryWithModel("search_supporting_materials", query)
-        const rows = await semanticSupportingMaterialSearch(this.#database, {
-          amendmentIds: supportingMaterialFilterValues(input.amendmentIds, input.amendmentId),
-          billIds: supportingMaterialFilterValues(input.billIds, input.billId),
-          classifications: supportingMaterialFilterValues(input.classifications, input.classification),
-          documentFrom: input.documentFrom,
-          documentTo: input.documentTo,
-          embedding: queryEmbedding.embedding,
-          eventIds: supportingMaterialFilterValues(input.eventIds, input.eventId),
-          jurisdictionIds: supportingMaterialFilterValues(input.jurisdictionIds, input.jurisdictionId),
-          limit: candidateLimit,
-          organizationIds: supportingMaterialFilterValues(input.organizationIds, input.organizationId),
-          processingStatus: input.processingStatus,
-          sessionIds: input.sessionIds,
-          updatedFrom: input.updatedFrom,
-          updatedTo: input.updatedTo,
-          updatedToExclusive: input.updatedToExclusive
-        })
+        const rows = await this.#observeQuery("supporting_material.search.semantic", "canonical", async () =>
+          semanticSupportingMaterialSearch(this.#database, {
+            amendmentIds: supportingMaterialFilterValues(input.amendmentIds, input.amendmentId),
+            billIds: supportingMaterialFilterValues(input.billIds, input.billId),
+            classifications: supportingMaterialFilterValues(input.classifications, input.classification),
+            documentFrom: input.documentFrom,
+            documentTo: input.documentTo,
+            embedding: queryEmbedding.embedding,
+            eventIds: supportingMaterialFilterValues(input.eventIds, input.eventId),
+            jurisdictionIds: supportingMaterialFilterValues(input.jurisdictionIds, input.jurisdictionId),
+            limit: candidateLimit,
+            organizationIds: supportingMaterialFilterValues(input.organizationIds, input.organizationId),
+            processingStatus: input.processingStatus,
+            sessionIds: input.sessionIds,
+            updatedFrom: input.updatedFrom,
+            updatedTo: input.updatedTo,
+            updatedToExclusive: input.updatedToExclusive
+          })
+        )
         return { model: queryEmbedding.model, rows }
       }
       const lexicalSearch = async () =>
@@ -3108,7 +3129,10 @@ export class LegislationQueryService {
   async searchBills(input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }): Promise<BillSearchResultPage> {
     const mode = input.mode ?? "hybrid"
     if (mode === "lexical") {
-      return { ...(await lexicalBillSearch(this.#database, input)), search: { isReranked: false, models: [] } }
+      const lexical = await this.#observeQuery("bill.search.lexical", "canonical", async () =>
+        lexicalBillSearch(this.#database, input)
+      )
+      return { ...lexical, search: { isReranked: false, models: [] } }
     }
     const queryEmbedding = await this.#embedQueryWithModel("search_bills", input.query)
     const cursorInput = { ...input, mode }
@@ -3119,12 +3143,14 @@ export class LegislationQueryService {
       throw new LegislationError("dependency_unavailable", "Bill search reranking is not configured")
     }
     if (mode === "semantic") {
-      const semantic = await semanticBillSearch(this.#database, {
-        ...input,
-        cursor: undefined,
-        embedding: queryEmbedding.embedding,
-        limit: candidateLimit
-      })
+      const semantic = await this.#observeQuery("bill.search.semantic", "canonical", async () =>
+        semanticBillSearch(this.#database, {
+          ...input,
+          cursor: undefined,
+          embedding: queryEmbedding.embedding,
+          limit: candidateLimit
+        })
+      )
       const reranked = await this.#rerank(
         "search_bills",
         input.query,
@@ -3149,13 +3175,17 @@ export class LegislationQueryService {
       }
     }
     const [lexical, semantic] = await Promise.all([
-      lexicalBillSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit }),
-      semanticBillSearch(this.#database, {
-        ...input,
-        cursor: undefined,
-        embedding: queryEmbedding.embedding,
-        limit: candidateLimit
-      })
+      this.#observeQuery("bill.search.lexical", "canonical", async () =>
+        lexicalBillSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit })
+      ),
+      this.#observeQuery("bill.search.semantic", "canonical", async () =>
+        semanticBillSearch(this.#database, {
+          ...input,
+          cursor: undefined,
+          embedding: queryEmbedding.embedding,
+          limit: candidateLimit
+        })
+      )
     ])
     const lexicalItems: FusedBillResult[] = lexical.items
     const semanticItems: FusedBillResult[] = semantic.items
@@ -3400,10 +3430,12 @@ export class LegislationQueryService {
       })
       .from(votes)
       .where(eq(votes.billId, lookup.id))
-    const events = await unionAll(actions, rollCalls)
-      .orderBy(sql`date asc nulls last`, sql`id asc`)
-      .limit(limit + 1)
-      .offset(offset)
+    const events = await this.#observeQuery("bill.timeline", "canonical", async () =>
+      unionAll(actions, rollCalls)
+        .orderBy(sql`date asc nulls last`, sql`id asc`)
+        .limit(limit + 1)
+        .offset(offset)
+    )
     const truncated = events.length > limit
     return {
       billId: lookup.id,
@@ -3419,13 +3451,19 @@ export class LegislationQueryService {
   ): Promise<PassageSearchResultPage> {
     const mode = input.mode ?? "lexical"
     if (mode === "lexical") {
-      if (this.#rankedPassageSearch !== undefined) {
-        return await this.#rankedPassageSearch.search({
-          ...input,
-          rankingGeneration: this.#rankedPassageSearch.generation
-        })
+      const rankedPassageSearch = this.#rankedPassageSearch
+      if (rankedPassageSearch !== undefined) {
+        return await this.#observeQuery("passage.search.lexical", "passage_search", async () =>
+          rankedPassageSearch.search({
+            ...input,
+            rankingGeneration: rankedPassageSearch.generation
+          })
+        )
       }
-      return { ...(await lexicalPassageSearch(this.#database, input)), search: { isReranked: false, models: [] } }
+      const lexical = await this.#observeQuery("passage.search.lexical", "canonical", async () =>
+        lexicalPassageSearch(this.#database, input)
+      )
+      return { ...lexical, search: { isReranked: false, models: [] } }
     }
     const queryEmbedding = await this.#embedQueryWithModel("search_bill_text", input.query)
     const { limit, offset } = validatePassageSearchInput(input)
@@ -3435,12 +3473,14 @@ export class LegislationQueryService {
       throw new LegislationError("dependency_unavailable", "Passage search reranking is not configured")
     }
     if (mode === "semantic") {
-      const semantic = await semanticPassageSearch(this.#database, {
-        ...input,
-        cursor: undefined,
-        embedding: queryEmbedding.embedding,
-        limit: candidateLimit
-      })
+      const semantic = await this.#observeQuery("passage.search.semantic", "canonical", async () =>
+        semanticPassageSearch(this.#database, {
+          ...input,
+          cursor: undefined,
+          embedding: queryEmbedding.embedding,
+          limit: candidateLimit
+        })
+      )
       const reranked = await this.#rerank(
         "search_bill_text",
         input.query,
@@ -3453,21 +3493,28 @@ export class LegislationQueryService {
         search: passageSearchExecution(queryEmbedding.model, rerankModel, semantic.items.length)
       }
     }
-    const semantic = await semanticPassageSearch(this.#database, {
-      ...input,
-      cursor: undefined,
-      embedding: queryEmbedding.embedding,
-      limit: candidateLimit
-    })
+    const semantic = await this.#observeQuery("passage.search.semantic", "canonical", async () =>
+      semanticPassageSearch(this.#database, {
+        ...input,
+        cursor: undefined,
+        embedding: queryEmbedding.embedding,
+        limit: candidateLimit
+      })
+    )
+    const rankedPassageSearch = this.#rankedPassageSearch
     const lexical =
-      this.#rankedPassageSearch === undefined
-        ? await lexicalPassageSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit })
-        : await this.#rankedPassageSearch.search({
-            ...input,
-            cursor: undefined,
-            limit: candidateLimit,
-            rankingGeneration: this.#rankedPassageSearch.generation
-          })
+      rankedPassageSearch === undefined
+        ? await this.#observeQuery("passage.search.lexical", "canonical", async () =>
+            lexicalPassageSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit })
+          )
+        : await this.#observeQuery("passage.search.lexical", "passage_search", async () =>
+            rankedPassageSearch.search({
+              ...input,
+              cursor: undefined,
+              limit: candidateLimit,
+              rankingGeneration: rankedPassageSearch.generation
+            })
+          )
     const lexicalById = new Map(lexical.items.map((item) => [item.section.id, item]))
     const semanticById = new Map(semantic.items.map((item) => [item.section.id, item]))
     const lexicalCandidates = lexical.items.map((item) => ({ ...item, id: item.section.id }))

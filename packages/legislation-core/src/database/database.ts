@@ -22,6 +22,11 @@ export interface DatabaseSessionOptions {
   waitForConnection?: boolean
 }
 
+export type DatabaseConnectionObservation = Readonly<{
+  durationMs: number
+  pool: ReturnType<typeof databasePoolSnapshot>
+}>
+
 export function createDatabase(config: DatabaseConfig, session: DatabaseSessionOptions = {}) {
   assertStatementTimeout(session.statementTimeoutMs)
   const queue = session.waitForConnection ? new ConnectionQueue(config.maxConnections) : undefined
@@ -58,9 +63,11 @@ export async function withReadOnlyDatabase<Result>(
   statementTimeoutMs: number,
   operation: (database: ReadOnlyTransaction) => Promise<Result>,
   signal?: AbortSignal,
-  transactionConfig?: PgTransactionConfig
+  transactionConfig?: PgTransactionConfig,
+  onConnectionAcquired?: (observation: DatabaseConnectionObservation) => void
 ): Promise<Result> {
   assertStatementTimeout(statementTimeoutMs)
+  const connectionStartedAt = performance.now()
   signal?.throwIfAborted()
   const releaseCapacity = await connectionQueues.get(pool)?.acquire(signal)
   if (signal?.aborted) {
@@ -76,6 +83,10 @@ export async function withReadOnlyDatabase<Result>(
   let client: pg.PoolClient
   try {
     client = await Promise.race([connecting, cancelled])
+    onConnectionAcquired?.({
+      durationMs: Math.round(performance.now() - connectionStartedAt),
+      pool: databasePoolSnapshot(pool)
+    })
   } catch (error) {
     void connecting.then(
       (lateClient) => {

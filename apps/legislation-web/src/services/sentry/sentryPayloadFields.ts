@@ -1,5 +1,6 @@
 import type { StackFrame } from "@sentry/core"
 import { z } from "zod"
+import { databaseQueryNameSchema } from "./databaseQueryNames"
 import { telemetryCorrelationSchema } from "./telemetryCorrelation"
 import { telemetryEvents } from "./telemetryEvents"
 import { telemetryFields as f, type TelemetryScalar } from "./telemetryFields"
@@ -154,6 +155,25 @@ const metadataFields = {
   "analytics.database_rows": f.count,
   "analytics.join_count": f.count,
   "analytics.result_bytes": f.count,
+  "db.duration_ms": f.duration,
+  "db.connection_wait.canonical_ms": f.duration,
+  "db.connection_wait.passage_search_ms": f.duration,
+  "db.error_code": z.string().regex(/^[0-9A-Z]{5}$/u),
+  "db.pool.active": f.count,
+  "db.pool.active_after": f.count,
+  "db.pool.idle": f.count,
+  "db.pool.idle_after": f.count,
+  "db.pool.maximum": f.count,
+  "db.pool.name": z.enum(["canonical", "passage_search"]),
+  "db.pool.saturation": z.number().finite().min(0).max(1),
+  "db.pool.saturation_after": z.number().finite().min(0).max(1),
+  "db.pool.total": f.count,
+  "db.pool.total_after": f.count,
+  "db.pool.waiting": f.count,
+  "db.pool.waiting_after": f.count,
+  "db.query.name": databaseQueryNameSchema,
+  "db.query.revision": z.number().int().min(1).max(1000),
+  "db.result_count": f.count,
   "gen_ai.request.model": f.token,
   "gen_ai.tool.name": f.tool,
   "gen_ai.response.model": f.token,
@@ -175,7 +195,8 @@ const diagnosticNames = z.enum([
   "analytics.validate",
   "analytics.compile",
   "analytics.execute",
-  "analytics.project"
+  "analytics.project",
+  ...databaseQueryNameSchema.options
 ])
 
 export function safeSpanName(value: unknown, fallback: string) {

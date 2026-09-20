@@ -1,4 +1,8 @@
-import { withReadOnlyDatabase, type LegislationDatabase } from "@repo/legislation-core/database/database"
+import {
+  withReadOnlyDatabase,
+  type DatabaseConnectionObservation,
+  type LegislationDatabase
+} from "@repo/legislation-core/database/database"
 import * as schema from "@repo/legislation-core/database/schema/schema"
 import type { Query, SQL } from "drizzle-orm"
 import { NodePgDatabase, NodePgSession, type NodePgQueryResultHKT } from "drizzle-orm/node-postgres"
@@ -51,13 +55,14 @@ class ReadOnlyPreparedQuery<T extends PreparedQueryConfig> extends PgPreparedQue
 export function createReadOnlyDatabase(
   pool: pg.Pool,
   statementTimeoutMs: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onConnectionAcquired?: (observation: DatabaseConnectionObservation) => void
 ): LegislationDatabase {
   const dialect = new PgDialect()
   const tables = extractTablesRelationalConfig<Tables>(schema, createTableRelationsHelpers)
   const relationalSchema = { fullSchema: schema, schema: tables.tables, tableNamesMap: tables.tableNamesMap }
   const run = <Result>(operation: (database: LegislationDatabase) => Promise<Result>) =>
-    withReadOnlyDatabase(pool, statementTimeoutMs, operation, signal)
+    withReadOnlyDatabase(pool, statementTimeoutMs, operation, signal, undefined, onConnectionAcquired)
 
   class ReadOnlySession extends NodePgSession<typeof schema, Tables> {
     override prepareQuery<T extends PreparedQueryConfig = PreparedQueryConfig>(
@@ -84,7 +89,7 @@ export function createReadOnlyDatabase(
       operation: (transaction: Transaction) => Promise<Result>,
       config?: PgTransactionConfig
     ): Promise<Result> {
-      return withReadOnlyDatabase(pool, statementTimeoutMs, operation, signal, config)
+      return withReadOnlyDatabase(pool, statementTimeoutMs, operation, signal, config, onConnectionAcquired)
     }
   }
 

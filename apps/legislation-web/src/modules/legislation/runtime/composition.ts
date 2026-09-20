@@ -1,5 +1,10 @@
 import { createDatabase, type LegislationDatabase } from "@repo/legislation-core/database/database"
+import { createReadOnlyDatabase } from "@repo/legislation-core/database/read-only-database"
 import { OpenRouterRetrievalClient } from "../../../services/openrouter/openrouter-retrieval"
+import {
+  createDatabaseQueryObserver,
+  recordDatabaseConnectionAcquired
+} from "../../../services/sentry/databaseQueryTelemetry"
 import { loadConfig, type LegislationConfig } from "../../configuration/config"
 import { createLegalAgenciesReader } from "../../request-handling/api/legal-agencies-read"
 import { createLegalBrowser } from "../../request-handling/api/legal-browse-read"
@@ -53,13 +58,29 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
           statementTimeoutMs: config.passageSearch.database.apiStatementTimeoutMs
         })
       : undefined
-  const rankedPassageSearch =
+  const observeDatabaseQuery = createDatabaseQueryObserver({
+    canonical: pool,
+    passageSearch: passageSearchDatabase?.pool
+  })
+  const queryDatabase = createReadOnlyDatabase(pool, config.database.apiStatementTimeoutMs, undefined, (observation) =>
+    recordDatabaseConnectionAcquired("canonical", observation)
+  )
+  const queryPassageDatabase =
     passageSearchDatabase === undefined || config.passageSearch.enabled === false
       ? undefined
+      : createReadOnlyDatabase(
+          passageSearchDatabase.pool,
+          config.passageSearch.database.apiStatementTimeoutMs,
+          undefined,
+          (observation) => recordDatabaseConnectionAcquired("passage_search", observation)
+        )
+  const rankedPassageSearch =
+    queryPassageDatabase === undefined || config.passageSearch.enabled === false
+      ? undefined
       : createRankedPassageSearch({
-          canonicalDatabase: database,
+          canonicalDatabase: queryDatabase,
           generation: config.passageSearch.rankingGeneration,
-          searchDatabase: passageSearchDatabase.database
+          searchDatabase: queryPassageDatabase
         })
 
   return {
@@ -78,7 +99,12 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
     legalBrowser: createLegalBrowser(pool, config.legalApi.allowedOrganizationIds),
     resolveLegalCitation: createLegalCitationResolver(pool, config.legalApi.allowedOrganizationIds),
     searchLegal: createLegalSearch(pool, passageSearchDatabase?.pool, config.legalApi.allowedOrganizationIds),
-    queryService: new LegislationQueryService(database, retrievalClient, rankedPassageSearch),
+    queryService: new LegislationQueryService(
+      queryDatabase,
+      retrievalClient,
+      rankedPassageSearch,
+      observeDatabaseQuery
+    ),
     retrievalClient,
     readiness: createNextDatabaseReadiness(pool, passageSearchDatabase?.pool)
   }

@@ -9,6 +9,7 @@ import { PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
 import { afterAll, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
+import type { DatabaseQueryObserver } from "../../services/sentry/databaseQueryTelemetry"
 import type { RankedPassageSearch } from "../search/ranked-passage-search"
 import {
   buildLexicalPassageSearchQuery,
@@ -255,12 +256,17 @@ describe("document parent bill identity", () => {
 describe("mention discovery", () => {
   it("applies timeline pagination to a single ordered action and vote query", async () => {
     const stopped = new Error("Timeline query captured")
+    const observed = vi.fn<(input: Parameters<DatabaseQueryObserver>[0]) => void>()
+    const observe: DatabaseQueryObserver = async (input, operation) => {
+      observed(input)
+      return await operation()
+    }
     const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
       throw stopped
     })
     try {
       await expect(
-        new LegislationQueryService(database).getBillTimeline({
+        new LegislationQueryService(database, undefined, undefined, observe).getBillTimeline({
           id: "bill:us:116:hr:1",
           limit: 1,
           cursor: Buffer.from(JSON.stringify({ offset: 1 })).toString("base64url")
@@ -276,6 +282,7 @@ describe("mention discovery", () => {
       expect(statement).toContain("offset")
       expect(query.mock.calls[0]?.[1]).toEqual(["bill:us:116:hr:1", "bill:us:116:hr:1", 2, 1])
       expect(query).toHaveBeenCalledOnce()
+      expect(observed).toHaveBeenCalledWith({ name: "bill.timeline", pool: "canonical", revision: 1 })
     } finally {
       query.mockRestore()
     }
