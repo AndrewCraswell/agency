@@ -57,7 +57,7 @@ const complete = {
   failedToolCalls: []
 }
 function observed(body: unknown, id = "request-one"): RequestObservation {
-  return { ...requestIdentity(body), id, status: 200, terminal: "finished", failure: null }
+  return { ...requestIdentity(body), id, serverRequestId: null, status: 200, terminal: "finished", failure: null }
 }
 function progress(): StepProgress[] {
   return authored.steps.map((step) => ({

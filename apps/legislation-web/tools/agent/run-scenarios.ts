@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url"
 import { parseArgs } from "node:util"
 import type { LanguageModel } from "ai"
 import type { Page, Request } from "playwright"
+import { z } from "zod"
 import { entityKindSchema } from "../../src/modules/conversations/entityResults"
 import { redactCredentials } from "../../src/modules/conversations/redactCredentials"
 import { createChatModel } from "../../src/services/openrouter/chat-model"
@@ -203,6 +204,7 @@ export async function runScenario(
         ...requestIdentity(body),
         id: randomUUID(),
         exchange,
+        serverRequestId: null,
         status: null,
         terminal: null,
         failure: null
@@ -217,9 +219,16 @@ export async function runScenario(
       const observation = requests.get(response.request())
       if (observation) {
         observation.status = response.status()
+        const header = response.headers()["x-rostra-request-id"]
+        const serverRequestId = z.uuid().safeParse(header)
+        observation.serverRequestId = serverRequestId.success ? serverRequestId.data : null
+        if (header && !serverRequestId.success) {
+          record("invalid-server-request-id", { requestId: observation.id })
+        }
         record("response", {
           requestId: observation.id,
           requestExchange: observation.exchange,
+          serverRequestId: observation.serverRequestId,
           status: observation.status
         })
       }
