@@ -12,7 +12,7 @@ turn and attempt correlation, streaming/render timing, clarification, recovery a
 retries, result-size limits and parallel critical-path attribution.
 
 [Follow-up research context](engineering/conversation-research-memory.md) retains bounded server-owned evidence,
-provenance and incomplete research across turns, with fresh citation registration and owner isolation.
+provenance and incomplete research across turns, with shared citation-reference rules, fresh registration and owner isolation.
 
 [Canonical bill identity](engineering/conversation-bill-identity.md) preserves bill titles, Congress/session and
 document provenance through follow-ups and requires explicit correction of conflicting earlier labels.

@@ -41,6 +41,13 @@ Server-owned short references remain internal registration metadata. Earlier mar
 source available. Citation rendering, telemetry and development reload recovery understand retained evidence even
 when the follow-up makes no new tool calls.
 
+Fresh projection and memory restoration share the pure citation-reference schema, BigInt ordinal calculation and
+formatting rules. Internal markers retain the `e` prefix and one to 31 decimal digits with no leading zero.
+Malformed historical markers do not reserve ordinals; formatting fails if the next ordinal exceeds that bound.
+Allocation state and evidence-to-reference mappings remain response-local. Restored sources receive fresh references
+above both historical markers and retained sources; fresh projection reuses those registrations, and previews do not
+consume ordinals or mutate retained evidence.
+
 Result handles, presentation IDs and page cursors are not restored. Evidence-based presentation options receive fresh
 IDs; other views require new retrieval. A removed continuation cursor leaves `hasMore: true`, so the model must restart
 the appropriate tool without that cursor to continue. Historical evidence is not a substitute for a fresh status query.

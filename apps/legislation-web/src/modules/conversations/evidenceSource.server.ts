@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import type { Logger } from "@repo/legislation-core/observability/logger"
 import { z } from "zod"
+import { formatCitationReference, nextCitationOrdinal } from "./citationReference"
 import { projectResearchEvidence, sourceUrlSchema, type EvidenceSourceContext, type EvidenceSnapshot } from "./evidence"
 
 const renditionSchema = z.object({
@@ -149,20 +150,12 @@ export function createResearchEvidenceProjector(
   const reported = new Set<string>()
   const retained = new Map<string, Rendition>()
   const references = new Map<string, string>()
-  let nextReference = 1n
   for (const source of restoredEvidence) {
     if (source.citationRef) {
       references.set(source.id, source.citationRef)
     }
   }
-  for (const reference of [...previousReferences, ...references.values()]) {
-    if (/^e[1-9][0-9]{0,30}$/.test(reference)) {
-      const next = BigInt(reference.slice(1)) + 1n
-      if (next > nextReference) {
-        nextReference = next
-      }
-    }
-  }
+  let nextReference = nextCitationOrdinal([...previousReferences, ...references.values()])
   return (data: unknown, preview = false) => {
     const projectionRenditions = preview ? new Map(retained) : retained
     const projectionReferences = preview ? new Map(references) : references
@@ -220,7 +213,7 @@ export function createResearchEvidenceProjector(
     const projected = snapshots.map((evidence) => {
       let citationRef = projectionReferences.get(evidence.id)
       if (!citationRef) {
-        citationRef = `e${projectionReference++}`
+        citationRef = formatCitationReference(projectionReference++)
         projectionReferences.set(evidence.id, citationRef)
       }
       return { ...evidence, citationRef }

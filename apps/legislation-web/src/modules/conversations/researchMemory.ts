@@ -1,5 +1,6 @@
 import type { ModelMessage } from "ai"
 import { z } from "zod"
+import { formatCitationReference, nextCitationOrdinal } from "./citationReference"
 import { evidenceSnapshotSchema, projectModelEvidence, type EvidenceSnapshot } from "./evidence"
 import { contentOptions, type PresentationContent } from "./presentationContent"
 import type { ResearchFailureCode } from "./researchFailure"
@@ -171,26 +172,18 @@ export async function restoreResearchMemory(
 
 function presentResearchMemory(turns: ResearchTurn[], warnings: Set<string>, previousReferences: readonly string[]) {
   const sources = new Map<string, EvidenceSnapshot>()
-  let nextReference = 1n
-  for (const reference of [
+  let nextReference = nextCitationOrdinal([
     ...previousReferences,
     ...turns.flatMap((turn) =>
       turn.observations.flatMap((item) => item.evidence.map((source) => source.citationRef ?? ""))
     )
-  ]) {
-    if (/^e[1-9][0-9]{0,30}$/.test(reference)) {
-      const next = BigInt(reference.slice(1)) + 1n
-      if (next > nextReference) {
-        nextReference = next
-      }
-    }
-  }
+  ])
   for (const turn of turns.toReversed()) {
     for (const item of turn.observations.toReversed()) {
       for (const source of item.evidence) {
         if (!sources.has(source.id)) {
           if (sources.size < 320) {
-            sources.set(source.id, { ...source, citationRef: `e${nextReference++}` })
+            sources.set(source.id, { ...source, citationRef: formatCitationReference(nextReference++) })
           } else {
             warnings.add(
               "Some evidence exceeded the retained source limit. Retrieve omitted sources before citing them."

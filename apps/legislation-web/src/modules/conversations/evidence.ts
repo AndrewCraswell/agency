@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { citationReferenceSchema } from "./citationReference"
 
 const billIdentitySchema = z.strictObject({
   id: z.string().regex(/^bill:[a-z0-9-]+:[^:]+:[a-z0-9-]+:[a-z0-9-]+$/),
@@ -22,10 +23,7 @@ export const evidenceSnapshotSchema = z.strictObject({
   recordId: z.string().min(1).max(512).optional(),
   billId: z.string().min(1).max(512).optional(),
   billIdentity: billIdentitySchema.optional(),
-  citationRef: z
-    .string()
-    .regex(/^e[1-9][0-9]{0,30}$/)
-    .optional(),
+  citationRef: citationReferenceSchema.optional(),
   title: z.string().trim().min(1).max(1000),
   origin: z.enum(["canonical", "web"]),
   publisher: z.string().trim().min(1).max(240).optional(),

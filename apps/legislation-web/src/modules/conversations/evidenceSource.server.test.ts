@@ -1,4 +1,5 @@
 import { createLogger } from "@repo/legislation-core/observability/logger"
+import invariant from "tiny-invariant"
 import { describe, expect, it } from "vitest"
 import { createResearchEvidenceProjector } from "./evidenceSource.server"
 
@@ -102,6 +103,30 @@ describe("readable evidence sources", () => {
     expect(another?.citationRef).toBe("e1")
     expect(another?.id).toBe(second?.id)
     expect(another?.id).not.toBe(first?.id)
+  })
+
+  it("preserves large restored references without sharing allocation or consuming previews", () => {
+    const prior = setup().project(document)[0]
+    invariant(prior)
+    const restored = [{ ...prior, citationRef: "e9007199254740993" }]
+    const original = structuredClone(restored)
+    const { logger } = setup()
+    const project = createResearchEvidenceProjector(
+      logger,
+      "run:restored",
+      ["e8", "e01", `e${"9".repeat(32)}`],
+      restored
+    )
+    expect(project(document)[0]).toEqual(restored[0])
+    expect(project(pdf, true)[0]?.citationRef).toBe("e9007199254740994")
+    expect(project(html, true)[0]?.citationRef).toBe("e9007199254740994")
+    expect(project(pdf)[0]?.citationRef).toBe("e9007199254740994")
+    expect(project(pdf)[0]?.citationRef).toBe("e9007199254740994")
+    expect(project(html)[0]?.citationRef).toBe("e9007199254740995")
+    expect(restored).toEqual(original)
+    expect(createResearchEvidenceProjector(logger, "run:independent", [], restored)(html)[0]?.citationRef).toBe(
+      "e9007199254740994"
+    )
   })
 
   it("recognizes publisher XHTML record pages without logging a fallback", () => {

@@ -297,6 +297,24 @@ describe("server-owned research memory", () => {
     expect(project({ ...data, text: "Changed text." })[0]?.citationRef).not.toBe(restored.evidence[0]?.citationRef)
   })
 
+  it("registers retained sources above large previous and saved markers without changing provenance", async () => {
+    const { persistence, saved } = persistenceFixture()
+    const source = { ...evidence, citationRef: "e9007199254740993" }
+    await seed(persistence, runId, source)
+    const original = structuredClone(saved.get(runId))
+    const restored = await restoreResearchMemory(
+      owner,
+      history,
+      ["e9007199254740995", "e01", `e${"9".repeat(32)}`],
+      persistence,
+      () => 1
+    )
+    expect(restored.evidence).toEqual([{ ...source, citationRef: "e9007199254740996" }])
+    expect(saved.get(runId)).toEqual(original)
+    const fromSavedMarker = await restoreResearchMemory(owner, history, ["e2"], persistence, () => 1)
+    expect(fromSavedMarker.evidence).toEqual([{ ...source, citationRef: "e9007199254740994" }])
+  })
+
   it("bounds serialized storage and actual model context and marks omitted observations", async () => {
     const { persistence, saved } = persistenceFixture()
     const turn = createResearchTurn(owner.sessionKey, owner.sessionId, "Question".repeat(1000), () => 0)
