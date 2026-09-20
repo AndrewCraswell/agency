@@ -33,6 +33,18 @@ must not be started or redeployed. Both runtime checks expose:
 - `GET /health` for process health.
 - `GET /ready` for dependency readiness.
 
+## Runtime configuration ownership
+
+`loadConfig` validates application settings, including database connections, the public API URL and the request-body
+limit. Next.js owns the listening host/port and process shutdown; use its CLI/runtime settings rather than the removed
+`LEGISLATION_HOST`, `LEGISLATION_PORT` or `LEGISLATION_SHUTDOWN_TIMEOUT_MS` variables.
+`LEGISLATION_PUBLIC_API_BASE_URL` identifies the public API origin; it does not configure the listener.
+
+[Langfuse settings](../../src/services/langfuse/client.ts) owns W's credential validation and endpoint default
+(`https://us.cloud.langfuse.com`), shared by its HTTP client and Node telemetry initialization. `loadConfig` does not
+read or validate Langfuse variables. Telemetry startup still rejects incomplete key pairs, and enabled integrations
+still require an HTTPS endpoint. Sentry initialization and database settings are unchanged.
+
 ## Local environment after the move
 
 The rename moved tracked files, not local credentials or evidence. In this checkout, the existing `.env`, `data` and

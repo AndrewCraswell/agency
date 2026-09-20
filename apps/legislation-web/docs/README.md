@@ -227,6 +227,8 @@ The catalog below includes every retained document. Most product work needs only
 - [Authentication and MCP client setup](operations/authentication.md)
 - [Database connection pooling](../../../packages/legislation-core/docs/operations/database-connection-pooling.md)
 - [Development, runtime and observability](operations/development.md)
+- [Runtime configuration ownership](operations/development.md#runtime-configuration-ownership): application settings,
+  Next.js listener settings and the active Langfuse integration reader.
 - [Debugging with Sentry and Langfuse](operations/telemetry-debugging.md)
 - [Prototype telemetry acceptance](operations/telemetry-acceptance.md)
 - [Document OCR implementation and operations](../../legislation-ingestion/docs/operations/document-ocr.md)

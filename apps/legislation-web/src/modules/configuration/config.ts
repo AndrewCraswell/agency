@@ -42,11 +42,6 @@ const configSchema = z
       baseUrl: z.url({ protocol: /^https$/ }),
       researchAnswerModel: optionalSecret
     }),
-    observability: z.object({
-      langfuseBaseUrl: z.url({ protocol: /^https$/ }),
-      langfusePublicKey: optionalSecret,
-      langfuseSecretKey: optionalSecret
-    }),
     passageSearch: z.discriminatedUnion("enabled", [
       z.object({ enabled: z.literal(false) }),
       z.object({
@@ -66,11 +61,8 @@ const configSchema = z
       webhookSecretEncryptionKey: optionalSecret
     }),
     server: z.object({
-      host: z.string().trim().min(1),
-      port: z.coerce.number().int().min(1).max(65_535),
       publicApiBaseUrl: z.url({ protocol: /^https?$/ }),
-      requestBodyBytes: z.coerce.number().int().min(1024).max(10_485_760),
-      shutdownTimeoutMs: z.coerce.number().int().min(1000).max(120_000)
+      requestBodyBytes: z.coerce.number().int().min(1024).max(10_485_760)
     })
   })
   .superRefine((config, context) => {
@@ -82,15 +74,6 @@ const configSchema = z
         code: "custom",
         message: "PASSAGE_SEARCH_DATABASE_URL must identify a separate database",
         path: ["passageSearch", "database", "url"]
-      })
-    }
-    const hasLangfusePublicKey = config.observability.langfusePublicKey !== undefined
-    const hasLangfuseSecretKey = config.observability.langfuseSecretKey !== undefined
-    if (hasLangfusePublicKey !== hasLangfuseSecretKey) {
-      context.addIssue({
-        code: "custom",
-        message: "Langfuse public and secret keys must be configured together",
-        path: ["observability"]
       })
     }
     if (config.environment === "production" && config.security.idempotencyEncryptionKey === undefined) {
@@ -208,24 +191,16 @@ export function loadConfig(environment: Readonly<Record<string, string | undefin
       baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
       researchAnswerModel: environment.RESEARCH_ANSWER_MODEL
     },
-    observability: {
-      langfuseBaseUrl: environment.LANGFUSE_BASE_URL ?? "https://cloud.langfuse.com",
-      langfusePublicKey: environment.LANGFUSE_PUBLIC_KEY?.trim() || undefined,
-      langfuseSecretKey: environment.LANGFUSE_SECRET_KEY?.trim() || undefined
-    },
     passageSearch,
     security: {
       idempotencyEncryptionKey: environment.LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET,
       webhookSecretEncryptionKey: environment.LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY
     },
     server: {
-      host: environment.LEGISLATION_HOST ?? (environment.PORT === undefined ? "127.0.0.1" : "0.0.0.0"),
-      port: environment.PORT ?? environment.LEGISLATION_PORT ?? "3100",
       publicApiBaseUrl:
         environment.LEGISLATION_PUBLIC_API_BASE_URL ??
         (environment.NODE_ENV === "production" ? undefined : "http://127.0.0.1:3100"),
-      requestBodyBytes: environment.LEGISLATION_REQUEST_BODY_BYTES ?? "1048576",
-      shutdownTimeoutMs: environment.LEGISLATION_SHUTDOWN_TIMEOUT_MS ?? "30000"
+      requestBodyBytes: environment.LEGISLATION_REQUEST_BODY_BYTES ?? "1048576"
     }
   })
 

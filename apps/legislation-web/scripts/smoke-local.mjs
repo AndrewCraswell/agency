@@ -12,8 +12,6 @@ const child = spawn(process.execPath, [nextCliPath, "dev", "--hostname", "127.0.
   env: {
     ...process.env,
     AUTH_MODE: "disabled",
-    LEGISLATION_HOST: "127.0.0.1",
-    LEGISLATION_PORT: String(port),
     NODE_ENV: "development",
     PORT: String(port)
   },

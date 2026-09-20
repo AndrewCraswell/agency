@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { createLangfuseClient } from "./client"
+import { createLangfuseClient, langfuseSettings } from "./client"
 
 const environment = {
   LANGFUSE_PUBLIC_KEY: "test-public",
@@ -8,6 +8,34 @@ const environment = {
 }
 
 afterEach(() => vi.unstubAllGlobals())
+
+describe("Langfuse settings", () => {
+  it.each([
+    { baseUrl: undefined, expectedUrl: "https://us.cloud.langfuse.com" },
+    { baseUrl: "https://langfuse.example.test", expectedUrl: "https://langfuse.example.test" }
+  ])("preserves the endpoint $expectedUrl and trims credentials", ({ baseUrl, expectedUrl }) => {
+    expect(
+      langfuseSettings({
+        LANGFUSE_PUBLIC_KEY: " test-public ",
+        LANGFUSE_SECRET_KEY: "\ttest-secret ",
+        LANGFUSE_BASE_URL: baseUrl
+      })
+    ).toEqual({
+      publicKey: "test-public",
+      secretKey: "test-secret",
+      baseUrl: expectedUrl
+    })
+  })
+
+  it.each([
+    { LANGFUSE_PUBLIC_KEY: undefined },
+    { LANGFUSE_SECRET_KEY: undefined },
+    { LANGFUSE_PUBLIC_KEY: " " },
+    { LANGFUSE_SECRET_KEY: "\t" }
+  ])("rejects incomplete credentials at the integration boundary", (overrides) => {
+    expect(() => langfuseSettings({ ...environment, ...overrides })).toThrow("HTTPS credentials")
+  })
+})
 
 describe("Langfuse HTTP transport", () => {
   it("posts JSON with dedicated credentials and refuses redirects", async () => {

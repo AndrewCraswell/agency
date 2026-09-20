@@ -55,8 +55,6 @@ describe("loadConfig", () => {
       model: { baseUrl: "https://openrouter.ai/api/v1" },
       passageSearch: { enabled: false },
       server: {
-        host: "127.0.0.1",
-        port: 3100,
         publicApiBaseUrl: "http://127.0.0.1:3100",
         requestBodyBytes: 1_048_576
       }
@@ -71,18 +69,36 @@ describe("loadConfig", () => {
   })
 
   it("treats explicitly blank optional provider credentials as disabled", () => {
-    const config = loadConfig({ OPENROUTER_API_KEY: "", LANGFUSE_PUBLIC_KEY: " ", LANGFUSE_SECRET_KEY: "\t" })
+    const config = loadConfig({ OPENROUTER_API_KEY: "" })
     expect(config.model.apiKey).toBeUndefined()
-    expect(config.observability.langfusePublicKey).toBeUndefined()
-    expect(config.observability.langfuseSecretKey).toBeUndefined()
     const configured = loadConfig({
-      OPENROUTER_API_KEY: " synthetic-key ",
-      LANGFUSE_PUBLIC_KEY: " public ",
-      LANGFUSE_SECRET_KEY: " secret "
+      OPENROUTER_API_KEY: " synthetic-key "
     })
     expect(configured.model.apiKey).toBe("synthetic-key")
-    expect(configured.observability.langfusePublicKey).toBe("public")
-    expect(configured.observability.langfuseSecretKey).toBe("secret")
+  })
+
+  it("ignores obsolete listener settings and leaves PORT to Next.js", () => {
+    expect(
+      loadConfig({
+        LEGISLATION_HOST: " ",
+        LEGISLATION_PORT: "not-a-port",
+        LEGISLATION_SHUTDOWN_TIMEOUT_MS: "not-a-timeout",
+        PORT: "not-a-port"
+      })
+    ).toEqual(loadConfig({}))
+    expect(loadConfig({}).server).toEqual({
+      publicApiBaseUrl: "http://127.0.0.1:3100",
+      requestBodyBytes: 1_048_576
+    })
+  })
+
+  it.each([
+    { LANGFUSE_PUBLIC_KEY: "public-only" },
+    { LANGFUSE_SECRET_KEY: "secret-only" },
+    { LANGFUSE_BASE_URL: "not-a-url" }
+  ])("leaves Langfuse configuration validation to the integration", (environment) => {
+    expect(loadConfig(environment)).toEqual(loadConfig({}))
+    expect(loadConfig(environment)).not.toHaveProperty("observability")
   })
 
   it("keeps ranked passage search off unless its separate database and generation are explicit", () => {
@@ -149,11 +165,10 @@ describe("loadConfig", () => {
       DATABASE_URL: "postgresql://user:password@database.example/policy",
       GOVINFO_API_KEY: "govinfo-key",
       GOVINFO_API_URL: "https://govinfo.example/api/",
-      LEGISLATION_HOST: "0.0.0.0",
       LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY: encryptionKey,
-      LEGISLATION_PORT: "8080",
       LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
+      LEGISLATION_REQUEST_BODY_BYTES: "2048",
       LOG_LEVEL: "debug",
       NODE_ENV: "production",
       OPENSTATES_API_KEY: "openstates-key",
@@ -186,17 +201,10 @@ describe("loadConfig", () => {
       url: "postgresql://user:password@database.example/policy"
     })
     expect(config.environment).toBe("production")
-    expect(config.server).toMatchObject({
-      host: "0.0.0.0",
-      port: 8080,
-      publicApiBaseUrl: "https://legislation.example"
+    expect(config.server).toEqual({
+      publicApiBaseUrl: "https://legislation.example",
+      requestBodyBytes: 2048
     })
-  })
-
-  it("uses Railway's injected port and public container bind address", () => {
-    const config = loadConfig({ LEGISLATION_PORT: "3100", PORT: "4567" })
-
-    expect(config.server).toMatchObject({ host: "0.0.0.0", port: 4567 })
   })
 
   it("requires an http or https public API URL in production", () => {
@@ -243,18 +251,23 @@ describe("loadConfig", () => {
     ).toThrow("LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY is required in production")
   })
 
-  it.each(["0", "65536", "not-a-port"])('rejects invalid port "%s" without including secrets', (port) => {
-    const secret = "must-not-appear"
+  it.each(["0", "10485761", "not-a-size"])(
+    'rejects invalid request body limit "%s" without including secrets',
+    (limit) => {
+      const secret = "must-not-appear"
 
-    expect(() => loadConfig({ LEGISLATION_PORT: port, OPENROUTER_API_KEY: secret })).toThrow(ConfigurationError)
-    let caught: unknown
-    try {
-      loadConfig({ LEGISLATION_PORT: port, OPENROUTER_API_KEY: secret })
-    } catch (error) {
-      caught = error
+      expect(() => loadConfig({ LEGISLATION_REQUEST_BODY_BYTES: limit, OPENROUTER_API_KEY: secret })).toThrow(
+        ConfigurationError
+      )
+      let caught: unknown
+      try {
+        loadConfig({ LEGISLATION_REQUEST_BODY_BYTES: limit, OPENROUTER_API_KEY: secret })
+      } catch (error) {
+        caught = error
+      }
+      expect(String(caught)).not.toContain(secret)
     }
-    expect(String(caught)).not.toContain(secret)
-  })
+  )
 
   it("rejects incomplete WorkOS configuration", () => {
     expect(() => loadConfig({ AUTH_MODE: "workos", WORKOS_ISSUER: "https://issuer.example" })).toThrow(

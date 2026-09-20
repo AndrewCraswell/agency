@@ -129,8 +129,6 @@ function startLocalServer(secrets: readonly string[], port: number): LocalServer
   const environment = { ...process.env }
   delete environment.LEGISLATION_SMOKE_TOKEN
   Object.assign(environment, {
-    LEGISLATION_HOST: "127.0.0.1",
-    LEGISLATION_PORT: String(port),
     NODE_ENV: "development",
     PORT: String(port)
   })
