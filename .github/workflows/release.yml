@@ -18,6 +18,7 @@ env:
   # pnpm's higher-precedence override and does not need Azure credentials.
   NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
   PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   # Turbo Remote Cache (see CI workflow) speeds up the build before publishing.
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
@@ -60,6 +61,8 @@ jobs:
       # npm. No-ops when there are no change files, so the follow-up push it
       # creates does not loop.
       - name: Publish
+        if: env.NODE_AUTH_TOKEN != ''
         run: pnpm exec beachball publish --yes --message "applying package updates [skip ci]"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Report skipped publication
+        if: env.NODE_AUTH_TOKEN == ''
+        run: echo "::notice::Package publication skipped because NPM_TOKEN is not configured."
