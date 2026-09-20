@@ -17,6 +17,7 @@ import {
   type HttpApiHandler
 } from "./http"
 import { searchExecution } from "./search-execution"
+import { normalizeSearchTemporalRange } from "./search-temporal-range"
 
 type SearchMode = "hybrid" | "lexical" | "semantic"
 
@@ -107,29 +108,6 @@ function highlightRanges(text: string, query: string, mode: SearchMode) {
   return text.length === 0 ? [] : [{ end: text.length, kind: "semantic" as const, start: 0 }]
 }
 
-function validateBoundOrder(from: string | undefined, to: string | undefined): void {
-  if (from !== undefined && to !== undefined && from.includes("T") !== to.includes("T")) {
-    throw new LegislationError("invalid_request", "from and to must use the same temporal format")
-  }
-  if (from !== undefined && to !== undefined && Date.parse(from) > Date.parse(to)) {
-    throw new LegislationError("invalid_request", "from must not be after to")
-  }
-}
-
-function updatedRange(from: string | undefined, to: string | undefined) {
-  const dateOnly = (from ?? to ?? "").length === 10
-  const updatedFrom = from === undefined ? undefined : new Date(dateOnly ? `${from}T00:00:00.000Z` : from)
-  if (to === undefined) {
-    return { updatedFrom, updatedTo: undefined, updatedToExclusive: undefined }
-  }
-  if (!dateOnly) {
-    return { updatedFrom, updatedTo: new Date(to), updatedToExclusive: undefined }
-  }
-  const updatedToExclusive = new Date(`${to}T00:00:00.000Z`)
-  updatedToExclusive.setUTCDate(updatedToExclusive.getUTCDate() + 1)
-  return { updatedFrom, updatedTo: undefined, updatedToExclusive }
-}
-
 function limitFor(mode: SearchMode, requested: number | undefined): number {
   const limit = requested ?? 20
   if (mode !== "lexical" && limit > 25) {
@@ -212,7 +190,7 @@ export function createPassageSearchApiHandler(
         throw new LegislationError("invalid_request", "pageFrom must not be greater than pageTo")
       }
       const mode = body.mode ?? "lexical"
-      validateBoundOrder(body.from ?? undefined, body.to ?? undefined)
+      const updatedRange = normalizeSearchTemporalRange(body.from, body.to, ["from", "to"])
       const limit = limitFor(mode, body.limit)
       const input = {
         billIds: body.billIds,
@@ -229,7 +207,7 @@ export function createPassageSearchApiHandler(
         rankingGeneration: mode === "lexical" ? options.rankedPassageGeneration : undefined,
         sessionIds: body.sessionIds,
         versionCodes: body.versionCodes,
-        ...updatedRange(body.from ?? undefined, body.to ?? undefined)
+        ...updatedRange
       }
       let offset: number
       try {

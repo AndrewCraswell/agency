@@ -76,14 +76,26 @@ describe("production universal-search adapter", () => {
     expect(page.items[0]).toMatchObject({ recordId: "person:ada", recordType: "person" })
   })
 
-  it("passes meeting lexical search into SQL-backed query input instead of filtering a prefix", async () => {
+  it("passes meeting occurrence bounds unchanged rather than normalizing them as update timestamps", async () => {
     mocks.listMeetings.mockResolvedValueOnce({ items: [{ id: "meeting:budget" }], truncated: false })
     mocks.projectMeetingRead.mockReturnValueOnce(canonical("meeting", "meeting:budget"))
     const database: LegislationDatabase = Object.create(null)
-    await createProductionUniversalSearchApi(service(), database, "https://api.example.test").search(
-      input("meeting", "Budget")
-    )
-    expect(mocks.listMeetings).toHaveBeenCalledWith(database, expect.objectContaining({ limit: 7, query: "Budget" }))
+    await createProductionUniversalSearchApi(service(), database, "https://api.example.test").search({
+      ...input("meeting", "Budget"),
+      filters: { from: "2026-08-24T01:00:00-07:00" },
+      shared: { from: "2026-08-24T00:00:00-07:00", to: "2026-08-25T00:00:00-07:00" }
+    })
+    expect(mocks.listMeetings).toHaveBeenCalledWith(database, {
+      classifications: undefined,
+      from: "2026-08-24T01:00:00-07:00",
+      jurisdictionIds: undefined,
+      limit: 7,
+      organizationIds: undefined,
+      query: "Budget",
+      sessionIds: undefined,
+      statuses: undefined,
+      to: "2026-08-25T00:00:00-07:00"
+    })
   })
 
   it("intersects shared and product jurisdiction filters while preserving multi-value person filters", async () => {

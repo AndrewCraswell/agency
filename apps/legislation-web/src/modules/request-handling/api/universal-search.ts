@@ -11,6 +11,7 @@ import {
   type HttpApiHandler
 } from "./http"
 import { searchExecution, type SearchModel } from "./search-execution"
+import { validateSearchTemporalRange } from "./search-temporal-range"
 
 const RECORD_TYPES = [
   "bill",
@@ -279,33 +280,27 @@ function semanticLimit(requested: number | undefined): number {
 }
 
 function validateDateRanges(body: Request): void {
-  validateRange(body.from ?? undefined, body.to ?? undefined, "from", "to")
+  validateSearchTemporalRange(body.from, body.to, ["from", "to"])
   const filters = body.filters
-  validateRange(filters?.bill?.introducedFrom, filters?.bill?.introducedTo, "introducedFrom", "introducedTo")
-  validateRange(filters?.amendment?.submittedFrom, filters?.amendment?.submittedTo, "submittedFrom", "submittedTo")
-  validateRange(
-    filters?.supportingMaterial?.documentFrom,
-    filters?.supportingMaterial?.documentTo,
+  validateSearchTemporalRange(filters?.bill?.introducedFrom, filters?.bill?.introducedTo, [
+    "introducedFrom",
+    "introducedTo"
+  ])
+  validateSearchTemporalRange(filters?.amendment?.submittedFrom, filters?.amendment?.submittedTo, [
+    "submittedFrom",
+    "submittedTo"
+  ])
+  validateSearchTemporalRange(filters?.supportingMaterial?.documentFrom, filters?.supportingMaterial?.documentTo, [
     "documentFrom",
     "documentTo"
-  )
-  validateRange(filters?.meeting?.from, filters?.meeting?.to, "meeting.from", "meeting.to")
+  ])
+  validateSearchTemporalRange(filters?.meeting?.from, filters?.meeting?.to, ["meeting.from", "meeting.to"])
   if (
     filters?.passage?.pageFrom !== undefined &&
     filters.passage.pageTo !== undefined &&
     filters.passage.pageFrom > filters.passage.pageTo
   ) {
     throw new LegislationError("invalid_request", "pageFrom must not be greater than pageTo")
-  }
-}
-
-function validateRange(from: string | undefined, to: string | undefined, fromName: string, toName: string): void {
-  if (
-    from !== undefined &&
-    to !== undefined &&
-    (from.includes("T") !== to.includes("T") || Date.parse(from) > Date.parse(to))
-  ) {
-    throw new LegislationError("invalid_request", `${fromName} must not be after ${toName}`)
   }
 }
 

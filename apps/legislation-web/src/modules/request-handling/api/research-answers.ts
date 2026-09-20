@@ -21,6 +21,7 @@ import {
 } from "./http"
 import type { PassageSearchApi } from "./passage-search"
 import { searchExecution, type SearchExecution } from "./search-execution"
+import { normalizeSearchTemporalRange, validateSearchTemporalRange } from "./search-temporal-range"
 
 type SearchMode = "hybrid" | "lexical" | "semantic"
 type ResearchRecordType = "amendment" | "bill" | "passage" | "supporting-material"
@@ -495,14 +496,7 @@ function validateScope(scope: ResearchScope, hasGlobalPermission: boolean): void
   if (!hasGlobalPermission && Object.values(scope).every((value) => value === undefined)) {
     throw new LegislationError("unprocessable", "Research scope requires at least one explicit constraint")
   }
-  if (scope.from !== undefined && scope.to !== undefined) {
-    if (scope.from.includes("T") !== scope.to.includes("T")) {
-      throw new LegislationError("invalid_request", "scope.from and scope.to must use the same temporal format")
-    }
-    if (Date.parse(scope.from) > Date.parse(scope.to)) {
-      throw new LegislationError("invalid_request", "scope.from must not be after scope.to")
-    }
-  }
+  validateSearchTemporalRange(scope.from, scope.to, ["scope.from", "scope.to"])
 }
 
 function supportsScope(scope: ResearchScope, supported: readonly (keyof ResearchScope)[]): boolean {
@@ -512,26 +506,12 @@ function supportsScope(scope: ResearchScope, supported: readonly (keyof Research
 }
 
 function searchScope(scope: ResearchScope) {
-  const updatedRange = updatedRangeFor(scope.from, scope.to)
+  const updatedRange = normalizeSearchTemporalRange(scope.from, scope.to, ["scope.from", "scope.to"])
   return {
     jurisdictionIds: scope.jurisdictionIds === undefined ? undefined : [...scope.jurisdictionIds],
     sessionIds: scope.sessionIds === undefined ? undefined : [...scope.sessionIds],
     ...updatedRange
   }
-}
-
-function updatedRangeFor(from: string | undefined, to: string | undefined) {
-  const dateOnly = (from ?? to ?? "").length === 10
-  const updatedFrom = from === undefined ? undefined : new Date(dateOnly ? `${from}T00:00:00.000Z` : from)
-  if (to === undefined) {
-    return { updatedFrom, updatedTo: undefined, updatedToExclusive: undefined }
-  }
-  if (!dateOnly) {
-    return { updatedFrom, updatedTo: new Date(to), updatedToExclusive: undefined }
-  }
-  const updatedToExclusive = new Date(`${to}T00:00:00.000Z`)
-  updatedToExclusive.setUTCDate(updatedToExclusive.getUTCDate() + 1)
-  return { updatedFrom, updatedTo: undefined, updatedToExclusive }
 }
 
 function billMatchesScope(value: unknown, scope: ResearchScope): boolean {
@@ -560,13 +540,14 @@ function matchesTimeRange(value: unknown, from: string | undefined, to: string |
     return false
   }
   const time = Date.parse(value)
-  let toExclusive: number | undefined
-  if (to !== undefined && to.length === 10) {
-    toExclusive = Date.parse(`${to}T00:00:00.000Z`) + 86_400_000
-  }
+  const { updatedFrom, updatedTo, updatedToExclusive } = normalizeSearchTemporalRange(from, to, [
+    "scope.from",
+    "scope.to"
+  ])
   return (
-    (from === undefined || time >= Date.parse(from)) &&
-    (to === undefined || (toExclusive === undefined ? time <= Date.parse(to) : time < toExclusive))
+    (updatedFrom === undefined || time >= updatedFrom.getTime()) &&
+    (updatedTo === undefined || time <= updatedTo.getTime()) &&
+    (updatedToExclusive === undefined || time < updatedToExclusive.getTime())
   )
 }
 

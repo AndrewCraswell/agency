@@ -54,6 +54,26 @@ token-level explanations. Scores are comparable only inside one response.
 
 No semantic request silently falls back to lexical. Missing model dependencies return `503 dependency_unavailable`.
 
+## Temporal filters
+
+Product search `from`/`to` bounds accept either calendar dates (`YYYY-MM-DD`) or timestamps with a UTC/offset suffix.
+Omitted or null bounds leave that side unrestricted. When both bounds are present they must use the same format and
+the lower bound must not follow the upper bound. Timestamp ordering compares instants, including offsets.
+Endpoint schemas reject invalid calendar dates and malformed timestamps.
+
+For canonical update filters, a date-only lower bound starts at midnight UTC and a date-only upper bound includes the
+whole UTC day: retrieval receives `updatedToExclusive` at the following midnight, never a rounded end-of-day timestamp.
+Timestamp upper bounds remain inclusive `updatedTo`, preserving their supplied precision.
+[`search-temporal-range.ts`](../../../src/modules/request-handling/api/search-temporal-range.ts) owns shared range
+validation and update-bound normalization for civic, passage, amendment and universal search, plus research evidence
+scope filtering.
+Invalid ranges return `400 invalid_request` and name the offending fields. Universal search now identifies mixed
+date/timestamp formats explicitly, matching the product endpoints, instead of describing them as reversed bounds.
+
+Publisher dates (`introducedFrom`/`introducedTo`, `submittedFrom`/`submittedTo`, `documentFrom`/`documentTo`) share
+ordering validation but remain date strings for their respective query filters. Universal meeting bounds remain
+occurrence filters owned by the meeting reader; they are not converted into canonical update timestamps.
+
 ## Model and ranking contract
 
 | Product | Lexical candidate source | Embedding route | Dimensions | Merge | Reranker |

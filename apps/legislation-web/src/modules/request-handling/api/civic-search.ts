@@ -20,6 +20,7 @@ import {
   type HttpApiHandler
 } from "./http"
 import { searchExecution, type SearchExecution, type SearchMode, type SearchProduct } from "./search-execution"
+import { normalizeSearchTemporalRange, validateSearchTemporalRange } from "./search-temporal-range"
 
 type QueryPage<T> = Readonly<{
   items: readonly T[]
@@ -100,39 +101,6 @@ const materialSearchRequestSchema = searchRequestSchema
   })
   .strict()
 
-function validateDateOrder(from: string | undefined, to: string | undefined, names: readonly [string, string]): void {
-  if (from !== undefined && to !== undefined && from.includes("T") !== to.includes("T")) {
-    throw new LegislationError("invalid_request", `${names[0]} and ${names[1]} must use the same temporal format`)
-  }
-  if (from !== undefined && to !== undefined && Date.parse(from) > Date.parse(to)) {
-    throw new LegislationError("invalid_request", `${names[0]} must not be after ${names[1]}`)
-  }
-}
-
-function materialUpdatedRange(
-  from: string | undefined,
-  to: string | undefined
-): {
-  updatedFrom: Date | undefined
-  updatedTo: Date | undefined
-  updatedToExclusive: Date | undefined
-} {
-  if (from === undefined && to === undefined) {
-    return { updatedFrom: undefined, updatedTo: undefined, updatedToExclusive: undefined }
-  }
-  const dateOnly = (from ?? to ?? "").length === 10
-  const updatedFrom = from === undefined ? undefined : new Date(dateOnly ? `${from}T00:00:00.000Z` : from)
-  if (to === undefined) {
-    return { updatedFrom, updatedTo: undefined, updatedToExclusive: undefined }
-  }
-  if (!dateOnly) {
-    return { updatedFrom, updatedTo: new Date(to), updatedToExclusive: undefined }
-  }
-  const exclusive = new Date(`${to}T00:00:00.000Z`)
-  exclusive.setUTCDate(exclusive.getUTCDate() + 1)
-  return { updatedFrom, updatedTo: undefined, updatedToExclusive: exclusive }
-}
-
 function validateSearchModeLimit(mode: SearchMode, limit: number | undefined): number {
   const effectiveLimit = limit ?? 20
   if (mode !== "lexical" && effectiveLimit > 25) {
@@ -158,9 +126,8 @@ function searchInput(
   value: z.infer<typeof billSearchRequestSchema>,
   mode: SearchMode
 ): Readonly<{ input: SearchInput & { mode: SearchMode }; offset: number }> {
-  validateDateOrder(value.introducedFrom, value.introducedTo, ["introducedFrom", "introducedTo"])
-  validateDateOrder(value.from ?? undefined, value.to ?? undefined, ["from", "to"])
-  const updatedRange = materialUpdatedRange(value.from ?? undefined, value.to ?? undefined)
+  validateSearchTemporalRange(value.introducedFrom, value.introducedTo, ["introducedFrom", "introducedTo"])
+  const updatedRange = normalizeSearchTemporalRange(value.from, value.to, ["from", "to"])
   const input = {
     classifications: value.classifications,
     cursor: value.cursor ?? undefined,
@@ -223,9 +190,8 @@ export function createCivicSearchApiHandler(
         const body = materialSearchRequestSchema.parse(await readJsonBody(request))
         const mode = body.mode ?? "lexical"
         const limit = validateSearchModeLimit(mode, body.limit)
-        validateDateOrder(body.from ?? undefined, body.to ?? undefined, ["from", "to"])
-        validateDateOrder(body.documentFrom, body.documentTo, ["documentFrom", "documentTo"])
-        const updatedRange = materialUpdatedRange(body.from ?? undefined, body.to ?? undefined)
+        const updatedRange = normalizeSearchTemporalRange(body.from, body.to, ["from", "to"])
+        validateSearchTemporalRange(body.documentFrom, body.documentTo, ["documentFrom", "documentTo"])
         const input: SupportingMaterialSearchInput = {
           amendmentIds: body.amendmentIds,
           billIds: body.billIds,

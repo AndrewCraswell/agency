@@ -13,6 +13,7 @@ import { projectOrganizationRow } from "./organization-summary-read-projection"
 import { projectPassageSearchHit, type PassageSearchApi } from "./passage-search"
 import { projectPersonRead } from "./people-read-routes"
 import { searchExecution } from "./search-execution"
+import { normalizeSearchTemporalRange } from "./search-temporal-range"
 import {
   type UniversalProductPage,
   type UniversalProductSearchInput,
@@ -73,7 +74,10 @@ async function searchBills(service: SearchServices, apiBaseUrl: string, input: U
     sponsorIds: strings(filters, "sponsorIds"),
     statuses: strings(filters, "statuses"),
     subjects: strings(filters, "subjects"),
-    ...updatedRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"))
+    ...normalizeSearchTemporalRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"), [
+      "from",
+      "to"
+    ])
   })
   return {
     items: projectBillSearchHits(page.items, input.mode, apiBaseUrl).map(candidateFromHit),
@@ -96,7 +100,10 @@ async function searchAmendments(service: SearchServices, apiBaseUrl: string, inp
     statuses: strings(filters, "statuses"),
     submittedFrom: string(filters, "submittedFrom"),
     submittedTo: string(filters, "submittedTo"),
-    ...updatedRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"))
+    ...normalizeSearchTemporalRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"), [
+      "from",
+      "to"
+    ])
   })
   return {
     items: projectAmendmentSearchHits(page.items, input.mode, apiBaseUrl).map(candidateFromHit),
@@ -120,7 +127,10 @@ async function searchPassages(service: SearchServices, apiBaseUrl: string, input
     query: input.query,
     sessionIds: strings(input.shared, "sessionIds"),
     versionCodes: strings(filters, "versionCodes"),
-    ...updatedRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"))
+    ...normalizeSearchTemporalRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"), [
+      "from",
+      "to"
+    ])
   })
   return {
     items: page.items.map((item, index) =>
@@ -146,7 +156,10 @@ async function searchMaterials(service: SearchServices, apiBaseUrl: string, inpu
     organizationIds: strings(filters, "organizationIds"),
     query: input.query,
     sessionIds: strings(input.shared, "sessionIds"),
-    ...updatedRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"))
+    ...normalizeSearchTemporalRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"), [
+      "from",
+      "to"
+    ])
   })
   return {
     items: projectSupportingMaterialSearchHits(page.items, input.mode, apiBaseUrl).map(candidateFromHit),
@@ -176,7 +189,10 @@ async function searchPeople(
     organizationIds,
     parties,
     q: input.query,
-    ...updatedRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"))
+    ...normalizeSearchTemporalRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"), [
+      "from",
+      "to"
+    ])
   })
   return lexicalReadPage(
     page.items.map((item) => projectPersonRead(item, apiBaseUrl)),
@@ -203,7 +219,10 @@ async function searchOrganizations(
     limit: input.perTypeLimit,
     parentOrganizationIds: strings(filters, "parentOrganizationIds"),
     query: input.query,
-    ...updatedRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"))
+    ...normalizeSearchTemporalRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"), [
+      "from",
+      "to"
+    ])
   })
   return lexicalReadPage(
     page.items.map((item) => projectOrganizationRow(item, apiBaseUrl)),
@@ -281,23 +300,6 @@ function candidateFromHit(hit: {
   sources: readonly unknown[]
 }): UniversalSearchCandidate {
   return { ...hit.match, record: hit.record, recordId: hit.recordId, recordType: hit.recordType, sources: hit.sources }
-}
-
-function updatedRange(from: string | null, to: string | null) {
-  if (from === null && to === null) {
-    return {}
-  }
-  const dateOnly = (from ?? to ?? "").length === 10
-  const updatedFrom = from === null ? undefined : new Date(dateOnly ? `${from}T00:00:00.000Z` : from)
-  if (to === null) {
-    return { updatedFrom }
-  }
-  if (!dateOnly) {
-    return { updatedFrom, updatedTo: new Date(to) }
-  }
-  const updatedToExclusive = new Date(`${to}T00:00:00.000Z`)
-  updatedToExclusive.setUTCDate(updatedToExclusive.getUTCDate() + 1)
-  return { updatedFrom, updatedToExclusive }
 }
 
 function strings(value: Record<string, unknown>, name: string): string[] | undefined {

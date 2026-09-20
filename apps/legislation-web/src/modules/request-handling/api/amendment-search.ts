@@ -17,6 +17,7 @@ import {
   type HttpApiHandler
 } from "./http"
 import { searchExecution } from "./search-execution"
+import { normalizeSearchTemporalRange, validateSearchTemporalRange } from "./search-temporal-range"
 
 export interface AmendmentSearchApi {
   searchAmendmentHits: (
@@ -74,8 +75,8 @@ export function createAmendmentSearchApiHandler(
     try {
       assertAllowedQueryParameters(url, [])
       const body = requestSchema.parse(await readJsonBody(request))
-      validateOrder(body.from ?? undefined, body.to ?? undefined, "from", "to")
-      validateOrder(body.submittedFrom, body.submittedTo, "submittedFrom", "submittedTo")
+      const updatedRange = normalizeSearchTemporalRange(body.from, body.to, ["from", "to"])
+      validateSearchTemporalRange(body.submittedFrom, body.submittedTo, ["submittedFrom", "submittedTo"])
       const mode = body.mode ?? "lexical"
       const limit = limitFor(mode, body.limit)
       const input: AmendmentSearchInput = {
@@ -91,7 +92,7 @@ export function createAmendmentSearchApiHandler(
         statuses: body.statuses,
         submittedFrom: body.submittedFrom,
         submittedTo: body.submittedTo,
-        ...updatedRange(body.from ?? undefined, body.to ?? undefined)
+        ...updatedRange
       }
       let offset: number
       try {
@@ -135,27 +136,4 @@ function limitFor(mode: AmendmentSearchMode, requested: number | undefined): num
     throw new LegislationError("invalid_request", "limit must be between 1 and 25 for semantic or hybrid search")
   }
   return limit
-}
-
-function validateOrder(from: string | undefined, to: string | undefined, fromName: string, toName: string): void {
-  if (from !== undefined && to !== undefined && from.includes("T") !== to.includes("T")) {
-    throw new LegislationError("invalid_request", `${fromName} and ${toName} must use the same temporal format`)
-  }
-  if (from !== undefined && to !== undefined && Date.parse(from) > Date.parse(to)) {
-    throw new LegislationError("invalid_request", `${fromName} must not be after ${toName}`)
-  }
-}
-
-function updatedRange(from: string | undefined, to: string | undefined) {
-  const dateOnly = (from ?? to ?? "").length === 10
-  const updatedFrom = from === undefined ? undefined : new Date(dateOnly ? `${from}T00:00:00.000Z` : from)
-  if (to === undefined) {
-    return { updatedFrom, updatedTo: undefined, updatedToExclusive: undefined }
-  }
-  if (!dateOnly) {
-    return { updatedFrom, updatedTo: new Date(to), updatedToExclusive: undefined }
-  }
-  const updatedToExclusive = new Date(`${to}T00:00:00.000Z`)
-  updatedToExclusive.setUTCDate(updatedToExclusive.getUTCDate() + 1)
-  return { updatedFrom, updatedTo: undefined, updatedToExclusive }
 }
