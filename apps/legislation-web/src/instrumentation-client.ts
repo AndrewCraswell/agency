@@ -10,6 +10,7 @@ init({
     {
       NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
       NEXT_PUBLIC_SENTRY_ENVIRONMENT: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
+      NEXT_PUBLIC_DEPLOYMENT_COMMIT_SHA: process.env.NEXT_PUBLIC_DEPLOYMENT_COMMIT_SHA,
       NODE_ENV: process.env.NODE_ENV
     },
     typeof window === "undefined" ? undefined : window.location.origin,

@@ -227,7 +227,7 @@ export function registerNodeTelemetry(
   const configuration = {
     dsn: environment.NEXT_PUBLIC_SENTRY_DSN?.trim(),
     environment: diagnosticEnvironment(environment.NEXT_PUBLIC_SENTRY_ENVIRONMENT, environment.NODE_ENV),
-    release: environment.SENTRY_RELEASE,
+    release: deploymentSentryRelease(environment),
     publicKey,
     secretKey,
     baseUrl: langfuseConfiguration?.baseUrl,
@@ -293,3 +293,4 @@ export function registerNodeTelemetry(
 export async function flushNodeTelemetry() {
   await globalThis.__rostraNodeTelemetryOwner?.handle.flush()
 }
+import { deploymentSentryRelease } from "@repo/legislation-core/observability/deployment-identity"

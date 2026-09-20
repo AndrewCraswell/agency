@@ -9,6 +9,7 @@ export function createBrowserSentryOptions(
     NODE_ENV?: string
     NEXT_PUBLIC_SENTRY_DSN?: string
     NEXT_PUBLIC_SENTRY_ENVIRONMENT?: string
+    NEXT_PUBLIC_DEPLOYMENT_COMMIT_SHA?: string
   }>,
   origin: string | undefined,
   createTracingIntegration: typeof browserTracingIntegration
@@ -29,6 +30,7 @@ export function createBrowserSentryOptions(
     enabled: Boolean(dsn),
     initialScope: { tags: { runtime: "browser" } },
     environment: diagnosticEnvironment(environment.NEXT_PUBLIC_SENTRY_ENVIRONMENT, environment.NODE_ENV),
+    release: deploymentSentryRelease(environment, "NEXT_PUBLIC_DEPLOYMENT_COMMIT_SHA"),
     defaultIntegrations: undefined,
     tracePropagationTargets: target ? [target, /^\/(?![\\/])/u] : [],
     integrations: (integrations) => [
@@ -67,3 +69,4 @@ export function createBrowserSentryOptions(
     ]
   }
 }
+import { deploymentSentryRelease } from "@repo/legislation-core/observability/deployment-identity"

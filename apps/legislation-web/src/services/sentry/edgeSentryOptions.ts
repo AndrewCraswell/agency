@@ -21,6 +21,7 @@ export function createEdgeSentryOptions(
     enabled: Boolean(dsn),
     initialScope: { tags: { runtime: "edge" } },
     environment: diagnosticEnvironment(environment.NEXT_PUBLIC_SENTRY_ENVIRONMENT, environment.NODE_ENV),
+    release: deploymentSentryRelease(environment),
     skipOpenTelemetrySetup: false,
     tracePropagationTargets: target ? [target] : [],
     integrations: [
@@ -32,3 +33,4 @@ export function createEdgeSentryOptions(
     ]
   }
 }
+import { deploymentSentryRelease } from "@repo/legislation-core/observability/deployment-identity"

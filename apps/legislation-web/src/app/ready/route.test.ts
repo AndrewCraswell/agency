@@ -21,6 +21,7 @@ function request(method = "GET", correlationId?: string): NextRequest {
 }
 
 afterEach(() => {
+  vi.unstubAllEnvs()
   readiness.check.mockReset()
   readiness.details.mockReset()
   vi.restoreAllMocks()
@@ -37,6 +38,7 @@ describe("GET /ready", () => {
     expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8")
     expect(response.headers.get("x-correlation-id")).toBe("ready-test")
     await expect(response.json()).resolves.toEqual({
+      commitSha: null,
       databasePool: { maximum: 10, total: 2 },
       ingestionContract,
       status: "ready"
@@ -52,6 +54,7 @@ describe("GET /ready", () => {
 
     expect(response.status).toBe(503)
     await expect(response.json()).resolves.toEqual({
+      commitSha: null,
       databasePool: { saturation: 1, waiting: 2 },
       ingestionContract,
       status: "unavailable"

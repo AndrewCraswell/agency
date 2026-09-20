@@ -15,6 +15,12 @@ if (
 const token = process.env.LEGISLATION_MCP_SMOKE_TOKEN?.trim()
 const billId = process.env.LEGISLATION_SMOKE_BILL_ID?.trim()
 if (!token || !billId) throw new Error("LEGISLATION_MCP_SMOKE_TOKEN and LEGISLATION_SMOKE_BILL_ID are required")
+const expectedCommitSha = (
+  process.env.LEGISLATION_DEPLOYMENT_COMMIT_SHA?.trim() || process.env.GITHUB_SHA?.trim() || ""
+).toLowerCase()
+if (!/^[0-9a-f]{40}$/u.test(expectedCommitSha)) {
+  throw new Error("LEGISLATION_DEPLOYMENT_COMMIT_SHA or GITHUB_SHA must be a full Git commit SHA")
+}
 const fullStateAcceptance = process.env.LEGISLATION_MCP_SMOKE_FULL === "true"
 const jurisdictionId = process.env.LEGISLATION_SMOKE_JURISDICTION_ID?.trim()
 const sessionId = process.env.LEGISLATION_SMOKE_SESSION_ID?.trim()
@@ -34,7 +40,10 @@ const boundedFetch = (input, init = {}) => {
 for (const path of ["/health", "/ready"]) {
   const response = await boundedFetch(new URL(path, base))
   if (!response.ok) throw new Error(`MCP ${path} failed with status ${response.status}`)
-  await response.text()
+  const body = await response.json()
+  if (body.commitSha !== expectedCommitSha) {
+    throw new Error(`MCP ${path} commit does not match the expected Git commit`)
+  }
 }
 const metadata = await boundedFetch(new URL("/.well-known/oauth-protected-resource/mcp", base))
 const discovery = await metadata.json()
@@ -166,7 +175,9 @@ try {
     const uncalled = [...names].filter((name) => !called.has(name))
     if (uncalled.length > 0) throw new Error(`MCP tools were not exercised: ${uncalled.join(", ")}`)
   }
-  process.stdout.write(`${JSON.stringify({ status: "ok", tools: names.size, calls: called.size })}\n`)
+  process.stdout.write(
+    `${JSON.stringify({ calls: called.size, commitSha: expectedCommitSha, status: "ok", tools: names.size })}\n`
+  )
 } finally {
   await transport.close()
 }

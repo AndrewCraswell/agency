@@ -1,5 +1,6 @@
 import { getRequestContext } from "@repo/legislation-core/auth/request-context"
 import { normalizeLegislationError, postgresErrorCode } from "@repo/legislation-core/domain/errors"
+import { deploymentSentryRelease } from "@repo/legislation-core/observability/deployment-identity"
 import { sanitizeTelemetry } from "@repo/legislation-core/observability/sanitize-telemetry"
 import type { Telemetry } from "@repo/legislation-core/observability/telemetry"
 import * as Sentry from "@sentry/node"
@@ -22,7 +23,7 @@ export function mcpSentryOptions(environment: NodeJS.ProcessEnv): Sentry.NodeOpt
     dsn: environment.SENTRY_DSN,
     enabled: Boolean(environment.SENTRY_DSN),
     environment: environment.SENTRY_ENVIRONMENT ?? environment.NODE_ENV ?? "development",
-    release: environment.SENTRY_RELEASE,
+    release: deploymentSentryRelease(environment),
     sendDefaultPii: false,
     tracesSampleRate: 1,
     maxValueLength: 2000,

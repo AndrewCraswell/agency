@@ -26,6 +26,19 @@ function fixture(dsn = "https://synthetic@o0.ingest.sentry.io/1") {
 }
 
 describe("browser SDK configuration", () => {
+  it("uses the exact deployed commit as the browser release", () => {
+    const tracing = vi.fn<typeof browserTracingIntegration>(() => ({ name: "BrowserTracing" }))
+    const options = createBrowserSentryOptions(
+      {
+        NEXT_PUBLIC_DEPLOYMENT_COMMIT_SHA: "A".repeat(40),
+        NEXT_PUBLIC_SENTRY_DSN: "https://synthetic@o0.ingest.sentry.io/1"
+      },
+      "https://example.test",
+      tracing
+    )
+    expect(options.release).toBe("a".repeat(40))
+  })
+
   it("enables diagnostic traces with audited integrations while logs, metrics and replay stay off", () => {
     const test = fixture()
     expect(test.integrations.map((integration) => integration.name)).toEqual([

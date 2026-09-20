@@ -325,7 +325,7 @@ automation. Specialist maintenance and evaluation programs live under `tools`, g
 | Entry point | Purpose | Retention rule |
 | --- | --- | --- |
 | `scripts/smoke-local.mjs` | Start the real local service and verify health and readiness. | Permanent release check. |
-| `scripts/smoke-deployment.mjs` | Verify W health, readiness and authenticated API behavior. | W API token and explicit W origin only; M owns its separate smoke. |
+| `scripts/smoke-deployment.mjs` | Verify W health, readiness, exact deployed commit and authenticated API behavior. | W API token, explicit W origin and `LEGISLATION_DEPLOYMENT_COMMIT_SHA` or `GITHUB_SHA`; M owns its separate smoke. |
 
 Source storage checks, backfills and Trigger schedule reconciliation belong to
 [I's operator guide](../../../legislation-ingestion/docs/operations/development.md). Migration assets belong to C;

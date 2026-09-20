@@ -1,3 +1,4 @@
+import { deploymentCommitSha } from "@repo/legislation-core/observability/deployment-identity"
 import { NextResponse, type NextRequest } from "next/server"
 import { jsonResponse, notFoundResponse, requestCorrelationId } from "./response"
 
@@ -5,7 +6,10 @@ export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 export function GET(request: NextRequest): NextResponse {
-  return jsonResponse(requestCorrelationId(request), 200, { status: "ok" })
+  return jsonResponse(requestCorrelationId(request), 200, {
+    commitSha: deploymentCommitSha(process.env) ?? null,
+    status: "ok"
+  })
 }
 
 export function DELETE(request: NextRequest): NextResponse {

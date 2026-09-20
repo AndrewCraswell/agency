@@ -8,8 +8,10 @@ const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
 const withVanillaExtract = createVanillaExtractPlugin({
   unstable_turbopack: { mode: "auto" }
 })
+const deploymentCommitSha = process.env.RAILWAY_GIT_COMMIT_SHA?.trim()
 
 const nextConfig: NextConfig = {
+  env: deploymentCommitSha ? { NEXT_PUBLIC_DEPLOYMENT_COMMIT_SHA: deploymentCommitSha } : undefined,
   output: "standalone",
   serverExternalPackages: ["tiktoken"],
   transpilePackages: ["@repo/legislation-core"],

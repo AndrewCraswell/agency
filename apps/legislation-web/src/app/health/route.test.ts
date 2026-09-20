@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from "./route"
 
 function request(method = "GET", correlationId?: string): NextRequest {
@@ -9,6 +9,10 @@ function request(method = "GET", correlationId?: string): NextRequest {
   })
 }
 
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
 describe("GET /health", () => {
   it("reports process health and returns a caller correlation ID", async () => {
     const response = GET(request("GET", "health-test"))
@@ -16,7 +20,13 @@ describe("GET /health", () => {
     expect(response.status).toBe(200)
     expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8")
     expect(response.headers.get("x-correlation-id")).toBe("health-test")
-    await expect(response.json()).resolves.toEqual({ status: "ok" })
+    await expect(response.json()).resolves.toEqual({ commitSha: null, status: "ok" })
+  })
+
+  it("reports the exact deployed commit", async () => {
+    vi.stubEnv("RAILWAY_GIT_COMMIT_SHA", "A".repeat(40))
+    const response = GET(request())
+    await expect(response.json()).resolves.toEqual({ commitSha: "a".repeat(40), status: "ok" })
   })
 
   it("generates a correlation ID when the caller does not provide one", () => {

@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server } from "node:http"
 import { Readable } from "node:stream"
 import { toNodeHandler } from "@modelcontextprotocol/node"
+import { deploymentCommitSha } from "@repo/legislation-core/observability/deployment-identity"
 import { createMcpApplication } from "./application.js"
 import { jsonResponse } from "./http.js"
 import { createMcpTelemetry } from "./telemetry.js"
@@ -18,10 +19,16 @@ export function createMcpServer(application: ReturnType<typeof createMcpApplicat
             return jsonResponse(converted, 405, { error: "method_not_allowed" }, { headers: { allow: "GET" } })
           }
           if (path === "/health") {
-            return jsonResponse(converted, 200, { status: "ok" })
+            return jsonResponse(converted, 200, {
+              commitSha: deploymentCommitSha(process.env) ?? null,
+              status: "ok"
+            })
           }
           const isReady = application.isReady()
-          return jsonResponse(converted, isReady ? 200 : 503, { status: isReady ? "ready" : "unavailable" })
+          return jsonResponse(converted, isReady ? 200 : 503, {
+            commitSha: deploymentCommitSha(process.env) ?? null,
+            status: isReady ? "ready" : "unavailable"
+          })
         }
         if (path === "/.well-known/oauth-protected-resource" || path === "/.well-known/oauth-protected-resource/mcp") {
           if (converted.method !== "GET") {

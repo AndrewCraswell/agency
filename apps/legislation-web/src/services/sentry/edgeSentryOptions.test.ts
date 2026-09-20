@@ -9,6 +9,15 @@ function fixture(environment: Record<string, string | undefined>) {
 }
 
 describe("edge-owned telemetry configuration", () => {
+  it("uses Railway's exact deployed commit as the edge release", () => {
+    expect(
+      fixture({
+        RAILWAY_GIT_COMMIT_SHA: "A".repeat(40),
+        NEXT_PUBLIC_SENTRY_DSN: "https://synthetic@o0.ingest.sentry.io/1"
+      }).options.release
+    ).toBe("a".repeat(40))
+  })
+
   it("fails explicitly rather than using an unsafe synchronous context fallback", () => {
     try {
       vi.stubGlobal("AsyncLocalStorage", undefined)

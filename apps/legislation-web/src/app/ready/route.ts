@@ -1,4 +1,5 @@
 import { ingestionContract } from "@repo/legislation-core/domain/ingestion-contract"
+import { deploymentCommitSha } from "@repo/legislation-core/observability/deployment-identity"
 import { NextResponse, type NextRequest } from "next/server"
 import { jsonResponse, notFoundResponse, requestCorrelationId } from "../health/response"
 import { getReadinessDependencies } from "./dependencies"
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       dependencies.logger.warn("readiness check failed", { correlationId, ...readinessDetails })
     }
     return jsonResponse(correlationId, isServiceReady ? 200 : 503, {
+      commitSha: deploymentCommitSha(process.env) ?? null,
       ...readinessDetails,
       ingestionContract,
       status: isServiceReady ? "ready" : "unavailable"

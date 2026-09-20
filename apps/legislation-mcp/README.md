@@ -29,8 +29,9 @@ decision.
 
 ## Run
 
-MCP failure reporting uses `SENTRY_DSN`, `SENTRY_ENVIRONMENT` and `SENTRY_RELEASE`; see
-[diagnostic telemetry](docs/operations/telemetry.md) for coverage, redaction and acceptance requirements.
+MCP failure reporting uses `SENTRY_DSN`, `SENTRY_ENVIRONMENT` and the Railway Git commit as its release identity,
+falling back to `SENTRY_RELEASE` outside Railway; see [diagnostic telemetry](docs/operations/telemetry.md) for coverage,
+redaction and acceptance requirements.
 
 From the repository root, with workspace dependencies installed and the runtime environment configured:
 
@@ -81,9 +82,10 @@ replace this with direct raw-handler mounting.
 ## Smoke And Ownership
 
 `pnpm --filter legislation-mcp smoke:deployment` requires `LEGISLATION_MCP_SMOKE_BASE_URL`,
-`LEGISLATION_MCP_SMOKE_TOKEN`, and `LEGISLATION_SMOKE_BILL_ID`. It checks discovery, anonymous rejection and
-authenticated tool round trips. It never uses a web API token. Web's smoke is separate and uses its explicit API origin
-and API token.
+`LEGISLATION_MCP_SMOKE_TOKEN`, `LEGISLATION_SMOKE_BILL_ID`, and the expected full commit in
+`LEGISLATION_DEPLOYMENT_COMMIT_SHA` or `GITHUB_SHA`. It checks the reported deployment identity, discovery, anonymous
+rejection and authenticated tool round trips. It never uses a web API token. Web's smoke is separate and uses its
+explicit API origin and API token.
 
 Core owns research definitions, paging and canonical wire validation; MCP owns SDK wrapping and the outbound adapter.
 Tests use local signing keys and fixture HTTP, never sibling apps. Built acceptance runs the production entry and the

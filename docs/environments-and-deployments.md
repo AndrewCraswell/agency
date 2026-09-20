@@ -368,6 +368,10 @@ The target workflow is active only after all of the following are true:
 - W and M health, readiness, authentication and cross-runtime smoke checks pass in both persistent environments.
 - Production deployment requires an explicit approval and reports the exact deployed commit.
 
+W and M publish Railway's full `RAILWAY_GIT_COMMIT_SHA` on their public health and readiness responses and use it as
+their Sentry release. Deployment smoke tests compare that value with `LEGISLATION_DEPLOYMENT_COMMIT_SHA` or
+`GITHUB_SHA` and include the verified commit in their JSON output.
+
 ## Platform references
 
 - [Railway monorepo deployments](https://docs.railway.com/deployments/monorepo)

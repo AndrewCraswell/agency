@@ -7,6 +7,15 @@ afterEach(async () => {
   await Sentry.close(1000)
 })
 
+it("uses Railway's exact deployed commit as the Sentry release", () => {
+  expect(
+    mcpSentryOptions({
+      RAILWAY_GIT_COMMIT_SHA: "A".repeat(40),
+      SENTRY_RELEASE: "manual-release"
+    }).release
+  ).toBe("a".repeat(40))
+})
+
 it("exports MCP errors with correlation and cause metadata but no credentials or source bodies", async () => {
   const envelopes: string[] = []
   Sentry.init({

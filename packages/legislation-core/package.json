@@ -64,6 +64,7 @@
     "./legal-text/search-database-role": "./src/legal-text/search-database-role.ts",
     "./legal-text/storage-contract": "./src/legal-text/storage-contract.ts",
     "./observability/logger": "./src/observability/logger.ts",
+    "./observability/deployment-identity": "./src/observability/deployment-identity.ts",
     "./observability/sanitize-telemetry": "./src/observability/sanitize-telemetry.ts",
     "./observability/telemetry": "./src/observability/telemetry.ts",
     "./research/canonical-search-output": "./src/research/canonical-search-output.ts",

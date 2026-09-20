@@ -20,6 +20,7 @@ const environment = {
   WORKOS_API_M2M_CLIENT_ID: "fixture-api-client",
   WORKOS_API_M2M_CLIENT_SECRET: "fixture-client-secret"
 }
+const deploymentCommitSha = "a".repeat(40)
 const bill = { id: "bill:us:119:hr:1", title: "Built acceptance fixture" }
 const correlationId = "built-mcp-acceptance"
 
@@ -219,8 +220,8 @@ async function waitForHealth(running, origin) {
 
 async function assertPublicRoutes(origin) {
   for (const [path, expected] of [
-    ["/health", { status: "ok" }],
-    ["/ready", { status: "ready" }],
+    ["/health", { commitSha: deploymentCommitSha, status: "ok" }],
+    ["/ready", { commitSha: deploymentCommitSha, status: "ready" }],
     [
       "/.well-known/oauth-protected-resource",
       {
@@ -319,7 +320,11 @@ test("isolated built MCP acceptance", { timeout: 60_000 }, async (context) => {
     const reservation = createServer()
     const origin = await listenFixture(reservation)
     await closeFixture(reservation)
-    const running = startChild(directory, ["main.mjs"], { ...environment, PORT: new URL(origin).port })
+    const running = startChild(directory, ["main.mjs"], {
+      ...environment,
+      PORT: new URL(origin).port,
+      RAILWAY_GIT_COMMIT_SHA: deploymentCommitSha
+    })
     children.push(running)
     await waitForHealth(running, origin)
     await assertPublicRoutes(origin)
@@ -392,7 +397,9 @@ test("isolated built MCP acceptance", { timeout: 60_000 }, async (context) => {
       assert.notEqual(new URL(environment.WORKOS_MCP_AUDIENCE).origin, new URL(environment.MCP_API_BASE_URL).origin)
       assert.notEqual(issuerOrigin, apiOrigin)
 
-      const running = startChild(directory, ["--input-type=module", "--eval", applicationHost])
+      const running = startChild(directory, ["--input-type=module", "--eval", applicationHost], {
+        RAILWAY_GIT_COMMIT_SHA: deploymentCommitSha
+      })
       children.push(running)
       const listening = once(running.child, "message")
       running.child.send({ environment, publicJwk, issuerOrigin, apiOrigin })
