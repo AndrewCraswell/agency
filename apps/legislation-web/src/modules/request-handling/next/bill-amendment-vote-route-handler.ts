@@ -1,4 +1,5 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
+import type { DatabaseQueryObserver } from "../../../services/sentry/databaseQueryTelemetry"
 import {
   assertBillRelatedParentExists,
   listBillRelatedBills
@@ -26,6 +27,7 @@ import { executeAuthenticatedApiRequest } from "./authenticated-api-request"
 type BillAmendmentVoteRouteApplication = Readonly<{
   config: Readonly<{ server: Readonly<{ publicApiBaseUrl: string | undefined }> }>
   database: LegislationDatabase
+  observeDatabaseQuery: DatabaseQueryObserver
   queryService: CoreReadQueryApi
 }>
 
@@ -121,7 +123,11 @@ export function createBillAmendmentVoteHttpApiHandler(application: BillAmendment
         createBillTimelineReadApiHandler(
           {
             assertBillTimelineParentExists: async (billId) => await assertBillExists(database, billId),
-            listBillTimeline: async (input) => await listBillTimeline(database, input)
+            listBillTimeline: async (input) =>
+              await application.observeDatabaseQuery(
+                { name: "bill.timeline", pool: "canonical", revision: 1 },
+                async () => await listBillTimeline(database, input)
+              )
           },
           options
         ),

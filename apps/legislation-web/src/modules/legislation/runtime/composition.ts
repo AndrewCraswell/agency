@@ -3,6 +3,7 @@ import { createReadOnlyDatabase } from "@repo/legislation-core/database/read-onl
 import { OpenRouterRetrievalClient } from "../../../services/openrouter/openrouter-retrieval"
 import {
   createDatabaseQueryObserver,
+  type DatabaseQueryObserver,
   recordDatabaseConnectionAcquired
 } from "../../../services/sentry/databaseQueryTelemetry"
 import { loadConfig, type LegislationConfig } from "../../configuration/config"
@@ -23,6 +24,7 @@ import { createNextDatabaseReadiness, type NextDatabaseReadiness } from "./readi
 export interface NextLegislationApplication {
   readonly config: LegislationConfig
   readonly database: LegislationDatabase
+  readonly observeDatabaseQuery: DatabaseQueryObserver
   readonly queryService: LegislationQueryService
   readonly retrievalClient: OpenRouterRetrievalClient | undefined
   readonly readiness: NextDatabaseReadiness
@@ -97,6 +99,7 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
     legalCoverage: createLegalCoverageReader(pool, passageSearchDatabase?.pool, config.legalApi.allowedOrganizationIds),
     legalPublications: createLegalPublicationsReader(pool, config.legalApi.allowedOrganizationIds),
     legalBrowser: createLegalBrowser(pool, config.legalApi.allowedOrganizationIds),
+    observeDatabaseQuery,
     resolveLegalCitation: createLegalCitationResolver(pool, config.legalApi.allowedOrganizationIds),
     searchLegal: createLegalSearch(pool, passageSearchDatabase?.pool, config.legalApi.allowedOrganizationIds),
     queryService: new LegislationQueryService(
