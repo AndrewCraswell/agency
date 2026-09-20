@@ -13,6 +13,8 @@ env:
   # The committed .npmrc supports development behind the work VPN. CI uses
   # pnpm's higher-precedence override and does not need Azure credentials.
   PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  # Keep interaction-heavy browser tests deterministic on hosted runners.
+  VITEST_MAX_WORKERS: 2
   # Turbo Remote Cache. Set TURBO_TOKEN (secret) and TURBO_TEAM (variable) in the
   # repository settings to share the cache across CI runs and contributors.
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}

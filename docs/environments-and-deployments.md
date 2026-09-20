@@ -127,6 +127,8 @@ higher-precedence `PNPM_CONFIG_REGISTRY` environment override for repository ins
 `NPM_CONFIG_REGISTRY` to the public registry. GitHub does not receive Azure registry credentials, and the committed
 developer configuration remains unchanged. Railway Docker builds use the public registry explicitly or omit the
 repository `.npmrc` from their build context.
+GitHub also caps Vitest at two workers so interaction-heavy browser tests do not compete for the hosted runner's limited
+CPU; local development retains the repository default.
 
 ### Merge to `main`
 
