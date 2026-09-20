@@ -24,6 +24,7 @@ const transientDatabaseErrorCodes = new Set([
   "ETIMEDOUT",
   "EPIPE"
 ])
+const transientDatabaseErrorMessages = new Set(["Connection terminated unexpectedly"])
 
 /** Maps known boundary failures without hiding deterministic application errors. */
 export function toPublicApiError(error: unknown): unknown {
@@ -56,6 +57,10 @@ function isTransientDatabaseError(error: unknown): boolean {
     seen.add(current)
     const code = Reflect.get(current, "code")
     if (typeof code === "string" && transientDatabaseErrorCodes.has(code.toUpperCase())) {
+      return true
+    }
+    const message = Reflect.get(current, "message")
+    if (typeof message === "string" && transientDatabaseErrorMessages.has(message)) {
       return true
     }
     current = Reflect.get(current, "cause")
