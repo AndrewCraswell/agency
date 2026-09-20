@@ -1,5 +1,21 @@
-import { describe, expect, it, vi } from "vitest"
-import { OpenRouterRetrievalClient } from "./openrouter-retrieval"
+import invariant from "tiny-invariant"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { z } from "zod"
+import { OpenRouterRetrievalClient, type ChatCompletionRequest } from "./openrouter-retrieval"
+
+const completion: ChatCompletionRequest = {
+  messages: [
+    { role: "system", content: "Return the requested summary as JSON." },
+    { role: "user", content: "Summarize the supplied text." }
+  ],
+  model: "configured-model",
+  responseFormat: { type: "json_object" },
+  temperature: 0.4
+}
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe("OpenRouter retrieval client", () => {
   it("routes bill queries to Voyage and selectively reranks bill candidates", { timeout: 30_000 }, async () => {
@@ -55,32 +71,100 @@ describe("OpenRouter retrieval client", () => {
     ).rejects.toThrow("does not have a reranking route")
   })
 
-  it("sends configured generation model and returns the provider-reported model", async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: '{"answer":"Supported","claims":[]}' } }],
-          model: "openai/gpt-5-mini"
-        }),
-        { status: 200 }
+  it.each(["reported-model", undefined])(
+    "passes through caller-owned generation policy and handles reported model %s",
+    async (reportedModel) => {
+      const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: '{"summary":"Complete"}' } }],
+            model: reportedModel
+          }),
+          { status: 200 }
+        )
       )
-    )
-    const client = new OpenRouterRetrievalClient({ apiKey: "secret", fetch: fetchMock })
-
-    await expect(
-      client.generateResearchAnswer({
-        evidence: "[evidence:1] The bill requires publication.",
-        model: "openai/gpt-5-mini",
-        question: "What does the bill require?"
+      const client = new OpenRouterRetrievalClient({
+        apiKey: "fixture-key",
+        baseUrl: new URL("https://gateway.example.test/api/v1"),
+        fetch: fetchMock
       })
-    ).resolves.toEqual({ content: '{"answer":"Supported","claims":[]}', model: "openai/gpt-5-mini" })
 
-    const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
-    expect(request).toMatchObject({
-      model: "openai/gpt-5-mini",
-      provider: { allow_fallbacks: false, data_collection: "deny" },
-      response_format: { type: "json_object" },
-      temperature: 0
+      await expect(client.completeChat(completion)).resolves.toEqual({
+        content: '{"summary":"Complete"}',
+        model: reportedModel ?? completion.model
+      })
+
+      expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+        new URL("https://gateway.example.test/api/v1/chat/completions"),
+        {
+          body: expect.any(String),
+          headers: { Authorization: "Bearer fixture-key", "Content-Type": "application/json" },
+          method: "POST",
+          signal: expect.any(AbortSignal)
+        }
+      )
+      const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+      expect(request).toEqual({
+        messages: completion.messages,
+        model: completion.model,
+        provider: { allow_fallbacks: false, data_collection: "deny" },
+        response_format: completion.responseFormat,
+        temperature: completion.temperature
+      })
+    }
+  )
+
+  it.each([
+    [401, " \n Invalid key\t ", ": Invalid key"],
+    [429, "", ""],
+    [503, "x".repeat(510), `: ${"x".repeat(500)}`]
+  ] as const)("preserves HTTP %s error details without retrying generation", async (status, body, detail) => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(body, { status }))
+    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock, maximumAttempts: 3 })
+
+    await expect(client.completeChat(completion)).rejects.toThrow(
+      `OpenRouter research generation failed with HTTP ${status}${detail}`
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([{ choices: [] }, { choices: [{ message: { content: "" } }] }, { choices: [{ message: {} }] }])(
+    "rejects a malformed provider envelope: %j",
+    async (body) => {
+      const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(Response.json(body))
+      const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock })
+
+      await expect(client.completeChat(completion)).rejects.toThrow(z.ZodError)
+    }
+  )
+
+  it("passes the configured timeout signal to fetch and propagates cancellation", async () => {
+    const controller = new AbortController()
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal)
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (_url, options) => {
+      const signal = options?.signal
+      invariant(signal)
+      return await new Promise<Response>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true })
+      })
     })
+    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock, timeoutMs: 1500 })
+    const result = client.completeChat(completion)
+    const error = new DOMException("Request timed out", "TimeoutError")
+    controller.abort(error)
+
+    await expect(result).rejects.toBe(error)
+    expect(timeout).toHaveBeenCalledExactlyOnceWith(1500)
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(controller.signal)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("propagates fetch failures without retrying generation", async () => {
+    const error = new Error("Fixture connection failure")
+    const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(error)
+    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock })
+
+    await expect(client.completeChat(completion)).rejects.toBe(error)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

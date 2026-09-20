@@ -10,7 +10,7 @@ import { z } from "zod"
 const rerankResponseSchema = z.object({
   results: z.array(z.object({ index: z.number().int().nonnegative(), relevance_score: z.number() }))
 })
-const researchAnswerResponseSchema = z.object({
+const chatCompletionResponseSchema = z.object({
   choices: z.array(z.object({ message: z.object({ content: z.string().min(1) }) })).min(1),
   model: z.string().trim().min(1).optional()
 })
@@ -29,8 +29,15 @@ export interface RetrievalModelClient {
   rerank(tool: EmbeddingSearchTool, query: string, candidates: RerankCandidate[]): Promise<RerankedCandidate[]>
 }
 
-export interface ResearchAnswerModelClient {
-  generateResearchAnswer(input: Readonly<{ evidence: string; model: string; question: string }>): Promise<{
+export type ChatCompletionRequest = Readonly<{
+  messages: readonly Readonly<{ content: string; role: "system" | "user" }>[]
+  model: string
+  responseFormat: Readonly<{ type: "json_object" }>
+  temperature: number
+}>
+
+export interface ChatCompletionClient {
+  completeChat(input: ChatCompletionRequest): Promise<{
     content: string
     model: string
   }>
@@ -44,7 +51,7 @@ export interface OpenRouterRetrievalClientOptions {
   timeoutMs?: number
 }
 
-export class OpenRouterRetrievalClient implements RetrievalModelClient, ResearchAnswerModelClient {
+export class OpenRouterRetrievalClient implements RetrievalModelClient, ChatCompletionClient {
   readonly #apiKey: string
   readonly #baseUrl: URL
   readonly #embeddingClients = new Map<EmbeddingRouteProduct, OpenRouterEmbeddingClient>()
@@ -121,24 +128,17 @@ export class OpenRouterRetrievalClient implements RetrievalModelClient, Research
     throw new Error("OpenRouter rerank request exhausted retries")
   }
 
-  async generateResearchAnswer(input: Readonly<{ evidence: string; model: string; question: string }>): Promise<{
+  async completeChat(input: ChatCompletionRequest): Promise<{
     content: string
     model: string
   }> {
     const response = await this.#fetch(new URL("chat/completions", this.#baseUrl), {
       body: JSON.stringify({
-        messages: [
-          {
-            content:
-              "Answer only from the supplied legislative evidence. Return JSON with answer and claims. Each claim must have text, confidence (supported, mixed, or insufficient), and citationIds containing only supplied evidence IDs. Do not invent citations.",
-            role: "system"
-          },
-          { content: `Question:\n${input.question}\n\nEvidence:\n${input.evidence}`, role: "user" }
-        ],
+        messages: input.messages,
         model: input.model,
         provider: { allow_fallbacks: false, data_collection: "deny" },
-        response_format: { type: "json_object" },
-        temperature: 0
+        response_format: input.responseFormat,
+        temperature: input.temperature
       }),
       headers: { Authorization: `Bearer ${this.#apiKey}`, "Content-Type": "application/json" },
       method: "POST",
@@ -150,7 +150,7 @@ export class OpenRouterRetrievalClient implements RetrievalModelClient, Research
         `OpenRouter research generation failed with HTTP ${response.status}${detail.length === 0 ? "" : `: ${detail}`}`
       )
     }
-    const parsed = researchAnswerResponseSchema.parse(await response.json())
+    const parsed = chatCompletionResponseSchema.parse(await response.json())
     const content = parsed.choices[0]?.message.content
     if (content === undefined) {
       throw new Error("OpenRouter research generation returned no content")

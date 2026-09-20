@@ -88,7 +88,8 @@ Migrations live once in C and release explicitly through `pnpm --filter legislat
   [dashboards, budgets and acceptance](operations/telemetry-acceptance.md)
 - [Research identity and collection retrieval](engineering/research-record-retrieval.md)
 - [Architecture decisions](engineering/architecture-decisions.md), including separate runtimes, explicit migration
-  releases and the [transport-free projection boundary](engineering/architecture-decisions.md#canonical-read-projection-boundary)
+  releases, the [transport-free projection boundary](engineering/architecture-decisions.md#canonical-read-projection-boundary)
+  and [feature-owned research generation](engineering/architecture-decisions.md#research-generation-boundary)
 - [Civic graph/events and persisted provenance](engineering/api/civic-graph-and-events.md),
   [membership projection](engineering/committee-membership-history.md)
 - [Legislative records](engineering/api/legislative-records.md), [HTTP schemas](engineering/api/schemas.md)

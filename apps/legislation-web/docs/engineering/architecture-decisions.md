@@ -49,6 +49,19 @@ reconsideration trigger.
 - Separate deployment and positive consent require release evidence. Historical anonymous/wrong-token rejection is not
   successful browser consent, and a local extraction is not deployed acceptance.
 
+## Research generation boundary
+
+The research-answer feature in [`research-answers.ts`](../../src/modules/request-handling/api/research-answers.ts)
+owns evidence serialization, system/user messages, the configured generation model, JSON output mode, temperature,
+claim schema validation and rejection of unsupported citations. The provider adapter accepts a completed
+`ChatCompletionRequest` through its capability-specific `ChatCompletionClient`; it does not build legislative prompts.
+
+OpenRouter services retain endpoint construction, credentials, provider privacy controls, timeout signals and provider
+envelope parsing. Generation remains a single request with the existing error behavior and configured-model fallback
+when the provider omits its model ID. Embedding/reranking routes and their retry policy are unchanged. This boundary
+does not introduce an orchestration framework or alter research-answer policy; captured-request tests preserve the
+messages and settings without paid model calls.
+
 ## Canonical read projection boundary
 
 Public response mapping belongs to the transport-free projection modules under `src/modules/request-handling/api`,

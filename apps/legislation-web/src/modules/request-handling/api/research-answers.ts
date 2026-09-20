@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { getRequestContext, type RequestIdentity } from "@repo/legislation-core/auth/request-context"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { z } from "zod"
-import type { ResearchAnswerModelClient } from "../../../services/openrouter/openrouter-retrieval"
+import type { ChatCompletionClient } from "../../../services/openrouter/openrouter-retrieval"
 import { documentSectionReadFromPersistence } from "../../legislation/persistence/queries/document-reads"
 import type { AmendmentSearchInput } from "../../legislation/query-service"
 import { projectSupportingMaterialSearchHits } from "./canonical-material-search"
@@ -263,7 +263,7 @@ export function createCanonicalResearchEvidenceRetriever(
 }
 
 export function createOpenRouterResearchAnswerGenerator(
-  client: ResearchAnswerModelClient,
+  client: ChatCompletionClient,
   configuredModel: string | undefined
 ): ResearchAnswerGenerator | undefined {
   if (configuredModel === undefined) {
@@ -271,12 +271,24 @@ export function createOpenRouterResearchAnswerGenerator(
   }
   return {
     async generate(input) {
-      const result = await client.generateResearchAnswer({
-        evidence: input.citations
-          .map((citation) => `[${citation.id}] ${citation.title}\n${citation.snippet}\n${citation.sourceUrl}`)
-          .join("\n\n"),
+      const evidence = input.citations
+        .map((citation) => `[${citation.id}] ${citation.title}\n${citation.snippet}\n${citation.sourceUrl}`)
+        .join("\n\n")
+      const result = await client.completeChat({
+        messages: [
+          {
+            content:
+              "Answer only from the supplied legislative evidence. Return JSON with answer and claims. Each claim must have text, confidence (supported, mixed, or insufficient), and citationIds containing only supplied evidence IDs. Do not invent citations.",
+            role: "system"
+          },
+          {
+            content: `Question:\n${input.question}\nRequested format: ${input.answerFormat}\n\nEvidence:\n${evidence}`,
+            role: "user"
+          }
+        ],
         model: configuredModel,
-        question: `${input.question}\nRequested format: ${input.answerFormat}`
+        responseFormat: { type: "json_object" },
+        temperature: 0
       })
       const parsed = generatedContentSchema.parse(JSON.parse(result.content))
       return {

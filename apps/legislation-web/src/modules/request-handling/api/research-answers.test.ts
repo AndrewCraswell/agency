@@ -1,5 +1,6 @@
 import { createServer } from "node:http"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { OpenRouterRetrievalClient, type ChatCompletionClient } from "../../../services/openrouter/openrouter-retrieval"
 import { createLegislationApiHandler } from "./handlers"
 import {
   createCanonicalResearchEvidenceRetriever,
@@ -440,34 +441,113 @@ describe("research answer HTTP API", () => {
     ])
   })
 
-  it("parses configured OpenRouter JSON before the citation boundary validates it", async () => {
-    const generator = createOpenRouterResearchAnswerGenerator(
-      {
-        generateResearchAnswer: async () => ({
-          content:
-            '{"answer":"Annual publication is required.","claims":[{"text":"Publication is required.","confidence":"supported","citationIds":["evidence:passage:1"]}]}',
+  it.each(["concise", "detailed", "timeline"] as const)(
+    "preserves the provider request and validates generated claims for %s answers",
+    async (answerFormat) => {
+      const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+        Response.json({
+          choices: [
+            {
+              message: {
+                content:
+                  '{"answer":"Annual publication is required.","claims":[{"text":"Publication is required.","confidence":"supported","citationIds":["evidence:passage:1"]}]}'
+              }
+            }
+          ],
           model: "openai/gpt-5-mini"
         })
-      },
-      "openai/gpt-5-mini"
-    )
-    if (generator === undefined) {
-      throw new Error("Expected a configured research generator")
-    }
-    const service = createResearchAnswerService(
-      { retrieve: async () => ({ candidateCount: 1, citations: [citation], models: [], rerankedProducts: [] }) },
-      generator
-    )
-    const answer = await service.answer({
-      answerFormat: "concise",
-      question: "What does the bill require?",
-      retrieval: { maxEvidence: 1, mode: "lexical", recordTypes: ["passage"] },
-      scope: { billIds: ["bill:wa:2026:hb:1"] }
-    })
+      )
+      const generator = createOpenRouterResearchAnswerGenerator(
+        new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock }),
+        "openai/gpt-5-mini"
+      )
+      if (generator === undefined) {
+        throw new Error("Expected a configured research generator")
+      }
+      const citations = [
+        citation,
+        {
+          ...citation,
+          id: "evidence:passage:2",
+          title: "HB 1, section 2",
+          snippet: "The report must be available online."
+        }
+      ]
+      const service = createResearchAnswerService(
+        { retrieve: async () => ({ candidateCount: 2, citations, models: [], rerankedProducts: [] }) },
+        generator
+      )
+      const answer = await service.answer({
+        answerFormat,
+        question: "What does the bill require?",
+        retrieval: { maxEvidence: 2, mode: "lexical", recordTypes: ["passage"] },
+        scope: { billIds: ["bill:wa:2026:hb:1"] }
+      })
 
-    expect(answer.retrieval.models).toContainEqual(generationModel)
-    expect(answer.claims[0]?.citationIds).toEqual([citation.id])
+      expect(answer.retrieval.models).toContainEqual(generationModel)
+      expect(answer.claims[0]?.citationIds).toEqual([citation.id])
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(fetchMock.mock.calls[0]?.[0]).toEqual(new URL("https://openrouter.ai/api/v1/chat/completions"))
+      expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+        messages: [
+          {
+            role: "system",
+            content:
+              "Answer only from the supplied legislative evidence. Return JSON with answer and claims. Each claim must have text, confidence (supported, mixed, or insufficient), and citationIds containing only supplied evidence IDs. Do not invent citations."
+          },
+          {
+            role: "user",
+            content:
+              `Question:\nWhat does the bill require?\nRequested format: ${answerFormat}\n\nEvidence:\n` +
+              "[evidence:passage:1] HB 1, section 1\nThe bill requires annual publication of the report.\nhttps://leg.wa.gov/bills/1\n\n" +
+              "[evidence:passage:2] HB 1, section 2\nThe report must be available online.\nhttps://leg.wa.gov/bills/1"
+          }
+        ],
+        model: "openai/gpt-5-mini",
+        provider: { allow_fallbacks: false, data_collection: "deny" },
+        response_format: { type: "json_object" },
+        temperature: 0
+      })
+    }
+  )
+
+  it("does not configure generation without a research model", () => {
+    const completeChat = vi.fn<ChatCompletionClient["completeChat"]>()
+    expect(createOpenRouterResearchAnswerGenerator({ completeChat }, undefined)).toBeUndefined()
+    expect(completeChat).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ["not JSON", 503, "dependency_unavailable"],
+    ['{"answer":"Publication is required.","claims":[]}', 503, "dependency_unavailable"],
+    [
+      '{"answer":"Publication is required.","claims":[{"text":"Publication is required.","confidence":"supported","citationIds":["invented"]}]}',
+      422,
+      "unprocessable"
+    ]
+  ] as const)(
+    "rejects invalid generated content %s at the existing feature boundary",
+    async (content, status, category) => {
+      const completeChat = vi.fn<ChatCompletionClient["completeChat"]>().mockResolvedValue({
+        content,
+        model: generationModel.model
+      })
+      const service = createResearchAnswerService(
+        { retrieve: async () => ({ candidateCount: 1, citations: [citation], models: [], rerankedProducts: [] }) },
+        createOpenRouterResearchAnswerGenerator({ completeChat }, generationModel.model)
+      )
+      const baseUrl = await start(service)
+      const response = await post(baseUrl, {
+        question: "What does the bill require?",
+        retrieval: { mode: "lexical", recordTypes: ["passage"] },
+        scope: { billIds: ["bill:wa:2026:hb:1"] }
+      })
+
+      expect(response.status).toBe(status)
+      await expect(response.json()).resolves.toMatchObject({ error: { category } })
+      expect(completeChat).toHaveBeenCalledTimes(1)
+    }
+  )
 
   it("is reachable through the composed legislation handler when dependencies are configured", async () => {
     const baseUrl = await startComposed(answerService())
