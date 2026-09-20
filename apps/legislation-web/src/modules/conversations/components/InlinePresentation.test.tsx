@@ -10,9 +10,9 @@ import type { ContentComponent, PresentationContent } from "../presentationConte
 import { ChatProviders } from "./ChatProviders"
 import { markdownEvidenceFixture, qualifiedEvidenceFixture } from "./citationEvidenceFixtures"
 import type { CitationSelection } from "./citationPresentation"
+import { ComposedRecord } from "./ComposedRecord"
 import { ConversationResponse } from "./ConversationResponse"
 import { CompactRecordCard, RecordCard, recordHref } from "./EntityResults"
-import { InlinePresentation } from "./InlinePresentation"
 
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn<typeof import("@sentry/nextjs").captureException>() }))
 afterEach(() => {
@@ -353,6 +353,57 @@ it("rejects a valid content ID paired with the wrong component", () => {
   expect(() => part(content, "RollCall")).toThrow(/Presentation content does not match/)
 })
 
+it.each([
+  { name: "missing content", content: undefined },
+  { name: "wrong content ID", content: { ...content, id: "44444444-4444-4444-8444-444444444444" } },
+  {
+    name: "wrong content kind",
+    content: {
+      id: content.id,
+      kind: "record-status",
+      recordId: "record-one",
+      title: "Untrusted status",
+      state: "not-found",
+      sourceUrl: null
+    }
+  },
+  {
+    name: "unsafe provenance",
+    content: { ...content, evidence: { ...source, sourceUrl: "javascript:alert(1)" } }
+  },
+  {
+    name: "model-owned content",
+    content,
+    props: { contentId: content.id, evidence: source }
+  }
+])("rejects $name at the client boundary without exposing content", (invalid) => {
+  render(
+    <ComposedRecord
+      isRunning={false}
+      part={{
+        type: "data-presentation",
+        id: "untrusted",
+        data: {
+          state: "ready",
+          blockId: "untrusted",
+          records: [],
+          content: invalid.content,
+          spec: {
+            root: "content",
+            elements: {
+              content: { type: "CitationCard", props: invalid.props ?? { contentId: content.id } }
+            }
+          }
+        }
+      }}
+    />
+  )
+  expect(screen.getByRole("alert").textContent).toBe("This content could not be displayed.")
+  expect(screen.queryByText(source.title)).toBeNull()
+  expect(screen.queryByText("Untrusted status")).toBeNull()
+  expect(screen.queryByRole("link")).toBeNull()
+})
+
 it("copies the source citation without changing the retrieved passage", async () => {
   const user = userEvent.setup()
   const copy = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue()
@@ -426,7 +477,7 @@ it("shows a bounded roll call and keeps the inspector open through snapshot rere
     return (
       <ChatProviders>
         <StickToBottom initial={false}>
-          <InlinePresentation content={value} variant="RollCall" answerId="answer" />
+          <ComposedRecord part={part(value, "RollCall")} isRunning={false} answerId="answer" />
         </StickToBottom>
       </ChatProviders>
     )

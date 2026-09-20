@@ -1,20 +1,17 @@
 "use client"
 
-import { defineRegistry, JSONUIProvider, Renderer } from "@json-render/react"
 import { CircleSlash, CircleX, FileText, TriangleAlert } from "lucide-react"
-import { createContext, useContext, useRef, useState } from "react"
+import { useRef, useState } from "react"
+import invariant from "tiny-invariant"
 import { useStickToBottomContext } from "use-stick-to-bottom"
 import { z } from "zod"
 import { Spinner } from "../../../components/ui/spinner"
 import {
-  answerCatalog,
   presentationBlockSchema,
   presentationReferences,
   type PresentationBlock,
   type PresentationReference
 } from "../composition"
-import type { EntityCard } from "../entityResults"
-import { contentComponentSchema, type PresentationContent, type ContentComponent } from "../presentationContent"
 import type { CitationSelection } from "./citationPresentation"
 import { CompactRecordCard, RecordCard } from "./EntityResults"
 import { InlinePresentation } from "./InlinePresentation"
@@ -32,13 +29,6 @@ const presentationPartSchema = z
   })
   .refine((part) => part.id === part.data.blockId)
 
-type RecordContextValue = Readonly<{
-  records: EntityCard[]
-  references: PresentationReference[]
-  onOpenRecord: (recordId: string) => void
-}>
-const RecordContext = createContext<RecordContextValue | undefined>(undefined)
-type TrustedRecordCardProps = Readonly<{ props: PresentationReference }>
 type ReadyRecordProps = Readonly<{ block: Extract<PresentationBlock, { state: "ready" }> }>
 type ComposedRecordProps = Readonly<{
   part: unknown
@@ -47,16 +37,6 @@ type ComposedRecordProps = Readonly<{
   onEvidence?: (selection: CitationSelection) => void
   answerId?: string
 }>
-const ContentContext = createContext<
-  | Readonly<{
-      content: PresentationContent
-      variant: ContentComponent
-      citation?: CitationSelection
-      onEvidence?: (selection: CitationSelection) => void
-      answerId: string
-    }>
-  | undefined
->(undefined)
 
 function PresentationFailure({
   reason = "presentation"
@@ -119,82 +99,6 @@ function RecordLoading() {
   )
 }
 
-function TrustedRecordCard({ props, compact = false }: TrustedRecordCardProps & { compact?: boolean }) {
-  const context = useContext(RecordContext)
-  const record = context?.records[0]
-  if (
-    !context ||
-    !record ||
-    context.records.length !== 1 ||
-    props.resultId !== context.references[0]?.resultId ||
-    props.recordId !== record.id
-  ) {
-    return <PresentationFailure />
-  }
-  if (compact) {
-    return <CompactRecordCard record={record} resultId={props.resultId} onOpenVote={context.onOpenRecord} />
-  }
-  return <RecordCard record={record} resultId={props.resultId} onOpenVote={context.onOpenRecord} />
-}
-
-function TrustedCompactRecordCard({ props }: TrustedRecordCardProps) {
-  return <TrustedRecordCard props={props} compact />
-}
-
-function TrustedRecordGroup({
-  props,
-  compact = false
-}: Readonly<{ props: { records: PresentationReference[] }; compact?: boolean }>) {
-  const context = useContext(RecordContext)
-  if (
-    !context ||
-    props.records.length !== context.records.length ||
-    props.records.some(
-      (reference, index) =>
-        reference.recordId !== context.records[index]?.id || reference.resultId !== context.references[index]?.resultId
-    )
-  ) {
-    return <PresentationFailure />
-  }
-  return (
-    <RecordGroup
-      compact={compact}
-      items={context.records.map((record, index) => ({ record, resultId: props.records[index]!.resultId }))}
-      onOpenRecord={context.onOpenRecord}
-    />
-  )
-}
-
-function TrustedCompactRecordGroup({ props }: Readonly<{ props: { records: PresentationReference[] } }>) {
-  return <TrustedRecordGroup props={props} compact />
-}
-
-function TrustedContent({ props }: Readonly<{ props: { contentId: string } }>) {
-  const context = useContext(ContentContext)
-  if (!context || context.content.id !== props.contentId) {
-    return <PresentationFailure />
-  }
-  return <InlinePresentation {...context} />
-}
-
-const { registry } = defineRegistry(answerCatalog, {
-  components: {
-    BillProgressCard: TrustedContent,
-    RecordGroup: TrustedRecordGroup,
-    CompactRecordGroup: TrustedCompactRecordGroup,
-    RecordCard: TrustedRecordCard,
-    CompactRecordCard: TrustedCompactRecordCard,
-    CitationCard: TrustedContent,
-    CompactPassageCard: TrustedContent,
-    PassageQuote: TrustedContent,
-    ResultList: TrustedContent,
-    ProgressPath: TrustedContent,
-    RecordTimeline: TrustedContent,
-    RollCall: TrustedContent,
-    RecordStatus: TrustedContent
-  }
-})
-
 function ReadyRecord({ block }: ReadyRecordProps) {
   const [selectedVote, setSelectedVote] = useState<PresentationReference>()
   const [meetingSelection, setMeetingSelection] = useState<PresentationReference>()
@@ -203,9 +107,12 @@ function ReadyRecord({ block }: ReadyRecordProps) {
   const content = useRef<HTMLDivElement>(null)
   const references = presentationReferences(block.spec)
   const reference = references[0]
-  if (!reference) {
-    return <PresentationFailure />
-  }
+  const record = block.records[0]
+  const element = block.spec.elements[block.spec.root]
+  invariant(element && reference && record, "Validated record presentations require a root and resolved records")
+  const isGroup = element.type === "RecordGroup" || element.type === "CompactRecordGroup"
+  const isCompact = element.type === "CompactRecordCard" || element.type === "CompactRecordGroup"
+  const Card = isCompact ? CompactRecordCard : RecordCard
   function onOpenRecord(recordId: string) {
     const selectedReference = references.find((reference) => reference.recordId === recordId)
     if (!selectedReference) {
@@ -232,11 +139,19 @@ function ReadyRecord({ block }: ReadyRecordProps) {
   return (
     <>
       <div ref={content} className="min-w-0">
-        <RecordContext value={{ records: block.records, references, onOpenRecord }}>
-          <JSONUIProvider registry={registry}>
-            <Renderer spec={block.spec} registry={registry} />
-          </JSONUIProvider>
-        </RecordContext>
+        {isGroup ? (
+          <RecordGroup
+            compact={isCompact}
+            items={block.records.map((record, index) => {
+              const reference = references[index]
+              invariant(reference, "Validated record groups require a reference for each record")
+              return { record, resultId: reference.resultId }
+            })}
+            onOpenRecord={onOpenRecord}
+          />
+        ) : (
+          <Card record={record} resultId={reference.resultId} onOpenVote={onOpenRecord} />
+        )}
       </div>
       <VoteDetails selection={selectedVote} onClose={() => setSelectedVote(undefined)} returnFocus={returnFocus} />
       <MeetingDetails
@@ -269,15 +184,24 @@ export function ComposedRecord({
     }
     return <RecordLoading />
   }
-  if (block.content) {
-    const variant = contentComponentSchema.parse(block.spec.elements[block.spec.root]?.type)
-    return (
-      <ContentContext value={{ content: block.content, variant, citation, onEvidence, answerId }}>
-        <JSONUIProvider registry={registry}>
-          <Renderer spec={block.spec} registry={registry} />
-        </JSONUIProvider>
-      </ContentContext>
-    )
+  const element = block.spec.elements[block.spec.root]
+  invariant(element, "Validated presentations require a root")
+  if (
+    element.type === "RecordCard" ||
+    element.type === "CompactRecordCard" ||
+    element.type === "RecordGroup" ||
+    element.type === "CompactRecordGroup"
+  ) {
+    return <ReadyRecord block={block} />
   }
-  return <ReadyRecord block={block} />
+  invariant(block.content, "Validated content presentations require resolved content")
+  return (
+    <InlinePresentation
+      content={block.content}
+      variant={element.type}
+      citation={citation}
+      onEvidence={onEvidence}
+      answerId={answerId}
+    />
+  )
 }

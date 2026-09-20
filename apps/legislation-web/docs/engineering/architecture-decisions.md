@@ -49,6 +49,25 @@ reconsideration trigger.
 - Separate deployment and positive consent require release evidence. Historical anonymous/wrong-token rejection is not
   successful browser consent, and a local extraction is not deployed acceptance.
 
+## Single-root presentation boundary
+
+The model-facing answer catalog and composition stream protocol remain in
+[`composition.ts`](../../src/modules/conversations/composition.ts) and
+[`compositionStream.ts`](../../src/modules/conversations/compositionStream.ts). Models select literal references,
+not canonical display facts. The response-local presentation store resolves registered content and canonical result
+references against the owning session before the stream emits validated snapshots.
+
+[`ComposedRecord`](../../src/modules/conversations/components/ComposedRecord.tsx) validates the incoming transport
+ID and complete snapshot with `presentationBlockSchema` before rendering. The schema requires exactly one root,
+no children or actions, canonical result IDs, ordered record/reference agreement, and matching content ID/kind.
+Invalid input renders an explicit failure; pending, interrupted and unavailable states keep their existing UI.
+
+After validation, the client dispatches directly to the existing record card, record group or inline content
+component. There is no client registry, JSON renderer provider or context carrying a second copy of resolved data.
+Record inspector selection and focus return remain local to the activating presentation. Content components retain
+their citation controls and session-owned pagination. Client shape validation does not replace server ownership,
+canonical resolution or provenance validation.
+
 ## Research generation boundary
 
 The research-answer feature in [`research-answers.ts`](../../src/modules/request-handling/api/research-answers.ts)

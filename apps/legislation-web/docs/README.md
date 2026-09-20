@@ -90,6 +90,7 @@ Migrations live once in C and release explicitly through `pnpm --filter legislat
 - [Architecture decisions](engineering/architecture-decisions.md), including separate runtimes, explicit migration
   releases, the [transport-free projection boundary](engineering/architecture-decisions.md#canonical-read-projection-boundary)
   and [feature-owned research generation](engineering/architecture-decisions.md#research-generation-boundary)
+- [Single-root presentation rendering and trust boundaries](engineering/architecture-decisions.md#single-root-presentation-boundary)
 - [Civic graph/events and persisted provenance](engineering/api/civic-graph-and-events.md),
   [membership projection](engineering/committee-membership-history.md)
 - [Legislative records](engineering/api/legislative-records.md), [HTTP schemas](engineering/api/schemas.md)

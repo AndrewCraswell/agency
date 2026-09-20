@@ -2029,6 +2029,23 @@ describe("ConversationResponse inline composition", () => {
     expect(screen.queryByText(selectedRecord.title)).toBeNull()
   })
 
+  it.each([
+    { reason: "presentation", title: "Content could not be displayed", status: "Invalid reference" },
+    { reason: "records", title: "Record unavailable", status: "Unavailable" },
+    { reason: "interrupted", title: "Content incomplete", status: "Interrupted" }
+  ])("retains the explicit $reason failure instead of rendering a record", ({ reason, title, status }) => {
+    render(
+      inlineResponse([
+        { type: "data-presentation", id: "failed", data: { state: "error", blockId: "failed", reason } }
+      ]),
+      { wrapper: InlineProviders }
+    )
+    const failure = screen.getByRole("region", { name: title })
+    expect(within(failure).getByText(status)).toBeDefined()
+    expect(within(failure).getByRole("alert")).toBeDefined()
+    expect(screen.queryByText(selectedRecord.title)).toBeNull()
+  })
+
   it("keeps a vote drawer open through duplicate-ID snapshot updates and restores focus to the same trigger", async () => {
     const vote: EntityCard = { ...selectedRecord, id: "selected-vote", kind: "vote", title: "Selected vote" }
     const details: VoteDetails = { record: vote, hasCompleteTally: false, positions: [] }
@@ -2277,6 +2294,78 @@ describe("ConversationResponse inline composition", () => {
       name: "missing root element",
       part: { ...ready, data: { ...ready.data, spec: { root: "absent", elements: {} } } }
     },
+    {
+      name: "extra root",
+      part: {
+        ...ready,
+        data: {
+          ...ready.data,
+          spec: {
+            ...ready.data.spec,
+            elements: { ...ready.data.spec.elements, extra: ready.data.spec.elements.record }
+          }
+        }
+      }
+    },
+    {
+      name: "nested children",
+      part: {
+        ...ready,
+        data: {
+          ...ready.data,
+          spec: {
+            ...ready.data.spec,
+            elements: { record: { ...ready.data.spec.elements.record, children: ["record"] } }
+          }
+        }
+      }
+    },
+    {
+      name: "extra resolved record",
+      part: { ...ready, data: { ...ready.data, records: [selectedRecord, { ...selectedRecord, id: "other" }] } }
+    },
+    {
+      name: "unresolved result handle",
+      part: {
+        ...ready,
+        data: {
+          ...ready.data,
+          spec: {
+            ...ready.data.spec,
+            elements: {
+              record: {
+                ...ready.data.spec.elements.record,
+                props: { resultId: "r1", recordId: selectedRecord.id }
+              }
+            }
+          }
+        }
+      }
+    },
+    ...(["RecordGroup", "CompactRecordGroup"] as const).map((type) => ({
+      name: `${type} record order mismatch`,
+      part: {
+        ...ready,
+        data: {
+          ...ready.data,
+          records: [selectedRecord, { ...selectedRecord, id: "other" }],
+          spec: {
+            root: "record",
+            elements: {
+              record: {
+                type,
+                props: {
+                  records: [
+                    { resultId, recordId: "other" },
+                    { resultId, recordId: selectedRecord.id }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    })),
     {
       name: "unknown component",
       part: {
