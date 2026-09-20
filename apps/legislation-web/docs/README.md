@@ -9,7 +9,7 @@ backlogs, completed-task ledgers, or dated deployment journals here.
 | Need | Canonical page |
 | --- | --- |
 | Product scope and audience | [Product specification](product/product-spec.md), [information architecture](product/information-architecture.md), [ideal customer profiles](product/icp.md) |
-| Local setup and runtime ownership | [Development](operations/development.md) |
+| Local setup, dependency deadlines and research pool ownership | [Development](operations/development.md) |
 | Tests and final verification | [Testing](operations/testing.md) |
 | Authentication and MCP setup | [Authentication](operations/authentication.md) |
 | Frontend conventions | [Frontend styling](engineering/frontend-styling.md) |
@@ -38,9 +38,9 @@ including `@repo/legislation-diffing`; it does not verify unrelated workspaces o
 - [Notification experience](product/notification-experience.md)
 - [Organization features](product/organization-features.md)
 - [Pricing](product/pricing.md) and [pricing research](research/pricing.md)
-- [Conversation export](operations/conversation-export.md)
-- [Conversation research memory](engineering/conversation-research-memory.md)
-- [Canonical bill identity](engineering/conversation-bill-identity.md)
+- [Conversation export and copyable JSON snapshots](operations/conversation-export.md)
+- [Conversation research lifecycle and memory](engineering/conversation-research-memory.md)
+- [Canonical bill identity and citation titles](engineering/conversation-bill-identity.md)
 - [Exact research selections](engineering/conversation-research-selection.md)
 - [Bill progress](engineering/conversation-bill-progress.md)
 - [Record inspectors](engineering/conversation-record-inspectors.md)

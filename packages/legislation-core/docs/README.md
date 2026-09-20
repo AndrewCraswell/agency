@@ -15,7 +15,7 @@ environment, pools, credentials and telemetry. Never import an app from C.
 | Lossless text, blocks and continuation | [Reader contract](regulations/reader-contract.md) |
 | One local database and explicit migration release | [Development](operations/development.md) |
 | Fresh schema and existing-database release safety | [Canonical migration baseline](operations/migration-baseline.md) |
-| Aggregate PgBouncer policy and retained measurements | [Connection pooling](operations/database-connection-pooling.md) |
+| Aggregate capacity, cancellable research queues and scoped reads | [Connection pooling](operations/database-connection-pooling.md) |
 | App-free unit/schema checks | [Testing](operations/testing.md) |
 
 Commands: `pnpm --filter @repo/legislation-core test`, `pnpm --filter @repo/legislation-core check:types`,

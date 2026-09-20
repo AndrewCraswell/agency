@@ -1,17 +1,17 @@
 import type { LookupAddress } from "node:dns"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { describeAnalytics } from "@repo/legislation-core/research/analytics-catalog"
-import { researchResultByteLimit } from "@repo/legislation-core/research/result-pages"
+import { researchResultByteLimit, researchResultFragmentSchema } from "@repo/legislation-core/research/result-pages"
 import type { LegislationQueryApi } from "@repo/legislation-core/research/tools"
 import { dynamicTool, isStepCount, streamText } from "ai"
 import { MockLanguageModelV4 } from "ai/test"
 import { afterEach, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { researchAgentLimits, runResearchAgent } from "./agent"
+import { runResearchAgent } from "./agent"
 import { createCitationPresentation } from "./components/citationPresentation"
 import { compositionInstructions, recordMentionHref } from "./composition"
 import type { EntityPage } from "./entityResults"
-import { projectResearchEvidence } from "./evidence"
+import { evidenceSnapshotSchema, projectResearchEvidence } from "./evidence"
 import { createResearchTools, modelInputSchema, researchModelOutput } from "./research"
 import { researchFailureCode } from "./researchFailure"
 import type { ResearchToolMeasurement } from "./researchMeasurement"
@@ -55,8 +55,8 @@ afterEach(() => {
   runtimeRun.mockRejectedValue(new Error("Unexpected database runtime call"))
 })
 
-function webTools(signal = new AbortController().signal, canResearch = () => true) {
-  return createResearchTools(webEnvironment, signal, canResearch, vi.fn<() => void>())
+function webTools(signal = new AbortController().signal, canResearch = () => true, environment = webEnvironment) {
+  return createResearchTools(environment, signal, canResearch, vi.fn<() => void>())
 }
 
 async function callWebTool(name: string, input: unknown, tools = webTools(), toolCallId: string = crypto.randomUUID()) {
@@ -164,6 +164,22 @@ it("marks a page-capped PDF excerpt incomplete even when its text is short", asy
   })
 })
 
+it("does not claim complete PDF coverage when the provider omits the total page count", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () =>
+      Response.json({
+        success: true,
+        data: { markdown: "PDF excerpt", metadata: { sourceURL: "https://example.org/report.pdf" } }
+      })
+    )
+  )
+  const result = await callWebTool("read_web_page", { url: "https://example.org/report.pdf" })
+  expect(result).toMatchObject({
+    evidence: [{ locator: "Requested first 10 PDF pages", content: { state: "available", truncated: true } }]
+  })
+})
+
 it("rejects unsafe final URLs and publisher error pages", async () => {
   vi.stubGlobal(
     "fetch",
@@ -253,7 +269,201 @@ it("rejects malformed and oversized web responses", async () => {
   await expect(callWebTool("search_web", { query: "policy" })).rejects.toMatchObject({ code: "result_limit" })
 })
 
-it("shares the research call budget and clarification gate with web tools", async () => {
+it("uses separate configured search and read deadlines with the existing defaults", async () => {
+  const timeout = vi.spyOn(AbortSignal, "timeout")
+  const fetchMock = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json({ success: true, data: { web: [] } }))
+    .mockResolvedValueOnce(Response.json({ success: true, data: { markdown: "Text", metadata: {} } }))
+    .mockResolvedValueOnce(Response.json({ success: true, data: { web: [] } }))
+  vi.stubGlobal("fetch", fetchMock)
+  const tools = webTools(undefined, undefined, {
+    ...webEnvironment,
+    FIRECRAWL_SEARCH_TIMEOUT_MS: "45000",
+    FIRECRAWL_READ_TIMEOUT_MS: "90000"
+  })
+  await callWebTool("search_web", { query: "policy" }, tools)
+  await callWebTool("read_web_page", { url: "https://example.org" }, tools)
+  await callWebTool("search_web", { query: "policy" })
+  expect(timeout.mock.calls.map(([milliseconds]) => milliseconds)).toEqual([45000, 90000, 30000])
+  expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toHaveProperty("timeout", 40000)
+  expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toHaveProperty("timeout", 85000)
+  expect(JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body))).toHaveProperty("timeout", 25000)
+})
+
+it.each([408, 429, 500, 502, 503, 504])("recovers a transient web HTTP %s response", async (status) => {
+  const timeout = vi.spyOn(AbortSignal, "timeout")
+  const fetchMock = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(new Response("private provider detail", { status }))
+    .mockResolvedValueOnce(Response.json({ success: true, data: { web: [] } }))
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(callWebTool("search_web", { query: "policy" })).resolves.toMatchObject({ data: { items: [] } })
+  expect(fetchMock).toHaveBeenCalledTimes(2)
+  expect(timeout).toHaveBeenCalledTimes(1)
+  expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(fetchMock.mock.calls[1]?.[1]?.signal)
+})
+
+it.each([400, 401, 402, 403, 413, 422, 501])("does not retry permanent web HTTP %s", async (status) => {
+  const fetchMock = vi.fn<typeof fetch>(async () => new Response("fixture-secret", { status }))
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(callWebTool("search_web", { query: "policy" })).rejects.toMatchObject({ code: "dependency_unavailable" })
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+})
+
+it("bounds repeated transient web failures and sanitizes retry diagnostics", async () => {
+  const output = vi.spyOn(process.stdout, "write").mockReturnValue(true)
+  const fetchMock = vi.fn<typeof fetch>(async () => new Response("fixture-secret provider detail", { status: 503 }))
+  vi.stubGlobal("fetch", fetchMock)
+  const result = callWebTool("search_web", { query: "private query fixture" })
+  await expect(result).rejects.toMatchObject({ code: "dependency_unavailable" })
+  expect(fetchMock).toHaveBeenCalledTimes(3)
+  const diagnostics = JSON.stringify(output.mock.calls)
+  expect(diagnostics).toContain("web_dependency_retry")
+  expect(diagnostics).not.toContain("fixture-secret")
+  expect(diagnostics).not.toContain("private query fixture")
+  expect(diagnostics).not.toContain("provider detail")
+})
+
+it("recovers a known socket failure but does not retry arbitrary exceptions", async () => {
+  const failure = new TypeError("fetch failed", {
+    cause: Object.assign(new Error("socket reset"), { code: "ECONNRESET" })
+  })
+  const fetchMock = vi
+    .fn<typeof fetch>()
+    .mockRejectedValueOnce(failure)
+    .mockResolvedValueOnce(Response.json({ success: true, data: { web: [] } }))
+  vi.stubGlobal("fetch", fetchMock)
+  await callWebTool("search_web", { query: "policy" })
+  expect(fetchMock).toHaveBeenCalledTimes(2)
+  fetchMock.mockReset().mockRejectedValue(new TypeError("programming failure"))
+  await expect(callWebTool("search_web", { query: "policy" })).rejects.toMatchObject({ code: "dependency_unavailable" })
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+})
+
+it("stops during web retry backoff without making another request", async () => {
+  const controller = new AbortController()
+  const fetchMock = vi.fn<typeof fetch>(async () => {
+    setTimeout(() => controller.abort(), 20)
+    return new Response("busy", { status: 503 })
+  })
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(callWebTool("search_web", { query: "policy" }, webTools(controller.signal))).rejects.toMatchObject({
+    code: "interrupted"
+  })
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+})
+
+it("cancels a stalled response body when the operation deadline expires", async () => {
+  const deadline = new AbortController()
+  vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal)
+  const cancel = vi.fn<() => void>()
+  const fetchMock = vi.fn<typeof fetch>(
+    async () =>
+      new Response(
+        new ReadableStream({
+          start() {
+            setTimeout(() => deadline.abort(new DOMException("deadline", "TimeoutError")), 20)
+          },
+          cancel
+        })
+      )
+  )
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(callWebTool("search_web", { query: "policy" })).rejects.toMatchObject({ code: "timeout" })
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+  expect(cancel).toHaveBeenCalledTimes(1)
+})
+
+it("applies the read deadline to DNS validation before any provider request", async () => {
+  const deadline = new AbortController()
+  vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal)
+  lookupMock.mockImplementationOnce(async () => {
+    setTimeout(() => deadline.abort(new DOMException("deadline", "TimeoutError")), 20)
+    return await new Promise<LookupAddress[]>(() => undefined)
+  })
+  const fetchMock = vi.fn<typeof fetch>()
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(callWebTool("read_web_page", { url: "https://example.org" })).rejects.toMatchObject({ code: "timeout" })
+  expect(fetchMock).not.toHaveBeenCalled()
+})
+
+it("cancels oversized streamed bodies without parsing partial JSON or retrying", async () => {
+  const cancel = vi.fn<() => void>()
+  const fetchMock = vi.fn<typeof fetch>(
+    async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('{"success":true,"data":{"markdown":"'))
+            controller.enqueue(new Uint8Array(1_000_000))
+          },
+          cancel
+        })
+      )
+  )
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(
+    callWebTool("read_web_page", {
+      url: "https://example.org/large",
+      includeTags: ["article"]
+    })
+  ).rejects.toMatchObject({ code: "result_limit" })
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+  expect(cancel).toHaveBeenCalledTimes(1)
+})
+
+it.each(["malformed", "oversized", "schema"])("does not retry a %s response", async (kind) => {
+  const fetchMock = vi.fn<typeof fetch>(async () => {
+    if (kind === "malformed") {
+      return new Response("not JSON")
+    }
+    if (kind === "oversized") {
+      return new Response("x".repeat(1_000_001))
+    }
+    return Response.json({ success: true, data: {} })
+  })
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(callWebTool("search_web", { query: "policy" })).rejects.toMatchObject({
+    code: kind === "oversized" ? "result_limit" : "invalid_response"
+  })
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+})
+
+it("requests provider-supported selected content and marks its coverage incomplete", async () => {
+  const fetchMock = vi.fn<typeof fetch>(async () =>
+    Response.json({ success: true, data: { markdown: "Selected text", metadata: {} } })
+  )
+  vi.stubGlobal("fetch", fetchMock)
+  const result = await callWebTool("read_web_page", {
+    url: "https://example.org/large",
+    includeTags: ["article"],
+    maxPdfPages: 1
+  })
+  expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+    formats: ["markdown"],
+    onlyMainContent: true,
+    includeTags: ["article"],
+    parsers: [{ type: "pdf", maxPages: 1 }]
+  })
+  expect(result).toMatchObject({
+    evidence: [{ locator: "Selected HTML tags: article", content: { state: "available", truncated: true } }]
+  })
+})
+
+it.each([{ includeTags: [] }, { includeTags: ["<script>"] }, { maxPdfPages: 0 }, { maxPdfPages: 11 }])(
+  "rejects invalid content selection before fetching: %j",
+  async (selection) => {
+    const fetchMock = vi.fn<typeof fetch>()
+    vi.stubGlobal("fetch", fetchMock)
+    await expect(callWebTool("read_web_page", { url: "https://example.org", ...selection })).rejects.toMatchObject({
+      code: "invalid_request"
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  }
+)
+
+it("allows web research beyond 24 calls while preserving the clarification gate", async () => {
   const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ success: true, data: { web: [] } }))
   vi.stubGlobal("fetch", fetchMock)
   await expect(
@@ -264,11 +474,10 @@ it("shares the research call budget and clarification gate with web tools", asyn
     )
   ).rejects.toMatchObject({ code: "interrupted" })
   const tools = webTools()
-  for (let index = 0; index < 24; index++) {
+  for (let index = 0; index < 30; index++) {
     await callWebTool("search_web", { query: "policy" }, tools)
   }
-  await expect(callWebTool("search_web", { query: "policy" }, tools)).rejects.toMatchObject({ code: "step_limit" })
-  expect(fetchMock).toHaveBeenCalledTimes(24)
+  expect(fetchMock).toHaveBeenCalledTimes(30)
 })
 
 it("preserves web provenance without treating search snippets as collected page text", () => {
@@ -528,6 +737,18 @@ it("preserves canonical batch sizes and child limits", () => {
   expect(schema.safeParse({ ids: ["invalid"], childLimit: 1 }).success).toBe(false)
 })
 
+it("retains normalization when model inputs use an object schema pipeline", () => {
+  const schema = modelInputSchema(
+    z
+      .object({ query: z.string(), limit: z.number().optional(), cursor: z.string().optional() })
+      .transform((input) => ({ ...input, limit: input.limit ?? 10 }))
+  )
+  expect(schema.parse({ query: "regulations", limit: null, cursor: null })).toEqual({
+    query: "regulations",
+    limit: 10
+  })
+})
+
 it("admits configured production research before checking cancellation", async () => {
   const cancellation = new Error("Request cancelled")
   await expect(
@@ -785,23 +1006,28 @@ it("uses canonical schema defaults when validating continuation filters", async 
   expect(searchBillText).toHaveBeenCalledTimes(2)
 })
 
-it("charges every rejected selection to the existing call budget and offers recovery only once", async () => {
-  const getBillText = vi.fn<LegislationQueryApi["getBillText"]>()
+it("keeps selection validation beyond 24 calls and permits valid research after rejected selections", async () => {
+  const getBillText = vi.fn<LegislationQueryApi["getBillText"]>(async () => ({
+    document: selectionDocument,
+    sections: [],
+    nextCursor: null
+  }))
   const fixture = selectionTools({ getBillText })
   const input = { ...selectionInput, cursor: "invented" }
   await expect(callWebTool("get_bill_text", input, fixture.tools)).rejects.toMatchObject({
     code: "invalid_cursor",
     recovery: { action: "restart" }
   })
-  for (let index = 1; index < researchAgentLimits.calls; index++) {
+  for (let index = 1; index < 30; index++) {
     await expect(callWebTool("get_bill_text", input, fixture.tools)).rejects.toMatchObject({
       code: "invalid_cursor",
       recovery: { action: "answer" }
     })
   }
-  await expect(callWebTool("get_bill_text", input, fixture.tools)).rejects.toMatchObject({ code: "step_limit" })
   expect(getBillText).not.toHaveBeenCalled()
-  expect(fixture.report).toHaveBeenCalledTimes(researchAgentLimits.calls + 1)
+  expect(fixture.report).toHaveBeenCalledTimes(30)
+  await callWebTool("get_bill_text", selectionInput, fixture.tools)
+  expect(getBillText).toHaveBeenCalledOnce()
 })
 
 it("delivers exact recovery to the SDK model and preserves answer synthesis after repeated failed reads", async () => {
@@ -817,7 +1043,7 @@ it("delivers exact recovery to the SDK model and preserves answer synthesis afte
   })
   const fixture = selectionTools({ getBillText })
   const scriptedCalls = [
-    { name: "get_bill", input: { id: selectionBillId, childLimit: null } },
+    { name: "get_bill", input: { id: selectionBillId, childLimit: null, cursor: null } },
     { name: "get_bill_text", input: { ...selectionInput, documentId: alteredDocumentId, cursor: null } },
     { name: "get_bill_text", input: { ...selectionInput, cursor: null } }
   ]
@@ -825,13 +1051,13 @@ it("delivers exact recovery to the SDK model and preserves answer synthesis afte
     "Research is incomplete: the read failed, and a definitions heading does not establish whether duties are absent."
   let generations = 0
   const model = new MockLanguageModelV4({
-    doStream: async ({ toolChoice }) => {
+    doStream: async () => {
       const call = scriptedCalls[generations] ?? {
         name: "get_bill_text",
         input: { ...selectionInput, cursor: "invented" }
       }
       generations++
-      const isSynthesis = toolChoice?.type === "none"
+      const isSynthesis = generations > 12
       return {
         stream: new ReadableStream({
           start(controller) {
@@ -892,8 +1118,8 @@ it("delivers exact recovery to the SDK model and preserves answer synthesis afte
     ])
   )
   expect(getBillText.mock.calls).toEqual([[{ ...selectionInput, documentId: alteredDocumentId }], [selectionInput]])
-  expect(model.doStreamCalls).toHaveLength(researchAgentLimits.steps)
-  expect(model.doStreamCalls.at(-1)?.toolChoice?.type).toBe("none")
+  expect(model.doStreamCalls).toHaveLength(13)
+  expect(model.doStreamCalls.at(-1)?.toolChoice?.type).not.toBe("none")
   expect(text).toBe(answer)
   expect(fixture.record).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -1147,22 +1373,20 @@ it.each(
 )
 
 it.each([
-  { name: "get_organization", root: "organization", id: "organization:us:one", collection: "organization-children" },
-  { name: "get_event", root: "event", id: "event:us:one", collection: "meeting-agenda" },
-  { name: "get_supporting_material", root: "material", id: "material:us:one", collection: "material-sections" }
-])("offers supported recovery when $name identity cannot fit", async ({ name, root, id, collection }) => {
+  { name: "get_organization", root: "organization", id: "organization:us:one" },
+  { name: "get_event", root: "event", id: "event:us:one" },
+  { name: "get_supporting_material", root: "material", id: "material:us:one" }
+])("reconstructs $name identity when it exceeds one transport page", async ({ name, root, id }) => {
   const read = vi.fn<LegislationQueryApi["getOrganization"]>(async () => ({
     [root]: { id, description: "x".repeat(researchResultByteLimit) }
   }))
   const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
   const fixture = selectionTools({ getOrganization: read, getEvent: read, getSupportingMaterial: read }, { onContents })
-  await expect(callWebTool(name, { id }, fixture.tools)).rejects.toMatchObject({
-    code: "result_limit",
-    recovery: { action: "narrow", instruction: expect.stringContaining(collection) }
-  })
-  expect(read).toHaveBeenCalledOnce()
-  expect(onContents).not.toHaveBeenCalled()
-  expect(fixture.record).toHaveBeenCalledWith(expect.objectContaining({ failure: "result_limit" }))
+  const result = await readFragmentedTool(name, { id }, fixture.tools)
+  expect(result.data).toMatchObject({ [root]: { id, description: "x".repeat(researchResultByteLimit) } })
+  expect(read).toHaveBeenCalledTimes(result.count)
+  expect(onContents).toHaveBeenCalledOnce()
+  expect(fixture.report).not.toHaveBeenCalled()
 })
 
 it.each([178500, 320000])(
@@ -1281,23 +1505,61 @@ it.each([178500, 320000])(
   }
 )
 
-it("gives supported collection recovery when the person identity itself exceeds the budget", async () => {
+async function readFragmentedTool(
+  name: string,
+  input: Record<string, unknown>,
+  tools: ReturnType<typeof createResearchTools>
+) {
+  let cursor: string | undefined
+  let text = ""
+  for (let count = 0; count < 100; count++) {
+    const output = await callWebTool(name, { ...input, cursor }, tools)
+    expect(Buffer.byteLength(researchModelOutput({ output }).value, "utf8")).toBeLessThanOrEqual(
+      researchResultByteLimit
+    )
+    const page = z
+      .object({
+        data: researchResultFragmentSchema,
+        evidence: z.array(evidenceSnapshotSchema),
+        assembly: z.object({ status: z.enum(["pending", "complete"]) }),
+        evidencePage: z.object({ nextCursor: z.string().nullable(), partial: z.boolean() }).optional(),
+        resultSet: z.unknown().optional()
+      })
+      .parse(output)
+    expect(page.data.partialResult.textOffset).toBe(text.length)
+    text += page.data.partialResult.text
+    const complete = page.data.partialResult.nextTextOffset === null
+    expect(page.assembly.status).toBe(complete ? "complete" : "pending")
+    if (complete) {
+      return { data: z.json().parse(JSON.parse(text)), page, count: count + 1 }
+    }
+    expect(page.evidence).toEqual([])
+    expect(page.resultSet).toBeUndefined()
+    cursor = page.data.nextCursor ?? undefined
+    expect(cursor).toBeDefined()
+  }
+  throw new Error("Fragment continuation did not terminate")
+}
+
+it("reconstructs oversized person identity before registering citations or presentation content", async () => {
   const id = "person:congress:d000617"
+  const person = { id, name: "Suzan DelBene", biography: "x".repeat(researchResultByteLimit) }
   const getPerson = vi.fn<LegislationQueryApi["getPerson"]>(async () => ({
-    person: { id, name: "Suzan DelBene", biography: "x".repeat(researchResultByteLimit) },
+    person,
     terms: [],
     memberships: { items: [] },
     sponsoredBills: { items: [] }
   }))
   const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
   const fixture = selectionTools({ getPerson }, { onContents })
-  await expect(callWebTool("get_person", { id }, fixture.tools)).rejects.toMatchObject({
-    code: "result_limit",
-    recovery: { action: "narrow", instruction: expect.stringContaining("those inputs are unsupported") }
-  })
-  expect(getPerson).toHaveBeenCalledOnce()
-  expect(onContents).not.toHaveBeenCalled()
-  expect(fixture.record).toHaveBeenCalledWith(expect.objectContaining({ failure: "result_limit" }))
+  const result = await readFragmentedTool("get_person", { id }, fixture.tools)
+  expect(result.data).toMatchObject({ person })
+  expect(result.page.evidence).toEqual(
+    expect.arrayContaining([expect.objectContaining({ recordId: id, title: person.name, citationRef: "e1" })])
+  )
+  expect(getPerson).toHaveBeenCalledTimes(result.count)
+  expect(onContents).toHaveBeenCalledOnce()
+  expect(fixture.report).not.toHaveBeenCalled()
 })
 
 it.each(["get_vote", "get_votes", "get_bill_votes"])(
@@ -1401,9 +1663,10 @@ it.each(["get_vote", "get_votes", "get_bill_votes"])(
   }
 )
 
-it("reports an indivisible vote position that exceeds the enriched budget without publishing or retrying", async () => {
+it("reconstructs an indivisible vote position that exceeds the enriched budget", async () => {
+  vi.spyOn(resultStore, "persist").mockResolvedValue(undefined)
   const detail = {
-    vote: { id: "vote:congress:house-119-1-190", question: "On passage" },
+    vote: { id: "vote:congress:house-119-1-190", question: "On passage", motion: "On passage" },
     positions: [
       {
         person: { id: "person:congress:one", name: "Member", biography: "" },
@@ -1418,31 +1681,152 @@ it("reports an indivisible vote position that exceeds the enriched budget withou
   const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
   const onResultSet = vi.fn<NonNullable<Parameters<typeof createResearchTools>[7]>>(() => "r1")
   const fixture = selectionTools({ getVote }, { sessionKey: crypto.randomUUID(), onContents, onResultSet })
-  await expect(callWebTool("get_vote", { id: detail.vote.id }, fixture.tools)).rejects.toMatchObject({
-    code: "result_limit",
-    message: expect.stringContaining("did not establish complete coverage")
-  })
-  expect(getVote).toHaveBeenCalledOnce()
-  expect(onContents).not.toHaveBeenCalled()
-  expect(onResultSet).not.toHaveBeenCalled()
-  expect(fixture.record).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ failure: "result_limit" }))
-  expect(fixture.report).toHaveBeenCalledOnce()
+  const result = await readFragmentedTool("get_vote", { id: detail.vote.id }, fixture.tools)
+  expect(result.data).toMatchObject(detail)
+  expect(result.page.evidence.length).toBeGreaterThan(0)
+  expect(getVote).toHaveBeenCalledTimes(result.count)
+  expect(onContents).toHaveBeenCalledOnce()
+  expect(onResultSet).toHaveBeenCalledOnce()
+  expect(fixture.report).not.toHaveBeenCalled()
 })
 
-it("keeps raw-budget rejection measured and does not treat an oversized record as no evidence", async () => {
+it("measures finite transport pages and keeps exact oversized titles behind bounded citation labels", async () => {
+  const bill = { id: selectionBillId, title: "Recorded bill ".repeat(15000), detail: "Exact metadata" }
   const getBill = vi.fn<LegislationQueryApi["getBill"]>(async () => ({
-    bill: { id: selectionBillId, title: "Recorded bill", detail: "x".repeat(researchResultByteLimit) }
+    bill
   }))
   const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
   const fixture = selectionTools({ getBill }, { onMeasurement })
-  await expect(callWebTool("get_bill", { id: selectionBillId }, fixture.tools)).rejects.toMatchObject({
-    code: "result_limit",
-    recovery: { action: "narrow", instruction: expect.stringContaining("childLimit: 1") }
-  })
+  const result = await readFragmentedTool("get_bill", { id: selectionBillId }, fixture.tools)
+  expect(result.data).toMatchObject({ bill })
+  expect(result.page.evidence[0]?.title).toHaveLength(1000)
+  expect(result.page.evidence[0]?.billIdentity?.id).toBe(selectionBillId)
   const measured = onMeasurement.mock.calls[0]?.[0]
-  expect(measured?.rawResultBytes).toBeGreaterThan(researchResultByteLimit)
-  expect(measured).toMatchObject({ enrichedResultBytes: null, modelResultBytes: null, outcome: "error" })
-  expect(getBill).toHaveBeenCalledOnce()
+  expect(measured?.rawResultBytes).toBeLessThanOrEqual(researchResultByteLimit)
+  expect(measured).toMatchObject({ outcome: "success" })
+  expect(getBill).toHaveBeenCalledTimes(result.count)
+  expect(fixture.report).not.toHaveBeenCalled()
+})
+
+it("pages reconstructed citation enrichment independently without extra dependency reads or lost quotes", async () => {
+  const attachments = Array.from({ length: 12 }, (_, index) => ({
+    id: `material:us:report-${index}`,
+    title: `Report ${index}`,
+    sourceUrl: `https://example.org/report-${index}`,
+    text: `${index}:` + "Exact passage ".repeat(1100)
+  }))
+  const data = { bill: { id: selectionBillId, title: "Bill" }, attachments }
+  const getBill = vi.fn<LegislationQueryApi["getBill"]>(async () => data)
+  const fixture = selectionTools(
+    { getBill },
+    { onContents: vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>() }
+  )
+  const result = await readFragmentedTool("get_bill", { id: selectionBillId }, fixture.tools)
+  expect(result.data).toEqual(data)
+  const evidence = [...result.page.evidence]
+  let cursor = result.page.evidencePage?.nextCursor
+  expect(cursor).toBeTruthy()
+  const calls = getBill.mock.calls.length
+  while (cursor) {
+    const output = await callWebTool("get_bill", { id: selectionBillId, cursor }, fixture.tools)
+    expect(Buffer.byteLength(researchModelOutput({ output }).value)).toBeLessThanOrEqual(researchResultByteLimit)
+    const page = z
+      .object({
+        evidence: z.array(evidenceSnapshotSchema),
+        evidencePage: z.object({ nextCursor: z.string().nullable() })
+      })
+      .parse(output)
+    expect(page.evidence.length).toBeGreaterThan(0)
+    evidence.push(...page.evidence)
+    cursor = page.evidencePage.nextCursor
+  }
+  expect(getBill).toHaveBeenCalledTimes(calls)
+  for (const attachment of attachments) {
+    expect(evidence).toContainEqual(
+      expect.objectContaining({
+        recordId: attachment.id,
+        sourceUrl: attachment.sourceUrl,
+        citationRef: expect.any(String),
+        content: expect.objectContaining({ state: "available", quote: attachment.text })
+      })
+    )
+  }
+  expect(new Set(evidence.map((source) => source.citationRef)).size).toBe(evidence.length)
+  expect(fixture.report).not.toHaveBeenCalled()
+})
+
+it("registers catalog transport continuations without treating schema examples as evidence", async () => {
+  const catalog = { ...describeAnalytics(), explanation: "Catalog detail ".repeat(15000) }
+  const fixture = selectionTools({ describeAnalytics: async () => catalog, analyzeLegislation: async () => ({}) })
+  const result = await readFragmentedTool("describe_analytics", {}, fixture.tools)
+  expect(result.data).toEqual(catalog)
+  expect(result.page.evidence).toEqual([])
+  expect(fixture.record).not.toHaveBeenCalled()
+  expect(fixture.report).not.toHaveBeenCalled()
+  expect((await fixture.tools).get_bill?.description).toContain("assembly.status")
+  expect((await fixture.tools).get_bill?.description).toContain("evidencePage.nextCursor")
+})
+
+it("continues oversized analytics from the same receipt snapshot instead of reexecuting a volatile query", async () => {
+  const analyzeLegislation = vi.fn<NonNullable<LegislationQueryApi["analyzeLegislation"]>>(async () => ({
+    rows: [{ title: "Exact grouped title ".repeat(10000), total: 1 }],
+    receipt: { executedAt: new Date().toISOString(), execution: crypto.randomUUID() }
+  }))
+  const fixture = selectionTools({ analyzeLegislation })
+  const input = { dataset: "bills", metrics: [{ name: "total", operation: "countDistinct", field: "id" }] }
+  const result = await readFragmentedTool("analyze_legislation", input, fixture.tools)
+  expect(result.data).toEqual(await analyzeLegislation.mock.results[0]?.value)
+  expect(analyzeLegislation).toHaveBeenCalledOnce()
+  expect(fixture.report).not.toHaveBeenCalled()
+})
+
+it("keeps section-window citations distinct, explicitly partial and faithful to the selected document", async () => {
+  const text = "🏛".repeat(50000)
+  const sourceUrl = "https://example.org/selected-version"
+  const fixture = selectionTools({
+    getBillText: async () => ({
+      document: { ...selectionDocument, title: "Selected version", sourceUrl },
+      sections: [{ id: "section:large", documentId: selectionDocument.id, heading: "Section 1", text }],
+      nextCursor: null
+    })
+  })
+  let cursor: string | undefined
+  let reconstructed = ""
+  const references = new Set<string>()
+  for (let index = 0; index < 10; index++) {
+    const output = await callWebTool("get_bill_text", { ...selectionInput, cursor }, fixture.tools)
+    expect(Buffer.byteLength(researchModelOutput({ output }).value)).toBeLessThanOrEqual(researchResultByteLimit)
+    const page = z
+      .object({
+        data: z.object({
+          partial: z.literal(true),
+          sections: z.array(z.object({ text: z.string(), textOffset: z.number() })),
+          nextCursor: z.string().nullish()
+        }),
+        evidence: z.array(evidenceSnapshotSchema)
+      })
+      .parse(output)
+    const section = page.data.sections[0]!
+    expect(section.textOffset).toBe(Array.from(reconstructed).length)
+    const citation = page.evidence.find((source) => source.content.state === "available")!
+    expect(citation).toMatchObject({
+      recordId: selectionDocument.id,
+      billId: selectionBillId,
+      sourceUrl,
+      content: { state: "available", quote: section.text, truncated: true }
+    })
+    expect(references.has(citation.id)).toBe(false)
+    references.add(citation.id)
+    reconstructed += section.text
+    cursor = page.data.nextCursor ?? undefined
+    if (!cursor) {
+      break
+    }
+  }
+  expect(cursor).toBeUndefined()
+  expect(reconstructed).toBe(text)
+  expect(references.size).toBeGreaterThan(1)
+  expect(fixture.report).not.toHaveBeenCalled()
 })
 
 it("measures accepted output in UTF-8 bytes and distinguishes dependency time from whole-tool time", async () => {
@@ -1659,6 +2043,30 @@ it.each([
     expect(JSON.stringify(report.mock.calls)).not.toMatch(/private|Private/)
   }
 )
+
+it("reports an acquisition timeout accurately without exposing the driver error or blaming the question", async () => {
+  runtimeRun.mockRejectedValueOnce(
+    new LegislationError("dependency_unavailable", "The database connection timed out.", {
+      cause: new Error("timeout exceeded when trying to connect"),
+      details: { reason: "timeout", retryable: true }
+    })
+  )
+  const report = vi.fn<() => void>()
+  const tools = createResearchTools({ NODE_ENV: "development" }, new AbortController().signal, () => true, report)
+  await expect(callWebTool("get_bill_timeline", { limit: 100, id: "bill:us:119:hr:1" }, tools)).rejects.toMatchObject({
+    code: "timeout",
+    message: expect.stringContaining("This research operation timed out before it could finish. Try again.")
+  })
+  expect(report).toHaveBeenCalledWith(
+    expect.objectContaining({
+      stage: "dependency",
+      error: expect.objectContaining({ code: "timeout" }),
+      measurement: expect.objectContaining({ failureCode: "timeout", outcome: "error" })
+    })
+  )
+  expect(runtimeRun).toHaveBeenCalledOnce()
+  expect(JSON.stringify(report.mock.calls)).not.toContain("timeout exceeded when trying to connect")
+})
 
 it("preserves the exact timeline call and date/null evidence without a hidden retry", async () => {
   const events = [

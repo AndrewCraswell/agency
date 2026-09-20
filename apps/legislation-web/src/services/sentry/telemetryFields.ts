@@ -43,7 +43,6 @@ export const telemetryFields = {
     "not_found",
     "forbidden",
     "invalid_response",
-    "step_limit",
     "interrupted",
     "internal"
   ]),

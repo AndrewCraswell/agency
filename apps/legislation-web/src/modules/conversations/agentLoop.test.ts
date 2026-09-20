@@ -2,7 +2,7 @@ import { dynamicTool } from "ai"
 import { MockLanguageModelV4 } from "ai/test"
 import { expect, it, vi } from "vitest"
 import { z } from "zod"
-import { researchAgentLimits, runResearchAgent } from "./agent"
+import { runResearchAgent } from "./agent"
 import { collectChatStream } from "./capture"
 import { ResearchFailure } from "./researchFailure"
 
@@ -11,32 +11,36 @@ vi.mock("@langfuse/tracing", () => ({
 }))
 
 it.each([
-  { callsPerStep: 1, shouldFail: false, expectedSteps: 8 },
-  { callsPerStep: 1, shouldFail: true, expectedSteps: 8 },
-  { callsPerStep: 24, shouldFail: false, expectedSteps: 1 },
-  { callsPerStep: 25, shouldFail: true, expectedSteps: 1 }
+  { callsPerStep: 3, shouldFail: false, researchSteps: 12, ending: "answer" },
+  { callsPerStep: 3, shouldFail: true, researchSteps: 12, ending: "answer" },
+  { callsPerStep: 30, shouldFail: false, researchSteps: 1, ending: "answer" },
+  { callsPerStep: 3, shouldFail: false, researchSteps: 12, ending: "clarification" },
+  { callsPerStep: 1, shouldFail: false, researchSteps: 26, ending: "cancel" }
 ])(
-  "synthesizes after $expectedSteps tool-only steps with $callsPerStep calls and failures=$shouldFail",
-  async ({ callsPerStep, shouldFail, expectedSteps }) => {
+  "continues for $researchSteps steps with $callsPerStep calls and failures=$shouldFail until $ending",
+  async ({ callsPerStep, shouldFail, researchSteps, ending }) => {
     let generations = 0
     let calls = 0
+    const abort = new AbortController()
     const prepareStep = vi.fn<NonNullable<Parameters<typeof runResearchAgent>[0]["prepareStep"]>>(() => ({
       toolChoice: "auto"
     }))
     const execute = vi.fn<() => Promise<unknown>>(async () => {
       calls++
-      if (calls > researchAgentLimits.calls) {
-        throw new ResearchFailure("step_limit", "fixture-budget")
+      if (ending === "cancel" && calls === researchSteps * callsPerStep) {
+        abort.abort()
       }
       if (shouldFail) {
         throw new ResearchFailure("dependency_unavailable", "fixture-failure")
       }
       return { evidence: "Agencies must publish procurement reports." }
     })
+    const clarify = vi.fn<() => Promise<{ question: string }>>(async () => ({ question: "Which jurisdiction?" }))
     const model = new MockLanguageModelV4({
-      doStream: async ({ toolChoice }) => {
+      doStream: async () => {
         generations++
-        const isSynthesis = toolChoice?.type === "none"
+        const isEnding = generations > researchSteps
+        const isSynthesis = isEnding && ending !== "clarification"
         return {
           stream: new ReadableStream({
             start(controller) {
@@ -49,6 +53,13 @@ it.each([
                   delta: shouldFail ? "Research is incomplete." : "Agencies must publish procurement reports."
                 })
                 controller.enqueue({ type: "text-end", id: "answer" })
+              } else if (isEnding) {
+                controller.enqueue({
+                  type: "tool-call",
+                  toolCallId: "clarification",
+                  toolName: "ask_clarification",
+                  input: "{}"
+                })
               } else {
                 for (let call = 0; call < callsPerStep; call++) {
                   controller.enqueue({
@@ -78,29 +89,37 @@ it.each([
     })
     const result = await collectChatStream(
       runResearchAgent({
-        sessionId: "bounded-research",
+        sessionId: "continued-research",
         model,
         instructions: "Answer the procurement question.",
         messages: [{ role: "user", content: "What must agencies disclose?" }],
-        tools: { get_bill: dynamicTool({ inputSchema: z.object({}), execute }) },
-        signal: new AbortController().signal,
+        tools: {
+          get_bill: dynamicTool({ inputSchema: z.object({}), execute }),
+          ask_clarification: dynamicTool({ inputSchema: z.object({}), execute: clarify })
+        },
+        signal: abort.signal,
         prepareStep
       }).stream
     )
-    expect(model.doStreamCalls).toHaveLength(expectedSteps + 1)
-    const synthesis = model.doStreamCalls.at(-1)
-    expect(JSON.stringify(synthesis?.prompt)).toContain("finish with an answer from the evidence already retrieved")
-    expect(synthesis?.prompt.some((message) => message.role === "tool")).toBe(true)
-    expect(synthesis?.toolChoice?.type).toBe("none")
-    expect(prepareStep).toHaveBeenCalledTimes(expectedSteps + 1)
-    expect(execute).toHaveBeenCalledTimes(expectedSteps * callsPerStep)
-    expect(result.output).toMatchObject({
-      termination: "stop",
-      text: shouldFail ? "Research is incomplete." : "Agencies must publish procurement reports."
-    })
-    expect(result.events.filter((event) => event.type === "call")).toHaveLength(expectedSteps * callsPerStep)
+    const expectedGenerations = researchSteps + (ending === "cancel" ? 0 : 1)
+    expect(model.doStreamCalls).toHaveLength(expectedGenerations)
+    expect(model.doStreamCalls.every((call) => call.toolChoice?.type === "auto")).toBe(true)
+    expect(prepareStep).toHaveBeenCalledTimes(expectedGenerations)
+    expect(execute).toHaveBeenCalledTimes(researchSteps * callsPerStep)
+    const expectedOutput =
+      ending === "answer"
+        ? {
+            termination: "stop",
+            text: shouldFail ? "Research is incomplete." : "Agencies must publish procurement reports."
+          }
+        : { termination: ending === "cancel" ? "abort" : "clarification", text: "" }
+    expect(result.output).toMatchObject(expectedOutput)
+    expect(clarify).toHaveBeenCalledTimes(ending === "clarification" ? 1 : 0)
+    expect(result.events.filter((event) => event.type === "call" && event.tool === "get_bill")).toHaveLength(
+      researchSteps * callsPerStep
+    )
     expect(result.events.filter((event) => event.type === "error")).toHaveLength(
-      shouldFail ? expectedSteps * callsPerStep : 0
+      shouldFail ? researchSteps * callsPerStep : 0
     )
   }
 )

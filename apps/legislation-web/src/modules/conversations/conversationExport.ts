@@ -77,18 +77,3 @@ export function createConversationExport(options: {
     }
   })
 }
-
-export function downloadConversationExport(conversationId: string, payload: unknown) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = `rostra-conversation-${conversationId.replace(/[^a-z0-9_-]/gi, "_")}.json`
-  document.body.append(anchor)
-  try {
-    anchor.click()
-  } finally {
-    anchor.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
-}

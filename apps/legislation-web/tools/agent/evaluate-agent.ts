@@ -3,7 +3,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { parseArgs } from "node:util"
 import { z } from "zod"
-import { createResearchModel, researchAgentLimits } from "../../src/modules/conversations/agent"
+import { createResearchModel, researchAgentSettings } from "../../src/modules/conversations/agent"
 import { composeResearchInstructions } from "../../src/modules/conversations/composition"
 import { getResearchPrompt, researchDateContext } from "../../src/modules/conversations/prompt"
 import {
@@ -65,7 +65,7 @@ const frozenManifestSchema = z.object({
   datasetVersion: z.string(),
   caseHashes: z.array(z.object({ id: z.string(), hash: z.string() })),
   sources: z.array(z.object({ file: z.string(), hash: z.string().nullable() })),
-  limits: z.unknown(),
+  agentSettings: z.unknown(),
   prompts: z.array(z.object({ name: z.string(), version: z.number(), hash: z.string() })),
   synced: z.object({ ids: z.record(z.string(), z.string()), timestamp: z.string() }),
   evaluatorPrompts: z.object({ judge: promptSnapshotSchema, critic: promptSnapshotSchema }).optional()
@@ -330,7 +330,7 @@ async function main() {
       version: prompt.version,
       hash: digest(prompt.prompt)
     })),
-    limits: researchAgentLimits,
+    agentSettings: researchAgentSettings,
     judgeHash: digest(judgeInstructions),
     criticHash: digest(criticInstructions),
     evaluatorPrompts,
@@ -341,7 +341,7 @@ async function main() {
       digest(frozen.sources) !== digest(sources) ||
       frozen.datasetHash !== manifest.datasetHash ||
       digest(frozen.prompts) !== digest(manifest.prompts) ||
-      digest(frozen.limits) !== digest(researchAgentLimits)
+      digest(frozen.agentSettings) !== digest(researchAgentSettings)
     ) {
       throw new Error("Frozen run inputs or source code changed; start a new run rather than mixing results.")
     }

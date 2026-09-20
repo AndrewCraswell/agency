@@ -41,6 +41,19 @@ function definition(api: LegislationQueryApi, name: string) {
 }
 
 describe("shared research definitions", () => {
+  it("lets dependency-owned deadlines govern work beyond the former registry timer", async () => {
+    vi.useFakeTimers()
+    try {
+      const pending = Promise.withResolvers<{ items: [] }>()
+      const api = { ...service(), searchBills: () => pending.promise }
+      const result = definition(api, "search_bills").execute({ query: "student privacy" })
+      await vi.advanceTimersByTimeAsync(31_000)
+      pending.resolve({ items: [] })
+      await expect(result).resolves.not.toMatchObject({ isError: true })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
   it("registers bounded legal passage tools only for an authorized legal service", async () => {
     const versionId = "00000000-0000-4000-8000-000000000001"
     const editionId = "00000000-0000-4000-8000-000000000002"
@@ -300,7 +313,7 @@ describe("shared research definitions", () => {
     expect(data.memberships.nextCursor).toBe("members-page")
   })
 
-  it("permits an identity-only person preview but never trims oversized identity or provenance", async () => {
+  it("permits an identity-only preview and losslessly continues oversized person identity", async () => {
     const person = { id: "person:congress:m001111", name: "Patty Murray", sourceUrl: "https://example.gov/person" }
     const data = {
       person,
@@ -316,15 +329,55 @@ describe("shared research definitions", () => {
     expect(result).toHaveProperty("structuredContent.data.termsTruncated", true)
     expect(result).toHaveProperty("structuredContent.data.truncated", true)
     expect(result).toHaveProperty("structuredContent.data.person", person)
-    const oversized = await definition(
+    const oversizedTool = definition(
       {
         ...service(),
         getPerson: async () => ({ ...data, person: { ...person, biography: "x".repeat(researchResultByteLimit) } })
       },
       "get_person"
-    ).execute({ id: person.id })
-    expect(oversized).toHaveProperty("isError", true)
-    expect(JSON.parse(oversized.content[0]!.text)).toMatchObject({ error: "payload_too_large", retryable: false })
+    )
+    const oversized = await oversizedTool.execute({ id: person.id })
+    expect(oversized).toHaveProperty("structuredContent.data.partialResult.textOffset", 0)
+    assert.ok("structuredContent" in oversized)
+    const firstPage = oversized.structuredContent.data
+    assert.ok(firstPage && typeof firstPage === "object" && !Array.isArray(firstPage))
+    const continued = await oversizedTool.execute({ id: person.id, cursor: firstPage.nextCursor })
+    expect(continued).toHaveProperty("structuredContent.data.partialResult.textOffset", 10000)
+  })
+
+  it("reconstructs an oversized singleton through registry cursors without passing them to its query", async () => {
+    const id = "amendment:us:one"
+    const source = {
+      amendment: {
+        id,
+        title: "Source amendment",
+        sourceUrl: "https://example.gov/amendment",
+        description: "Exact 🙂 source text.\n".repeat(12000)
+      }
+    }
+    const getAmendment = vi.fn<LegislationQueryApi["getAmendment"]>(async () => source)
+    const tool = definition({ ...service(), getAmendment }, "get_amendment")
+    let cursor: unknown
+    let text = ""
+    let pages = 0
+    do {
+      const result = await tool.execute({ id, cursor })
+      assert.ok("structuredContent" in result)
+      expect(Buffer.byteLength(JSON.stringify(result.structuredContent))).toBeLessThanOrEqual(researchResultByteLimit)
+      const data = result.structuredContent.data
+      assert.ok(data && typeof data === "object" && !Array.isArray(data))
+      const fragment = data.partialResult
+      assert.ok(fragment && typeof fragment === "object" && !Array.isArray(fragment))
+      assert.ok(typeof fragment.text === "string")
+      expect(fragment.textOffset).toBe(text.length)
+      text += fragment.text
+      cursor = data.nextCursor
+      expect(fragment.nextTextOffset).toBe(cursor ? text.length : null)
+      expect(++pages).toBeLessThan(100)
+    } while (cursor)
+    expect(JSON.parse(text)).toEqual(source)
+    expect(pages).toBeGreaterThan(1)
+    expect(getAmendment.mock.calls).toEqual(Array.from({ length: pages }, () => [{ id }]))
   })
 
   it("rejects vote continuation after source data or selection changes", async () => {
@@ -439,12 +492,12 @@ describe("shared research definitions", () => {
     expect(read).toHaveBeenCalledTimes(3)
     expect(read).toHaveBeenLastCalledWith({ id, limit: 2, cursor: "upstream" })
     const oversized = vi.fn(async () => ({ [collection]: [{ text: "x".repeat(researchResultByteLimit) }] }))
-    const failure = await definition(
+    const partial = await definition(
       { ...service(), getBillTimeline: oversized, getSupportingMaterial: oversized },
       name
     ).execute({ id })
-    expect(failure).toHaveProperty("isError", true)
-    expect(JSON.parse(failure.content[0]!.text)).toMatchObject({ error: "payload_too_large", retryable: false })
+    expect(partial).toHaveProperty("structuredContent.data.partial", true)
+    expect(partial).toHaveProperty("structuredContent.data.nextCursor")
   })
 
   it.each([
@@ -589,7 +642,7 @@ describe("shared research definitions", () => {
     expect(JSON.parse(result.content[0]!.text)).toMatchObject({
       error: "payload_too_large",
       retryable: false,
-      message: expect.stringContaining("One vote position or its attribution")
+      message: expect.stringContaining("response envelope exceeds the budget")
     })
     expect(getVote).toHaveBeenCalledOnce()
   })

@@ -165,4 +165,87 @@ describe("canonical bill identity across research turns", () => {
       expect(contentOptions(content)).toMatchObject({ recordId: documentId, billId: bill.id, versionLabel: "is" })
     }
   })
+
+  it("carries retrieved document-parent identity into model input and presentation choices", () => {
+    for (const bill of bills) {
+      const documentId = `document:${bill.id}:introduced`
+      const sources = projector()({
+        document: {
+          id: documentId,
+          billId: bill.id,
+          bill,
+          classification: "version",
+          title: "Introduced in Senate",
+          versionCode: "is"
+        },
+        sections: [{ id: "section:1", documentId, text: "Fixture operative text." }]
+      })
+      const source = sources.find((item) => item.content.state === "available")
+      invariant(source)
+      expect(source.billIdentity).toEqual(bill)
+      expect(source.title).toContain(`${bill.identifier} (`)
+      expect(source.title).toContain(bill.title)
+      expect(source.versionLabel).toBe("Introduced in Senate")
+      const content: PresentationContent = { id: contentId, kind: "evidence", evidence: source }
+      expect(contentOptions(content)).toMatchObject({
+        recordId: documentId,
+        billId: bill.id,
+        billIdentity: bill,
+        label: source.title,
+        versionLabel: "Introduced in Senate"
+      })
+      const output = z
+        .object({ evidence: z.array(z.object({ title: z.string(), billIdentity: z.unknown() })) })
+        .parse(JSON.parse(researchModelOutput({ output: { evidence: [source] } }).value))
+      expect(output.evidence[0]).toMatchObject({ title: source.title, billIdentity: bill })
+    }
+  })
+
+  it("retains new version citation titles across research memory without retaining the raw result", async () => {
+    const saved = new Map<string, unknown>()
+    const persistence: ResearchSnapshotPersistence = {
+      save: async (id, value) => {
+        saved.set(id, value)
+      },
+      read: async (_key, id) => saved.get(id)
+    }
+    const bill = bills[0]
+    const documentId = `document:${bill.id}:introduced`
+    const source = projector()({
+      document: {
+        id: documentId,
+        billId: bill.id,
+        bill,
+        classification: "version",
+        title: "Introduced in House",
+        versionCode: "ih",
+        documentDate: "2026-01-13"
+      },
+      sections: [{ id: "section:1", documentId, text: "Fixture operative text." }]
+    }).find((item) => item.content.state === "available")
+    invariant(source)
+    const turn = createResearchTurn(owner.sessionKey, owner.sessionId, "Read the bill text.", () => 0)
+    turn.record({
+      tool: "get_bill_text",
+      input: { id: bill.id, documentId },
+      data: { padding: "x".repeat(96000) },
+      evidence: [source]
+    })
+    await turn.save(runId, false, persistence)
+    const memory = await restoreResearchMemory(
+      owner,
+      [{ role: "assistant", researchRunId: runId }],
+      [],
+      persistence,
+      () => 1
+    )
+    expect(memory.evidence[0]).toMatchObject({
+      title: source.title,
+      versionLabel: "Introduced in House, 2026-01-13",
+      billIdentity: bill,
+      recordId: documentId,
+      content: { state: "available", quote: "Fixture operative text." }
+    })
+    expect(JSON.stringify(memory.message)).toContain(source.title)
+  })
 })

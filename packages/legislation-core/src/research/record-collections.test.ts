@@ -1,3 +1,4 @@
+import { getTableColumns } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { afterAll, describe, expect, it, vi } from "vitest"
@@ -14,6 +15,181 @@ const createdAt = "2026-09-01T00:00:00.000Z"
 
 afterAll(async () => {
   await pool.end()
+})
+
+describe("document collection parent bill identity", () => {
+  const bill = {
+    id: "bill:us:119:s:2937",
+    identifier: "S. 2937",
+    title: "A bill to establish requirements for automated decision systems.",
+    sessionId: "session:us:119"
+  }
+  const document = {
+    id: "document:us:119:s:2937:is",
+    billId: bill.id,
+    title: "Introduced in Senate",
+    classification: "version",
+    versionCode: "is",
+    documentDate: "2025-10-01",
+    sourceUrl: "https://www.congress.gov/bill/119th-congress/senate-bill/2937/text"
+  }
+  const section = {
+    id: "section:2937:1",
+    documentId: document.id,
+    ordinal: 0,
+    heading: "Requirements"
+  }
+  const billRow = Object.values(bill)
+
+  it("joins each bill document to its exact persisted parent without replacing the published title", async () => {
+    const documentValues: Record<string, unknown> = document
+    const documentRow = Object.keys(getTableColumns(schema.billDocuments))
+      .filter((key) => key !== "text")
+      .map((key) => documentValues[key] ?? null)
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(async () => ({
+      rows: [[...documentRow, ...billRow]],
+      fields: [],
+      command: "SELECT",
+      rowCount: 1,
+      oid: 0
+    }))
+    try {
+      const result = await readRecordCollection(database, {
+        collection: "bill-documents",
+        recordId: bill.id,
+        limit: 2
+      })
+      expect(result.items).toEqual([expect.objectContaining({ ...document, bill })])
+      expect(result.items[0]).not.toHaveProperty("text")
+      expect(result.truncated).toBe(false)
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain('inner join "legislation"."bills"')
+      expect(statement).toContain('"legislation"."bills"."id" = "legislation"."bill_documents"."bill_id"')
+      expect(query.mock.calls[0]?.[1]).toEqual([bill.id, 3])
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("returns the parent on section continuation while binding the exact document, section and text offset", async () => {
+    const sectionValues: Record<string, unknown> = section
+    const sectionRow = Object.keys(getTableColumns(schema.documentSections))
+      .filter((key) => key !== "text" && key !== "searchVector")
+      .map((key) => sectionValues[key] ?? null)
+    const row = [
+      ...sectionRow,
+      document.id,
+      section.id,
+      document.title,
+      document.sourceUrl,
+      document.documentDate,
+      document.billId,
+      document.versionCode,
+      "Exact published text",
+      10000,
+      10020,
+      null,
+      document.classification,
+      ...billRow
+    ]
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(async () => ({
+      rows: [row, row],
+      fields: [],
+      command: "SELECT",
+      rowCount: 2,
+      oid: 0
+    }))
+    try {
+      const result = await readRecordCollection(database, {
+        collection: "document-sections",
+        recordId: document.id,
+        sectionId: section.id,
+        textOffset: 10000,
+        limit: 1
+      })
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          ...section,
+          recordId: document.id,
+          sectionId: section.id,
+          title: document.title,
+          classification: document.classification,
+          versionCode: document.versionCode,
+          documentDate: document.documentDate,
+          sourceUrl: document.sourceUrl,
+          billId: bill.id,
+          bill,
+          text: "Exact published text",
+          textOffset: 10000,
+          totalCharacters: 10020,
+          nextTextOffset: null
+        })
+      ])
+      expect(result.truncated).toBe(true)
+      expect(result.nextCursor).toEqual(expect.any(String))
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain('inner join "legislation"."bill_documents"')
+      expect(statement).toContain('inner join "legislation"."bills"')
+      expect(statement).toContain('"legislation"."bills"."id" = "legislation"."bill_documents"."bill_id"')
+      expect(statement).toContain('"bill_documents"."classification"')
+      expect(query.mock.calls[0]?.[1]).toEqual([10001, 10000, 20000, 20000, document.id, section.id, 2])
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("does not join or attach a bill identity to supporting material sections", async () => {
+    const materialSection = { id: "section:report:1", materialId, ordinal: 0, heading: "Report findings" }
+    const sectionValues: Record<string, unknown> = materialSection
+    const sectionRow = Object.keys(getTableColumns(schema.supportingMaterialSections))
+      .filter((key) => key !== "text" && key !== "searchVector")
+      .map((key) => sectionValues[key] ?? null)
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(async () => ({
+      rows: [
+        [
+          ...sectionRow,
+          materialId,
+          materialSection.id,
+          "Committee report",
+          sourceUrl,
+          "2026-09-01",
+          null,
+          null,
+          "Report text",
+          0,
+          11,
+          null
+        ]
+      ],
+      fields: [],
+      command: "SELECT",
+      rowCount: 1,
+      oid: 0
+    }))
+    try {
+      const result = await readRecordCollection(database, { collection: "material-sections", recordId: materialId })
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          ...materialSection,
+          title: "Committee report",
+          billId: null,
+          versionCode: null,
+          text: "Report text"
+        })
+      ])
+      expect(result.items[0]).not.toHaveProperty("bill")
+      expect(result.items[0]).not.toHaveProperty("classification")
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).not.toContain('"legislation"."bills"')
+      expect(statement).not.toContain('"legislation"."bill_documents"')
+      expect(query.mock.calls[0]?.[1]).toEqual([1, 0, 10000, 10000, materialId, 2])
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
 })
 
 describe("supporting material link collections", () => {

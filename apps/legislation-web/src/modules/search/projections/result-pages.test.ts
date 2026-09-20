@@ -1,7 +1,8 @@
 import {
   prepareResultPage,
   readResultPage,
-  researchResultByteLimit
+  researchResultByteLimit,
+  researchResultFragmentSchema
 } from "@repo/legislation-core/research/result-pages"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
@@ -122,11 +123,32 @@ describe("shared research results", () => {
     expect(collected).toEqual(items)
   })
 
-  it("preserves ordinary pages and rejects an individually oversized record instead of clipping it", () => {
+  it("preserves ordinary pages and losslessly fragments an individually oversized record", () => {
     const source = { items: [{ id: "bill:1", text: "source" }] }
     expect(prepareResultPage("search_bill_text", input, source, 0)).toEqual(source)
-    expect(() =>
-      prepareResultPage("search_bill_text", input, { items: [{ text: "x".repeat(researchResultByteLimit) }] }, 0)
-    ).toThrow(/exceeds the response budget/)
+    const oversized = { items: [{ text: "x".repeat(researchResultByteLimit) }] }
+    let request: Record<string, unknown> = { ...input }
+    let text = ""
+    for (let count = 0; count < 100; count++) {
+      const selection = readResultPage("search_bill_text", request)
+      const page = researchResultFragmentSchema.parse(
+        prepareResultPage(
+          "search_bill_text",
+          selection.input,
+          oversized,
+          selection.offset,
+          selection.snapshot,
+          undefined,
+          selection.fragment
+        )
+      )
+      expect(page.partialResult.textOffset).toBe(text.length)
+      text += page.partialResult.text
+      if (!page.nextCursor) {
+        break
+      }
+      request = { ...input, cursor: page.nextCursor }
+    }
+    expect(JSON.parse(text)).toEqual(oversized)
   })
 })

@@ -1,4 +1,9 @@
 import {
+  isTransientHttpStatus,
+  isTransientRequestFailure,
+  waitForRequestRetry
+} from "@repo/legislation-core/api-client/request-retry"
+import {
   embeddingQueryRouteFor,
   embeddingRouteFor,
   type EmbeddingRouteProduct,
@@ -14,6 +19,7 @@ const chatCompletionResponseSchema = z.object({
   choices: z.array(z.object({ message: z.object({ content: z.string().min(1) }) })).min(1),
   model: z.string().trim().min(1).optional()
 })
+const requestTimeoutSchema = z.number().int().min(1).max(300_000).default(30_000)
 
 export interface RerankCandidate {
   id: string
@@ -48,7 +54,10 @@ export interface OpenRouterRetrievalClientOptions {
   baseUrl?: URL
   fetch?: typeof fetch
   maximumAttempts?: number
-  timeoutMs?: number
+  embeddingTimeoutMs?: number
+  rerankTimeoutMs?: number
+  generationTimeoutMs?: number
+  signal?: AbortSignal
 }
 
 export class OpenRouterRetrievalClient implements RetrievalModelClient, ChatCompletionClient {
@@ -57,15 +66,26 @@ export class OpenRouterRetrievalClient implements RetrievalModelClient, ChatComp
   readonly #embeddingClients = new Map<EmbeddingRouteProduct, OpenRouterEmbeddingClient>()
   readonly #fetch: typeof fetch
   readonly #maximumAttempts: number
-  readonly #timeoutMs: number
+  readonly #embeddingTimeoutMs: number
+  readonly #rerankTimeoutMs: number
+  readonly #generationTimeoutMs: number
+  readonly #signal: AbortSignal | undefined
 
   constructor(options: OpenRouterRetrievalClientOptions) {
     this.#apiKey = options.apiKey
     const configuredBaseUrl = options.baseUrl ?? new URL("https://openrouter.ai/api/v1/")
     this.#baseUrl = new URL(`${configuredBaseUrl.href.replace(/\/+$/, "")}/`)
     this.#fetch = options.fetch ?? fetch
-    this.#maximumAttempts = options.maximumAttempts ?? 3
-    this.#timeoutMs = options.timeoutMs ?? 30_000
+    this.#maximumAttempts = z
+      .number()
+      .int()
+      .min(1)
+      .max(10)
+      .parse(options.maximumAttempts ?? 3)
+    this.#embeddingTimeoutMs = requestTimeoutSchema.parse(options.embeddingTimeoutMs)
+    this.#rerankTimeoutMs = requestTimeoutSchema.parse(options.rerankTimeoutMs)
+    this.#generationTimeoutMs = requestTimeoutSchema.parse(options.generationTimeoutMs)
+    this.#signal = options.signal
   }
 
   async embed(product: EmbeddingRouteProduct, input: string[]) {
@@ -77,7 +97,8 @@ export class OpenRouterRetrievalClient implements RetrievalModelClient, ChatComp
         fetch: this.#fetch,
         maximumAttempts: this.#maximumAttempts,
         route: embeddingRouteFor(product),
-        timeoutMs: this.#timeoutMs
+        timeoutMs: this.#embeddingTimeoutMs,
+        signal: this.#signal
       })
       this.#embeddingClients.set(product, client)
     }
@@ -96,65 +117,78 @@ export class OpenRouterRetrievalClient implements RetrievalModelClient, ChatComp
       ...candidate,
       text: candidate.text.slice(0, rerank.inputMaximumCharacters)
     }))
-    for (let attempt = 1; attempt <= this.#maximumAttempts; attempt += 1) {
-      const response = await this.#fetch(new URL("rerank", this.#baseUrl), {
-        body: JSON.stringify({
-          documents: bounded.map((candidate) => candidate.text),
-          model: rerank.model,
-          provider: { allow_fallbacks: false, data_collection: "deny" },
-          query,
-          top_n: bounded.length
-        }),
-        headers: { Authorization: `Bearer ${this.#apiKey}`, "Content-Type": "application/json" },
-        method: "POST",
-        signal: AbortSignal.timeout(this.#timeoutMs)
-      })
-      if (response.ok) {
-        const parsed = rerankResponseSchema.parse(await response.json())
-        return parsed.results.flatMap((result) => {
-          const candidate = bounded[result.index]
-          return candidate === undefined ? [] : [{ ...candidate, relevanceScore: result.relevance_score }]
-        })
-      }
-      const retryable = response.status === 429 || response.status >= 500
-      if (!retryable || attempt === this.#maximumAttempts) {
-        const detail = (await response.text()).replaceAll(/\s+/g, " ").trim().slice(0, 500)
-        throw new Error(
-          `OpenRouter rerank request failed with HTTP ${response.status}${detail.length === 0 ? "" : `: ${detail}`}`
-        )
-      }
-      await new Promise((resolve) => setTimeout(resolve, Math.min(250 * 2 ** (attempt - 1), 2_000)))
-    }
-    throw new Error("OpenRouter rerank request exhausted retries")
+    const body = await this.#request("rerank", {
+      documents: bounded.map((candidate) => candidate.text),
+      model: rerank.model,
+      provider: { allow_fallbacks: false, data_collection: "deny" },
+      query,
+      top_n: bounded.length
+    })
+    const parsed = rerankResponseSchema.parse(JSON.parse(body))
+    return parsed.results.flatMap((result) => {
+      const candidate = bounded[result.index]
+      return candidate === undefined ? [] : [{ ...candidate, relevanceScore: result.relevance_score }]
+    })
   }
 
   async completeChat(input: ChatCompletionRequest): Promise<{
     content: string
     model: string
   }> {
-    const response = await this.#fetch(new URL("chat/completions", this.#baseUrl), {
-      body: JSON.stringify({
-        messages: input.messages,
-        model: input.model,
-        provider: { allow_fallbacks: false, data_collection: "deny" },
-        response_format: input.responseFormat,
-        temperature: input.temperature
-      }),
-      headers: { Authorization: `Bearer ${this.#apiKey}`, "Content-Type": "application/json" },
-      method: "POST",
-      signal: AbortSignal.timeout(this.#timeoutMs)
+    const body = await this.#request("chat/completions", {
+      messages: input.messages,
+      model: input.model,
+      provider: { allow_fallbacks: false, data_collection: "deny" },
+      response_format: input.responseFormat,
+      temperature: input.temperature
     })
-    if (!response.ok) {
-      const detail = (await response.text()).replaceAll(/\s+/g, " ").trim().slice(0, 500)
-      throw new Error(
-        `OpenRouter research generation failed with HTTP ${response.status}${detail.length === 0 ? "" : `: ${detail}`}`
-      )
-    }
-    const parsed = chatCompletionResponseSchema.parse(await response.json())
+    const parsed = chatCompletionResponseSchema.parse(JSON.parse(body))
     const content = parsed.choices[0]?.message.content
     if (content === undefined) {
       throw new Error("OpenRouter research generation returned no content")
     }
     return { content, model: parsed.model ?? input.model }
+  }
+
+  async #request(endpoint: "rerank" | "chat/completions", input: unknown) {
+    const body = JSON.stringify(input)
+    const operation = endpoint === "rerank" ? "rerank request" : "research generation"
+    for (let attempt = 1; attempt <= this.#maximumAttempts; attempt += 1) {
+      this.#signal?.throwIfAborted()
+      const timeout = AbortSignal.timeout(endpoint === "rerank" ? this.#rerankTimeoutMs : this.#generationTimeoutMs)
+      const signal = this.#signal ? AbortSignal.any([this.#signal, timeout]) : timeout
+      let response: Response
+      let text: string
+      try {
+        response = await this.#fetch(new URL(endpoint, this.#baseUrl), {
+          body,
+          headers: { Authorization: `Bearer ${this.#apiKey}`, "Content-Type": "application/json" },
+          method: "POST",
+          signal
+        })
+        if (response.ok) {
+          text = await response.text()
+        } else {
+          await response.body?.cancel().catch(() => undefined)
+          text = ""
+        }
+        signal.throwIfAborted()
+      } catch (error) {
+        this.#signal?.throwIfAborted()
+        if ((!timeout.aborted && !isTransientRequestFailure(error)) || attempt === this.#maximumAttempts) {
+          throw error
+        }
+        await waitForRequestRetry(attempt, this.#signal)
+        continue
+      }
+      if (response.ok) {
+        return text
+      }
+      if (!isTransientHttpStatus(response.status) || attempt === this.#maximumAttempts) {
+        throw new Error(`OpenRouter ${operation} failed with HTTP ${response.status}`)
+      }
+      await waitForRequestRetry(attempt, this.#signal)
+    }
+    throw new Error(`OpenRouter ${operation} exhausted retries`)
   }
 }

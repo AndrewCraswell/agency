@@ -118,6 +118,12 @@ const SECTION_LIMIT = 50
 const MATERIAL_LINK_PREVIEW_LIMIT = 25
 const DETAIL_PREVIEW_LIMIT = 1000
 const { text: _documentText, ...documentMetadataColumns } = getTableColumns(billDocuments)
+const documentBillColumns = {
+  id: bills.id,
+  identifier: bills.identifier,
+  title: bills.title,
+  sessionId: bills.sessionId
+}
 const DETAIL_RESPONSE_TARGET_BYTES = 750_000
 const DOCUMENT_AMENDMENT_ID_PREFIX = "amendment:document:"
 const LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT = 250
@@ -1802,7 +1808,12 @@ export class LegislationQueryService {
   }
 
   async getDocument(lookup: EntityLookup) {
-    const document = await this.#database.select().from(billDocuments).where(eq(billDocuments.id, lookup.id)).limit(1)
+    const document = await this.#database
+      .select({ ...getTableColumns(billDocuments), bill: documentBillColumns })
+      .from(billDocuments)
+      .innerJoin(bills, eq(bills.id, billDocuments.billId))
+      .where(eq(billDocuments.id, lookup.id))
+      .limit(1)
     if (document[0] === undefined) {
       throw new LegislationError("not_found", `Document ${lookup.id} was not found`)
     }
@@ -1818,8 +1829,19 @@ export class LegislationQueryService {
     const limit = Math.min(Math.max(input.limit ?? SECTION_LIMIT, 1), SECTION_LIMIT)
     const offset = decodeOffset(input.cursor)
     const rows = await this.#database
-      .select()
+      .select({
+        ...getTableColumns(documentSections),
+        billId: billDocuments.billId,
+        title: billDocuments.title,
+        classification: billDocuments.classification,
+        versionCode: billDocuments.versionCode,
+        documentDate: billDocuments.documentDate,
+        sourceUrl: billDocuments.sourceUrl,
+        bill: documentBillColumns
+      })
       .from(documentSections)
+      .innerJoin(billDocuments, eq(billDocuments.id, documentSections.documentId))
+      .innerJoin(bills, eq(bills.id, billDocuments.billId))
       .where(eq(documentSections.documentId, input.documentId))
       .orderBy(asc(documentSections.ordinal))
       .limit(limit + 1)
@@ -1835,15 +1857,16 @@ export class LegislationQueryService {
 
   async getDocumentSection(input: Readonly<{ documentId: string; sectionId: string }>) {
     const rows = await this.#database
-      .select({ document: billDocuments, section: documentSections })
+      .select({ document: billDocuments, section: documentSections, bill: documentBillColumns })
       .from(documentSections)
       .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+      .innerJoin(bills, eq(bills.id, billDocuments.billId))
       .where(and(eq(documentSections.documentId, input.documentId), eq(documentSections.id, input.sectionId)))
       .limit(1)
     if (rows[0] === undefined) {
       throw new LegislationError("not_found", `Document section ${input.sectionId} was not found`)
     }
-    return rows[0]
+    return { document: { ...rows[0].document, bill: rows[0].bill }, section: rows[0].section }
   }
 
   async getPerson(lookup: EntityLookup) {
@@ -2729,10 +2752,10 @@ export class LegislationQueryService {
       })
     } catch (error) {
       if (isPostgresStatementTimeout(error)) {
-        throw new LegislationError(
-          "dependency_unavailable",
-          "Supporting material lexical search is temporarily unavailable"
-        )
+        throw new LegislationError("dependency_unavailable", "The supporting material search timed out.", {
+          cause: error,
+          details: { reason: "timeout", retryable: true }
+        })
       }
       throw error
     }
@@ -3431,10 +3454,11 @@ export class LegislationQueryService {
       .select({
         ...documentMetadataColumns,
         billIdentifier: bills.identifier,
+        bill: documentBillColumns,
         sectionCount: sql<number>`(select count(*)::integer from ${documentSections} where ${documentSections.documentId} = ${billDocuments.id})`
       })
       .from(billDocuments)
-      .leftJoin(bills, eq(bills.id, billDocuments.billId))
+      .innerJoin(bills, eq(bills.id, billDocuments.billId))
       .where(
         and(
           eq(billDocuments.billId, input.id),

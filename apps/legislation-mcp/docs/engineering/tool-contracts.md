@@ -38,6 +38,15 @@ Stable error categories are `invalid_request`, `unauthorized`, `forbidden`, `not
 `dependency_unavailable`, and `internal`. Errors include a safe message and correlation ID and never include SQL,
 credentials, stack traces, or provider secrets.
 
+The shared registry does not impose a second whole-tool 30-second timer. M's typed HTTP client still applies its
+configured API deadline and propagates request cancellation to the transport. W owns database and provider deadlines;
+a genuine dependency timeout is reported as such rather than inferred from an operation's duration.
+Oversized singleton records and metadata continue through lossless, snapshot-bound JSON fragments while each response
+still fits the combined text-and-structured budget. Fragment continuations retain the first API response's
+`meta.correlationId`, so per-request diagnostics do not invalidate unchanged source snapshots. Reconstructed envelopes
+retain their original shape and correlation ID; each HTTP request and error still has its own telemetry correlation.
+Changes to source content continue to invalidate the snapshot.
+
 ## Locked tools
 
 ### `search_bills`

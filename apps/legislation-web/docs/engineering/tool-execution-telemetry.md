@@ -28,8 +28,16 @@ An existing `ResearchFailure` retains its normalized reason and reference. Pre-w
 continue through the existing failure reporter. Clarification remains a control tool, not a data retrieval.
 
 Useful normalized reasons include `precondition_failed`, `result_limit`, `invalid_request`, `invalid_cursor`,
-`timeout`, `dependency_unavailable`, `not_found`, `forbidden`, `invalid_response`, `step_limit`, `interrupted`
+`timeout`, `dependency_unavailable`, `not_found`, `forbidden`, `invalid_response`, `interrupted`
 and `internal`. `interrupted` is not proof of explicit user cancellation; inspect the request/run outcome.
+
+The read-only database boundary recognizes pg-pool's explicit acquisition timeout errors as `timeout`, so chat
+reports that the operation timed out instead of a generic internal failure. Unknown connection errors remain
+unknown; elapsed duration alone is not a classifier. Caller cancellation takes precedence over acquisition timeout.
+Timeout copy does not assume that the question was too broad or that the database query started.
+Waiting for configured research-pool capacity is cancellable and has no separate acquisition deadline. SQL timeout
+classification is preserved through canonical, ranked-passage and supporting-material reads. The shared registry and
+research runtime no longer add whole-operation timer races on top of dependency-owned deadlines.
 
 ## Privacy and interpretation
 

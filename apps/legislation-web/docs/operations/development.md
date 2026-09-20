@@ -84,11 +84,16 @@ the organization-gated legal-text reader is not passed to the registry, and priv
 Relationship analytics uses `describe_analytics` and `analyze_legislation` from the same registry. M forwards analytical
 plans to authenticated `POST /api/analytics`; chat executes the identical compiler in the read-only runtime. See
 [the query contract and acceptance procedure](../../../../packages/legislation-core/docs/engineering/relationship-analytics.md).
-The [research runtime](../../src/modules/search/research-runtime.ts) owns a process-cached pool limited to two connections
-per data store. Each operation creates the existing query service against a client-bound Drizzle database inside
-`BEGIN READ ONLY`. Timeouts are applied with transaction-local `set_config`, not rejected PgBouncer startup fields.
-Individual requests release their clients but must not close the shared pools. The optional ranked passage store uses
-the same transaction-local approach without enabling any unapproved search cutover.
+The [research runtime](../../src/modules/search/research-runtime.ts) owns process-cached pools that honor
+`DATABASE_MAX_CONNECTIONS` and `PASSAGE_SEARCH_MAX_CONNECTIONS`, without a separate research clamp. A cancellable
+FIFO queue waits for configured capacity before opening or checking out a connection. Connection establishment still
+has its configured deadline; time waiting for capacity is not a connection failure.
+The query service acquires a client only for SQL or an explicit transaction, not while embedding or reranking.
+Reads use `BEGIN READ ONLY` and transaction-local `set_config`, not rejected PgBouncer startup fields.
+Explicit transactions preserve their pinned connection and nested savepoints. Individual requests release their clients
+but must not close the shared pools. The optional ranked passage store uses the same cancellation and transaction-local
+approach without enabling any unapproved search cutover. Capacity remains finite and must be budgeted across replicas
+and other workloads; this change does not resize PostgreSQL or PgBouncer.
 
 Conversation answers use `openai/gpt-5.6-luna-20260709` with **high** reasoning by default, selected by
 `researchReasoningEffort` in the conversation agent. Chat trace metadata uses the same setting. The September 18 upgrade
@@ -106,27 +111,54 @@ route tests verify the actual model input and unchanged user cutoffs across midn
 clarification streams. These deterministic fixtures establish context delivery, not live-model semantic accuracy.
 
 Chat and evaluation research turns have no application-wide elapsed-time deadline. Explicit cancellation still stops
-the run. Per-operation deadlines remain in place, including 30-second registry tool calls and database statement limits.
-Current per-run bounds: eight tool-capable model steps plus a final synthesis step, 24 tool calls, and 180,000 bytes
-per model-visible tool result. Research serialization omits
+the run. Dependency-owned deadlines remain in place: connection establishment, PostgreSQL statements, model-provider
+requests and external web requests. Neither the research runtime nor the shared tool registry races an entire operation
+against a second 30-second timer. Standalone MCP retains cancellation and its configured outbound HTTP API deadline.
+Canonical SQL defaults to 15 seconds, optional ranked SQL to 10 seconds, and supporting-material lexical SQL to 5 seconds.
+These defaults are unchanged: raise or optimize them from query-plan and latency evidence, not from time spent queued.
+Research has no tool-call count or model-step cutoff. Tools remain available until the model finishes, requests
+clarification, or the run is cancelled or fails. Failed calls do not consume a separate research allowance.
+Each model-visible tool result remains bounded to 180,000 bytes. Research serialization omits
 internal embedding and search-index fields. The shared chat/MCP bill discovery contract returns snippets, identifiers, sources, and child
 metadata instead of full summaries and embedded document bodies. Research tools must retrieve relevant passages using
 `search_bill_text` or read a selected version using `get_bill_text` before making substantive claims about provisions.
 Version-text reads omit the duplicate full document body but retain document metadata and complete source sections.
-The shared tool registry splits oversized bill search pages, bill batches, and passage/section pages at complete-record
-boundaries before transport validation; normal page, batch, and child limits remain unchanged. Opaque continuations
+The shared tool registry splits oversized bill search pages, bill batches, and passage/section pages before transport
+validation; normal page, batch, and child limits remain unchanged. Opaque continuations
 preserve upstream pagination and require the same tool, filters, IDs, and limits. Continuations re-run the original
 read and advance within its result window; they work across stateless requests and replicas without retained data.
-They do not promise snapshot isolation when the underlying records change. Model, UI, and MCP paging share this path;
-individual records that cannot fit still fail explicitly rather than clipping evidence. The public MCP
+They do not promise snapshot isolation when the underlying records change. Model, UI, and MCP paging share this path.
+Indivisible sections use lossless text windows; oversized metadata and records use snapshot-bound JSON fragments.
+The app reconstructs fragments before publishing logical evidence or result cards, marks incomplete assembly explicitly,
+and pages citation enrichment separately when necessary. It does not resend an unbounded reconstructed body.
+Changed source snapshots invalidate a continuation rather than combining different records. See
+[exact selections and payload handling](../engineering/conversation-research-selection.md).
+The public MCP
 transport limit is unchanged. These limits bound a request and do not impose a conversation count. No transcript is saved
 server-side; follow-ups re-fetch evidence instead of trusting client-supplied tool output. Tavily/Firecrawl remain later work.
-Cancellation prevents further calls and discards late results; it does not claim to interrupt an already-running SQL
-statement. Existing database statement deadlines remain responsible for that bound.
+Cancellation removes queued research work, stops further SQL and discards the active client and late results.
+PostgreSQL statement deadlines still bound server execution if a server or pooler has not yet observed the disconnect.
 
-The demo's PgBouncer startup failure is resolved. A live check confirmed a 15-second statement timeout, read-only mode,
-server cancellation at a one-second test deadline, and healthy client reuse after rollback. Public API pool configuration
-and PgBouncer infrastructure were not changed by this demo-specific fix.
+Optional Firecrawl tools retain the 1,000,000-byte response-body bound. `FIRECRAWL_SEARCH_TIMEOUT_MS` and
+`FIRECRAWL_READ_TIMEOUT_MS` independently configure search and page-read deadlines (30,000 ms by default,
+1,000-300,000 ms). Each deadline includes retries and response reading, and caller cancellation also stops retry waits.
+Oversized web content fails explicitly with provider-specific narrowing guidance; it is never clipped or presented as
+an empty successful result.
+
+OpenRouter retrieval uses independent `OPENROUTER_EMBEDDING_TIMEOUT_MS`, `OPENROUTER_RERANK_TIMEOUT_MS` and
+`OPENROUTER_GENERATION_TIMEOUT_MS` settings (30,000 ms per attempt by default, integer range 1-300,000 ms).
+The generation setting applies to retrieval-client completions, not the entire conversation turn. Retrieval and web
+requests retry only transient HTTP/network failures, with three attempts and cancellable backoff; invalid requests,
+schema failures and oversized bodies are not retried. The conversation agent separately allows two SDK retries for
+retryable provider failures and no longer overrides the provider's output-token allowance.
+
+When `DATABASE_URL` uses transaction-mode PgBouncer, configure `DATABASE_DIRECT_URL` with the same database's direct
+PostgreSQL endpoint for the public API and readiness pool. That pool sends a PostgreSQL startup statement timeout,
+which PgBouncer can reject with `08P01: unsupported startup parameter: statement_timeout`. Research continues to use
+`DATABASE_URL` with transaction-local deadlines. Without a direct override, the API uses `DATABASE_URL`, which must
+support startup parameters. Direct API connections retain `DATABASE_MAX_CONNECTIONS`; budget these alongside pooled
+research/worker backends. Restart Next.js after changing connection configuration because pools are process-cached.
+The optional passage-search API pool likewise requires a startup-parameter-compatible endpoint.
 
 Model-facing optional tool fields explicitly accept null, which is removed before the canonical input schema validates
 the request. Empty strings and invented omission markers are not accepted as cursors. Chat only accepts continuation

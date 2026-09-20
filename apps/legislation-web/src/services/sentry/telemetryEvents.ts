@@ -127,7 +127,7 @@ export const telemetryEvents = {
   "conversation.finished": event(
     {
       outcome: f.responseOutcome,
-      finish_reason: z.enum(["stop", "length", "step_limit", "error", "cancelled", "unknown"]),
+      finish_reason: z.enum(["stop", "length", "error", "cancelled", "unknown"]),
       duration_ms: f.duration,
       first_content_ms: f.duration.optional(),
       tool_count: f.count,

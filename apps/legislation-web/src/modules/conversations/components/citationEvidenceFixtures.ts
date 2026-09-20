@@ -1,4 +1,38 @@
-import type { EvidenceSnapshot } from "../evidence"
+import { projectResearchEvidence, type EvidenceSnapshot } from "../evidence"
+
+export const billVersionCitationFixtures = [
+  { congress: "119", number: "1", title: "Synthetic Data Access Act", version: "Introduced in Senate", code: "is" },
+  { congress: "119", number: "2", title: "Synthetic Public Records Act", version: "Introduced in Senate", code: "is" },
+  { congress: "118", number: "1", title: "Synthetic Data Access Act", version: "Introduced in Senate", code: "is" },
+  { congress: "119", number: "1", title: "Synthetic Data Access Act", version: "Enrolled Bill", code: "enr" }
+].flatMap(({ congress, number, title, version, code }, index) => {
+  const billId = `bill:us:${congress}:s:${number}`
+  const documentId = `document:${billId}:${code}`
+  let ordinal = 0
+  return projectResearchEvidence(
+    {
+      bill: { id: billId, identifier: `S ${number}`, title, sessionId: `session:us:${congress}` },
+      document: {
+        id: documentId,
+        billId,
+        classification: "version",
+        title: version,
+        versionCode: code,
+        documentDate: "2025-01-03",
+        sourceUrl: `https://publisher.example/fixture/${index}.pdf`
+      },
+      section: {
+        id: `section:${documentId}:2`,
+        documentId,
+        sectionIdentifier: "Section 2",
+        text: "Synthetic retained bill passage. This fixture tests citation identity, not a legislative claim."
+      }
+    },
+    () => `bill-version-fixture-${index}-${ordinal++}`
+  )
+    .filter((source) => source.content.state === "available")
+    .map((source) => ({ ...source, citationRef: `e${index + 1}` }))
+})
 
 // Synthetic source records preserve the reported syntax, not historical research claims.
 export const malformedCitationFixtures = [

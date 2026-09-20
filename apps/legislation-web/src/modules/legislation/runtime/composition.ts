@@ -42,9 +42,10 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
   // This pool exists only in the Next HTTP process. PostgreSQL cancels a slow
   // API statement at the server, so abandoned client requests cannot continue
   // consuming I/O during maintenance. Trigger and CLI pools remain unlimited.
-  const { database, pool } = createDatabase(config.database, {
-    statementTimeoutMs: config.database.apiStatementTimeoutMs
-  })
+  const { database, pool } = createDatabase(
+    { ...config.database, url: config.database.directUrl ?? config.database.url },
+    { statementTimeoutMs: config.database.apiStatementTimeoutMs }
+  )
   const retrievalClient = createRetrievalClient(config)
   const passageSearchDatabase =
     config.passageSearch.enabled === true
@@ -86,5 +87,11 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
 function createRetrievalClient(config: LegislationConfig): OpenRouterRetrievalClient | undefined {
   return config.model.apiKey === undefined
     ? undefined
-    : new OpenRouterRetrievalClient({ apiKey: config.model.apiKey, baseUrl: new URL(config.model.baseUrl) })
+    : new OpenRouterRetrievalClient({
+        apiKey: config.model.apiKey,
+        baseUrl: new URL(config.model.baseUrl),
+        embeddingTimeoutMs: config.model.embeddingTimeoutMs,
+        generationTimeoutMs: config.model.generationTimeoutMs,
+        rerankTimeoutMs: config.model.rerankTimeoutMs
+      })
 }

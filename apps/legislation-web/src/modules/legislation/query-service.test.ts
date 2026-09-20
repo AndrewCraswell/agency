@@ -49,6 +49,203 @@ afterAll(async () => {
   await pool.end()
 })
 
+describe("document parent bill identity", () => {
+  const bill = {
+    id: "bill:us:119:s:2937",
+    identifier: "S. 2937",
+    title: "A bill to establish requirements for automated decision systems.",
+    sessionId: "session:us:119"
+  }
+  const document = {
+    id: "document:us:119:s:2937:is",
+    billId: bill.id,
+    title: "Introduced in Senate",
+    classification: "version",
+    versionCode: "is",
+    documentDate: "2025-10-01",
+    sourceUrl: "https://www.congress.gov/bill/119th-congress/senate-bill/2937/text",
+    processingStatus: "processed",
+    text: "Exact published text"
+  }
+  const section = {
+    id: "section:2937:1",
+    documentId: document.id,
+    ordinal: 0,
+    heading: "Requirements",
+    text: "Exact published text"
+  }
+  const documentValues: Record<string, unknown> = document
+  const sectionValues: Record<string, unknown> = section
+  const documentRow = Object.keys(getTableColumns(schema.billDocuments)).map((key) => documentValues[key] ?? null)
+  const sectionRow = Object.keys(getTableColumns(schema.documentSections)).map((key) => sectionValues[key] ?? null)
+  const sectionMetadata = [
+    document.billId,
+    document.title,
+    document.classification,
+    document.versionCode,
+    document.documentDate,
+    document.sourceUrl
+  ]
+  const billRow = Object.values(bill)
+
+  function expectBillJoin(statement: string) {
+    expect(statement).toContain('inner join "legislation"."bills"')
+    expect(statement).toContain('"legislation"."bills"."id" = "legislation"."bill_documents"."bill_id"')
+    for (const field of ["id", "identifier", "title", "session_id"]) {
+      expect(statement).toContain(`"bills"."${field}"`)
+    }
+  }
+
+  it("returns the persisted parent beside unmodified bill text document metadata", async () => {
+    const metadataRow = Object.keys(getTableColumns(schema.billDocuments))
+      .filter((key) => key !== "text")
+      .map((key) => documentValues[key] ?? null)
+    const query = vi
+      .spyOn(pool, "query")
+      .mockImplementationOnce(async () => ({
+        rows: [[...metadataRow, bill.identifier, ...billRow, 1]],
+        fields: [],
+        command: "SELECT",
+        rowCount: 1,
+        oid: 0
+      }))
+      .mockImplementationOnce(async () => ({ rows: [sectionRow], fields: [], command: "SELECT", rowCount: 1, oid: 0 }))
+    try {
+      const result = await new LegislationQueryService(database).getBillText({
+        id: bill.id,
+        documentId: document.id,
+        versionCode: document.versionCode,
+        limit: 1
+      })
+      expect(result.document).toMatchObject({
+        id: document.id,
+        billId: bill.id,
+        title: document.title,
+        versionCode: document.versionCode,
+        billIdentifier: bill.identifier,
+        bill
+      })
+      expect(result.document).not.toHaveProperty("text")
+      expect(result.sections).toEqual([expect.objectContaining(section)])
+      expectBillJoin(z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text)
+      expect(query.mock.calls[0]?.[1]).toEqual([bill.id, document.id, document.versionCode, 2])
+      expect(query.mock.calls[1]?.[1]).toEqual([document.id, 2])
+      expect(query).toHaveBeenCalledTimes(2)
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("returns parent identity on direct document details and their section items without extra queries", async () => {
+    const query = vi
+      .spyOn(pool, "query")
+      .mockImplementationOnce(async () => ({
+        rows: [[...documentRow, ...billRow]],
+        fields: [],
+        command: "SELECT",
+        rowCount: 1,
+        oid: 0
+      }))
+      .mockImplementationOnce(async () => ({
+        rows: [[...sectionRow, ...sectionMetadata, ...billRow]],
+        fields: [],
+        command: "SELECT",
+        rowCount: 1,
+        oid: 0
+      }))
+    try {
+      const result = await new LegislationQueryService(database).getDocument({ id: document.id, limit: 1 })
+      expect(result.document).toMatchObject({ ...document, bill })
+      expect(result.sections.items).toEqual([
+        expect.objectContaining({
+          ...section,
+          billId: bill.id,
+          title: document.title,
+          classification: document.classification,
+          versionCode: document.versionCode,
+          documentDate: document.documentDate,
+          sourceUrl: document.sourceUrl,
+          bill
+        })
+      ])
+      for (const call of query.mock.calls) {
+        expectBillJoin(z.object({ text: z.string() }).parse(call[0]).text)
+      }
+      expect(query.mock.calls[0]?.[1]).toEqual([document.id, 1])
+      expect(query.mock.calls[1]?.[1]).toEqual([document.id, 2])
+      expect(query).toHaveBeenCalledTimes(2)
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("keeps exact document and section bindings on a direct section read", async () => {
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(async () => ({
+      rows: [[...documentRow, ...sectionRow, ...billRow]],
+      fields: [],
+      command: "SELECT",
+      rowCount: 1,
+      oid: 0
+    }))
+    try {
+      const result = await new LegislationQueryService(database).getDocumentSection({
+        documentId: document.id,
+        sectionId: section.id
+      })
+      expect(result).toMatchObject({ document: { ...document, bill }, section })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expectBillJoin(statement)
+      expect(statement).toContain('"document_sections"."document_id" = "legislation"."bill_documents"."id"')
+      expect(query.mock.calls[0]?.[1]).toEqual([document.id, section.id, 1])
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("preserves count-plus-one pagination and parent metadata for independently fetched sections", async () => {
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(async () => ({
+      rows: [
+        [...sectionRow, ...sectionMetadata, ...billRow],
+        [...sectionRow, ...sectionMetadata, ...billRow]
+      ],
+      fields: [],
+      command: "SELECT",
+      rowCount: 2,
+      oid: 0
+    }))
+    try {
+      const result = await new LegislationQueryService(database).getDocumentSections({
+        documentId: document.id,
+        limit: 1,
+        cursor: Buffer.from(JSON.stringify({ offset: 1 })).toString("base64url")
+      })
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          ...section,
+          billId: bill.id,
+          title: document.title,
+          classification: document.classification,
+          versionCode: document.versionCode,
+          documentDate: document.documentDate,
+          sourceUrl: document.sourceUrl,
+          bill
+        })
+      ])
+      expect(result.truncated).toBe(true)
+      expect(result.nextCursor).toBe(Buffer.from(JSON.stringify({ offset: 2 })).toString("base64url"))
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expectBillJoin(statement)
+      expect(statement).toContain('"bill_documents"."id" = "legislation"."document_sections"."document_id"')
+      expect(statement).toContain('"bill_documents"."classification"')
+      expect(query.mock.calls[0]?.[1]).toEqual([document.id, 2, 1])
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+})
+
 describe("mention discovery", () => {
   it("applies timeline pagination to a single ordered action and vote query", async () => {
     const stopped = new Error("Timeline query captured")

@@ -11,7 +11,7 @@ import { projectEntityResult, type EntityCard, type EntityPage } from "../entity
 import type { EvidenceSnapshot } from "../evidence"
 import type { MeetingDetails, VoteDetails } from "../recordDetails"
 import { ChatProviders } from "./ChatProviders"
-import { malformedCitationFixtures } from "./citationEvidenceFixtures"
+import { billVersionCitationFixtures, malformedCitationFixtures } from "./citationEvidenceFixtures"
 import { createCitationPresentation, type CitationSelection } from "./citationPresentation"
 import { ConversationResponse } from "./ConversationResponse"
 import { CompactRecordCard, RecordCard } from "./EntityResults"
@@ -121,6 +121,37 @@ function inlineResponse(parts: UIMessage["parts"], isRunning = false) {
     />
   )
 }
+
+it("shows distinct bill identities in citation rows and opens the exact version evidence", async () => {
+  const onEvidence = vi.fn<(selection: CitationSelection) => void>()
+  render(
+    <ConversationResponse
+      message={message(
+        billVersionCitationFixtures.map((source, index) => `[${index + 1}](#citation-${source.citationRef})`).join(" ")
+      )}
+      evidence={billVersionCitationFixtures}
+      isRunning={false}
+      isIncomplete={false}
+      onEvidence={onEvidence}
+    />,
+    { wrapper: InlineProviders }
+  )
+  const user = userEvent.setup()
+  const disclosure = screen.getByRole("button", { name: "Sources 4" })
+  if (disclosure.getAttribute("aria-expanded") !== "true") {
+    await user.click(disclosure)
+  }
+  const sources = within(screen.getByRole("region", { name: "Sources" }))
+  expect(sources.getAllByRole("button", { name: /^Read source/ })).toHaveLength(4)
+  for (const [index, source] of billVersionCitationFixtures.entries()) {
+    const trigger = sources.getByRole("button", { name: `Read source ${index + 1}: ${source.title}` })
+    expect(trigger.textContent).toContain(source.versionLabel)
+    expect(trigger.textContent).toContain("Section 2")
+    trigger.focus()
+    await user.keyboard("{Enter}")
+    expect(onEvidence).toHaveBeenLastCalledWith({ answerId: "answer", number: index + 1, evidence: source })
+  }
+})
 
 describe("response presentation snapshots", () => {
   it.each([

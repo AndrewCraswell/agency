@@ -35,6 +35,50 @@ it("retains the returned document bytes without rejecting legitimate undiscovere
   })
 })
 
+it("retires consumed fragment-only cursors while retaining source and independent evidence continuations", () => {
+  const selections = createResearchSelections()
+  const name = "get_person"
+  const selection = { id: "person:us:1" }
+  const raw = { person: { id: selection.id, name: "Member", biography: "x".repeat(researchResultByteLimit + 1) } }
+  let result = prepareResultPage(name, selection, raw, 0)
+  selections.register(result, "initial")
+  let cursor = z.object({ nextCursor: z.string() }).parse(result).nextCursor
+  const firstCursor = cursor
+  const evidenceCursor = page(name, selection, "research-evidence:retained").nextCursor
+  selections.register({ evidencePage: { nextCursor: evidenceCursor } }, "evidence")
+  for (let index = 0; index < 3; index++) {
+    const consumed = { ...selection, cursor }
+    selections.validate(name, consumed, "read")
+    const parsed = readResultPage(name, consumed)
+    result = prepareResultPage(name, parsed.input, raw, parsed.offset, parsed.snapshot, undefined, parsed.fragment)
+    selections.register(result, "next", { tool: name, input: consumed })
+    cursor = z.object({ nextCursor: z.string() }).parse(result).nextCursor
+  }
+  expect(() => selections.validate(name, { ...selection, cursor: firstCursor }, "old")).toThrow(
+    expect.objectContaining({ code: "invalid_cursor" })
+  )
+  expect(() => selections.validate(name, { ...selection, cursor: evidenceCursor }, "separate")).not.toThrow()
+  selections.register({}, "evidence-read", { tool: name, input: { ...selection, cursor: evidenceCursor } })
+  expect(() => selections.validate(name, { ...selection, cursor: evidenceCursor }, "used")).toThrow(
+    expect.objectContaining({ code: "invalid_cursor" })
+  )
+})
+
+it("does not accumulate consumed citation continuations across long chains", () => {
+  const selections = createResearchSelections()
+  const name = "get_bill"
+  const input = { id: billId }
+  let cursor = page(name, input, "research-evidence:0").nextCursor
+  selections.register({ nextCursor: cursor }, "initial")
+  for (let index = 1; index <= 1700; index++) {
+    const consumed = { ...input, cursor }
+    selections.validate(name, consumed, "read")
+    cursor = page(name, input, `research-evidence:${index}`).nextCursor
+    selections.register({ nextCursor: cursor }, "next", { tool: name, input: consumed })
+  }
+  expect(() => selections.validate(name, { ...input, cursor }, "final")).not.toThrow()
+})
+
 it.each([
   ["get_bill_text", { ...input, id: "bill:us:118:hr:9619" }],
   ["get_bill_text", { ...input, versionCode: "eh" }],
@@ -173,7 +217,7 @@ it("uses explicit resolution rather than unscoped or excessive replacement choic
   ).toMatchObject({ action: "resolve_document" })
 })
 
-it.each(["forbidden", "timeout", "precondition_failed", "step_limit", "interrupted"] as const)(
+it.each(["forbidden", "timeout", "precondition_failed", "interrupted"] as const)(
   "does not turn %s into a selection retry",
   (code) => {
     expect(createResearchSelections().recover("get_bill_text", input, code)).toBeUndefined()

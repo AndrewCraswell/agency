@@ -5,12 +5,11 @@ const failureMessages = {
     "The result is too large to read safely. This call did not establish complete coverage or an absence of evidence.",
   invalid_request: "The research request is invalid. Check the filters and identifiers before retrying.",
   invalid_cursor: "The page cursor does not match a returned continuation for this request.",
-  timeout: "The research query timed out. Narrow the question or request fewer records.",
+  timeout: "This research operation timed out before it could finish. Try again.",
   dependency_unavailable: "The data service is temporarily unavailable.",
   not_found: "The requested record was not found. Search for the record before reading it.",
   forbidden: "This record is not available for this research request.",
   invalid_response: "The data service returned an unreadable result.",
-  step_limit: "This response reached its research limit. Narrow the question to continue.",
   interrupted: "Research was stopped before this operation finished.",
   internal: "This research operation failed."
 }
@@ -34,13 +33,13 @@ export function researchLimitRecovery(name: string): ResearchRecovery {
     instruction = "Request one dataset in datasets instead of the full catalog. The failed catalog was not read."
   } else if (name === "get_person") {
     instruction =
-      "The person identity or its provenance exceeds the budget even without relationship previews. Do not retry get_person with limit, childLimit or cursor; those inputs are unsupported. Read get_memberships with personId, get_sponsored_bills with id, or read_record_collection with collection: person-terms and recordId, starting at limit: 1. The failed identity preview was not read; disclose incomplete coverage."
+      "The person projection exceeds the delivery budget. Do not invent limit or childLimit for get_person. Follow only a successfully returned cursor with unchanged inputs. Read get_memberships with personId, get_sponsored_bills with id, or read_record_collection with collection: person-terms and recordId, starting at limit: 1. The failed projection was not read; disclose incomplete coverage."
   } else if (name === "get_organization") {
     instruction =
-      "The organization identity or its context exceeds the budget even without relationship previews. Do not retry get_organization with limit, childLimit or cursor; those inputs are unsupported. Read get_memberships with organizationId, get_committee_bills with id, or read_record_collection with collection: organization-children and recordId, starting at limit: 1. Disclose that the failed detail was not read."
+      "The organization projection exceeds the delivery budget. Do not invent limit or childLimit for get_organization. Follow only a successfully returned cursor with unchanged inputs. Read get_memberships with organizationId, get_committee_bills with id, or read_record_collection with collection: organization-children and recordId, starting at limit: 1. Disclose that the failed projection was not read."
   } else if (name === "get_event") {
     instruction =
-      "The event identity or its context exceeds the budget even without relationship previews. Do not retry get_event with limit, childLimit or cursor; those inputs are unsupported. Read read_record_collection with the event ID as recordId and collection: meeting-agenda, meeting-documents, meeting-participants, meeting-bills or meeting-outcomes, starting at limit: 1. Disclose that the failed detail was not read."
+      "The event projection exceeds the delivery budget. Do not invent limit or childLimit for get_event. Follow only a successfully returned cursor with unchanged inputs. Read read_record_collection with the event ID as recordId and collection: meeting-agenda, meeting-documents, meeting-participants, meeting-bills or meeting-outcomes, starting at limit: 1. Disclose that the failed projection was not read."
   } else if (name === "get_supporting_material") {
     instruction =
       "Restart get_supporting_material without cursor and with limit: 1. If one section or the material identity still exceeds the budget, use read_record_collection with recordId and collection: material-sections, selecting sectionId and textOffset for long text. Read relationships with collection: material-links. Disclose unread coverage; do not infer an absence of evidence."

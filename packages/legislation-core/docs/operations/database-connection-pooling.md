@@ -47,6 +47,15 @@ W owns [serving pools and transaction-local deadlines](../../../../apps/legislat
 Budget direct W clients, administration, search targets and I pooled backends together. M has no database connections.
 Per-process pool limits never establish aggregate capacity across replicas or tasks.
 
+Research pools opt into cancellable FIFO admission through `createDatabase({ ... }, { waitForConnection: true })`.
+`withReadOnlyDatabase` waits for that capacity before calling the driver, so its finite connection-establishment timer
+does not charge normal queueing. Other pool consumers retain their existing acquisition behavior.
+`createReadOnlyDatabase` implements Drizzle's session/prepared-query boundary with the normal node-postgres driver:
+each SQL execution gets a read-only transaction with local deadlines and driver row mapping; an explicit transaction
+pins a single connection, including nested savepoints. Network/model work outside those transactions holds no connection.
+Cancellation removes an admission waiter or discards an active client; server-side statement deadlines remain the final
+execution bound after disconnect. Neither helper changes live PostgreSQL or PgBouncer capacity.
+
 Inspect PgBouncer clients and waits, PostgreSQL sessions and locks, query latency, Trigger failures, and provider
 throttling throughout each stage.
 Stop or scale back when any of these conditions holds:

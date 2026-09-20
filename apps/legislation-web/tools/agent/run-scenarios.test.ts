@@ -64,7 +64,9 @@ async function send(text, body) {
 document.querySelector('#send').onclick=async()=>{
   if(box.value==='/export'){
     const snapshot={format:'rostra-conversation',schemaVersion:1,conversationId:'browser-fixture',interactionStatus:'ready',messages,responseOutcomes:outcomes,toolCalls:calls};
-    const link=document.createElement('a'); link.href=URL.createObjectURL(new Blob([JSON.stringify(snapshot)],{type:'application/json'})); link.download='export.json'; link.click(); URL.revokeObjectURL(link.href); box.value=''; return;
+    document.querySelector('[data-conversation-export]')?.remove();
+    const region=document.createElement('section'); region.setAttribute('aria-label','Conversation export'); region.setAttribute('data-conversation-export','');
+    const pre=document.createElement('pre'); pre.setAttribute('aria-label','Conversation export JSON'); const code=document.createElement('code'); code.textContent=JSON.stringify(snapshot,null,2); pre.append(code); region.append(pre); log.append(region); box.value=''; return;
   }
   const text=box.value; box.value=''; await send(text);
 };

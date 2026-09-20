@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { billProgressSchema, projectBillProgress } from "./billProgress"
+import { displayText } from "./displayText"
 import { entityPageSchema, type EntityPage } from "./entityResults"
 import { evidenceSnapshotSchema, sourceUrlSchema, type EvidenceSnapshot } from "./evidence"
 import { projectVoteDetails, voteDetailsSchema } from "./recordDetails"
@@ -157,7 +158,7 @@ export function projectPresentationContents(
         id: crypto.randomUUID(),
         kind: "timeline",
         billId: timeline.data.billId,
-        events: timeline.data.events,
+        events: timeline.data.events.map((event) => ({ ...event, description: displayText(event.description) })),
         hasMore: Boolean(timeline.data.nextCursor ?? timeline.data.nextChildCursor) || timeline.data.truncated === true
       })
     }

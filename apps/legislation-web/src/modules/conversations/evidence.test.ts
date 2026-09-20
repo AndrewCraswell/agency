@@ -22,6 +22,30 @@ const citation = {
 }
 
 describe("conversation evidence", () => {
+  it("bounds display titles without losing exact source identity or mutating attribution", () => {
+    const first = { id: "bill:us:119:hr:1", title: "Exact title ".repeat(20000) + "A", text: "Retained provision." }
+    const second = { ...first, title: first.title.slice(0, -1) + "B" }
+    const project = (value: unknown) =>
+      projectResearchEvidence(value, (identity) => createHash("sha256").update(identity).digest("hex"))[0]!
+    const evidence = project(first)
+    expect(evidence.title).toHaveLength(1000)
+    expect(evidence.title.endsWith("…")).toBe(true)
+    expect(evidence.billIdentity?.title).toBe(evidence.title)
+    expect(evidence.content).toMatchObject({ state: "available", quote: first.text })
+    expect(evidence.id).not.toBe(project(second).id)
+    expect(first.title).toHaveLength("Exact title ".length * 20000 + 1)
+    expect(evidenceSnapshotSchema.safeParse(evidence).success).toBe(true)
+  })
+
+  it("marks omitted display URLs explicitly while retaining the untouched original record", () => {
+    const source = { id: "material:1", title: "Attribution", sourceUrl: `https://example.org/${"a".repeat(9000)}` }
+    expect(projectResearchEvidence(source, () => "source-1")[0]).toMatchObject({
+      recordId: source.id,
+      sourceUrl: null,
+      sourceUrlOmitted: true
+    })
+    expect(source.sourceUrl.length).toBeGreaterThan(9000)
+  })
   it.each([
     [
       "https://www.govinfo.gov/bulkdata/BILLSTATUS/116/hr/BILLSTATUS-116hr5826.xml",
@@ -166,6 +190,12 @@ const section = {
   text: "The exact retained passage.\nSecond paragraph.",
   snippet: null
 }
+const bill = {
+  id: document.billId,
+  identifier: "HR 1",
+  title: "Synthetic Legislative Data Access Act",
+  sessionId: "session:us:119"
+}
 
 function createEvidenceId(identity: string) {
   return `evidence:${createHash("sha256").update(identity).digest("hex")}`
@@ -176,6 +206,113 @@ function project(data: unknown) {
 }
 
 describe("research evidence identity", () => {
+  it.each([
+    { items: [{ bill, document, section }] },
+    { billId: bill.id, document: { ...document, bill }, sections: [section] },
+    { items: [{ ...document, ...section, bill, recordId: document.id, sectionId: section.id }] }
+  ])("labels version passages with the exact parent bill across retrieval shapes: %j", (data) => {
+    const source = project(data).find((item) => item.content.state === "available")!
+    expect(source).toMatchObject({
+      recordId: document.id,
+      billId: bill.id,
+      billIdentity: bill,
+      title: "HR 1 (119th Congress): Synthetic Legislative Data Access Act",
+      versionLabel: "Introduced text, 2025-01-03",
+      locator: "Section 2",
+      sourceUrl: document.sourceUrl,
+      content: { state: "available", quote: section.text }
+    })
+    expect(source.id).toBe(
+      project({ document: { ...document, bill }, sections: [section] }).find(
+        (item) => item.content.state === "available"
+      )?.id
+    )
+    expect(formatEvidenceCitation(source)).toContain(
+      "HR 1 (119th Congress): Synthetic Legislative Data Access Act\nIntroduced text, 2025-01-03\nSection 2"
+    )
+    expect(bill.title).toBe("Synthetic Legislative Data Access Act")
+    expect(document.title).toBe("Introduced text")
+  })
+
+  it("distinguishes bills, Congresses and passages with the same version label", () => {
+    const result = project({
+      items: [bill, { ...bill, id: "bill:us:118:hr:1", sessionId: "session:us:118" }].map((parent) => ({
+        bill: parent,
+        document: { ...document, id: `document:${parent.id}`, billId: parent.id, title: "Introduced in House" },
+        sections: [
+          { ...section, documentId: `document:${parent.id}` },
+          { ...section, id: "section:two", documentId: `document:${parent.id}`, sectionIdentifier: "Section 3" }
+        ]
+      }))
+    }).filter((item) => item.content.state === "available")
+    expect(result.map((item) => item.title)).toEqual([
+      "HR 1 (119th Congress): Synthetic Legislative Data Access Act",
+      "HR 1 (119th Congress): Synthetic Legislative Data Access Act",
+      "HR 1 (118th Congress): Synthetic Legislative Data Access Act",
+      "HR 1 (118th Congress): Synthetic Legislative Data Access Act"
+    ])
+    expect(new Set(result.map((item) => item.id)).size).toBe(4)
+    expect(result.every((item) => item.versionLabel === "Introduced in House, 2025-01-03")).toBe(true)
+  })
+
+  it.each(["Introduced in Senate", "Introduced in House", "Enrolled Bill"])(
+    "keeps %s as version metadata rather than the citation heading",
+    (title) => {
+      const source = project({ ...document, title, bill })[0]!
+      expect(source.title).toBe("HR 1 (119th Congress): Synthetic Legislative Data Access Act")
+      expect(source.versionLabel).toBe(`${title}, 2025-01-03`)
+    }
+  )
+
+  it("keeps state sessions and non-version document titles distinct", () => {
+    const stateBill = {
+      ...bill,
+      id: "bill:ca:20232024:ab:1",
+      identifier: "AB 1",
+      sessionId: "session:ca:20232024"
+    }
+    const version = project({ ...document, billId: stateBill.id, bill: stateBill })[0]!
+    expect(version.title).toBe("AB 1 (2023-2024): Synthetic Legislative Data Access Act")
+    const analysis = project({ ...document, bill, classification: "analysis", title: "Committee analysis" })[0]!
+    expect(analysis.title).toBe("Committee analysis")
+    expect(analysis.billIdentity).toEqual(bill)
+  })
+
+  it("never promotes a version label, foreign bill or web label into the parent bill identity", () => {
+    for (const data of [
+      document,
+      { ...document, bill: { ...bill, id: "bill:us:118:hr:1" } },
+      { ...document, bill, origin: "web" },
+      { ...document, bill: { ...bill, origin: "web" } },
+      { ...document, bill, materialId: "material:one" },
+      { ...document, bill, provisionId: "provision:one" }
+    ]) {
+      const source = project(data)[0]!
+      expect(source.billIdentity).toBeUndefined()
+      expect(source.title).toBe(document.title)
+    }
+    const source = project({
+      bill,
+      document: { ...document, billId: "bill:us:119:s:2" },
+      sections: [section]
+    }).find((item) => item.content.state === "available")!
+    expect(source.billIdentity).toBeUndefined()
+    expect(source.title).toBe(document.title)
+  })
+
+  it("bounds version citation headings but hashes the full parent title and identifier", () => {
+    const parent = { ...bill, title: "Long official title ".repeat(1000) + "A" }
+    const source = project({ ...document, bill: parent })[0]!
+    const changed = project({ ...document, bill: { ...parent, title: parent.title.slice(0, -1) + "B" } })[0]!
+    expect(source.title).toHaveLength(1000)
+    expect(source.title).toMatch(/^HR 1 \(119th Congress\): Long official title/)
+    expect(source.id).not.toBe(changed.id)
+    expect(source.title).toBe(changed.title)
+    expect(source.billIdentity?.title).toHaveLength(1000)
+    expect(evidenceSnapshotSchema.safeParse(source).success).toBe(true)
+    expect(project({ ...document, bill: { ...parent, identifier: "Corrected identifier" } })[0]?.id).not.toBe(source.id)
+  })
+
   it("projects the same action from bill details and timeline without inventing a document quote", () => {
     const action = {
       id: "action:ca:ab2652:10",

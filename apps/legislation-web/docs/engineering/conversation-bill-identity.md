@@ -2,7 +2,20 @@
 
 Canonical bill evidence retains the retrieved title and identifier with its exact bill ID and Congress/session.
 The session is derived from the canonical ID, not an assistant label. Document evidence retains its own record ID,
-parent bill ID and version; a document title is never promoted to a bill title. Web titles are not canonical identity.
+parent bill ID and version; a document title is never promoted to a bill title. Document reads also carry the
+persisted parent bill's identity, joined by its exact bill ID. Web titles are not canonical identity.
+
+Bill-version citations use the parent bill's identifier, Congress/session and retrieved title as their heading.
+The document's published title (for example, "Introduced in Senate") remains in the version line with its date,
+instead of repeating an opaque version code. The source URL, document ID, passage locator and exact quote remain
+bound to the cited version. Other document classifications keep their own titles. This shared evidence projection
+feeds the source list, evidence panel, inline presentations, copied citations and model input.
+
+Passage search consumes its returned sibling bill record; direct document and section reads carry the same parent
+identity. Only matching canonical bill IDs may supply that identity. Missing, foreign or web-provided bill identity
+does not justify relabeling a document. Full parent titles and identifiers participate in evidence identity before
+display truncation, so conflicting retrieved identities cannot silently share a citation.
+This is a forward-only read/projection change: it requires neither re-ingestion nor rewriting saved conversations.
 
 These identity snapshots survive bounded server-owned research memory even when the larger tool result is omitted.
 Changed canonical titles produce distinct evidence snapshots, so contradictory retained identities are not silently

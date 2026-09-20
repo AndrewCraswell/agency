@@ -5,7 +5,7 @@ import { captureException, getReplay } from "@sentry/nextjs"
 import { RotateCcw } from "lucide-react"
 import { LoaderCircle } from "lucide-react"
 import Link from "next/link"
-import { useRef, useState } from "react"
+import { Fragment, useRef, useState } from "react"
 import {
   Conversation,
   ConversationContent,
@@ -19,12 +19,13 @@ import type { StagedReference } from "../chatRequest"
 import { isClarificationSubmission } from "../chatRequest"
 import { composerDraftText, composerMessageMetadata, messageComposerDraft } from "../composerDraft"
 import { composerSubmissionBlockedReason } from "../composerPolicy"
-import { createConversationExport, downloadConversationExport } from "../conversationExport"
+import { createConversationExport } from "../conversationExport"
 import { entityPageSchema } from "../entityResults"
 import { messageResponseOutcome, responseIsIncomplete } from "../responseOutcome"
 import { ChatComposer } from "./ChatComposer"
 import type { CitationSelection } from "./citationPresentation"
 import type { ComposerHandle } from "./ComposerInput"
+import { ConversationExport } from "./ConversationExport"
 import { ConversationResponse } from "./ConversationResponse"
 import { useConversationSession } from "./ConversationSession"
 import { EvidencePanel } from "./EvidencePanel"
@@ -37,6 +38,12 @@ import * as responseStyles from "./ConversationResponse.css"
 type ChatWorkspaceProps = Readonly<{
   isAvailable?: boolean
   conversationId: string
+}>
+
+type ConversationExportTurn = Readonly<{
+  id: string
+  afterMessageId: string
+  json: string
 }>
 
 export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorkspaceProps) {
@@ -59,12 +66,14 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
   const [isReferencePickerOpen, setReferencePickerOpen] = useState(false)
   const [selectedCitation, setSelectedCitation] = useState<CitationSelection>()
   const [exportStatus, setExportStatus] = useState<string>()
+  const [exportTurns, setExportTurns] = useState<ConversationExportTurn[]>([])
   const evidenceTrigger = useRef<HTMLElement | null>(null)
   function handleEvidence(selection: CitationSelection) {
     evidenceTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setSelectedCitation(selection)
   }
   const { messages, sendMessage, status, stop, regenerate } = useChat({ chat, throttle: 50 })
+  const visibleMessages = messages.filter((message) => !isClarificationSubmission(message))
   const isRunning = status === "submitted" || status === "streaming"
   const isBusy = isRunning || isConfirmingClarification || isRestoringConversation
   const lastMessage = messages.at(-1)
@@ -110,8 +119,12 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
         return
       }
       try {
-        downloadConversationExport(
-          chat.id,
+        const afterMessageId = visibleMessages.at(-1)?.id
+        if (!afterMessageId) {
+          setExportStatus("Start a conversation before exporting.")
+          return
+        }
+        const json = JSON.stringify(
           createConversationExport({
             conversationId: chat.id,
             messages: chat.messages,
@@ -119,9 +132,12 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
             interruptedMessageId,
             replayId: getReplay()?.getReplayId(),
             clarificationAnswers
-          })
+          }),
+          null,
+          2
         )
-        setExportStatus("Conversation export requested.")
+        setExportTurns((turns) => [...turns, { id: crypto.randomUUID(), afterMessageId, json }])
+        setExportStatus(undefined)
         setDraft([])
       } catch (error) {
         captureException(error, { tags: { operation: "conversation_export", sessionId: chat.id } })
@@ -208,12 +224,10 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
             )}
             {hasSession && (
               <>
-                {messages
-                  .filter((message) => !isClarificationSubmission(message))
-                  .map((message) =>
-                    message.role === "assistant" ? (
+                {visibleMessages.map((message) => (
+                  <Fragment key={message.id}>
+                    {message.role === "assistant" ? (
                       <ConversationResponse
-                        key={message.id}
                         message={message}
                         isLatest={message.id === messages.at(-1)?.id}
                         isRunning={isRunning && message.id === messages.at(-1)?.id}
@@ -225,7 +239,6 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
                       />
                     ) : (
                       <article
-                        key={message.id}
                         tabIndex={-1}
                         aria-label={message.role === "user" ? "Your question" : "Rostra response"}
                         className={responseStyles.questionTurn}
@@ -241,8 +254,14 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
                         </div>
                         <MessageActions message={message} />
                       </article>
-                    )
-                  )}
+                    )}
+                    {exportTurns
+                      .filter((turn) => turn.afterMessageId === message.id)
+                      .map((turn) => (
+                        <ConversationExport key={turn.id} json={turn.json} />
+                      ))}
+                  </Fragment>
+                ))}
                 {isRunning && messages.at(-1)?.role !== "assistant" && (
                   <output className={responseStyles.working}>
                     <LoaderCircle className={responseStyles.spinner} aria-hidden="true" />
@@ -270,7 +289,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
         {hasSession && (
           <ConversationScrollButton
             className={styles.jumpToLatest}
-            messageIds={messages.filter((message) => !isClarificationSubmission(message)).map((message) => message.id)}
+            messageIds={[...visibleMessages.map((message) => message.id), ...exportTurns.map((turn) => turn.id)]}
           />
         )}
       </Conversation>

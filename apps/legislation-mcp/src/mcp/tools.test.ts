@@ -4,6 +4,7 @@ import { createLogger } from "@repo/legislation-core/observability/logger"
 import { createLegislationResearchTools, type LegislationQueryApi } from "@repo/legislation-core/research/tools"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
+import { readFragmentedResult } from "./fragment-test-helper.js"
 import { createLegislationMcpHandler } from "./tools.js"
 
 const handlers = new Set<ReturnType<typeof createLegislationMcpHandler>>()
@@ -126,15 +127,14 @@ describe("legislation MCP tools", () => {
       await transport.close()
     }
   })
-  it("counts both text and structured output against the total response byte budget", async () => {
+  it.each([500_000, 950_000])("pages %s bytes losslessly within the combined MCP response budget", async (size) => {
     const service = createService()
-    vi.mocked(service.getBill).mockResolvedValue({ text: "x".repeat(500_000) })
+    const source = { text: "x".repeat(size) }
+    vi.mocked(service.getBill).mockResolvedValue(source)
     const { client, transport } = await createClient(service)
     try {
-      const result = await client.callTool({ name: "get_bill", arguments: { id: "bill:us:119:hr:1234" } })
-      expect(result.isError).toBe(true)
-      expect(JSON.stringify(result)).toContain("result_limit")
-      expect(Buffer.byteLength(JSON.stringify(result))).toBeLessThan(900_000)
+      const result = await readFragmentedResult(client, "get_bill", { id: "bill:us:119:hr:1234" })
+      expect(result).toEqual(source)
     } finally {
       await transport.close()
     }
@@ -358,23 +358,6 @@ describe("legislation MCP tools", () => {
 
     expect(result.isError).toBe(true)
     expect(service.getBill).not.toHaveBeenCalled()
-    await transport.close()
-  })
-
-  it("rejects serialized responses above the hard payload limit", async () => {
-    const service: LegislationQueryApi = {
-      ...createService(),
-      getBill: vi.fn<LegislationQueryApi["getBill"]>(async () => ({ text: "x".repeat(950_000) }))
-    }
-    const { client, transport } = await createClient(service)
-
-    const result = await client.callTool({
-      arguments: { id: "bill:us:119:hr:1234" },
-      name: "get_bill"
-    })
-
-    expect(result.isError).toBe(true)
-    expect(JSON.stringify(result.content)).toContain("result_limit")
     await transport.close()
   })
 

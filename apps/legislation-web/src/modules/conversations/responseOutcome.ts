@@ -2,7 +2,6 @@ import { getToolName, isToolUIPart, type UIMessage } from "ai"
 import { z } from "zod"
 import { clarificationRequestSchema } from "./clarification"
 import { presentationBlockSchema } from "./composition"
-import { researchToolMeasurementSchema } from "./researchMeasurement"
 
 export const incompleteAnswerText = "Research ended before an answer was completed. Narrow the question and try again."
 
@@ -32,7 +31,6 @@ export function classifyResponse(options: {
   isCancelled?: boolean
   isError?: boolean
   isInterrupted?: boolean
-  isExhausted?: boolean
 }): ResponseOutcome {
   const pendingToolCalls = options.pendingToolCalls ?? []
   const failedToolCalls = options.failedToolCalls ?? []
@@ -59,8 +57,6 @@ export function classifyResponse(options: {
     !options.isError
   ) {
     status = "completed"
-  } else if (options.isExhausted) {
-    status = "exhausted"
   } else if (options.hasAnswer) {
     status = "partial"
   } else if (
@@ -114,11 +110,6 @@ export function messageResponseOutcome(message: UIMessage): ResponseOutcome {
     const block = part.type === "data-presentation" ? presentationBlockSchema.safeParse(part.data) : undefined
     return block?.success && block.data.state === "error"
   })
-  const isExhausted = message.parts.some((part) => {
-    const measurement =
-      part.type === "data-tool-measurement" ? researchToolMeasurementSchema.safeParse(part.data) : undefined
-    return measurement?.success && measurement.data.failureCode === "step_limit"
-  })
   return classifyResponse({
     hasAnswer: recorded?.hasAnswer ?? hasAnswer,
     hasClarification,
@@ -131,8 +122,7 @@ export function messageResponseOutcome(message: UIMessage): ResponseOutcome {
     failedToolCalls: tools.filter((part) => part.state === "output-error").map((part) => part.toolCallId),
     isCancelled: observation?.isCancelled,
     isError: observation?.isError || hasFailedPresentation,
-    isInterrupted: observation?.isAbort || observation?.isDisconnect,
-    isExhausted
+    isInterrupted: observation?.isAbort || observation?.isDisconnect
   })
 }
 

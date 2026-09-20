@@ -57,9 +57,18 @@ export function createResearchSelections() {
   const documents = new Map<string, Document>()
   let hasOfferedRecovery = false
 
-  function register(data: unknown, reference: string) {
+  function register(data: unknown, reference: string, consumed?: { tool: string; input: Input }) {
     const nextCursors = new Map(cursors)
     const nextDocuments = new Map(documents)
+    if (consumed && typeof consumed.input.cursor === "string") {
+      const page = readResultPage(consumed.tool, consumed.input)
+      if (
+        page.fragment ||
+        (typeof page.input.cursor === "string" && page.input.cursor.startsWith("research-evidence:"))
+      ) {
+        nextCursors.delete(consumed.input.cursor)
+      }
+    }
     function visit(value: unknown, parent?: string) {
       if (Array.isArray(value)) {
         for (const item of value) {

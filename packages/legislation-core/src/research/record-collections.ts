@@ -27,6 +27,13 @@ import {
 import { LegislationError } from "../domain/errors"
 import { recordCollectionSchema, type RecordCollectionInput } from "./record-contracts"
 
+const documentBillColumns = {
+  id: bills.id,
+  identifier: bills.identifier,
+  title: bills.title,
+  sessionId: bills.sessionId
+}
+
 export function readSupportingMaterialLinks(
   database: LegislationDatabase,
   materialId: string,
@@ -94,12 +101,6 @@ export async function readRecordCollection(database: LegislationDatabase, value:
       parent: billSponsors.billId,
       order: billSponsors.id,
       columns: getTableColumns(billSponsors)
-    },
-    "bill-documents": {
-      table: billDocuments,
-      parent: billDocuments.billId,
-      order: billDocuments.id,
-      columns: documentMetadata
     },
     "person-terms": {
       table: legislativeTerms,
@@ -173,27 +174,42 @@ export async function readRecordCollection(database: LegislationDatabase, value:
     const parentTable = input.collection === "document-sections" ? billDocuments : supportingMaterials
     const textOffset = input.textOffset ?? 0
     const { text: _sectionText, searchVector: _searchVector, ...sectionMetadata } = getTableColumns(table)
-    items = await database
-      .select({
-        ...sectionMetadata,
-        recordId: parent,
-        sectionId: table.id,
-        title: parentTable.title,
-        sourceUrl: parentTable.sourceUrl,
-        documentDate: parentTable.documentDate,
-        billId: input.collection === "document-sections" ? billDocuments.billId : sql<string | null>`null`,
-        versionCode: input.collection === "document-sections" ? billDocuments.versionCode : sql<string | null>`null`,
-        text: sql<string>`substring(${table.text} from ${textOffset + 1} for 10000)`,
-        textOffset: sql<number>`${textOffset}::integer`,
-        totalCharacters: sql<number>`length(${table.text})`,
-        nextTextOffset: sql<
-          number | null
-        >`case when length(${table.text}) > ${textOffset + 10000} then ${textOffset + 10000}::integer else null end`
-      })
-      .from(table)
-      .innerJoin(parentTable, eq(parentTable.id, parent))
+    const sectionColumns = {
+      ...sectionMetadata,
+      recordId: parent,
+      sectionId: table.id,
+      title: parentTable.title,
+      sourceUrl: parentTable.sourceUrl,
+      documentDate: parentTable.documentDate,
+      billId: input.collection === "document-sections" ? billDocuments.billId : sql<string | null>`null`,
+      versionCode: input.collection === "document-sections" ? billDocuments.versionCode : sql<string | null>`null`,
+      text: sql<string>`substring(${table.text} from ${textOffset + 1} for 10000)`,
+      textOffset: sql<number>`${textOffset}::integer`,
+      totalCharacters: sql<number>`length(${table.text})`,
+      nextTextOffset: sql<
+        number | null
+      >`case when length(${table.text}) > ${textOffset + 10000} then ${textOffset + 10000}::integer else null end`
+    }
+    const query =
+      input.collection === "document-sections"
+        ? database
+            .select({ ...sectionColumns, classification: billDocuments.classification, bill: documentBillColumns })
+            .from(table)
+            .innerJoin(parentTable, eq(parentTable.id, parent))
+            .innerJoin(bills, eq(bills.id, billDocuments.billId))
+        : database.select(sectionColumns).from(table).innerJoin(parentTable, eq(parentTable.id, parent))
+    items = await query
       .where(and(eq(parent, input.recordId), input.sectionId ? eq(table.id, input.sectionId) : undefined))
       .orderBy(asc(table.ordinal), asc(table.id))
+      .limit(limit + 1)
+      .offset(offset)
+  } else if (input.collection === "bill-documents") {
+    items = await database
+      .select({ ...documentMetadata, bill: documentBillColumns })
+      .from(billDocuments)
+      .innerJoin(bills, eq(bills.id, billDocuments.billId))
+      .where(eq(billDocuments.billId, input.recordId))
+      .orderBy(asc(billDocuments.id))
       .limit(limit + 1)
       .offset(offset)
   } else if (input.collection === "material-links") {

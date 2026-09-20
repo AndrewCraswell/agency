@@ -20,8 +20,6 @@ describe("response outcomes", () => {
     { hasAnswer: false, isCancelled: true, expected: "cancelled" },
     { hasAnswer: true, finishReason: "length", expected: "exhausted" },
     { hasAnswer: false, finishReason: "tool-calls", expected: "unknown" },
-    { hasAnswer: false, isExhausted: true, finishReason: "stop", expected: "exhausted" },
-    { hasAnswer: true, isExhausted: true, finishReason: "stop", expected: "completed" },
     { hasAnswer: false, isError: true, expected: "failed" },
     { hasAnswer: false, finishReason: null, expected: "unknown" },
     { hasAnswer: false, finishReason: "stop", expected: "partial" },

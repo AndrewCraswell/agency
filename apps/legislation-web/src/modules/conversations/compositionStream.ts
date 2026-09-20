@@ -18,7 +18,6 @@ import {
 import { createCompositionDiagnostics, type CompositionDiagnostic } from "./compositionDiagnostics"
 import type { EntityCard } from "./entityResults"
 import { contentReferenceSchema, type PresentationContent } from "./presentationContent"
-import { researchToolMeasurementSchema } from "./researchMeasurement"
 import { classifyResponse, incompleteAnswerText, responseIsIncomplete, type ResponseOutcome } from "./responseOutcome"
 
 const maximumBlocks = 3
@@ -100,7 +99,6 @@ export function createCompositionStream(
   let finishReason: string | null = null
   let hasStreamError = false
   let hasSyntheticText = false
-  let hasExhaustedResearch = false
   let outcome: ResponseOutcome | undefined
   const pendingToolCalls = new Set<string>()
   const failedToolCalls = new Set<string>()
@@ -149,8 +147,7 @@ export function createCompositionStream(
       pendingToolCalls: [...pendingToolCalls],
       failedToolCalls: [...failedToolCalls],
       isError: hasStreamError || [...renderedBlocks.values()].some((block) => block.state === "error"),
-      isInterrupted: Boolean(interruption),
-      isExhausted: hasExhaustedResearch
+      isInterrupted: Boolean(interruption)
     })
   }
 
@@ -511,10 +508,6 @@ export function createCompositionStream(
           }
           const context = contexts.get(chunk)
           if (context) {
-            if (context.type === "data-tool-measurement") {
-              const measurement = researchToolMeasurementSchema.safeParse(context.data)
-              hasExhaustedResearch ||= measurement.success && measurement.data.failureCode === "step_limit"
-            }
             if (context.type === "tool-input-start" || context.type === "tool-input-available") {
               pendingToolCalls.add(context.toolCallId)
             } else if (

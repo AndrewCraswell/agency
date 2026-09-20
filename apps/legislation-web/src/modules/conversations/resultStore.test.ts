@@ -1,3 +1,8 @@
+import {
+  prepareResultPage,
+  readResultPage,
+  researchResultByteLimit
+} from "@repo/legislation-core/research/result-pages"
 import { describe, expect, it, vi } from "vitest"
 import { entityCardSchema, projectEntityResult, ResultExpiredError } from "./entityResults"
 import { createResultStore, type RetainedResult, type ResultPersistence } from "./resultStore"
@@ -7,6 +12,41 @@ vi.mock("./resultPersistence.server", () => {
 })
 
 describe("result recovery", () => {
+  it("loads a fragmented record as one logical page before resuming ordinary upstream results", async () => {
+    const store = createResultStore()
+    const owner = crypto.randomUUID()
+    const input = { query: "housing", limit: 1 }
+    const bill = { id: "bill:large", title: "Exact title ".repeat(20000) }
+    const raw = { items: [bill], nextCursor: "upstream" }
+    expect(Buffer.byteLength(JSON.stringify(raw))).toBeGreaterThan(researchResultByteLimit)
+    const load = vi.fn<(cursor: string) => Promise<unknown>>(async (cursor) => {
+      if (cursor === "start") {
+        return prepareResultPage("search_bills", input, raw, 0)
+      }
+      const page = readResultPage("search_bills", { ...input, cursor })
+      if (page.input.cursor === "upstream") {
+        return { items: [{ id: "bill:last", title: "Last" }] }
+      }
+      return prepareResultPage("search_bills", page.input, raw, page.offset, page.snapshot, undefined, page.fragment)
+    })
+    const initial = store.create(
+      owner,
+      "search_bills",
+      {
+        items: Array.from({ length: 5 }, (_, index) => ({ id: `bill:${index}`, title: `Bill ${index}` })),
+        nextCursor: "start"
+      },
+      input.query,
+      load
+    )!
+    const next = await store.page(owner, initial.id, 1, new AbortController().signal)
+    expect(next.items.map((item) => item.id)).toEqual([bill.id, "bill:last"])
+    expect(next.items[0]?.title).toHaveLength(1000)
+    expect(load.mock.calls.length).toBeGreaterThan(5)
+    expect(store.record(owner, initial.id, bill.id).title.endsWith("…")).toBe(true)
+    expect(bill.title).toHaveLength("Exact title ".length * 20000)
+  })
+
   it.each([
     { recordedMemberCount: 8, membershipRelationsComplete: true, completeness: "complete", value: "8" },
     { recordedMemberCount: 8, membershipRelationsComplete: false, completeness: "partial", value: "8" },
