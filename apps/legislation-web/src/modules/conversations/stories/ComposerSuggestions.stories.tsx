@@ -23,7 +23,9 @@ function reference(
       fields: [],
       tallies: [],
       sourceUrl: null,
-      ...(kind === "organization" ? { organizationSummary: { classification: "committee" } } : {})
+      ...(kind === "organization"
+        ? { organizationSummary: { classification: "committee", membershipCompleteness: "unknown" as const } }
+        : {})
     }
   }
 }

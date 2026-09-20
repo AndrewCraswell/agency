@@ -7,7 +7,7 @@ import invariant from "tiny-invariant"
 import { StickToBottom } from "use-stick-to-bottom"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { recordMentionHref, type PresentationBlock } from "../composition"
-import type { EntityCard, EntityPage } from "../entityResults"
+import { projectEntityResult, type EntityCard, type EntityPage } from "../entityResults"
 import type { EvidenceSnapshot } from "../evidence"
 import type { MeetingDetails, VoteDetails } from "../recordDetails"
 import { ChatProviders } from "./ChatProviders"
@@ -123,6 +123,114 @@ function inlineResponse(parts: UIMessage["parts"], isRunning = false) {
 }
 
 describe("response presentation snapshots", () => {
+  it.each([
+    {
+      tool: "get_bill",
+      data: { bill: { id: "bill:copy", title: "Bill", introducedDate: "2025-01-01", versionCount: 4 } },
+      values: ["Jan 1, 2025", "4"]
+    },
+    {
+      tool: "get_person",
+      data: { person: { id: "person:copy", name: "Person", inOfficeSinceYear: 1997, recordedCommitteeRoleCount: 4 } },
+      values: ["1997", "4"]
+    },
+    {
+      tool: "get_organization",
+      data: {
+        organization: { id: "organization:copy", name: "Committee", memberCount: 8, chairName: "Published chair" },
+        nextMeeting: null
+      },
+      values: ["8", "Published chair", "None recorded"]
+    },
+    {
+      tool: "get_event",
+      data: {
+        event: {
+          id: "event:copy",
+          name: "Meeting",
+          agendaItemCount: 3,
+          documentCount: 2,
+          location: { room: "H-313", building: "Capitol" }
+        }
+      },
+      values: ["3", "2", "Capitol"]
+    },
+    {
+      tool: "get_bill_text",
+      data: {
+        document: {
+          id: "document:copy",
+          title: "Document",
+          sectionCount: 7,
+          pageCount: 14,
+          processingStatus: "processed"
+        }
+      },
+      values: ["7", "14", "Text available"]
+    },
+    {
+      tool: "get_supporting_material",
+      data: {
+        material: { id: "material:copy", title: "Report", contentType: "application/xml" },
+        links: [{ materialId: "material:copy", billIdentifier: "HB 1" }]
+      },
+      values: ["Not paginated", "HB 1"]
+    },
+    {
+      tool: "get_amendment",
+      data: {
+        amendment: { id: "amendment:copy", printedIdentifier: "A 1", billIdentifier: "HB 1" },
+        actions: [{ amendmentId: "amendment:copy", actionDate: "2025-01-02", description: "Offered" }]
+      },
+      values: ["HB 1", "Jan 2, 2025"]
+    }
+  ])("renders $tool facts after their labels and explanations change", ({ tool, data, values }) => {
+    const projected = projectEntityResult(tool, data)?.items[0]
+    invariant(projected)
+    const record: EntityCard = {
+      ...projected,
+      fields: projected.fields.map((field, index) => ({ ...field, label: `Renamed fact ${index}`, detail: undefined }))
+    }
+    render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
+    for (const value of values) {
+      expect(screen.getByText(value)).toBeDefined()
+    }
+  })
+
+  it.each([
+    { completeness: "complete", count: "8", detail: "A publisher explanation", expected: "8 members" },
+    { completeness: "partial", count: "8", detail: undefined, expected: "8 recorded members" },
+    { completeness: "partial", count: "8", detail: "Different copy", expected: "8 recorded members" },
+    { completeness: "complete", count: "0", detail: "A publisher explanation", expected: "0 members" },
+    { completeness: "unknown", count: undefined, detail: undefined, expected: "Active" }
+  ] as const)(
+    "uses explicit membership completeness in compact cards: %j",
+    ({ completeness, count, detail, expected }) => {
+      const record: EntityCard = {
+        ...selectedRecord,
+        kind: "organization",
+        organizationSummary: { membershipCompleteness: completeness, isActive: true },
+        fields: count === undefined ? [] : [{ id: "members", label: "Roster size", value: count, detail }]
+      }
+      render(<CompactRecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
+      expect(screen.getByText(expected)).toBeDefined()
+      const link = screen.getByRole("link", { name: record.title })
+      link.focus()
+      expect(document.activeElement).toBe(link)
+      expect(link.getAttribute("href")).toContain("/records/organization/")
+    }
+  )
+
+  it("retains compact document section counts after the display label changes", () => {
+    const record: EntityCard = {
+      ...selectedRecord,
+      kind: "document",
+      fields: [{ id: "sections", label: "Renamed section count", value: "7" }]
+    }
+    render(<CompactRecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
+    expect(screen.getByText("7 sections")).toBeDefined()
+  })
+
   it.each(malformedCitationFixtures)(
     "activates the exact answer-owned source for malformed receipt $marker",
     async (fixture) => {
@@ -200,7 +308,7 @@ describe("response presentation snapshots", () => {
     const record: EntityCard = {
       ...selectedRecord,
       kind: "person",
-      fields: [{ label: "In office since", value: "1997" }],
+      fields: [{ id: "inOfficeSince", label: "In office since", value: "1997" }],
       personSummary: { term: { startYear: 2025, endYear: 2027, isActive: true } }
     }
     render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
@@ -271,7 +379,14 @@ describe("response presentation snapshots", () => {
       ...selectedRecord,
       kind: "amendment",
       title: "HAMDT 10",
-      fields: [{ label: "Bill", value: "HR 152", detail: "Making supplemental appropriations for the fiscal year." }]
+      fields: [
+        {
+          id: "bill",
+          label: "Bill",
+          value: "HR 152",
+          detail: "Making supplemental appropriations for the fiscal year."
+        }
+      ]
     }
     render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} isGrouped={isGrouped} />)
     expect(screen.getByText("HR 152")).toBeDefined()
@@ -284,7 +399,7 @@ describe("response presentation snapshots", () => {
       ...selectedRecord,
       kind: "person",
       title: "Published member",
-      fields: [{ label: "Committee roles", value: "4", detail: "Recorded active roles" }]
+      fields: [{ id: "committeeRoles", label: "Committee roles", value: "4", detail: "Recorded active roles" }]
     }
     render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} isGrouped={isGrouped} />)
     expect(screen.getByText("Committee roles")).toBeDefined()
@@ -299,9 +414,9 @@ describe("response presentation snapshots", () => {
       kind: "meeting",
       title: "Published meeting",
       fields: [
-        { label: "Agenda items", value: "0", detail: "Recorded" },
-        { label: "Documents", value: "2", detail: "Recorded" },
-        { label: "Location detail", value: "Capitol" }
+        { id: "agendaItems", label: "Agenda items", value: "0", detail: "Recorded" },
+        { id: "documents", label: "Documents", value: "2", detail: "Recorded" },
+        { id: "locationDetail", label: "Location detail", value: "Capitol" }
       ]
     }
     render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} isGrouped={isGrouped} />)
@@ -323,7 +438,7 @@ describe("response presentation snapshots", () => {
       ...selectedRecord,
       kind: "amendment",
       title: "HAMDT 2",
-      fields: [{ label: "Latest action", value: "2013-01-03", detail }]
+      fields: [{ id: "latestAction", label: "Latest action", value: "2013-01-03", detail }]
     }
     render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
     expect(screen.getByText(expected)).toBeDefined()

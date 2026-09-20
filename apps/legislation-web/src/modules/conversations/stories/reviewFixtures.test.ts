@@ -21,7 +21,7 @@ describe("captured Storybook review", () => {
       expect(record.documentSummary?.versionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     }
     for (const { record } of materials) {
-      expect(record.fields.find((field) => field.label === "Pages")?.value).toMatch(/^(?:[1-9]\d*|Not paginated)$/)
+      expect(record.fields.find((field) => field.id === "pages")?.value).toMatch(/^(?:[1-9]\d*|Not paginated)$/)
     }
   })
 
@@ -49,9 +49,9 @@ describe("captured Storybook review", () => {
 
   it("retains repaired bill dates and year-precise person tenure", () => {
     const bill = capturedCards.find(({ record }) => record.id === "bill:ca:20232024:ab:2652")?.record
-    expect(bill?.fields.find((field) => field.label === "Introduced")?.value).toBe("2024-02-14")
+    expect(bill?.fields.find((field) => field.id === "introduced")?.value).toBe("2024-02-14")
     const person = capturedCards.find(({ record }) => record.id === "person:congress:a000055")?.record
-    expect(person?.fields.find((field) => field.label === "In office since")?.value).toBe("1997")
+    expect(person?.fields.find((field) => field.id === "inOfficeSince")?.value).toBe("1997")
     expect(person?.personSummary?.term?.startYear).toBe(2025)
     expect(person?.personSummary?.term?.startDate).toBeUndefined()
   })
@@ -62,8 +62,8 @@ describe("captured Storybook review", () => {
     expect(meetings.every(({ record }) => !record.id.includes("published-hearing"))).toBe(true)
     const congress = meetings.find(({ record }) => record.id === reviewMeetingIds[0])?.record
     const alaska = meetings.find(({ record }) => record.id === reviewMeetingIds[1])?.record
-    expect(congress?.fields.find((field) => field.label === "Agenda items")).toBeUndefined()
-    expect(alaska?.fields.find((field) => field.label === "Agenda items")?.value).toBe("21")
+    expect(congress?.fields.find((field) => field.id === "agendaItems")).toBeUndefined()
+    expect(alaska?.fields.find((field) => field.id === "agendaItems")?.value).toBe("21")
   })
 
   it("projects current card fields from retained source data", () => {

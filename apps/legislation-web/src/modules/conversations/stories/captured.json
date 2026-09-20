@@ -468,11 +468,13 @@
               "fields": [
                 {
                   "label": "Introduced",
-                  "value": "2024-02-14"
+                  "value": "2024-02-14",
+                  "id": "introduced"
                 },
                 {
                   "label": "Versions",
-                  "value": "4"
+                  "value": "4",
+                  "id": "versions"
                 }
               ],
               "tallies": []
@@ -1310,11 +1312,13 @@
               "fields": [
                 {
                   "label": "Introduced",
-                  "value": "2024-02-07"
+                  "value": "2024-02-07",
+                  "id": "introduced"
                 },
                 {
                   "label": "Versions",
-                  "value": "13"
+                  "value": "13",
+                  "id": "versions"
                 }
               ],
               "tallies": []
@@ -1426,7 +1430,8 @@
               "fields": [
                 {
                   "label": "Introduced",
-                  "value": "2024-02-14"
+                  "value": "2024-02-14",
+                  "id": "introduced"
                 }
               ],
               "tallies": []
@@ -1446,7 +1451,8 @@
               "fields": [
                 {
                   "label": "Introduced",
-                  "value": "2023-02-08"
+                  "value": "2023-02-08",
+                  "id": "introduced"
                 }
               ],
               "tallies": []
@@ -2729,11 +2735,13 @@
               "fields": [
                 {
                   "label": "Introduced",
-                  "value": "2024-02-14"
+                  "value": "2024-02-14",
+                  "id": "introduced"
                 },
                 {
                   "label": "Versions",
-                  "value": "4"
+                  "value": "4",
+                  "id": "versions"
                 }
               ],
               "tallies": []
@@ -2758,11 +2766,13 @@
               "fields": [
                 {
                   "label": "Introduced",
-                  "value": "2024-02-07"
+                  "value": "2024-02-07",
+                  "id": "introduced"
                 },
                 {
                   "label": "Versions",
-                  "value": "13"
+                  "value": "13",
+                  "id": "versions"
                 }
               ],
               "tallies": []
@@ -3231,7 +3241,8 @@
               "fields": [
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -3251,11 +3262,13 @@
               "fields": [
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -3276,7 +3289,8 @@
               "fields": [
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -3297,7 +3311,8 @@
               "fields": [
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -3318,7 +3333,8 @@
               "fields": [
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -3412,15 +3428,18 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "1"
+                  "value": "1",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -3515,7 +3534,8 @@
               "fields": [
                 {
                   "label": "In office since",
-                  "value": "1997"
+                  "value": "1997",
+                  "id": "inOfficeSince"
                 }
               ],
               "tallies": []
@@ -4572,11 +4592,13 @@
                 {
                   "label": "Committee roles",
                   "value": "4",
-                  "detail": "Recorded active roles"
+                  "detail": "Recorded active roles",
+                  "id": "committeeRoles"
                 },
                 {
                   "label": "In office since",
-                  "value": "1997"
+                  "value": "1997",
+                  "id": "inOfficeSince"
                 }
               ],
               "tallies": []
@@ -4773,7 +4795,8 @@
               "sourceUrl": "https://www.govinfo.gov/content/pkg/CDIR-2026-02-20/text/CDIR-2026-02-20.txt",
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [],
               "tallies": []
@@ -4786,7 +4809,8 @@
               "sourceUrl": null,
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [],
               "tallies": []
@@ -4799,7 +4823,8 @@
               "sourceUrl": null,
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [],
               "tallies": []
@@ -4812,7 +4837,8 @@
               "sourceUrl": null,
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [],
               "tallies": []
@@ -4825,7 +4851,8 @@
               "sourceUrl": null,
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [],
               "tallies": []
@@ -6104,20 +6131,24 @@
               "sourceUrl": "https://www.govinfo.gov/content/pkg/CDIR-2026-02-20/text/CDIR-2026-02-20.txt",
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [
                 {
                   "label": "Members",
-                  "value": "54"
+                  "value": "54",
+                  "id": "members"
                 },
                 {
                   "label": "Chair",
-                  "value": "Thompson, Glenn"
+                  "value": "Thompson, Glenn",
+                  "id": "chair"
                 },
                 {
                   "label": "Next meeting",
-                  "value": "None recorded"
+                  "value": "None recorded",
+                  "id": "nextMeeting"
                 }
               ],
               "tallies": []
@@ -6339,7 +6370,8 @@
               "fields": [
                 {
                   "label": "Location detail",
-                  "value": "Capitol"
+                  "value": "Capitol",
+                  "id": "locationDetail"
                 }
               ],
               "tallies": []
@@ -6387,7 +6419,8 @@
               "fields": [
                 {
                   "label": "Location detail",
-                  "value": "Cannon House Office Building"
+                  "value": "Cannon House Office Building",
+                  "id": "locationDetail"
                 }
               ],
               "tallies": []
@@ -6407,7 +6440,8 @@
               "fields": [
                 {
                   "label": "Location detail",
-                  "value": "Rayburn House Office Building"
+                  "value": "Rayburn House Office Building",
+                  "id": "locationDetail"
                 }
               ],
               "tallies": []
@@ -6577,11 +6611,13 @@
                 {
                   "label": "Documents",
                   "value": "4",
-                  "detail": "Recorded"
+                  "detail": "Recorded",
+                  "id": "documents"
                 },
                 {
                   "label": "Location detail",
-                  "value": "Capitol"
+                  "value": "Capitol",
+                  "id": "locationDetail"
                 }
               ],
               "tallies": []
@@ -22089,11 +22125,13 @@
                 {
                   "label": "Bill",
                   "value": "HR 152",
-                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes."
+                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes.",
+                  "id": "bill"
                 },
                 {
                   "label": "Latest action",
-                  "value": "2013-01-15"
+                  "value": "2013-01-15",
+                  "id": "latestAction"
                 }
               ],
               "tallies": []
@@ -22313,11 +22351,13 @@
                 {
                   "label": "Bill",
                   "value": "HR 152",
-                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes."
+                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes.",
+                  "id": "bill"
                 },
                 {
                   "label": "Latest action",
-                  "value": "2013-01-15"
+                  "value": "2013-01-15",
+                  "id": "latestAction"
                 }
               ],
               "tallies": []
@@ -22499,11 +22539,13 @@
               "fields": [
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -22521,7 +22563,8 @@
               "fields": [
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -22539,11 +22582,13 @@
               "fields": [
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -22561,11 +22606,13 @@
               "fields": [
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -22583,7 +22630,8 @@
               "fields": [
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -22723,20 +22771,24 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "3"
+                  "value": "3",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "1"
+                  "value": "1",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
                   "value": "HR 4366",
-                  "detail": "SAMDT 1255"
+                  "detail": "SAMDT 1255",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -31565,19 +31617,23 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "494"
+                  "value": "494",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "501"
+                  "value": "501",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "HR 5376"
+                  "value": "HR 5376",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -31685,19 +31741,23 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "1"
+                  "value": "1",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "S 3450"
+                  "value": "S 3450",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -32589,19 +32649,23 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "554"
+                  "value": "554",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "HR 5376"
+                  "value": "HR 5376",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -32709,19 +32773,23 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "1"
+                  "value": "1",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "1"
+                  "value": "1",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "S 129"
+                  "value": "S 129",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -32829,19 +32897,23 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "1"
+                  "value": "1",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "1"
+                  "value": "1",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "S 2559"
+                  "value": "S 2559",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -32971,19 +33043,23 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "1"
+                  "value": "1",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "Select Committee on the Events Surrounding the 2012 Terrorist Attack in Benghazi Committee"
+                  "value": "Select Committee on the Events Surrounding the 2012 Terrorist Attack in Benghazi Committee",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -33102,12 +33178,14 @@
                 {
                   "label": "Agenda items",
                   "value": "1",
-                  "detail": "Recorded"
+                  "detail": "Recorded",
+                  "id": "agendaItems"
                 },
                 {
                   "label": "Documents",
                   "value": "0",
-                  "detail": "Recorded"
+                  "detail": "Recorded",
+                  "id": "documents"
                 }
               ],
               "tallies": []
@@ -34631,11 +34709,13 @@
               "fields": [
                 {
                   "label": "Introduced",
-                  "value": "2023-02-08"
+                  "value": "2023-02-08",
+                  "id": "introduced"
                 },
                 {
                   "label": "Versions",
-                  "value": "8"
+                  "value": "8",
+                  "id": "versions"
                 }
               ],
               "tallies": []
@@ -34777,15 +34857,18 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "4"
+                  "value": "4",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "6"
+                  "value": "6",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 }
               ],
               "tallies": []
@@ -34954,20 +35037,24 @@
               "sourceUrl": null,
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [
                 {
                   "label": "Members",
-                  "value": "34"
+                  "value": "34",
+                  "id": "members"
                 },
                 {
                   "label": "Chair",
-                  "value": "Howard Penny, Jeff McNeely, Karl Gillespie"
+                  "value": "Howard Penny, Jeff McNeely, Karl Gillespie",
+                  "id": "chair"
                 },
                 {
                   "label": "Next meeting",
-                  "value": "None recorded"
+                  "value": "None recorded",
+                  "id": "nextMeeting"
                 }
               ],
               "tallies": []
@@ -35136,20 +35223,24 @@
               "sourceUrl": null,
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [
                 {
                   "label": "Members",
-                  "value": "6"
+                  "value": "6",
+                  "id": "members"
                 },
                 {
                   "label": "Chair",
-                  "value": "Brent Jackson, Jeff McNeely, Jimmy Dixon, Kyle Hall, Lisa Barnes, Norman Sanderson"
+                  "value": "Brent Jackson, Jeff McNeely, Jimmy Dixon, Kyle Hall, Lisa Barnes, Norman Sanderson",
+                  "id": "chair"
                 },
                 {
                   "label": "Next meeting",
-                  "value": "None recorded"
+                  "value": "None recorded",
+                  "id": "nextMeeting"
                 }
               ],
               "tallies": []
@@ -35318,20 +35409,24 @@
               "sourceUrl": null,
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [
                 {
                   "label": "Members",
-                  "value": "17"
+                  "value": "17",
+                  "id": "members"
                 },
                 {
                   "label": "Chair",
-                  "value": "Brent Jackson, Jimmy Dixon, Karl Gillespie"
+                  "value": "Brent Jackson, Jimmy Dixon, Karl Gillespie",
+                  "id": "chair"
                 },
                 {
                   "label": "Next meeting",
-                  "value": "None recorded"
+                  "value": "None recorded",
+                  "id": "nextMeeting"
                 }
               ],
               "tallies": []
@@ -35500,20 +35595,24 @@
               "sourceUrl": null,
               "organizationSummary": {
                 "classification": "committee",
-                "isActive": true
+                "isActive": true,
+                "membershipCompleteness": "complete"
               },
               "fields": [
                 {
                   "label": "Members",
-                  "value": "20"
+                  "value": "20",
+                  "id": "members"
                 },
                 {
                   "label": "Chair",
-                  "value": "Brent Jackson, Lisa Barnes, Norman Sanderson"
+                  "value": "Brent Jackson, Lisa Barnes, Norman Sanderson",
+                  "id": "chair"
                 },
                 {
                   "label": "Next meeting",
-                  "value": "None recorded"
+                  "value": "None recorded",
+                  "id": "nextMeeting"
                 }
               ],
               "tallies": []
@@ -35659,7 +35758,8 @@
                 {
                   "label": "Documents",
                   "value": "2",
-                  "detail": "Recorded"
+                  "detail": "Recorded",
+                  "id": "documents"
                 }
               ],
               "tallies": []
@@ -35805,7 +35905,8 @@
                 {
                   "label": "Documents",
                   "value": "2",
-                  "detail": "Recorded"
+                  "detail": "Recorded",
+                  "id": "documents"
                 }
               ],
               "tallies": []
@@ -35934,11 +36035,13 @@
                 {
                   "label": "Documents",
                   "value": "0",
-                  "detail": "Recorded"
+                  "detail": "Recorded",
+                  "id": "documents"
                 },
                 {
                   "label": "Location detail",
-                  "value": "Cannon House Office Building"
+                  "value": "Cannon House Office Building",
+                  "id": "locationDetail"
                 }
               ],
               "tallies": []
@@ -36355,11 +36458,13 @@
                 {
                   "label": "Documents",
                   "value": "21",
-                  "detail": "Recorded"
+                  "detail": "Recorded",
+                  "id": "documents"
                 },
                 {
                   "label": "Location detail",
-                  "value": "Rayburn House Office Building"
+                  "value": "Rayburn House Office Building",
+                  "id": "locationDetail"
                 }
               ],
               "tallies": []
@@ -43355,12 +43460,14 @@
                 {
                   "label": "Bill",
                   "value": "HRES 5",
-                  "detail": "Adopting rules for the One Hundred Thirteenth Congress."
+                  "detail": "Adopting rules for the One Hundred Thirteenth Congress.",
+                  "id": "bill"
                 },
                 {
                   "label": "Latest action",
                   "value": "2013-01-03",
-                  "detail": "House amendment offered"
+                  "detail": "House amendment offered",
+                  "id": "latestAction"
                 }
               ],
               "tallies": []
@@ -43551,11 +43658,13 @@
                 {
                   "label": "Bill",
                   "value": "HR 152",
-                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes."
+                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes.",
+                  "id": "bill"
                 },
                 {
                   "label": "Latest action",
-                  "value": "2013-01-15"
+                  "value": "2013-01-15",
+                  "id": "latestAction"
                 }
               ],
               "tallies": []
@@ -43768,11 +43877,13 @@
                 {
                   "label": "Bill",
                   "value": "HR 152",
-                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes."
+                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes.",
+                  "id": "bill"
                 },
                 {
                   "label": "Latest action",
-                  "value": "2013-01-15"
+                  "value": "2013-01-15",
+                  "id": "latestAction"
                 }
               ],
               "tallies": []
@@ -44007,11 +44118,13 @@
                 {
                   "label": "Bill",
                   "value": "HR 152",
-                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes."
+                  "detail": "Making supplemental appropriations for the fiscal\r\nyear ending September 30, 2013, to improve and\r\nstreamline disaster assistance for Hurricane\r\nSandy, and for other purposes.",
+                  "id": "bill"
                 },
                 {
                   "label": "Latest action",
-                  "value": "2013-01-15"
+                  "value": "2013-01-15",
+                  "id": "latestAction"
                 }
               ],
               "tallies": []
@@ -44246,19 +44359,23 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "9"
+                  "value": "9",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "S 1129"
+                  "value": "S 1129",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -44413,15 +44530,18 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "4"
+                  "value": "4",
+                  "id": "sections"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "S 1934"
+                  "value": "S 1934",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -44544,19 +44664,23 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "2"
+                  "value": "2",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "S 1333"
+                  "value": "S 1333",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -44663,19 +44787,23 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "1"
+                  "value": "1",
+                  "id": "sections"
                 },
                 {
                   "label": "Pages",
-                  "value": "Not paginated"
+                  "value": "Not paginated",
+                  "id": "pages"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "HR 2768"
+                  "value": "HR 2768",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -44782,15 +44910,18 @@
               "fields": [
                 {
                   "label": "Sections",
-                  "value": "1"
+                  "value": "1",
+                  "id": "sections"
                 },
                 {
                   "label": "Status",
-                  "value": "Text available"
+                  "value": "Text available",
+                  "id": "status"
                 },
                 {
                   "label": "Attached to",
-                  "value": "S 2792"
+                  "value": "S 2792",
+                  "id": "attachedTo"
                 }
               ],
               "tallies": []
@@ -52598,12 +52729,14 @@
                 {
                   "label": "Agenda items",
                   "value": "21",
-                  "detail": "Recorded"
+                  "detail": "Recorded",
+                  "id": "agendaItems"
                 },
                 {
                   "label": "Documents",
                   "value": "0",
-                  "detail": "Recorded"
+                  "detail": "Recorded",
+                  "id": "documents"
                 }
               ],
               "tallies": []
@@ -53311,11 +53444,13 @@
           {
             "label": "Committee roles",
             "value": "4",
-            "detail": "Recorded active roles"
+            "detail": "Recorded active roles",
+            "id": "committeeRoles"
           },
           {
             "label": "In office since",
-            "value": "1997"
+            "value": "1997",
+            "id": "inOfficeSince"
           }
         ],
         "tallies": []
@@ -53426,20 +53561,24 @@
         "sourceUrl": "https://www.govinfo.gov/content/pkg/CDIR-2026-02-20/text/CDIR-2026-02-20.txt",
         "organizationSummary": {
           "classification": "committee",
-          "isActive": true
+          "isActive": true,
+          "membershipCompleteness": "complete"
         },
         "fields": [
           {
             "label": "Members",
-            "value": "54"
+            "value": "54",
+            "id": "members"
           },
           {
             "label": "Chair",
-            "value": "Thompson, Glenn"
+            "value": "Thompson, Glenn",
+            "id": "chair"
           },
           {
             "label": "Next meeting",
-            "value": "None recorded"
+            "value": "None recorded",
+            "id": "nextMeeting"
           }
         ],
         "tallies": []
@@ -53464,11 +53603,13 @@
           {
             "label": "Documents",
             "value": "4",
-            "detail": "Recorded"
+            "detail": "Recorded",
+            "id": "documents"
           },
           {
             "label": "Location detail",
-            "value": "Capitol"
+            "value": "Capitol",
+            "id": "locationDetail"
           }
         ],
         "tallies": []
@@ -54622,20 +54763,24 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "3"
+            "value": "3",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "1"
+            "value": "1",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
             "value": "HR 4366",
-            "detail": "SAMDT 1255"
+            "detail": "SAMDT 1255",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -54672,19 +54817,23 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "494"
+            "value": "494",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "501"
+            "value": "501",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "HR 5376"
+            "value": "HR 5376",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -54910,19 +55059,23 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "1"
+            "value": "1",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "Not paginated"
+            "value": "Not paginated",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "S 3450"
+            "value": "S 3450",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -54951,19 +55104,23 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "554"
+            "value": "554",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "Not paginated"
+            "value": "Not paginated",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "HR 5376"
+            "value": "HR 5376",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -55239,19 +55396,23 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "1"
+            "value": "1",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "1"
+            "value": "1",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "S 129"
+            "value": "S 129",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -55280,19 +55441,23 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "1"
+            "value": "1",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "1"
+            "value": "1",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "S 2559"
+            "value": "S 2559",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -55332,19 +55497,23 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "1"
+            "value": "1",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "Not paginated"
+            "value": "Not paginated",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "Select Committee on the Events Surrounding the 2012 Terrorist Attack in Benghazi Committee"
+            "value": "Select Committee on the Events Surrounding the 2012 Terrorist Attack in Benghazi Committee",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -55378,12 +55547,14 @@
           {
             "label": "Agenda items",
             "value": "1",
-            "detail": "Recorded"
+            "detail": "Recorded",
+            "id": "agendaItems"
           },
           {
             "label": "Documents",
             "value": "0",
-            "detail": "Recorded"
+            "detail": "Recorded",
+            "id": "documents"
           }
         ],
         "tallies": []
@@ -55415,20 +55586,24 @@
         "sourceUrl": null,
         "organizationSummary": {
           "classification": "committee",
-          "isActive": true
+          "isActive": true,
+          "membershipCompleteness": "complete"
         },
         "fields": [
           {
             "label": "Members",
-            "value": "34"
+            "value": "34",
+            "id": "members"
           },
           {
             "label": "Chair",
-            "value": "Howard Penny, Jeff McNeely, Karl Gillespie"
+            "value": "Howard Penny, Jeff McNeely, Karl Gillespie",
+            "id": "chair"
           },
           {
             "label": "Next meeting",
-            "value": "None recorded"
+            "value": "None recorded",
+            "id": "nextMeeting"
           }
         ],
         "tallies": []
@@ -55446,20 +55621,24 @@
         "sourceUrl": null,
         "organizationSummary": {
           "classification": "committee",
-          "isActive": true
+          "isActive": true,
+          "membershipCompleteness": "complete"
         },
         "fields": [
           {
             "label": "Members",
-            "value": "6"
+            "value": "6",
+            "id": "members"
           },
           {
             "label": "Chair",
-            "value": "Brent Jackson, Jeff McNeely, Jimmy Dixon, Kyle Hall, Lisa Barnes, Norman Sanderson"
+            "value": "Brent Jackson, Jeff McNeely, Jimmy Dixon, Kyle Hall, Lisa Barnes, Norman Sanderson",
+            "id": "chair"
           },
           {
             "label": "Next meeting",
-            "value": "None recorded"
+            "value": "None recorded",
+            "id": "nextMeeting"
           }
         ],
         "tallies": []
@@ -55477,20 +55656,24 @@
         "sourceUrl": null,
         "organizationSummary": {
           "classification": "committee",
-          "isActive": true
+          "isActive": true,
+          "membershipCompleteness": "complete"
         },
         "fields": [
           {
             "label": "Members",
-            "value": "17"
+            "value": "17",
+            "id": "members"
           },
           {
             "label": "Chair",
-            "value": "Brent Jackson, Jimmy Dixon, Karl Gillespie"
+            "value": "Brent Jackson, Jimmy Dixon, Karl Gillespie",
+            "id": "chair"
           },
           {
             "label": "Next meeting",
-            "value": "None recorded"
+            "value": "None recorded",
+            "id": "nextMeeting"
           }
         ],
         "tallies": []
@@ -55508,20 +55691,24 @@
         "sourceUrl": null,
         "organizationSummary": {
           "classification": "committee",
-          "isActive": true
+          "isActive": true,
+          "membershipCompleteness": "complete"
         },
         "fields": [
           {
             "label": "Members",
-            "value": "20"
+            "value": "20",
+            "id": "members"
           },
           {
             "label": "Chair",
-            "value": "Brent Jackson, Lisa Barnes, Norman Sanderson"
+            "value": "Brent Jackson, Lisa Barnes, Norman Sanderson",
+            "id": "chair"
           },
           {
             "label": "Next meeting",
-            "value": "None recorded"
+            "value": "None recorded",
+            "id": "nextMeeting"
           }
         ],
         "tallies": []
@@ -55545,7 +55732,8 @@
           {
             "label": "Documents",
             "value": "2",
-            "detail": "Recorded"
+            "detail": "Recorded",
+            "id": "documents"
           }
         ],
         "tallies": []
@@ -55587,7 +55775,8 @@
           {
             "label": "Documents",
             "value": "2",
-            "detail": "Recorded"
+            "detail": "Recorded",
+            "id": "documents"
           }
         ],
         "tallies": []
@@ -55630,11 +55819,13 @@
           {
             "label": "Documents",
             "value": "0",
-            "detail": "Recorded"
+            "detail": "Recorded",
+            "id": "documents"
           },
           {
             "label": "Location detail",
-            "value": "Cannon House Office Building"
+            "value": "Cannon House Office Building",
+            "id": "locationDetail"
           }
         ],
         "tallies": []
@@ -55666,11 +55857,13 @@
           {
             "label": "Documents",
             "value": "21",
-            "detail": "Recorded"
+            "detail": "Recorded",
+            "id": "documents"
           },
           {
             "label": "Location detail",
-            "value": "Rayburn House Office Building"
+            "value": "Rayburn House Office Building",
+            "id": "locationDetail"
           }
         ],
         "tallies": []
@@ -56894,19 +57087,23 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "9"
+            "value": "9",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "Not paginated"
+            "value": "Not paginated",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "S 1129"
+            "value": "S 1129",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -56975,15 +57172,18 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "4"
+            "value": "4",
+            "id": "sections"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "S 1934"
+            "value": "S 1934",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -57023,19 +57223,23 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "2"
+            "value": "2",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "Not paginated"
+            "value": "Not paginated",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "S 1333"
+            "value": "S 1333",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -57069,19 +57273,23 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "1"
+            "value": "1",
+            "id": "sections"
           },
           {
             "label": "Pages",
-            "value": "Not paginated"
+            "value": "Not paginated",
+            "id": "pages"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "HR 2768"
+            "value": "HR 2768",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -57109,15 +57317,18 @@
         "fields": [
           {
             "label": "Sections",
-            "value": "1"
+            "value": "1",
+            "id": "sections"
           },
           {
             "label": "Status",
-            "value": "Text available"
+            "value": "Text available",
+            "id": "status"
           },
           {
             "label": "Attached to",
-            "value": "S 2792"
+            "value": "S 2792",
+            "id": "attachedTo"
           }
         ],
         "tallies": []
@@ -58254,12 +58465,14 @@
           {
             "label": "Agenda items",
             "value": "21",
-            "detail": "Recorded"
+            "detail": "Recorded",
+            "id": "agendaItems"
           },
           {
             "label": "Documents",
             "value": "0",
-            "detail": "Recorded"
+            "detail": "Recorded",
+            "id": "documents"
           }
         ],
         "tallies": []

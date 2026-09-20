@@ -66,7 +66,7 @@ const mentionRecords: StagedReference["record"][] = [
     kind: "organization",
     title: "House Transportation and Local Government",
     subtitle: "Colorado House, 2026 session",
-    organizationSummary: { classification: "committee" },
+    organizationSummary: { classification: "committee", membershipCompleteness: "unknown" },
     sourceUrl: null,
     fields: [],
     tallies: []
@@ -85,7 +85,7 @@ const mentionRecords: StagedReference["record"][] = [
     kind: "organization",
     title: "House Education and Workforce",
     subtitle: "U.S. House, 119th Congress",
-    organizationSummary: { classification: "committee" },
+    organizationSummary: { classification: "committee", membershipCompleteness: "unknown" },
     sourceUrl: null,
     fields: [],
     tallies: []

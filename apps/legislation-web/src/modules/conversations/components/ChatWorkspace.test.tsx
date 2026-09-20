@@ -329,7 +329,7 @@ describe("ChatWorkspace", () => {
       sourceUrl: null,
       fields: [],
       tallies: [],
-      organizationSummary: { classification: "committee" }
+      organizationSummary: { classification: "committee", membershipCompleteness: "unknown" }
     }
   }
 

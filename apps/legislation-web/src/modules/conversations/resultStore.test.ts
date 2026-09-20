@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { projectEntityResult, ResultExpiredError } from "./entityResults"
+import { entityCardSchema, projectEntityResult, ResultExpiredError } from "./entityResults"
 import { createResultStore, type RetainedResult, type ResultPersistence } from "./resultStore"
 
 vi.mock("./resultPersistence.server", () => {
@@ -7,6 +7,37 @@ vi.mock("./resultPersistence.server", () => {
 })
 
 describe("result recovery", () => {
+  it.each([
+    { recordedMemberCount: 8, membershipRelationsComplete: true, completeness: "complete", value: "8" },
+    { recordedMemberCount: 8, membershipRelationsComplete: false, completeness: "partial", value: "8" },
+    { recordedMemberCount: 8, completeness: "partial", value: "8" },
+    { recordedMemberCount: 0, membershipRelationsComplete: true, completeness: "complete", value: "0" },
+    { recordedMemberCount: 0, membershipRelationsComplete: false, completeness: "unknown", value: undefined },
+    { recordedMemberCount: 0, completeness: "unknown", value: undefined },
+    { memberCount: 0, completeness: "complete", value: "0" },
+    { memberCount: 8, completeness: "complete", value: "8" },
+    { completeness: "unknown", value: undefined }
+  ])("preserves membership count coverage: %j", ({ completeness, value, ...organization }) => {
+    const card = projectEntityResult("get_organization", {
+      organization: { id: "org:coverage", name: "Committee", ...organization }
+    })?.items[0]
+    expect(card?.organizationSummary?.membershipCompleteness).toBe(completeness)
+    expect(card?.fields.find((field) => field.id === "members")?.value).toBe(value)
+    expect(entityCardSchema.safeParse(card).success).toBe(true)
+  })
+
+  it("requires known fact identifiers rather than accepting label-only fields", () => {
+    const card = projectEntityResult("get_bill", {
+      bill: { id: "bill:typed-facts", title: "Bill", introducedDate: "2025-01-01" }
+    })?.items[0]
+    expect(entityCardSchema.safeParse(card).success).toBe(true)
+    for (const id of [undefined, "Introduced", "unknown-fact"]) {
+      expect(
+        entityCardSchema.safeParse({ ...card, fields: [{ id, label: "Introduced", value: "2025-01-01" }] }).success
+      ).toBe(false)
+    }
+  })
+
   it("restores session-owned snapshots and resumes pagination after a process restart", async () => {
     const records = new Map<string, RetainedResult>()
     const persistence: ResultPersistence = {
@@ -72,8 +103,8 @@ describe("result recovery", () => {
     }
     expect(projectEntityResult("get_bill", input)?.items[0]?.fields).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: "Introduced", value: "2024-02-14" }),
-        expect.objectContaining({ label: "Versions", value: "4" })
+        expect.objectContaining({ id: "introduced", label: "Introduced", value: "2024-02-14" }),
+        expect.objectContaining({ id: "versions", label: "Versions", value: "4" })
       ])
     )
     expect(
@@ -91,15 +122,15 @@ describe("result recovery", () => {
     expect(card?.meetingSummary?.location).toBe("H-313")
     expect(card?.fields).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: "Agenda items", value: "1" }),
-        expect.objectContaining({ label: "Documents", value: "0" }),
-        expect.objectContaining({ label: "Location detail", value: "Capitol" })
+        expect.objectContaining({ id: "agendaItems", label: "Agenda items", value: "1" }),
+        expect.objectContaining({ id: "documents", label: "Documents", value: "0" }),
+        expect.objectContaining({ id: "locationDetail", label: "Location detail", value: "Capitol" })
       ])
     )
     const partial = projectEntityResult("get_event", { ...input, truncated: true })?.items[0]
-    expect(partial?.fields.some((field) => field.label === "Agenda items")).toBe(false)
+    expect(partial?.fields.some((field) => field.id === "agendaItems")).toBe(false)
     const foreign = projectEntityResult("get_event", { ...input, agendaItems: [{ eventId: "event:other" }] })?.items[0]
-    expect(foreign?.fields.some((field) => field.label === "Agenda items")).toBe(false)
+    expect(foreign?.fields.some((field) => field.id === "agendaItems")).toBe(false)
   })
 
   it("qualifies incomplete memberships and never infers office tenure from a current term", () => {
@@ -107,8 +138,13 @@ describe("result recovery", () => {
       person: { id: "person:1", name: "Member", recordedCommitteeRoleCount: 2 },
       terms: [{ isActive: true, startDate: "2025-01-03" }]
     })?.items[0]
-    expect(person?.fields).toContainEqual({ label: "Committee roles", value: "2", detail: "Recorded active roles" })
-    expect(person?.fields.some((field) => field.label === "In office since")).toBe(false)
+    expect(person?.fields).toContainEqual({
+      id: "committeeRoles",
+      label: "Committee roles",
+      value: "2",
+      detail: "Recorded active roles"
+    })
+    expect(person?.fields.some((field) => field.id === "inOfficeSince")).toBe(false)
     const organization = projectEntityResult("get_organization", {
       organization: {
         id: "org:1",
@@ -118,8 +154,18 @@ describe("result recovery", () => {
         chairName: "Published chair"
       }
     })?.items[0]
-    expect(organization?.fields).toContainEqual({ label: "Members", value: "8", detail: "Recorded active members" })
-    expect(organization?.fields).toContainEqual({ label: "Chair", value: "Published chair", detail: undefined })
+    expect(organization?.fields).toContainEqual({
+      id: "members",
+      label: "Members",
+      value: "8",
+      detail: "Recorded active members"
+    })
+    expect(organization?.fields).toContainEqual({
+      id: "chair",
+      label: "Chair",
+      value: "Published chair",
+      detail: undefined
+    })
   })
 
   it("preserves document identity, material attachments and date-only votes without inventing page counts", () => {
@@ -134,13 +180,13 @@ describe("result recovery", () => {
       }
     })?.items[0]
     expect(document?.identifier).toBe("HB 1")
-    expect(document?.fields).toContainEqual({ label: "Sections", value: "7", detail: undefined })
-    expect(document?.fields).toContainEqual({ label: "Pages", value: "Not paginated", detail: undefined })
+    expect(document?.fields).toContainEqual({ id: "sections", label: "Sections", value: "7", detail: undefined })
+    expect(document?.fields).toContainEqual({ id: "pages", label: "Pages", value: "Not paginated", detail: undefined })
     const material = projectEntityResult("get_supporting_material", {
       material: { id: "material:1", title: "Report" },
       links: [{ materialId: "material:1", billIdentifier: "HB 1", amendmentIdentifier: "A 2" }]
     })?.items[0]
-    expect(material?.fields).toContainEqual({ label: "Attached to", value: "HB 1", detail: "A 2" })
+    expect(material?.fields).toContainEqual({ id: "attachedTo", label: "Attached to", value: "HB 1", detail: "A 2" })
     const vote = projectEntityResult("get_vote", {
       vote: { id: "vote:1", motion: "Agreed", heldDate: "2026-02-03", heldAt: null }
     })?.items[0]
@@ -163,15 +209,18 @@ describe("result recovery", () => {
     const input = { amendment, actions: newestFirst ? actions : actions.toReversed(), truncated: false }
     const card = projectEntityResult("get_amendment", input)?.items[0]
     expect(card?.amendmentSummary).toMatchObject({ submittedDate: "2025-01-10", status: "agreed" })
-    expect(card?.fields).toContainEqual({ label: "Latest action", value: "2025-01-15", detail: "Agreed to" })
+    expect(card?.fields).toContainEqual({
+      id: "latestAction",
+      label: "Latest action",
+      value: "2025-01-15",
+      detail: "Agreed to"
+    })
     for (const incomplete of [
       { ...input, truncated: true },
       { ...input, actions: actions.map((action) => ({ ...action, actionDate: null })) }
     ]) {
       expect(
-        projectEntityResult("get_amendment", incomplete)?.items[0]?.fields.some(
-          (field) => field.label === "Latest action"
-        )
+        projectEntityResult("get_amendment", incomplete)?.items[0]?.fields.some((field) => field.id === "latestAction")
       ).toBe(false)
     }
     const tied = projectEntityResult("get_amendment", {
@@ -181,7 +230,12 @@ describe("result recovery", () => {
         { amendmentId: amendment.id, ordinal: 3, description: "Considered", actionDate: "2025-01-15" }
       ]
     })?.items[0]
-    expect(tied?.fields).toContainEqual({ label: "Latest action", value: "2025-01-15", detail: undefined })
+    expect(tied?.fields).toContainEqual({
+      id: "latestAction",
+      label: "Latest action",
+      value: "2025-01-15",
+      detail: undefined
+    })
   })
 
   it.each([true, false])("uses the independent latest action with truncated=%s", (truncated) => {
@@ -225,7 +279,7 @@ describe("result recovery", () => {
         latestAction: { billId: "bill:1", description: "Reported", actionAt, actionDate: "2020-01-01" }
       })
       expect(result?.items[0]?.billSummary?.latestAction).toEqual({ description: "Reported", date: "2024-12-27" })
-      expect(result?.items[0]?.fields).toContainEqual({ label: "Introduced", value: "2024-05-06" })
+      expect(result?.items[0]?.fields).toContainEqual({ id: "introduced", label: "Introduced", value: "2024-05-06" })
     }
   )
 

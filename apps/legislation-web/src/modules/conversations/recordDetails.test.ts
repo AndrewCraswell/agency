@@ -30,8 +30,8 @@ describe("record view projections", () => {
         truncated,
         documents: [{ eventId: event.id }, { eventId: event.id }]
       })?.items[0]
-      expect(record?.fields.find((field) => field.label === "Agenda items")?.value).toBe(expected)
-      expect(record?.fields.find((field) => field.label === "Documents")?.value).toBe(truncated ? undefined : "2")
+      expect(record?.fields.find((field) => field.id === "agendaItems")?.value).toBe(expected)
+      expect(record?.fields.find((field) => field.id === "documents")?.value).toBe(truncated ? undefined : "2")
     }
   )
 
@@ -58,7 +58,7 @@ describe("record view projections", () => {
       expect(
         projectEntityResult("get_bill_text", { document: { id: "document:one", title: "Published text", contentType } })
           ?.items[0]?.fields
-      ).toContainEqual({ label: "Pages", value: "Not paginated", detail: undefined })
+      ).toContainEqual({ id: "pages", label: "Pages", value: "Not paginated", detail: undefined })
     }
   )
 
@@ -67,7 +67,12 @@ describe("record view projections", () => {
       person: { id: "person:one", name: "Published member", isActive: true, inOfficeSinceYear: 1997 },
       terms: [{ startYear: 2025, endYear: 2027, isActive: true }]
     })?.items[0]
-    expect(record?.fields).toContainEqual({ label: "In office since", value: "1997", detail: undefined })
+    expect(record?.fields).toContainEqual({
+      id: "inOfficeSince",
+      label: "In office since",
+      value: "1997",
+      detail: undefined
+    })
     expect(record?.personSummary?.term).toMatchObject({ startYear: 2025, endYear: 2027 })
     expect(record?.personSummary?.term?.startDate).toBeUndefined()
   })
@@ -75,19 +80,20 @@ describe("record view projections", () => {
   it("uses the selected document's measured page count without counting a partial section page", () => {
     const document = { id: "document:one", title: "Published PDF", ocrPageCount: 12 }
     expect(projectEntityResult("get_bill_text", { document })?.items[0]?.fields).toContainEqual({
+      id: "pages",
       label: "Pages",
       value: "12",
       detail: undefined
     })
     expect(
       projectEntityResult("get_bill_text", { document: { ...document, pageCount: 14 } })?.items[0]?.fields
-    ).toContainEqual({ label: "Pages", value: "14", detail: undefined })
+    ).toContainEqual({ id: "pages", label: "Pages", value: "14", detail: undefined })
     const missing = projectEntityResult("get_bill_text", {
       document: { ...document, ocrPageCount: null },
       sections: [{ pageEnd: 2 }],
       truncated: true
     })?.items[0]
-    expect(missing?.fields.some((field) => field.label === "Pages")).toBe(false)
+    expect(missing?.fields.some((field) => field.id === "pages")).toBe(false)
   })
 
   it("preserves published time zones without inventing times for all-day or unknown-zone meetings", () => {

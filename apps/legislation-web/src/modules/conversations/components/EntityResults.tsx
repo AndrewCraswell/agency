@@ -21,7 +21,15 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react"
 import { useStickToBottomContext } from "use-stick-to-bottom"
 import { Button } from "../../../components/ui/button"
 import { Toggle } from "../../../components/ui/toggle"
-import { entityLabels, resultTone, ResultExpiredError, type EntityCard, type EntityPage } from "../entityResults"
+import {
+  entityFactLabels,
+  entityLabels,
+  resultTone,
+  ResultExpiredError,
+  type EntityCard,
+  type EntityFactId,
+  type EntityPage
+} from "../entityResults"
 import { evidenceSourceUrl } from "../evidence"
 import { useConversationSession } from "./ConversationSession"
 import { MeetingDetails } from "./MeetingDetails"
@@ -90,7 +98,7 @@ export function RecordIdentity({
   const Icon = icons[record.kind]
   let status = compactRecordDetails(record).status
   if (record.kind === "document" || record.kind === "material") {
-    status = suppliedFact(record, "Status")
+    status = suppliedFact(record, "status")
   }
   if (record.kind === "organization") {
     status = undefined
@@ -214,12 +222,12 @@ function DateFact({ value }: Readonly<{ value: string }>) {
   return <time dateTime={value}>{compactDate(value) ?? value}</time>
 }
 
-function suppliedFact(record: EntityCard, label: string) {
-  return record.fields.find((field) => field.label === label)?.value
+function suppliedFact(record: EntityCard, id: EntityFactId) {
+  return record.fields.find((field) => field.id === id)?.value
 }
 
-function storedFact(record: EntityCard, label: string): CardFact {
-  return { label, ...record.fields.find((field) => field.label === label) }
+function storedFact(record: EntityCard, id: EntityFactId): CardFact {
+  return { label: entityFactLabels[id], ...record.fields.find((field) => field.id === id) }
 }
 
 function billActionLabel(description: string | undefined) {
@@ -246,7 +254,7 @@ function BillCardBody({ record, isGrouped = false }: Readonly<{ record: EntityCa
   const summary = record.billSummary
   const action = summary?.latestAction
   const actionLabel = billActionLabel(action?.description)
-  const introduced = suppliedFact(record, "Introduced")
+  const introduced = suppliedFact(record, "introduced")
   return (
     <FactGrid
       facts={[
@@ -256,7 +264,7 @@ function BillCardBody({ record, isGrouped = false }: Readonly<{ record: EntityCa
           detail: !isGrouped && action?.date ? actionLabel : undefined
         },
         { label: "Introduced", value: introduced ? <DateFact value={introduced} /> : undefined },
-        { label: "Versions", value: suppliedFact(record, "Versions") }
+        { label: "Versions", value: suppliedFact(record, "versions") }
       ]}
     />
   )
@@ -287,7 +295,7 @@ function VoteCardBody({ record }: Readonly<{ record: EntityCard }>) {
 function CivicCardBody({ record }: Readonly<{ record: EntityCard }>) {
   if (record.kind === "person") {
     const term = record.personSummary?.term
-    const since = suppliedFact(record, "In office since")
+    const since = suppliedFact(record, "inOfficeSince")
     const start = term?.startDate ?? term?.startYear?.toString()
     const end = term?.endDate ?? term?.endYear?.toString()
     return (
@@ -308,7 +316,7 @@ function CivicCardBody({ record }: Readonly<{ record: EntityCard }>) {
               </>
             ) : undefined
           },
-          { label: "Committee roles", value: suppliedFact(record, "Committee roles") }
+          { label: "Committee roles", value: suppliedFact(record, "committeeRoles") }
         ]}
       />
     )
@@ -316,16 +324,16 @@ function CivicCardBody({ record }: Readonly<{ record: EntityCard }>) {
   if (record.kind === "organization") {
     return (
       <FactGrid
-        facts={[storedFact(record, "Chair"), storedFact(record, "Members"), storedFact(record, "Next meeting")]}
+        facts={[storedFact(record, "chair"), storedFact(record, "members"), storedFact(record, "nextMeeting")]}
       />
     )
   }
   return (
     <FactGrid
       facts={[
-        { label: "Agenda items", value: suppliedFact(record, "Agenda items") },
-        { label: "Documents", value: suppliedFact(record, "Documents") },
-        { label: "Location", value: record.meetingSummary?.location, detail: suppliedFact(record, "Location detail") }
+        { label: "Agenda items", value: suppliedFact(record, "agendaItems") },
+        { label: "Documents", value: suppliedFact(record, "documents") },
+        { label: "Location", value: record.meetingSummary?.location, detail: suppliedFact(record, "locationDetail") }
       ]}
     />
   )
@@ -396,7 +404,7 @@ function AmendmentMetadata({ record }: Readonly<{ record: EntityCard }>) {
 
 function AmendmentCardBody({ record }: Readonly<{ record: EntityCard }>) {
   const date = record.amendmentSummary?.submittedDate
-  const latest = storedFact(record, "Latest action")
+  const latest = storedFact(record, "latestAction")
   const latestDetail =
     typeof latest.detail === "string"
       ? latest.detail.replace(/^House amendment offered\b/i, "Amendment proposed")
@@ -410,7 +418,7 @@ function AmendmentCardBody({ record }: Readonly<{ record: EntityCard }>) {
           detail: latestDetail,
           value: typeof latest.value === "string" ? <DateFact value={latest.value} /> : undefined
         },
-        { label: "Bill", value: suppliedFact(record, "Bill") }
+        { label: "Bill", value: suppliedFact(record, "bill") }
       ]}
     />
   )
@@ -439,15 +447,15 @@ function DocumentCard({
     }
   }
   const facts: CardFact[] = isMaterial
-    ? [dateFact, storedFact(record, "Pages"), storedFact(record, "Attached to")]
+    ? [dateFact, storedFact(record, "pages"), storedFact(record, "attachedTo")]
     : [
         {
           label: "Version",
           value: summary?.versionCode,
           detail: versionDate ? <DateFact value={versionDate} /> : undefined
         },
-        storedFact(record, "Sections"),
-        storedFact(record, "Pages")
+        storedFact(record, "sections"),
+        storedFact(record, "pages")
       ]
   return (
     <section className={styles.fullCard} aria-label={`${entityLabels[record.kind].singular}: ${record.title}`}>
@@ -645,11 +653,10 @@ function compactRecordDetails(record: EntityCard) {
       status = active ? "Serving" : "Inactive"
     }
   } else if (record.kind === "organization") {
-    const memberField = record.fields.find((field) => field.label === "Members")
-    const members = memberField?.value
+    const members = suppliedFact(record, "members")
     if (members) {
       status = `${members} members`
-      if (memberField.detail) {
+      if (record.organizationSummary?.membershipCompleteness === "partial") {
         status = `${members} recorded members`
       }
     } else if (record.organizationSummary?.isActive !== undefined) {
@@ -666,7 +673,7 @@ function compactRecordDetails(record: EntityCard) {
   } else if (record.kind === "document" || record.kind === "material") {
     const summary = record.documentSummary
     const date = compactDate(summary?.versionDate)
-    const sections = record.fields.find((field) => field.label === "Sections")?.value
+    const sections = suppliedFact(record, "sections")
     let dated: string | undefined
     if (date) {
       dated = record.kind === "material" ? `Dated ${date}` : `Version dated ${date}`

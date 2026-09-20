@@ -30,8 +30,8 @@ const bill: EntityCard = {
     latestAction: { description: "In committee: Held under submission.", date: "2024-05-16" }
   },
   fields: [
-    { label: "Introduced", value: "2024-02-14" },
-    { label: "Versions", value: "4" }
+    { id: "introduced", label: "Introduced", value: "2024-02-14" },
+    { id: "versions", label: "Versions", value: "4" }
   ],
   tallies: []
 }

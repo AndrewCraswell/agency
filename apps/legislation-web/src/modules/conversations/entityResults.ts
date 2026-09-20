@@ -24,6 +24,44 @@ export const entityLabels: Record<EntityKind, { singular: string; plural: string
   material: { singular: "Material", plural: "Supporting materials" }
 }
 
+const entityFactIdSchema = z.enum([
+  "introduced",
+  "versions",
+  "sections",
+  "pages",
+  "status",
+  "agendaItems",
+  "documents",
+  "members",
+  "chair",
+  "nextMeeting",
+  "committeeRoles",
+  "inOfficeSince",
+  "bill",
+  "latestAction",
+  "attachedTo",
+  "locationDetail"
+])
+export type EntityFactId = z.infer<typeof entityFactIdSchema>
+export const entityFactLabels: Record<EntityFactId, string> = {
+  introduced: "Introduced",
+  versions: "Versions",
+  sections: "Sections",
+  pages: "Pages",
+  status: "Status",
+  agendaItems: "Agenda items",
+  documents: "Documents",
+  members: "Members",
+  chair: "Chair",
+  nextMeeting: "Next meeting",
+  committeeRoles: "Committee roles",
+  inOfficeSince: "In office since",
+  bill: "Bill",
+  latestAction: "Latest action",
+  attachedTo: "Attached to",
+  locationDetail: "Location detail"
+}
+
 export const entityCardSchema = z.object({
   id: z.string(),
   kind: entityKindSchema,
@@ -54,7 +92,8 @@ export const entityCardSchema = z.object({
     .object({
       classification: z.string().optional(),
       description: z.string().optional(),
-      isActive: z.boolean().optional()
+      isActive: z.boolean().optional(),
+      membershipCompleteness: z.enum(["complete", "partial", "unknown"])
     })
     .optional(),
   meetingSummary: z
@@ -92,7 +131,9 @@ export const entityCardSchema = z.object({
       latestAction: z.object({ description: z.string(), date: z.string().optional() }).optional()
     })
     .optional(),
-  fields: z.array(z.object({ label: z.string(), value: z.string(), detail: z.string().optional() })),
+  fields: z.array(
+    z.object({ id: entityFactIdSchema, label: z.string(), value: z.string(), detail: z.string().optional() })
+  ),
   tallies: z.array(z.object({ label: z.string(), value: z.number().int().nonnegative() }))
 })
 export type EntityCard = z.infer<typeof entityCardSchema>
@@ -233,42 +274,44 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
   const source = sourceUrlSchema.safeParse(record.sourceUrl ?? record.websiteUrl)
   const fields: EntityCard["fields"] = []
   const metadata: string[] = []
-  const addText = (label: string, value: string | undefined, detail?: string) => {
+  let membershipCompleteness: NonNullable<EntityCard["organizationSummary"]>["membershipCompleteness"] = "unknown"
+  const addText = (id: EntityFactId, value: string | undefined, detail?: string) => {
     if (value) {
-      fields.push({ label, value, detail })
+      fields.push({ id, label: entityFactLabels[id], value, detail })
     }
   }
-  const addDate = (label: string, value: unknown) => {
+  const addDate = (id: EntityFactId, value: unknown) => {
     const date = z.union([z.iso.date(), z.iso.datetime({ offset: true }), z.date()]).safeParse(value)
     if (date.success) {
       fields.push({
-        label,
+        id,
+        label: entityFactLabels[id],
         value: date.data instanceof Date ? date.data.toISOString().slice(0, 10) : date.data.slice(0, 10)
       })
     }
   }
-  const addCount = (label: string, value: unknown, detail?: string) => {
+  const addCount = (id: EntityFactId, value: unknown, detail?: string) => {
     const count = z.number().int().nonnegative().safeParse(value)
     if (count.success) {
-      fields.push({ label, value: String(count.data), detail })
+      fields.push({ id, label: entityFactLabels[id], value: String(count.data), detail })
     }
   }
   if (kind === "bill") {
-    addDate("Introduced", record.introducedDate ?? record.introducedAt)
-    addCount("Versions", record.versionCount)
+    addDate("introduced", record.introducedDate ?? record.introducedAt)
+    addCount("versions", record.versionCount)
   }
   if (kind === "document" || kind === "material") {
-    addCount("Sections", record.sectionCount ?? container.sectionCount)
-    addCount("Pages", record.pageCount ?? record.ocrPageCount)
+    addCount("sections", record.sectionCount ?? container.sectionCount)
+    addCount("pages", record.pageCount ?? record.ocrPageCount)
     const contentType = text(record, "contentType") ?? text(record, "mimeType")
     if (
       contentType &&
       ["application/xml", "text/xml", "text/html", "application/xhtml+xml", "text/plain"].includes(
         contentType.split(";", 1)[0]!.trim().toLowerCase()
       ) &&
-      !fields.some((field) => field.label === "Pages")
+      !fields.some((field) => field.id === "pages")
     ) {
-      addText("Pages", "Not paginated")
+      addText("pages", "Not paginated")
     }
     const formats: Record<string, string> = {
       "application/pdf": "PDF",
@@ -281,13 +324,13 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
     if (contentType) {
       metadata.push(formats[contentType] ?? contentType)
     }
-    addText("Status", record.processingStatus === "processed" ? "Text available" : undefined)
+    addText("status", record.processingStatus === "processed" ? "Text available" : undefined)
   }
   if (kind === "meeting") {
-    for (const [label, collection, countKey] of [
-      ["Agenda items", "agendaItems", "agendaItemCount"],
-      ["Documents", "documents", "documentCount"]
-    ]) {
+    for (const [factId, collection, countKey] of [
+      ["agendaItems", "agendaItems", "agendaItemCount"],
+      ["documents", "documents", "documentCount"]
+    ] as const) {
       const rows = z.array(z.object({ eventId: z.literal(id) })).safeParse(container[collection])
       let count = record[countKey]
       if (
@@ -298,42 +341,43 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
       ) {
         count = rows.data.length
       }
-      addCount(label, count, record.canonicalFactsComplete === false ? "Recorded" : undefined)
+      addCount(factId, count, record.canonicalFactsComplete === false ? "Recorded" : undefined)
     }
   }
   if (kind === "organization") {
     const count = z.number().int().nonnegative().safeParse(record.recordedMemberCount)
     if (count.success && (count.data > 0 || record.membershipRelationsComplete === true)) {
-      addCount(
-        "Members",
-        count.data,
-        record.membershipRelationsComplete === true ? undefined : "Recorded active members"
-      )
+      membershipCompleteness = record.membershipRelationsComplete === true ? "complete" : "partial"
+      addCount("members", count.data, membershipCompleteness === "complete" ? undefined : "Recorded active members")
     } else {
-      addCount("Members", record.memberCount)
+      const publishedCount = z.number().int().nonnegative().safeParse(record.memberCount)
+      if (publishedCount.success) {
+        membershipCompleteness = "complete"
+        addCount("members", publishedCount.data)
+      }
     }
-    addText("Chair", text(record, "chairName"))
+    addText("chair", text(record, "chairName"))
     const next = recordSchema.safeParse(container.nextMeeting)
     if (next.success) {
       const meeting = projectCard(next.data, "meeting", "event")
       const date = meeting?.meetingSummary?.startAt
-      addText("Next meeting", meeting?.subtitle ?? (date ? `${date.slice(0, 10)} (UTC)` : undefined))
+      addText("nextMeeting", meeting?.subtitle ?? (date ? `${date.slice(0, 10)} (UTC)` : undefined))
     } else if (container.nextMeeting === null) {
-      addText("Next meeting", "None recorded")
+      addText("nextMeeting", "None recorded")
     }
   }
   if (kind === "person") {
     const count = z.number().int().positive().safeParse(record.recordedCommitteeRoleCount)
     if (count.success) {
-      addCount("Committee roles", count.data, "Recorded active roles")
+      addCount("committeeRoles", count.data, "Recorded active roles")
     }
-    addDate("In office since", record.inOfficeSince)
-    if (!fields.some((field) => field.label === "In office since")) {
-      addCount("In office since", record.inOfficeSinceYear)
+    addDate("inOfficeSince", record.inOfficeSince)
+    if (!fields.some((field) => field.id === "inOfficeSince")) {
+      addCount("inOfficeSince", record.inOfficeSinceYear)
     }
   }
   if (kind === "amendment") {
-    addText("Bill", text(record, "billIdentifier"), text(record, "billTitle"))
+    addText("bill", text(record, "billIdentifier"), text(record, "billTitle"))
     const actions = z
       .array(z.object({ amendmentId: z.literal(id), actionDate: z.iso.date().nullish(), description: z.string() }))
       .safeParse(container.actions)
@@ -346,7 +390,7 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
         const descriptions = new Set(
           actions.data.filter((action) => action.actionDate === date).map((action) => action.description)
         )
-        addText("Latest action", date, descriptions.size === 1 ? [...descriptions][0] : undefined)
+        addText("latestAction", date, descriptions.size === 1 ? [...descriptions][0] : undefined)
       }
     }
   }
@@ -372,7 +416,7 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
           )
         )
       ]
-      addText("Attached to", names[0], names.slice(1).join(", ") || undefined)
+      addText("attachedTo", names[0], names.slice(1).join(", ") || undefined)
     }
   }
   let subtitle: string | undefined
@@ -474,7 +518,8 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
       organizationSummary = {
         classification: text(record, "classification"),
         description: text(record, "description"),
-        isActive: typeof record.isActive === "boolean" ? record.isActive : undefined
+        isActive: typeof record.isActive === "boolean" ? record.isActive : undefined,
+        membershipCompleteness
       }
       metadata.push(chamberLabel(record))
       break
@@ -502,7 +547,7 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
       }
       subtitle = formatMeetingWhen(meetingSummary)
       if (location.success) {
-        addText("Location detail", text(location.data, "building"))
+        addText("locationDetail", text(location.data, "building"))
       }
       const participants = z
         .array(

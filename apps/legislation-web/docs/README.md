@@ -91,6 +91,7 @@ Migrations live once in C and release explicitly through `pnpm --filter legislat
 - [Civic graph/events and persisted provenance](engineering/api/civic-graph-and-events.md),
   [membership projection](engineering/committee-membership-history.md)
 - [Legislative records](engineering/api/legislative-records.md), [HTTP schemas](engineering/api/schemas.md)
+- [Entity card facts](engineering/entity-card-facts.md): typed fact identifiers and explicit member-count completeness.
 - [Search/diffs and canonical model execution metadata](engineering/api/search-and-diffs.md),
   [subscriptions/webhooks](engineering/api/subscriptions-and-webhooks.md)
 - [Amendment search projection](engineering/amendment-search-projection.md), [ranked-search evidence](research/ranked-search.md)
