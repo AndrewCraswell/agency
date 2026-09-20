@@ -147,6 +147,43 @@ describe("result recovery", () => {
     expect(vote?.subtitle).toBe("2026-02-03")
   })
 
+  it.each([true, false])("uses dated federal amendment actions regardless of newestFirst=%s", (newestFirst) => {
+    const amendment = {
+      id: "amendment:us:119:hamdt:1",
+      printedIdentifier: "HAMDT 1",
+      recordType: "structured",
+      submittedDate: "2025-01-10",
+      status: "agreed"
+    }
+    const actions = [
+      { amendmentId: amendment.id, ordinal: 0, description: "Agreed to", actionDate: "2025-01-15" },
+      { amendmentId: amendment.id, ordinal: 1, description: "Offered", actionDate: "2025-01-10" },
+      { amendmentId: amendment.id, ordinal: 2, description: "Undated record", actionDate: null }
+    ]
+    const input = { amendment, actions: newestFirst ? actions : actions.toReversed(), truncated: false }
+    const card = projectEntityResult("get_amendment", input)?.items[0]
+    expect(card?.amendmentSummary).toMatchObject({ submittedDate: "2025-01-10", status: "agreed" })
+    expect(card?.fields).toContainEqual({ label: "Latest action", value: "2025-01-15", detail: "Agreed to" })
+    for (const incomplete of [
+      { ...input, truncated: true },
+      { ...input, actions: actions.map((action) => ({ ...action, actionDate: null })) }
+    ]) {
+      expect(
+        projectEntityResult("get_amendment", incomplete)?.items[0]?.fields.some(
+          (field) => field.label === "Latest action"
+        )
+      ).toBe(false)
+    }
+    const tied = projectEntityResult("get_amendment", {
+      ...input,
+      actions: [
+        ...actions,
+        { amendmentId: amendment.id, ordinal: 3, description: "Considered", actionDate: "2025-01-15" }
+      ]
+    })?.items[0]
+    expect(tied?.fields).toContainEqual({ label: "Latest action", value: "2025-01-15", detail: undefined })
+  })
+
   it.each([true, false])("uses the independent latest action with truncated=%s", (truncated) => {
     const bill = { id: "bill:ca:20232024:sb:1047", title: "SB 1047" }
     const data = {
@@ -179,6 +216,18 @@ describe("result recovery", () => {
       projectEntityResult("get_bill", { ...data, latestAction: null })?.items[0]?.billSummary?.latestAction
     ).toBeUndefined()
   })
+
+  it.each(["2024-12-27T18:00:00.000Z", new Date("2024-12-27T18:00:00.000Z")])(
+    "preserves timestamp precedence before and after serialization: %s",
+    (actionAt) => {
+      const result = projectEntityResult("get_bill", {
+        bill: { id: "bill:1", title: "Bill", introducedAt: "2024-05-06" },
+        latestAction: { billId: "bill:1", description: "Reported", actionAt, actionDate: "2020-01-01" }
+      })
+      expect(result?.items[0]?.billSummary?.latestAction).toEqual({ description: "Reported", date: "2024-12-27" })
+      expect(result?.items[0]?.fields).toContainEqual({ label: "Introduced", value: "2024-05-06" })
+    }
+  )
 
   function setup() {
     let time = 0

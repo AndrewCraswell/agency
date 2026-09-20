@@ -33,7 +33,7 @@ import {
   votePositions,
   votes
 } from "@repo/legislation-core/database/schema/schema"
-import { billActionTimestamp } from "@repo/legislation-core/domain/bill-action-timestamp"
+import { billActionOrder, billActionTimestamp } from "@repo/legislation-core/domain/bill-action-timestamp"
 import { LegislationError, postgresErrorCode } from "@repo/legislation-core/domain/errors"
 import {
   openStatesBillStatus,
@@ -3175,8 +3175,8 @@ export class LegislationQueryService {
           sourceUrl: billActions.sourceUrl
         })
         .from(billActions)
-        .where(eq(billActions.billId, lookup.id))
-        .orderBy(desc(billActions.ordinal), desc(billActions.id))
+        .where(and(eq(billActions.billId, lookup.id), isNotNull(billActionTimestamp())))
+        .orderBy(...billActionOrder(bill[0].upstreamIds, "desc"))
         .limit(1),
       bill[0].status === null && bill[0].upstreamIds.openstates
         ? this.#database
@@ -3192,14 +3192,14 @@ export class LegislationQueryService {
                 arrayOverlaps(billActions.classification, openStatesStatusClassifications)
               )
             )
-            .orderBy(desc(billActions.ordinal), desc(billActions.id))
+            .orderBy(...billActionOrder(bill[0].upstreamIds, "desc"))
             .limit(1)
         : Promise.resolve([]),
       this.#database
         .select()
         .from(billActions)
         .where(eq(billActions.billId, lookup.id))
-        .orderBy(asc(billActions.ordinal))
+        .orderBy(...billActionOrder(bill[0].upstreamIds, "asc"))
         .limit(childLimit + 1)
         .offset(childOffset),
       this.#database
@@ -3264,12 +3264,13 @@ export class LegislationQueryService {
           classification: billActions.classification,
           chamber: billActions.chamber,
           actionDate: billActions.actionDate,
+          actionAt: billActions.actionAt,
           sourceUrl: billActions.sourceUrl,
           description: billActions.description
         })
         .from(billActions)
         .where(eq(billActions.billId, lookup.id))
-        .orderBy(asc(billActions.ordinal), asc(billActions.id))
+        .orderBy(...billActionOrder(bill[0].upstreamIds, "asc"))
         .limit(101)
     ])
     const billAmendments = [

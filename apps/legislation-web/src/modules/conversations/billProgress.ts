@@ -60,6 +60,7 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
             classification: z.array(z.string()),
             chamber: z.string().nullish(),
             actionDate: z.iso.date().nullish(),
+            actionAt: z.union([z.iso.datetime({ offset: true }), z.date()]).nullish(),
             sourceUrl: sourceUrlSchema.nullish(),
             description: z.string().nullish()
           })
@@ -94,7 +95,7 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
     state: "unknown"
   })
   let current: string | undefined
-  for (const action of [...progressActions].sort((left, right) => left.ordinal - right.ordinal)) {
+  for (const action of progressActions) {
     const classification =
       action.classification.length > 0 ? action.classification : inferClassificationFromDescription(action.description)
     let stageId: string | undefined
@@ -124,13 +125,15 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
     const stage = stages.find((stage) => stage.id === stageId)
     if (stage) {
       stage.state = "recorded"
-      stage.date = action.actionDate ?? undefined
+      stage.date = action.actionAt
+        ? new Date(action.actionAt).toISOString().slice(0, 10)
+        : (action.actionDate ?? undefined)
       stage.sourceUrl = action.sourceUrl
       current = stage.id
     }
   }
   const latest = stages.find((stage) => stage.id === current)
-  if (latest && !progressTruncated) {
+  if (latest && !progressTruncated && progressActions.every((action) => action.actionAt || action.actionDate)) {
     latest.state = "current"
   }
   return billProgressSchema.parse({

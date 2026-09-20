@@ -20,8 +20,8 @@ document provenance through follow-ups and requires explicit correction of confl
 [Exact research selections](engineering/conversation-research-selection.md) preserves returned document IDs and
 scoped cursors with bounded, explicit recovery.
 
-[Bill progress](engineering/conversation-bill-progress.md) derives stages from recorded actions while preserving
-unknown milestones, missing dates and incomplete history.
+[Bill progress and latest action](engineering/conversation-bill-progress.md) use recorded action chronology while
+preserving introduction, source-order ties, unknown milestones, missing dates and incomplete history.
 
 [Conversation model settings](operations/development.md#development-chat-research-connection) use Luna with high
 reasoning for answers; suggestions and offline judges retain their separately configured low reasoning.

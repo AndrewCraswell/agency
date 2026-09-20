@@ -5,6 +5,10 @@ import { sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { projectBillProgress } from "../conversations/billProgress"
+import { projectEntityResult } from "../conversations/entityResults"
+import { createResultStore } from "../conversations/resultStore"
+import { getBillDetailRead } from "./persistence/queries/bill-detail-read"
 import { LegislationQueryService } from "./query-service"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
@@ -29,6 +33,228 @@ describe.skipIf(!pool)("legislation PostgreSQL queries", () => {
     await pool.query("drop schema if exists legislation_migrations cascade")
     await migrateDatabase(drizzle(pool, { schema }))
   }, 60_000)
+
+  it.each([
+    { state: "wa", name: "Washington", chamber: "lower", type: "hb", first: "House floor", second: "Senate" },
+    { state: "ny", name: "New York", chamber: "upper", type: "sb", first: "Senate", second: "House floor" },
+    { state: "ne", name: "Nebraska", chamber: "unicameral", type: "lb", first: "Legislature", second: undefined }
+  ])("keeps $state state bill cards, status and progress chronological", async (fixture) => {
+    if (!pool) {
+      throw new Error("Missing isolated test database")
+    }
+    const client = await pool.connect()
+    const id = `bill:${fixture.state}:2025:${fixture.type}:1`
+    const jurisdictionId = `jurisdiction:${fixture.state}`
+    const sessionId = `session:${fixture.state}:2025`
+    const sourceUrl = `https://legislature.example.test/${fixture.state}/bills/1`
+    try {
+      await client.query("begin")
+      await client.query(
+        `insert into legislation.jurisdictions (id, name, classification, country_code)
+        values ($1, $2, 'state', 'US')`,
+        [jurisdictionId, fixture.name]
+      )
+      await client.query(
+        `insert into legislation.legislative_sessions (id, jurisdiction_id, identifier, name)
+        values ($1, $2, '2025', '2025 Regular Session')`,
+        [sessionId, jurisdictionId]
+      )
+      await client.query(
+        `insert into legislation.bills
+        (id, jurisdiction_id, session_id, identifier, title, introduced_at, chamber, source_url, upstream_ids)
+        values ($1, $2, $3, $4, 'State chronology regression fixture', '2025-01-10', $5, $6, $7)`,
+        [
+          id,
+          jurisdictionId,
+          sessionId,
+          `${fixture.type.toUpperCase()} 1`,
+          fixture.chamber,
+          sourceUrl,
+          { openstates: id }
+        ]
+      )
+      await client.query(
+        `insert into legislation.bill_actions
+        (id, bill_id, ordinal, description, classification, chamber, action_date, source_url) values
+        ('action:intro', $1, 0, 'First reading', '{introduction}', $2, '2025-01-10', $3),
+        ('action:referral', $1, 1, 'Referred to committee', '{referral-committee}', $2, '2025-01-10', $3),
+        ('action:passage', $1, 2, 'Passed originating chamber', '{passage}', $2, '2025-02-01', $3),
+        ('action:receipt', $1, 4, 'Delivered to governor', '{executive-receipt}', null, '2025-02-03', $3),
+        ('action:signed', $1, 5, 'Signed by governor', '{executive-signature}', null, '2025-02-03', $3),
+        ('action:late-import', $1, 99, 'Earlier committee report imported later', '{committee-passage}', $2, '2025-01-15', $3)`,
+        [id, fixture.chamber, sourceUrl]
+      )
+      if (fixture.second) {
+        await client.query(
+          `insert into legislation.bill_actions
+          (id, bill_id, ordinal, description, classification, chamber, action_date, source_url)
+          values ('action:second', $1, 3, 'Passed other chamber', '{passage}', $2, '2025-02-02', $3)`,
+          [id, fixture.chamber === "lower" ? "upper" : "lower", sourceUrl]
+        )
+      }
+      const database = drizzle(client, { schema })
+      const service = new LegislationQueryService(database)
+      const first = await service.getBill({ id, childLimit: 1 })
+      const next = await service.getBill({ id, childLimit: 1, childCursor: first.nextChildCursor })
+      expect(first.actions.map((action) => action.id)).toEqual(["action:intro"])
+      expect(next.actions.map((action) => action.id)).toEqual(["action:referral"])
+      expect(first.latestAction).toMatchObject({
+        id: "action:signed",
+        description: "Signed by governor",
+        actionDate: "2025-02-03",
+        sourceUrl
+      })
+      expect(next.latestAction).toEqual(first.latestAction)
+      expect(first.bill.status).toBe("Signed by executive")
+      const page = createResultStore().create("LEG-83 state", "get_bill", first, undefined, async () => first)!
+      expect(page.items[0]?.fields).toContainEqual({ label: "Introduced", value: "2025-01-10" })
+      expect(page.items[0]?.billSummary?.latestAction).toEqual({
+        date: "2025-02-03",
+        description: "Signed by governor"
+      })
+      const progress = projectBillProgress(first, page)
+      expect(progress?.stages).toMatchObject([
+        { id: "introduced", state: "recorded", date: "2025-01-10", sourceUrl },
+        { id: "committee", state: "recorded", date: "2025-01-15", sourceUrl },
+        { id: "first", label: fixture.first, state: "recorded", date: "2025-02-01", sourceUrl },
+        ...(fixture.second
+          ? [{ id: "second", label: fixture.second, state: "recorded", date: "2025-02-02", sourceUrl }]
+          : []),
+        { id: "executive", label: "Governor", state: "current", date: "2025-02-03", sourceUrl }
+      ])
+      const detail = await getBillDetailRead(database, { id }, "https://api.example.test")
+      expect(detail.latestActionAt).toBe("2025-02-03T00:00:00.000Z")
+      expect(detail.introducedDate).toBe("2025-01-10")
+      expect(detail.latestActions.map((action) => action.id)).toEqual([
+        "action:intro",
+        "action:referral",
+        "action:late-import",
+        "action:passage",
+        ...(fixture.second ? ["action:second"] : []),
+        "action:receipt",
+        "action:signed"
+      ])
+      await client.query(
+        `insert into legislation.bill_documents
+          (id, bill_id, title, classification, document_date, source_url)
+          values ('document:state-amendment', $1, 'State amendment fixture', 'amendment', '2025-02-04', $2)`,
+        [id, sourceUrl]
+      )
+      const amendment = await service.getAmendment({ id: "amendment:document:document:state-amendment" })
+      expect(amendment.actions).toEqual([])
+      expect(amendment.amendment).toMatchObject({ jurisdictionId, recordType: "document", submittedDate: "2025-02-04" })
+      const amendmentCard = projectEntityResult("get_amendment", amendment)?.items[0]
+      expect(amendmentCard?.amendmentSummary?.submittedDate).toBe("2025-02-04")
+      expect(amendmentCard?.fields.some((field) => field.label === "Latest action")).toBe(false)
+    } finally {
+      await client.query("rollback")
+      client.release()
+    }
+  })
+
+  it.each(["govinfo", "congress", "openstates"])(
+    "selects dated actions independently of %s ordinals and child pages",
+    async (provider) => {
+      if (!pool) {
+        throw new Error("Missing isolated test database")
+      }
+      const client = await pool.connect()
+      try {
+        await client.query("begin")
+        await client.query(`
+          insert into legislation.jurisdictions (id, name, classification, country_code)
+            values ('jurisdiction:us', 'United States', 'country', 'US');
+          insert into legislation.legislative_sessions (id, jurisdiction_id, identifier, name)
+            values ('session:us:118', 'jurisdiction:us', '118', '118th Congress');
+          insert into legislation.bills
+            (id, jurisdiction_id, session_id, identifier, title, introduced_at, status, chamber, source_url)
+            values ('bill:us:118:hr:8245', 'jurisdiction:us', 'session:us:118', 'HR 8245',
+              'Rural Hospital Stabilization Pilot Program', '2024-05-06',
+              'Placed on the Union Calendar, Calendar No. 803.', 'lower',
+              'https://www.govinfo.gov/bulkdata/BILLSTATUS/118/hr/BILLSTATUS-118hr8245.xml');
+          insert into legislation.bill_actions (id, bill_id, ordinal, description, action_date, source_url) values
+            ('action:calendar', 'bill:us:118:hr:8245', 0, 'Placed on the Union Calendar, Calendar No. 803.', '2024-12-27', 'https://www.congress.gov/bill/118th-congress/house-bill/8245/all-actions'),
+            ('action:report', 'bill:us:118:hr:8245', 1, 'Reported (Amended) by the Committee on Ways and Means.', '2024-12-27', null),
+            ('action:ordered', 'bill:us:118:hr:8245', 2, 'Ordered to be Reported', '2024-05-08', null),
+            ('action:markup', 'bill:us:118:hr:8245', 3, 'Committee Consideration and Mark-up Session Held', '2024-05-08', null),
+            ('action:referral', 'bill:us:118:hr:8245', 4, 'Referred to the House Committee on Ways and Means.', '2024-05-06', null),
+            ('action:intro', 'bill:us:118:hr:8245', 5, 'Introduced in House', '2024-05-06', null);
+          update legislation.bill_actions set source_url = 'https://www.congress.gov/bill/118th-congress/house-bill/8245/all-actions';
+        `)
+        await client.query("update legislation.bills set upstream_ids = $1", [{ [provider]: "source-id" }])
+        if (provider === "openstates") {
+          await client.query(`
+            update legislation.bill_actions set ordinal = ordinal + 10;
+            update legislation.bill_actions set ordinal = 15 - ordinal;
+          `)
+        }
+        const database = drizzle(client, { schema })
+        const service = new LegislationQueryService(database)
+        const id = "bill:us:118:hr:8245"
+        const first = await service.getBill({ id, childLimit: 1 })
+        const next = await service.getBill({ id, childLimit: 1, childCursor: first.nextChildCursor })
+        expect(first.actions.map((action) => action.id)).toEqual(["action:intro"])
+        expect(next.actions.map((action) => action.id)).toEqual(["action:referral"])
+        expect(first.latestAction).toMatchObject({
+          id: "action:calendar",
+          description: first.bill.status,
+          actionDate: "2024-12-27",
+          sourceUrl: "https://www.congress.gov/bill/118th-congress/house-bill/8245/all-actions"
+        })
+        expect(next.latestAction).toEqual(first.latestAction)
+        const page = createResultStore().create("LEG-83", "get_bill", first, undefined, async () => first)!
+        expect(page.items[0]?.fields).toContainEqual({ label: "Introduced", value: "2024-05-06" })
+        expect(page.items[0]?.billSummary?.latestAction).toEqual({
+          date: "2024-12-27",
+          description: first.bill.status
+        })
+        expect(projectBillProgress(first, page)?.stages.slice(0, 2)).toMatchObject([
+          { id: "introduced", state: "recorded", date: "2024-05-06" },
+          { id: "committee", state: "current", date: "2024-05-06" }
+        ])
+        const detail = await getBillDetailRead(database, { id }, "https://api.example.test")
+        expect(detail.latestActionAt).toBe("2024-12-27T00:00:00.000Z")
+        expect(detail.introducedDate).toBe("2024-05-06")
+        expect(detail.latestActions.at(-1)?.id).toBe("action:calendar")
+
+        await client.query(`
+          insert into legislation.bill_actions (id, bill_id, ordinal, description, action_at, action_date, source_url)
+            values ('action:time', 'bill:us:118:hr:8245', 99, 'Timestamped action',
+              '2024-12-27 18:00:00+00', '2020-01-01', 'https://www.congress.gov/bill/118th-congress/house-bill/8245/all-actions'),
+              ('action:undated', 'bill:us:118:hr:8245', 100, 'Undated action', null, null, null);
+        `)
+        const withTime = await service.getBill({ id })
+        expect(withTime.latestAction?.id).toBe("action:time")
+        expect(projectEntityResult("get_bill", withTime)?.items[0]?.billSummary?.latestAction).toEqual({
+          date: "2024-12-27",
+          description: "Timestamped action"
+        })
+        expect(projectBillProgress(withTime, page)?.stages.some((stage) => stage.state === "current")).toBe(false)
+        await client.query("delete from legislation.bill_actions where id = 'action:undated'")
+        const timestampDetail = await getBillDetailRead(database, { id }, "https://api.example.test")
+        expect(timestampDetail.latestActionAt).toBe("2024-12-27T18:00:00.000Z")
+        expect(timestampDetail.latestActions.at(-1)).toMatchObject({
+          date: "2024-12-27",
+          occurredAt: "2024-12-27T18:00:00.000Z"
+        })
+        await client.query(`
+          update legislation.bill_actions set action_at = null, action_date = null;
+          insert into legislation.bill_documents (id, bill_id, title, classification, document_date, source_url)
+            values ('document:report', 'bill:us:118:hr:8245', 'Reported House text', 'version', '2024-12-27',
+              'https://www.govinfo.gov/content/pkg/BILLS-118hr8245rh');
+        `)
+        const undated = await service.getBill({ id })
+        expect(undated.latestAction).toBeNull()
+        expect(projectEntityResult("get_bill", undated)?.items[0]?.billSummary?.latestAction).toBeUndefined()
+        const progress = projectBillProgress(undated, page)
+        expect(progress?.stages.every((stage) => stage.date === undefined && stage.state !== "current")).toBe(true)
+        expect(undated.bill.introducedAt).toBe("2024-05-06")
+      } finally {
+        await client.query("rollback")
+        client.release()
+      }
+    }
+  )
 
   afterAll(async () => {
     await pool?.query("drop schema if exists legislation cascade")

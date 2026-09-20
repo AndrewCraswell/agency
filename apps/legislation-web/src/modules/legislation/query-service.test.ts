@@ -418,7 +418,7 @@ describe("bill summary independence from child pages", () => {
           ]
         } else if (text.includes('"classification" &&')) {
           rows = hasActions ? [[50, ["executive-veto"], "upper"]] : []
-        } else if (text.includes('order by "legislation"."bill_actions"."ordinal" desc')) {
+        } else if (text.includes('from "legislation"."bill_actions"') && text.includes("desc nulls last")) {
           rows = hasActions ? [Object.values(latestAction)] : []
         } else if (text.includes('from "legislation"."bill_documents"')) {
           rows = Array.from({ length: childLimit + 1 }, (_, index) =>
@@ -446,10 +446,12 @@ describe("bill summary independence from child pages", () => {
         expect(result.bill.status).toBe(expectedStatus)
         const latestQuery = statements.find(
           (statement) =>
-            statement.text.includes('order by "legislation"."bill_actions"."ordinal" desc') &&
+            statement.text.includes("desc nulls last") &&
+            statement.text.includes('from "legislation"."bill_actions"') &&
             !statement.text.includes('"classification" &&')
         )
         expect(latestQuery?.text).not.toContain("offset")
+        expect(latestQuery?.text).toContain("is not null")
         expect(latestQuery?.values).toEqual([billId, 1])
         const statusQueries = statements.filter((statement) => statement.text.includes('"classification" &&'))
         expect(statusQueries).toHaveLength(status === null && provider === "openstates" ? 1 : 0)

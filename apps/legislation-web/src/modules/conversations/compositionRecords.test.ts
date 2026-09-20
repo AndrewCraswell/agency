@@ -131,6 +131,50 @@ describe("run-owned presentation records", () => {
     expect(undatedPartial.stages.every((stage) => stage.date === undefined)).toBe(true)
   })
 
+  it("preserves the query's chronological progress order instead of re-sorting federal source ordinals", () => {
+    const store = createResultStore()
+    const data = {
+      bill: { id: "bill:us:118:hr:8245", title: "HR 8245", chamber: "lower", jurisdictionId: "jurisdiction:us" },
+      progressActions: [
+        {
+          id: "intro",
+          billId: "bill:us:118:hr:8245",
+          ordinal: 5,
+          classification: ["introduction"],
+          actionDate: "2024-05-06"
+        },
+        {
+          id: "referral",
+          billId: "bill:us:118:hr:8245",
+          ordinal: 4,
+          classification: ["referral-committee"],
+          actionDate: null,
+          actionAt: "2024-05-06T18:00:00.000Z",
+          sourceUrl: "https://www.congress.gov/bill/118th-congress/house-bill/8245/all-actions"
+        }
+      ],
+      progressTruncated: false
+    }
+    const page = store.create("owner", "get_bill", data, undefined, async () => data)!
+    const progress = projectPresentationContents("get_bill", data, [], page).find(
+      (content) => content.kind === "bill-progress"
+    )
+    expect(progress?.kind === "bill-progress" && progress.stages.slice(0, 2)).toMatchObject([
+      { id: "introduced", state: "recorded", date: "2024-05-06" },
+      { id: "committee", state: "current", date: "2024-05-06", sourceUrl: data.progressActions[1]?.sourceUrl }
+    ])
+    const undated = projectPresentationContents(
+      "get_bill",
+      {
+        ...data,
+        progressActions: data.progressActions.map((action) => ({ ...action, actionDate: null, actionAt: null }))
+      },
+      [],
+      page
+    ).find((content) => content.kind === "bill-progress")
+    expect(undated?.kind === "bill-progress" && undated.stages.some((stage) => stage.state === "current")).toBe(false)
+  })
+
   it("leaves stages unknown when unset classification and description do not match a recognized boilerplate phrase", () => {
     const store = createResultStore()
     const data = {

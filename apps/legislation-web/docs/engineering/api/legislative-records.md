@@ -112,6 +112,10 @@ the embedded document, amendment, and vote collections. Each `childPageInfo` mem
 relationship endpoint. Response is `ResourceResponse<BillDetail>`. Clients that need a complete
 large child collection should follow its dedicated relationship endpoint rather than repeatedly expanding bill detail.
 
+`latestActions` is chronological, using recorded action timestamps ahead of date-only values. Same-date ties retain
+publisher sequence (reversing newest-first federal source ordinals), then stable action ID. `latestActionAt` uses that
+same chronology, including date-only actions at midnight UTC; it is not a document or ingestion timestamp.
+
 ### `GET /api/bills/{billId}/timeline` (`getBillTimeline`)
 
 Query parameters are `cursor`, `limit`, `from`, `to`, and `type` (`action`, `vote`, `meeting-outcome`, or repeated values).

@@ -407,11 +407,17 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
         .object({
           billId: z.literal(id),
           description: z.string().trim().min(1),
-          actionDate: z.string().nullish()
+          actionDate: z.iso.date().nullish(),
+          actionAt: z.union([z.iso.datetime({ offset: true }), z.date()]).nullish()
         })
         .safeParse(container.latestAction)
       if (latest.success) {
-        billSummary.latestAction = { description: latest.data.description, date: latest.data.actionDate ?? undefined }
+        billSummary.latestAction = {
+          description: latest.data.description,
+          date: latest.data.actionAt
+            ? new Date(latest.data.actionAt).toISOString().slice(0, 10)
+            : (latest.data.actionDate ?? undefined)
+        }
       }
       break
     }

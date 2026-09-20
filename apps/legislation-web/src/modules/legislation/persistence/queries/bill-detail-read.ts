@@ -10,8 +10,9 @@ import {
   votePositions,
   votes
 } from "@repo/legislation-core/database/schema/schema"
+import { billActionOrder, billActionTimestamp } from "@repo/legislation-core/domain/bill-action-timestamp"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { and, asc, eq, gt, inArray, isNull, or, type SQL } from "drizzle-orm"
+import { and, asc, eq, getTableColumns, gt, inArray, isNull, or, type SQL } from "drizzle-orm"
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import {
   projectAmendmentSummary,
@@ -96,10 +97,10 @@ export async function getBillDetailRead(
     documentAmendments
   ] = await Promise.all([
     database
-      .select()
+      .select({ ...getTableColumns(billActions), sortTimestamp: billActionTimestamp() })
       .from(billActions)
       .where(eq(billActions.billId, id))
-      .orderBy(asc(billActions.ordinal))
+      .orderBy(...billActionOrder(bill.upstreamIds, "asc"))
       .limit(BILL_DETAIL_READ_LIMITS.actions),
     database
       .select({ sponsor: billSponsors, person: people })
@@ -230,7 +231,7 @@ export async function getBillDetailRead(
         identifier: bill.identifier,
         introducedDate: bill.introducedAt,
         jurisdictionId: bill.jurisdictionId,
-        latestActionAt: latestActions.at(-1)?.occurredAt ?? null,
+        latestActionAt: actionRows.at(-1)?.sortTimestamp ?? null,
         sessionId: bill.sessionId,
         sourceUrl: bill.sourceUrl,
         status: bill.status,
@@ -368,8 +369,8 @@ function projectAction(
   organizations: ReadonlyArray<BillDetail["organizations"][number]>,
   apiBaseUrl: string
 ): BillAction {
-  const date = action.actionDate ?? action.actionAt?.toISOString().slice(0, 10)
-  if (date === undefined) {
+  const date = action.actionAt?.toISOString().slice(0, 10) ?? action.actionDate
+  if (date === null) {
     throw incomplete("Bill action date is not persisted")
   }
   if (action.sourceUrl === null) {
