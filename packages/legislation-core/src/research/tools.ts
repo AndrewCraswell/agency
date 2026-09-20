@@ -968,7 +968,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
     "get_person",
     {
       description:
-        "Get a canonical legislator preview. Use get_memberships, get_sponsored_bills and read_record_collection for complete paginated relationships.",
+        "Get a bounded canonical legislator preview. Relationships may be partial or omitted to fit the response budget, not absent. Start the tools and inputs in continuations from their first page, then follow those tools' cursors for complete relationships.",
       inputSchema: entityLookupSchema("person").strict(),
       outputSchema
     },

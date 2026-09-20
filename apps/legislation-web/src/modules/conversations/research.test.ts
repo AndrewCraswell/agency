@@ -985,6 +985,141 @@ it("pages search results that overflow after enrichment without dropping evidenc
   expect(fixture.report).not.toHaveBeenCalled()
 })
 
+it.each([178500, 320000])(
+  "delivers a bounded person preview and complete collection reads from %i raw bytes",
+  async (bytes) => {
+    vi.spyOn(resultStore, "persist").mockResolvedValue(undefined)
+    const person = {
+      id: "person:congress:m001111",
+      name: "Patty Murray",
+      sourceUrl: "https://www.congress.gov/member/patty-murray/M001111",
+      party: "Democratic",
+      isActive: true
+    }
+    const terms = Array.from({ length: 10 }, (_, index) => ({
+      id: `term:${index}`,
+      officeTitle: "Senator",
+      sourceUrl: person.sourceUrl
+    }))
+    const memberships = Array.from({ length: 10 }, (_, index) => ({
+      membership: { id: `membership:${index}`, sourceUrl: person.sourceUrl },
+      organization: { id: `organization:congress:${index}`, name: `Committee ${index}`, description: "" }
+    }))
+    const sponsoredBills = Array.from({ length: 10 }, (_, index) => ({
+      bill: { id: `bill:us:119:s:${index + 1}`, title: `Bill ${index}`, sourceUrl: person.sourceUrl }
+    }))
+    const data = {
+      person,
+      terms,
+      termsTruncated: false,
+      memberships: { items: memberships, truncated: false },
+      sponsoredBills: { items: sponsoredBills, truncated: false },
+      truncated: false
+    }
+    const padding = Math.floor((bytes - Buffer.byteLength(JSON.stringify({ data }))) / memberships.length)
+    for (const membership of memberships) {
+      membership.organization.description = "x".repeat(padding)
+    }
+    const rawBytes = Buffer.byteLength(JSON.stringify({ data }))
+    expect(rawBytes).toBeGreaterThanOrEqual(bytes - memberships.length)
+    expect(rawBytes).toBeLessThanOrEqual(bytes)
+    const getPerson = vi.fn<LegislationQueryApi["getPerson"]>(async () => data)
+    const getMemberships = vi.fn<NonNullable<LegislationQueryApi["getMemberships"]>>(async () => ({
+      items: memberships,
+      truncated: false
+    }))
+    const getSponsoredBills = vi.fn<NonNullable<LegislationQueryApi["getSponsoredBills"]>>(async () => ({
+      items: sponsoredBills,
+      truncated: false
+    }))
+    const readRecordCollection = vi.fn<NonNullable<LegislationQueryApi["readRecordCollection"]>>(async () => ({
+      items: terms,
+      truncated: false
+    }))
+    const onMeasurement = vi.fn<(measurement: ResearchToolMeasurement) => void>()
+    const fixture = selectionTools(
+      { getPerson, getMemberships, getSponsoredBills, readRecordCollection },
+      {
+        sessionKey: crypto.randomUUID(),
+        onResultSet: () => "r1",
+        onContents: vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>(),
+        onMeasurement
+      }
+    )
+    const output = await callWebTool("get_person", { id: person.id }, fixture.tools)
+    const preview = z
+      .object({
+        data: z.object({
+          person: z.json(),
+          terms: z.array(z.json()),
+          truncated: z.literal(true),
+          continuations: z.record(z.string(), z.object({ tool: z.string(), input: z.record(z.string(), z.unknown()) }))
+        }),
+        evidence: z.array(z.unknown()),
+        resultHandle: z.string()
+      })
+      .parse(output)
+    expect(preview.data.person).toEqual(person)
+    expect(preview.data.terms.length).toBeLessThan(terms.length)
+    expect(preview.evidence.length).toBeGreaterThan(0)
+    const model = researchModelOutput({ output }).value
+    const delivered = z.object({ data: z.json() }).parse(output).data
+    expect(Buffer.byteLength(model)).toBeLessThanOrEqual(researchResultByteLimit)
+    expect(JSON.parse(model)).toMatchObject({ recordLinks: expect.any(Array), presentationOptions: expect.any(Array) })
+    expect(onMeasurement.mock.calls[0]?.[0]).toMatchObject({
+      rawResultBytes: Buffer.byteLength(JSON.stringify({ data: delivered })),
+      enrichedResultBytes: Buffer.byteLength(JSON.stringify(output)),
+      modelResultBytes: Buffer.byteLength(model),
+      outcome: "success",
+      attemptCount: 1
+    })
+    expect(getPerson).toHaveBeenCalledExactlyOnceWith({ id: person.id })
+    expect(getMemberships).not.toHaveBeenCalled()
+    const expected = { terms, memberships, sponsoredBills }
+    for (const key of ["terms", "memberships", "sponsoredBills"] as const) {
+      const handoff = preview.data.continuations[key]
+      expect(handoff).toBeDefined()
+      if (!handoff) {
+        throw new Error("Missing collection handoff")
+      }
+      const collected: unknown[] = []
+      let cursor: string | undefined
+      let pages = 0
+      do {
+        const output = await callWebTool(handoff.tool, { ...handoff.input, cursor }, fixture.tools)
+        expect(Buffer.byteLength(researchModelOutput({ output }).value)).toBeLessThanOrEqual(researchResultByteLimit)
+        const page = z
+          .object({ data: z.object({ items: z.array(z.json()), nextCursor: z.string().optional() }) })
+          .parse(output)
+        collected.push(...page.data.items)
+        cursor = page.data.nextCursor
+        expect(++pages).toBeLessThan(20)
+      } while (cursor)
+      expect(collected).toEqual(expected[key])
+    }
+    expect(fixture.report).not.toHaveBeenCalled()
+  }
+)
+
+it("gives supported collection recovery when the person identity itself exceeds the budget", async () => {
+  const id = "person:congress:d000617"
+  const getPerson = vi.fn<LegislationQueryApi["getPerson"]>(async () => ({
+    person: { id, name: "Suzan DelBene", biography: "x".repeat(researchResultByteLimit) },
+    terms: [],
+    memberships: { items: [] },
+    sponsoredBills: { items: [] }
+  }))
+  const onContents = vi.fn<NonNullable<Parameters<typeof createResearchTools>[9]>>()
+  const fixture = selectionTools({ getPerson }, { onContents })
+  await expect(callWebTool("get_person", { id }, fixture.tools)).rejects.toMatchObject({
+    code: "result_limit",
+    recovery: { action: "narrow", instruction: expect.stringContaining("those inputs are unsupported") }
+  })
+  expect(getPerson).toHaveBeenCalledOnce()
+  expect(onContents).not.toHaveBeenCalled()
+  expect(fixture.record).toHaveBeenCalledWith(expect.objectContaining({ failure: "result_limit" }))
+})
+
 it.each(["get_vote", "get_votes", "get_bill_votes"])(
   "sizes %s for evidence, presentation and record links while preserving every position",
   async (name) => {

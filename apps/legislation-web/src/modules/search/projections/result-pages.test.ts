@@ -127,6 +127,6 @@ describe("shared research results", () => {
     expect(prepareResultPage("search_bill_text", input, source, 0)).toEqual(source)
     expect(() =>
       prepareResultPage("search_bill_text", input, { items: [{ text: "x".repeat(researchResultByteLimit) }] }, 0)
-    ).toThrow(/One result exceeds/)
+    ).toThrow(/exceeds the response budget/)
   })
 })

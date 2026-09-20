@@ -247,6 +247,86 @@ describe("shared research definitions", () => {
     expect(collected).toEqual(positions)
   })
 
+  it("bounds person previews while preserving identity, coverage and usable collection handoffs", async () => {
+    const person = { id: "person:congress:d000617", name: "Suzan DelBene", sourceUrl: "https://example.gov/person" }
+    const terms = Array.from({ length: 20 }, (_, index) => ({ id: `term:${index}`, officeTitle: "Representative" }))
+    const memberships = Array.from({ length: 20 }, (_, index) => ({
+      membership: { id: `membership:${index}`, sourceUrl: "https://example.gov/membership" },
+      organization: { id: `organization:congress:${index}`, description: "x".repeat(12000) }
+    }))
+    const sponsoredBills = Array.from({ length: 20 }, (_, index) => ({
+      bill: { id: `bill:us:119:hr:${index + 1}`, title: `Bill ${index}`, summary: "x".repeat(10000) }
+    }))
+    const data = {
+      person,
+      terms,
+      termsTruncated: true,
+      memberships: { items: memberships, nextCursor: "members-page", truncated: true, warnings: ["Source coverage"] },
+      sponsoredBills: { items: sponsoredBills, nextCursor: "bills-page", truncated: true },
+      truncated: true
+    }
+    const getPerson = vi.fn<LegislationQueryApi["getPerson"]>(async () => data)
+    const getMemberships = vi.fn<NonNullable<LegislationQueryApi["getMemberships"]>>(async () => ({ items: [] }))
+    const getSponsoredBills = vi.fn<NonNullable<LegislationQueryApi["getSponsoredBills"]>>(async () => ({ items: [] }))
+    const readRecordCollection = vi.fn<NonNullable<LegislationQueryApi["readRecordCollection"]>>(async () => ({
+      items: []
+    }))
+    const api = { ...service(), getPerson, getMemberships, getSponsoredBills, readRecordCollection }
+    const result = await definition(api, "get_person").execute({ id: person.id })
+    assert.ok("structuredContent" in result)
+    const preview = result.structuredContent.data
+    assert.ok(preview && typeof preview === "object" && !Array.isArray(preview))
+    expect(Buffer.byteLength(JSON.stringify(result.structuredContent))).toBeLessThanOrEqual(researchResultByteLimit)
+    expect(preview.person).toEqual(person)
+    expect(preview.truncated).toBe(true)
+    expect(preview.termsTruncated).toBe(true)
+    assert.ok(Array.isArray(preview.terms))
+    expect(preview.terms.length).toBeLessThan(terms.length)
+    expect(preview.memberships).toMatchObject({ truncated: true, warnings: ["Source coverage"] })
+    expect(preview.memberships).not.toHaveProperty("nextCursor")
+    expect(preview.sponsoredBills).not.toHaveProperty("nextCursor")
+    const handoffs = preview.continuations
+    assert.ok(handoffs && typeof handoffs === "object" && !Array.isArray(handoffs))
+    for (const handoff of Object.values(handoffs)) {
+      assert.ok(handoff && typeof handoff === "object" && !Array.isArray(handoff))
+      assert.ok(typeof handoff.tool === "string")
+      await definition(api, handoff.tool).execute(handoff.input)
+    }
+    expect(getPerson).toHaveBeenCalledExactlyOnceWith({ id: person.id })
+    expect(getMemberships).toHaveBeenCalledExactlyOnceWith({ personId: person.id })
+    expect(getSponsoredBills).toHaveBeenCalledExactlyOnceWith({ id: person.id })
+    expect(readRecordCollection).toHaveBeenCalledExactlyOnceWith({ collection: "person-terms", recordId: person.id })
+    expect(data.memberships.items).toEqual(memberships)
+    expect(data.memberships.nextCursor).toBe("members-page")
+  })
+
+  it("permits an identity-only person preview but never trims oversized identity or provenance", async () => {
+    const person = { id: "person:congress:m001111", name: "Patty Murray", sourceUrl: "https://example.gov/person" }
+    const data = {
+      person,
+      terms: [{ id: "term:one", sourceText: "x".repeat(researchResultByteLimit) }],
+      memberships: { items: [], truncated: false },
+      sponsoredBills: { items: [], truncated: false },
+      truncated: false
+    }
+    const result = await definition({ ...service(), getPerson: async () => data }, "get_person").execute({
+      id: person.id
+    })
+    expect(result).toHaveProperty("structuredContent.data.terms", [])
+    expect(result).toHaveProperty("structuredContent.data.termsTruncated", true)
+    expect(result).toHaveProperty("structuredContent.data.truncated", true)
+    expect(result).toHaveProperty("structuredContent.data.person", person)
+    const oversized = await definition(
+      {
+        ...service(),
+        getPerson: async () => ({ ...data, person: { ...person, biography: "x".repeat(researchResultByteLimit) } })
+      },
+      "get_person"
+    ).execute({ id: person.id })
+    expect(oversized).toHaveProperty("isError", true)
+    expect(JSON.parse(oversized.content[0]!.text)).toMatchObject({ error: "payload_too_large", retryable: false })
+  })
+
   it("rejects vote continuation after source data or selection changes", async () => {
     const detail = {
       vote: { id: "vote:us:roll-1" },

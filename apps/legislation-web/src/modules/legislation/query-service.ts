@@ -1882,6 +1882,7 @@ export class LegislationQueryService {
       person: person[0],
       sponsoredBills,
       terms: terms.slice(0, DETAIL_PREVIEW_LIMIT),
+      termsTruncated: terms.length > DETAIL_PREVIEW_LIMIT,
       truncated: terms.length > DETAIL_PREVIEW_LIMIT || memberships.truncated || sponsoredBills.truncated,
       continuations: {
         terms: { collection: "person-terms", recordId: lookup.id },

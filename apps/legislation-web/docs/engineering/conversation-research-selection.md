@@ -47,6 +47,12 @@ Sizing previews do not retain result snapshots, consume citation references or p
 All omitted records/positions remain accessible through the existing bound continuations, with vote snapshot
 validation unchanged. An indivisible oversized record or position remains a reported, non-retryable core error.
 Unpaginated detail contracts still require explicit narrower reads; the paginator does not invent new tool inputs.
+`get_person` uses that same budget check to shorten inline terms, memberships and sponsored-bill previews, down to
+identity-only when necessary. Identity and provenance remain intact. Root and collection truncation flags distinguish
+unread relationships from absence. Its `continuations` name existing tools and first-page inputs; read each full
+collection from the beginning, then follow that tool's cursors. Nested preview cursors are not exposed as collection
+continuations. The ID-only input contract and the profile drawer's direct service read are unchanged. An oversized
+identity still fails explicitly, with recovery pointing to supported collection reads rather than unsupported limits.
 The final serialization is also guarded. Rejected enrichment is not turned into a successful empty result, stripped
 of provenance, or retried automatically. No successful memory observation or presentation content is published for
 an oversized projection. A `result_limit` error offers an explicit `narrow` recovery: restart without a cursor at

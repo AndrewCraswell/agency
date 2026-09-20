@@ -32,6 +32,9 @@ export function researchLimitRecovery(name: string): ResearchRecovery {
       "Make a new first-page request without cursor, with limit: 1 and a narrower query. Scope to a known billId or returned documentIds when available. If one passage still exceeds the budget, discover document metadata and read selected sections instead. No omitted passage or continuation from this failed call was read; disclose that coverage remains incomplete."
   } else if (name === "describe_analytics") {
     instruction = "Request one dataset in datasets instead of the full catalog. The failed catalog was not read."
+  } else if (name === "get_person") {
+    instruction =
+      "The person identity or its provenance exceeds the budget even without relationship previews. Do not retry get_person with limit, childLimit or cursor; those inputs are unsupported. Read get_memberships with personId, get_sponsored_bills with id, or read_record_collection with collection: person-terms and recordId, starting at limit: 1. The failed identity preview was not read; disclose incomplete coverage."
   }
   return { action: "narrow", instruction }
 }

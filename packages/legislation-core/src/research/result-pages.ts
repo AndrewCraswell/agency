@@ -103,15 +103,69 @@ function selectResultPage(
   length: number,
   candidate: (end: number) => JSONValue,
   fits: (page: JSONValue) => boolean,
-  message: string
+  message: string,
+  minimum = 1
 ) {
   // Halve only the in-memory page, not the query. Omitted units remain behind the continuation.
-  for (let end = length; end > offset; end = offset + Math.max(1, Math.floor((end - offset) / 2))) {
+  for (let end = length; end >= offset + minimum; end = offset + Math.max(minimum, Math.floor((end - offset) / 2))) {
     const page = candidate(end)
     if (fits(page)) return page
-    if (end === offset + 1) break
+    if (end === offset + minimum) break
   }
   throw new LegislationError("payload_too_large", message, { details: { retryable: false } })
+}
+
+function preparePersonPreview(
+  name: string,
+  input: Readonly<Record<string, unknown>>,
+  data: { [key: string]: JSONValue },
+  measureResult?: ResultPageMeasurement
+): JSONValue {
+  if (!isRecord(data.person) || typeof data.person.id !== "string") return data
+  const personId = data.person.id
+  const terms = Array.isArray(data.terms) ? data.terms : []
+  const collections = ["memberships", "sponsoredBills"] as const
+  const length = Math.max(
+    terms.length,
+    ...collections.map((key) => {
+      const page = data[key]
+      return isRecord(page) && Array.isArray(page.items) ? page.items.length : 0
+    })
+  )
+  const candidate = (limit: number): JSONValue => {
+    const preview = { ...data }
+    let omitted = false
+    if (Array.isArray(data.terms)) {
+      preview.terms = terms.slice(0, limit)
+      preview.termsTruncated = data.termsTruncated === true || terms.length > limit
+      omitted ||= terms.length > limit
+    }
+    for (const key of collections) {
+      const page = data[key]
+      if (!isRecord(page) || !Array.isArray(page.items)) continue
+      const { nextCursor: _nextCursor, ...metadata } = page
+      const truncated = page.truncated === true || typeof page.nextCursor === "string" || page.items.length > limit
+      preview[key] = { ...metadata, items: page.items.slice(0, limit), truncated }
+      omitted ||= truncated
+    }
+    preview.truncated = data.truncated === true || preview.termsTruncated === true || omitted
+    // These are fresh collection reads, not offsets into the shortened previews.
+    preview.continuations = {
+      ...(isRecord(data.continuations) ? data.continuations : {}),
+      terms: { tool: "read_record_collection", input: { collection: "person-terms", recordId: personId } },
+      memberships: { tool: "get_memberships", input: { personId } },
+      sponsoredBills: { tool: "get_sponsored_bills", input: { id: personId } }
+    }
+    return preview
+  }
+  return selectResultPage(
+    0,
+    length,
+    candidate,
+    (page) => resultPageFits(name, input, page, measureResult),
+    "The person identity or its provenance exceeds the response budget. Read its relationships with the collection tools instead.",
+    0
+  )
 }
 
 function prepareVotePage(
@@ -222,6 +276,9 @@ function prepareContentPage(
   const collection = name === "get_bill_text" ? "sections" : "items"
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
     return data
+  }
+  if (name === "get_person") {
+    return preparePersonPreview(name, input, data, measureResult)
   }
   const records = data[collection]
   if (!Array.isArray(records)) {
