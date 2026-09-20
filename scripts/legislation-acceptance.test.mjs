@@ -307,6 +307,7 @@ if (role === "web") {
       ...environment,
       LEGISLATION_ACCEPTANCE_CHILD: "web",
       DATABASE_URL: databaseUrl ?? `postgresql://fixture:fixture@127.0.0.1:${new URL(databaseOrigin).port}/acceptance`,
+      DATABASE_DIRECT_URL: "",
       DATABASE_CONNECTION_TIMEOUT_MS: "1000",
       LEGISLATION_PUBLIC_API_BASE_URL: apiOrigin,
       LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET: Buffer.alloc(32, 1).toString("base64"),

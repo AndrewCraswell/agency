@@ -1,11 +1,10 @@
+import { ConnectionQueue } from "@repo/legislation-core/database/connection-queue"
 import * as schema from "@repo/legislation-core/database/schema/schema"
 import { LegislationError, normalizeLegislationError, postgresErrorCode } from "@repo/legislation-core/domain/errors"
 import { sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import type { PgTransactionConfig } from "drizzle-orm/pg-core"
 import pg from "pg"
-import { ConnectionQueue } from "./connection-queue.js"
-
 const connectionQueues = new WeakMap<pg.Pool, ConnectionQueue>()
 
 export type DatabaseConfig = Readonly<{

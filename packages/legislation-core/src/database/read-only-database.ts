@@ -1,3 +1,4 @@
+import { withReadOnlyDatabase, type LegislationDatabase } from "@repo/legislation-core/database/database"
 import * as schema from "@repo/legislation-core/database/schema/schema"
 import type { Query, SQL } from "drizzle-orm"
 import { NodePgDatabase, NodePgSession, type NodePgQueryResultHKT } from "drizzle-orm/node-postgres"
@@ -15,8 +16,6 @@ import {
   type ExtractTablesWithRelations
 } from "drizzle-orm/relations"
 import type pg from "pg"
-import { withReadOnlyDatabase, type LegislationDatabase } from "./database.js"
-
 type Tables = ExtractTablesWithRelations<typeof schema>
 type Transaction = PgTransaction<NodePgQueryResultHKT, typeof schema, Tables>
 type PreparedExecution<T extends PreparedQueryConfig> = (
