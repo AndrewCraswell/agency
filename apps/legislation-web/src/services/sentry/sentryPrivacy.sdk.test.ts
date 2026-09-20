@@ -1,5 +1,5 @@
 import type { Envelope, Integration } from "@sentry/core"
-import { NodeClient, defaultStackParser, logger, metrics, withScope } from "@sentry/nextjs"
+import { NodeClient, defaultStackParser, logger, metrics, startSpan, withScope } from "@sentry/nextjs"
 import { expect, it, vi } from "vitest"
 import { sentryOptions } from "./sentryOptions"
 import { createSentryPrivacy } from "./sentryPrivacy"
@@ -102,6 +102,42 @@ it("filters real SDK error, log and metric envelopes after SDK metadata is added
     expect(JSON.stringify(envelopes)).toContain("fixture-release")
     expect(JSON.stringify(envelopes)).toContain("conversation.submitted")
     expect(JSON.stringify(envelopes)).toContain("rostra.chat.duration")
+  } finally {
+    await client.close(2000)
+  }
+})
+
+it("retains allowlisted database attributes from a real SDK span envelope", async () => {
+  const { client, envelopes } = clientFixture()
+  try {
+    await withScope(async (scope) => {
+      scope.setClient(client)
+      await startSpan(
+        {
+          name: "bill.timeline",
+          op: "db.query",
+          attributes: {
+            "db.pool.name": "canonical",
+            "db.query.name": "bill.timeline",
+            "db.query.revision": 1
+          }
+        },
+        async (span) => {
+          span.setAttribute("db.connection_wait.canonical_ms", 12)
+          span.setAttribute("db.duration_ms", 34)
+          span.setAttribute("db.result_count", 5)
+          span.setStatus({ code: 1 })
+        }
+      )
+    })
+    expect(await client.flush(2000)).toBe(true)
+    const serialized = JSON.stringify(envelopes)
+    expect(serialized).toContain("bill.timeline")
+    expect(serialized).toContain("db.query.name")
+    expect(serialized).toContain("db.query.revision")
+    expect(serialized).toContain("db.connection_wait.canonical_ms")
+    expect(serialized).toContain("db.duration_ms")
+    expect(serialized).toContain("db.result_count")
   } finally {
     await client.close(2000)
   }
