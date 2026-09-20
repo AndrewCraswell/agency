@@ -58,6 +58,72 @@ function membership(): OrganizationMembershipRead {
 }
 
 describe("projectOrganizationMembershipRead", () => {
+  it.each(["us", "us-wa"])("preserves independent %s membership, person and organization sources", (jurisdiction) => {
+    const read = membership()
+    const sourceUrl =
+      jurisdiction === "us"
+        ? "https://api.congress.gov/v3/committee/HSRU00"
+        : "https://openstates.org/committees/wa/rules"
+    read.membership = {
+      ...read.membership,
+      id: `membership:${jurisdiction}:rules:1`,
+      sourceIsOfficial: false,
+      sourceProvider: "published-roster",
+      sourceRetrievedAt: new Date("2026-08-23T12:00:00.000Z"),
+      sourceUpdatedAt: null,
+      sourceUrl
+    }
+    read.person = {
+      ...read.person,
+      id: `person:${jurisdiction}:example`,
+      jurisdictionId: `jurisdiction:${jurisdiction}`,
+      sourceIsOfficial: true,
+      sourceProvider: "member-register",
+      sourceRetrievedAt: new Date("2026-08-24T12:00:00.000Z"),
+      sourceUrl: `${sourceUrl}/members/example`
+    }
+    read.organization = {
+      ...read.organization,
+      id: `organization:${jurisdiction}:rules`,
+      jurisdictionId: `jurisdiction:${jurisdiction}`,
+      sourceIsOfficial: false,
+      sourceProvider: "committee-register",
+      sourceRetrievedAt: new Date("2026-08-25T12:00:00.000Z"),
+      sourceUrl
+    }
+    read.membership.personId = read.person.id
+    read.membership.organizationId = read.organization.id
+
+    const projected = projectOrganizationMembershipRead(read, "https://api.example.test")
+    expect(projected.sources).toEqual([
+      {
+        isOfficial: false,
+        provider: "published-roster",
+        retrievedAt: "2026-08-23T12:00:00.000Z",
+        sourceUpdatedAt: null,
+        sourceUrl
+      }
+    ])
+    expect(projected.person.sources).toEqual([
+      {
+        isOfficial: true,
+        provider: "member-register",
+        retrievedAt: "2026-08-24T12:00:00.000Z",
+        sourceUpdatedAt: "2026-08-20T14:00:00.000Z",
+        sourceUrl: `${sourceUrl}/members/example`
+      }
+    ])
+    expect(projected.organization.sources).toEqual([
+      {
+        isOfficial: false,
+        provider: "committee-register",
+        retrievedAt: "2026-08-25T12:00:00.000Z",
+        sourceUpdatedAt: "2026-08-20T14:00:00.000Z",
+        sourceUrl
+      }
+    ])
+  })
+
   it("preserves the canonical membership and embedded person and organization", () => {
     expect(projectOrganizationMembershipRead(membership(), "https://api.example.test")).toMatchObject({
       canonicalUrl:

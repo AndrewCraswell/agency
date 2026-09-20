@@ -3,6 +3,14 @@
 All operations use the [shared protocol and envelopes](schemas.md). `GET` operations have no request body. Canonical
 detail URLs remain top-level; nested routes expose a relationship from the named parent.
 
+Person collections and detail, legislative terms, memberships, and embedded person/organization summaries preserve
+their persisted source provider, official status, retrieval time, source-update time, and URL. These facts are not
+inferred from a URL or upstream ID, and record creation/update times do not substitute for source retrieval time.
+Each membership and embedded record retains its own provenance. Person detail retains both person and profile sources.
+Missing or incomplete required source facts fail with `422 unprocessable`, rather than falling back to inferred facts.
+The shared [persisted-source projector](../../../src/modules/request-handling/api/persisted-source-projection.ts)
+owns this mapping; document and meeting-participant parent-source contracts remain separate.
+
 ## Civic graph schemas
 
 ### People and service

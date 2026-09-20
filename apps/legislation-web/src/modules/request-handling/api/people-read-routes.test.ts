@@ -51,6 +51,58 @@ function person(overrides: Partial<PersonCollectionRead> = {}): PersonCollection
 }
 
 describe("people read API handler", () => {
+  it.each([
+    person({
+      id: "person:us:alex-example",
+      jurisdictionId: "jurisdiction:us",
+      sourceIsOfficial: false,
+      sourceProvider: "bioguide",
+      sourceUrl: "https://api.congress.gov/v3/member/A000001",
+      upstreamIds: { congress: "A000001" }
+    }),
+    person({
+      id: "person:us-wa:alex-example",
+      jurisdictionId: "jurisdiction:us-wa",
+      sourceIsOfficial: true,
+      sourceProvider: "state-roster",
+      sourceUrl: "https://openstates.org/person/alex-example",
+      upstreamIds: { openstates: "alex-example" }
+    })
+  ])("preserves persisted provenance in the $jurisdictionId collection", async (source) => {
+    const baseUrl = await startServer({
+      listPeople: async () => ({
+        items: [
+          person({
+            ...source,
+            sourceRetrievedAt: new Date("2026-08-23T12:00:00.000Z"),
+            sourceUpdatedAt: null
+          })
+        ],
+        truncated: false
+      })
+    })
+    const response = await fetch(`${baseUrl}/api/people`)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: [
+        {
+          id: source.id,
+          sources: [
+            {
+              isOfficial: source.sourceIsOfficial,
+              provider: source.sourceProvider,
+              retrievedAt: "2026-08-23T12:00:00.000Z",
+              sourceUpdatedAt: null,
+              sourceUrl: source.sourceUrl
+            }
+          ],
+          updatedAt: "2026-08-21T15:00:00.000Z"
+        }
+      ]
+    })
+  })
+
   it("returns the documented canonical page and forwards all filters", async () => {
     let received: unknown
     const baseUrl = await startServer({

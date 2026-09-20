@@ -38,9 +38,9 @@ function sourceFields() {
   return {
     createdAt: new Date("2026-08-20T15:00:00Z"),
     provenanceComplete: true,
-    sourceIsOfficial: true,
-    sourceProvider: "congress",
-    sourceRetrievedAt: new Date("2026-08-20T15:00:00Z"),
+    sourceIsOfficial: false,
+    sourceProvider: "published-civic-register",
+    sourceRetrievedAt: new Date("2026-08-23T15:00:00Z"),
     sourceUpdatedAt: new Date("2026-08-20T14:00:00Z"),
     sourceUrl: "https://api.congress.gov/v3/member/example",
     updatedAt: new Date("2026-08-20T15:00:00Z")
@@ -138,6 +138,15 @@ describe("civic scoped read API handler", () => {
       data: {
         canonicalUrl: "https://api.example.test/api/people/person%3Aus%3Aexample/terms/term%3Aus%3A119%3A1",
         officeTitle: "Representative",
+        sources: [
+          {
+            isOfficial: false,
+            provider: "published-civic-register",
+            retrievedAt: "2026-08-23T15:00:00.000Z",
+            sourceUpdatedAt: "2026-08-20T14:00:00.000Z",
+            sourceUrl: "https://api.congress.gov/v3/member/example"
+          }
+        ],
         type: "legislative-term"
       },
       links: { self: path },
@@ -175,6 +184,15 @@ describe("civic scoped read API handler", () => {
           "https://api.example.test/api/organizations/organization%3Aus%3Ahouse/memberships/membership%3Aus%3A1",
         person: { type: "person" },
         role: "member",
+        sources: [
+          {
+            isOfficial: false,
+            provider: "published-civic-register",
+            retrievedAt: "2026-08-23T15:00:00.000Z",
+            sourceUpdatedAt: "2026-08-20T14:00:00.000Z",
+            sourceUrl: "https://api.congress.gov/v3/member/example"
+          }
+        ],
         type: "membership"
       },
       links: { self: path }

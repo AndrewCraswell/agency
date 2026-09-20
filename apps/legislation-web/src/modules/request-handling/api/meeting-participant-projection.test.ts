@@ -20,7 +20,7 @@ function read(): MeetingParticipantProjectionRead {
       name: "Rules Committee",
       parentOrganizationId: "organization:us:senate",
       provenanceComplete: true,
-      sourceIsOfficial: true,
+      sourceIsOfficial: false,
       sourceProvider: "Congress.gov",
       sourceRetrievedAt: new Date("2026-08-20T15:00:00.000Z"),
       sourceUpdatedAt: null,
@@ -43,7 +43,7 @@ function read(): MeetingParticipantProjectionRead {
       name: "Pat Witness",
       party: null,
       provenanceComplete: true,
-      sourceIsOfficial: true,
+      sourceIsOfficial: false,
       sourceProvider: "Congress.gov",
       sourceRetrievedAt: new Date("2026-08-20T15:00:00.000Z"),
       sourceUpdatedAt: null,
@@ -65,6 +65,25 @@ describe("meeting participant projection", () => {
       person: { id: "person:us:pat-witness", type: "person" },
       type: "meeting-participant"
     })
+    expect(projected.person?.sources).toEqual([
+      {
+        isOfficial: false,
+        provider: "Congress.gov",
+        retrievedAt: "2026-08-20T15:00:00.000Z",
+        sourceUpdatedAt: null,
+        sourceUrl: "https://api.congress.gov/v3/member/P000001"
+      }
+    ])
+    expect(projected.organization?.sources).toEqual([
+      {
+        isOfficial: false,
+        provider: "Congress.gov",
+        retrievedAt: "2026-08-20T15:00:00.000Z",
+        sourceUpdatedAt: null,
+        sourceUrl: "https://api.congress.gov/v3/committee/SRUL00"
+      }
+    ])
+    expect(projected.sources[0]?.retrievedAt).toBe("2026-08-20T15:00:00.000Z")
   })
 
   it("keeps a singleton read valid when its participant selection has no event ID", () => {

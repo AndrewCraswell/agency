@@ -3,7 +3,12 @@ import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
 import type { PersonDetailRead } from "../../legislation/persistence/queries/person-detail-read"
 import { close, createLegislationServer } from "../test-http-server"
-import { createPersonDetailReadApiHandler, type PersonDetailReadApi } from "./person-detail-read-routes"
+import { projectPersonRead } from "./people-read-routes"
+import {
+  createPersonDetailReadApiHandler,
+  projectPersonDetailRead,
+  type PersonDetailReadApi
+} from "./person-detail-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "person-detail-read-test", write: () => undefined })
@@ -145,6 +150,53 @@ function detail(): PersonDetailRead {
 }
 
 describe("person detail read API handler", () => {
+  it.each(["us", "us-wa"])("agrees with the %s collection without losing profile or term sources", (jurisdiction) => {
+    const read = detail()
+    read.person = {
+      ...read.person,
+      id: `person:${jurisdiction}:alex-example`,
+      jurisdictionId: `jurisdiction:${jurisdiction}`,
+      sourceIsOfficial: false,
+      sourceProvider: "published-member-register",
+      sourceRetrievedAt: new Date("2026-08-25T12:00:00.000Z"),
+      sourceUrl:
+        jurisdiction === "us"
+          ? "https://api.congress.gov/v3/member/A000001"
+          : "https://openstates.org/person/alex-example"
+    }
+    read.profile.personId = read.person.id
+    read.aliases = read.aliases.map((alias) => ({ ...alias, personId: read.person.id }))
+    read.externalIdentifiers = read.externalIdentifiers.map((identifier) => ({
+      ...identifier,
+      personId: read.person.id
+    }))
+    read.jurisdictions = read.jurisdictions.map((record) => ({
+      ...record,
+      jurisdictionId: `jurisdiction:${jurisdiction}`,
+      personId: read.person.id
+    }))
+    read.terms = read.terms.map((term) => ({
+      ...term,
+      id: `term:${read.person.id}:current`,
+      jurisdictionId: `jurisdiction:${jurisdiction}`,
+      personId: read.person.id
+    }))
+    const projected = projectPersonDetailRead(read, "https://api.example.test")
+    const summary = projectPersonRead(read.person, "https://api.example.test")
+
+    expect(summary.sources).toEqual([projected.sources[0]])
+    expect(projected.sources).toHaveLength(2)
+    expect(projected.sources[0]).toEqual({
+      isOfficial: false,
+      provider: "published-member-register",
+      retrievedAt: "2026-08-25T12:00:00.000Z",
+      sourceUpdatedAt: "2026-08-19T15:00:00.000Z",
+      sourceUrl: read.person.sourceUrl
+    })
+    expect(projected.sources[1]?.provider).toBe("official-biography")
+    expect(projected.terms[0]?.sources[0]?.provider).toBe("official-term-register")
+  })
+
   it("returns the documented source-complete resource and rejects queries", async () => {
     let received: string | undefined
     const baseUrl = await startServer({

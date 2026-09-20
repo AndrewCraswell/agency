@@ -7,7 +7,7 @@ import type {
   PersonTermRead
 } from "../../legislation/persistence/queries/civic-scoped-reads"
 import { projectLegislativeTerm } from "./canonical-projection"
-import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiResource,
@@ -17,6 +17,7 @@ import {
   type HttpApiHandler
 } from "./http"
 import { projectOrganizationMembershipRead } from "./membership-read-projection"
+import { persistedSourceProjectionContext } from "./persisted-source-projection"
 
 export interface CivicScopedReadApi {
   getOrganizationMembership: (input: OrganizationMembershipLookup) => Promise<OrganizationMembershipRead>
@@ -72,7 +73,7 @@ async function handleCivicScopedReadRequest(
 }
 
 function projectTerm(read: PersonTermRead, apiBaseUrl: string) {
-  const source = canonicalSource(read.term, "term")
+  const context = persistedSourceProjectionContext([read.term], apiBaseUrl, "term")
   return projectLegislativeTerm(
     {
       district: read.term.district,
@@ -83,43 +84,11 @@ function projectTerm(read: PersonTermRead, apiBaseUrl: string) {
       officeTitle: requiredText(read.term.officeTitle, "term officeTitle"),
       organizationId: read.term.organizationId,
       personId: requiredText(read.term.personId, "term personId"),
-      sourceUrl: source.sourceUrl,
+      sourceUrl: context.sources[0].sourceUrl,
       startDate: read.term.startDate
     },
-    sourceProjectionContext(source, apiBaseUrl)
+    context
   )
-}
-
-function canonicalSource(
-  record: Readonly<{
-    createdAt: Date
-    id: string
-    provenanceComplete: boolean
-    sourceIsOfficial: boolean | null
-    sourceProvider: string | null
-    sourceRetrievedAt: Date | null
-    sourceUpdatedAt: Date | null
-    sourceUrl: string | null
-    updatedAt: Date
-  }>,
-  name: string
-) {
-  if (
-    !record.provenanceComplete ||
-    record.sourceIsOfficial === null ||
-    !isNonemptyString(record.sourceProvider) ||
-    record.sourceRetrievedAt === null ||
-    !isNonemptyString(record.sourceUrl)
-  ) {
-    throw new LegislationError("unprocessable", `${name} canonical provenance is incomplete`)
-  }
-  return {
-    createdAt: record.createdAt,
-    id: record.id,
-    sourceUpdatedAt: record.sourceUpdatedAt,
-    sourceUrl: record.sourceUrl,
-    updatedAt: record.updatedAt
-  }
 }
 
 function requiredBoolean(value: boolean | null, name: string): boolean {

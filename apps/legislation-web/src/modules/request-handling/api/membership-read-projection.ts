@@ -7,11 +7,11 @@ import {
   type OrganizationSummary,
   type PersonSummary
 } from "./canonical-projection"
-import { sourceProjectionContext } from "./canonical-read"
+import { persistedSourceProjectionContext } from "./persisted-source-projection"
 
 /** Projects a persisted membership and both required embedded records fail-closed. */
 export function projectOrganizationMembershipRead(read: OrganizationMembershipRead, apiBaseUrl: string) {
-  const source = canonicalSource(read.membership, "membership")
+  const context = persistedSourceProjectionContext([read.membership], apiBaseUrl, "membership")
   return projectMembership(
     {
       detectedEndDate: read.membership.detectedEndDate,
@@ -27,14 +27,14 @@ export function projectOrganizationMembershipRead(read: OrganizationMembershipRe
       organization: projectOrganization(read.organization, apiBaseUrl),
       person: projectPerson(read.person, apiBaseUrl),
       role: requiredText(read.membership.role, "membership role"),
-      sourceUrl: source.sourceUrl
+      sourceUrl: context.sources[0].sourceUrl
     },
-    sourceProjectionContext(source, apiBaseUrl)
+    context
   )
 }
 
 function projectPerson(read: OrganizationMembershipRead["person"], apiBaseUrl: string): PersonSummary {
-  const source = canonicalSource(read, "person")
+  const context = persistedSourceProjectionContext([read], apiBaseUrl, "person")
   return projectPersonSummary(
     {
       familyName: read.familyName,
@@ -45,9 +45,9 @@ function projectPerson(read: OrganizationMembershipRead["person"], apiBaseUrl: s
       jurisdictionIds: [requiredText(read.jurisdictionId, "person jurisdictionId")],
       name: requiredText(read.name, "person name"),
       party: read.party,
-      sourceUrl: source.sourceUrl
+      sourceUrl: context.sources[0].sourceUrl
     },
-    sourceProjectionContext(source, apiBaseUrl)
+    context
   )
 }
 
@@ -55,7 +55,7 @@ function projectOrganization(
   read: OrganizationMembershipRead["organization"],
   apiBaseUrl: string
 ): OrganizationSummary {
-  const source = canonicalSource(read, "organization")
+  const context = persistedSourceProjectionContext([read], apiBaseUrl, "organization")
   return projectOrganizationSummary(
     {
       chamber: canonicalChamber(read.chamber),
@@ -65,42 +65,10 @@ function projectOrganization(
       jurisdictionId: requiredText(read.jurisdictionId, "organization jurisdictionId"),
       name: requiredText(read.name, "organization name"),
       parentOrganizationId: read.parentOrganizationId,
-      sourceUrl: source.sourceUrl
+      sourceUrl: context.sources[0].sourceUrl
     },
-    sourceProjectionContext(source, apiBaseUrl)
+    context
   )
-}
-
-function canonicalSource(
-  record: Readonly<{
-    createdAt: Date
-    id: string
-    provenanceComplete: boolean
-    sourceIsOfficial: boolean | null
-    sourceProvider: string | null
-    sourceRetrievedAt: Date | null
-    sourceUpdatedAt: Date | null
-    sourceUrl: string | null
-    updatedAt: Date
-  }>,
-  name: string
-) {
-  if (
-    !record.provenanceComplete ||
-    record.sourceIsOfficial === null ||
-    !isNonemptyString(record.sourceProvider) ||
-    record.sourceRetrievedAt === null ||
-    !isNonemptyString(record.sourceUrl)
-  ) {
-    throw new LegislationError("unprocessable", `${name} canonical provenance is incomplete`)
-  }
-  return {
-    createdAt: record.createdAt,
-    id: record.id,
-    sourceUpdatedAt: record.sourceUpdatedAt,
-    sourceUrl: record.sourceUrl,
-    updatedAt: record.updatedAt
-  }
 }
 
 function canonicalChamber(value: string | null): OrganizationSummary["chamber"] {

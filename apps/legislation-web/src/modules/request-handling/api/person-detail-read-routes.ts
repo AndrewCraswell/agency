@@ -4,9 +4,7 @@ import {
   projectLegislativeTerm,
   projectPersonDetail,
   type ExternalIdentifier,
-  type PersonDetail,
-  type ProjectionContext,
-  type ProjectionSourceInput
+  type PersonDetail
 } from "./canonical-projection"
 import { toProjectionLegislationError } from "./canonical-read"
 import {
@@ -18,6 +16,7 @@ import {
   type HttpApiHandler
 } from "./http"
 import { projectOrganizationMembershipRead } from "./membership-read-projection"
+import { persistedSourceProjectionContext, projectPersistedSource } from "./persisted-source-projection"
 
 export interface PersonDetailReadApi {
   getPersonDetail(personId: string): Promise<PersonDetailRead>
@@ -46,8 +45,7 @@ export function createPersonDetailReadApiHandler(
 }
 
 export function projectPersonDetailRead(read: PersonDetailRead, apiBaseUrl: string): PersonDetail {
-  const personContext = projectionContext([read.person, read.profile], apiBaseUrl, "person detail")
-  const personSource = source(read.person, "person")
+  const personContext = persistedSourceProjectionContext([read.person, read.profile], apiBaseUrl, "person detail")
   return projectPersonDetail(
     {
       email: read.profile.sourceIsOfficial ? read.profile.publicEmail : null,
@@ -71,10 +69,10 @@ export function projectPersonDetailRead(read: PersonDetailRead, apiBaseUrl: stri
         jurisdictionIds: uniqueSorted(read.jurisdictions.map((jurisdiction) => jurisdiction.jurisdictionId)),
         name: requiredCanonicalText(read.person.name, "person name"),
         party: read.person.party,
-        sourceUrl: personSource.sourceUrl
+        sourceUrl: personContext.sources[0].sourceUrl
       },
       terms: read.terms.map((term) => {
-        const termSource = source(term, "person legislative term")
+        const context = persistedSourceProjectionContext([term], apiBaseUrl, "person legislative term")
         return projectLegislativeTerm(
           {
             district: term.district,
@@ -85,10 +83,10 @@ export function projectPersonDetailRead(read: PersonDetailRead, apiBaseUrl: stri
             officeTitle: requiredCanonicalText(term.officeTitle, "person legislative term officeTitle"),
             organizationId: term.organizationId,
             personId: requiredCanonicalText(term.personId, "person legislative term personId"),
-            sourceUrl: termSource.sourceUrl,
+            sourceUrl: context.sources[0].sourceUrl,
             startDate: term.startDate
           },
-          projectionContext([term], apiBaseUrl, "person legislative term")
+          context
         )
       })
     },
@@ -97,7 +95,7 @@ export function projectPersonDetailRead(read: PersonDetailRead, apiBaseUrl: stri
 }
 
 function projectExternalIdentifier(identifier: PersonDetailRead["externalIdentifiers"][number]): ExternalIdentifier {
-  source(identifier, "person external identifier")
+  projectPersistedSource(identifier, "person external identifier")
   return {
     scheme: requiredCanonicalText(identifier.scheme, "person external identifier scheme"),
     sourceUrl: identifier.sourceUrl,
@@ -121,52 +119,6 @@ function routePersonId(method: string | undefined, pathname: string): string | u
       throw error
     }
     throw new LegislationError("invalid_request", "Path contains invalid percent encoding")
-  }
-}
-
-function projectionContext(
-  records: readonly [PersistedSourceRecord, ...PersistedSourceRecord[]],
-  apiBaseUrl: string,
-  label: string
-): ProjectionContext {
-  const [first, ...rest] = records
-  const sources: [ProjectionSourceInput, ...ProjectionSourceInput[]] = [
-    source(first, label),
-    ...rest.map((record) => source(record, label))
-  ]
-  return {
-    apiBaseUrl,
-    sources,
-    updatedAt: first.updatedAt
-  }
-}
-
-type PersistedSourceRecord = Readonly<{
-  provenanceComplete: boolean
-  sourceIsOfficial: boolean | null
-  sourceProvider: string | null
-  sourceRetrievedAt: Date | null
-  sourceUpdatedAt: Date | null
-  sourceUrl: string | null
-  updatedAt: Date
-}>
-
-function source(record: PersistedSourceRecord, label: string): ProjectionSourceInput {
-  if (
-    !record.provenanceComplete ||
-    record.sourceIsOfficial === null ||
-    !isNonemptyString(record.sourceProvider) ||
-    record.sourceRetrievedAt === null ||
-    !isNonemptyString(record.sourceUrl)
-  ) {
-    throw new LegislationError("unprocessable", `${label} canonical provenance is incomplete`)
-  }
-  return {
-    isOfficial: record.sourceIsOfficial,
-    provider: record.sourceProvider,
-    retrievedAt: record.sourceRetrievedAt,
-    sourceUpdatedAt: record.sourceUpdatedAt,
-    sourceUrl: record.sourceUrl
   }
 }
 

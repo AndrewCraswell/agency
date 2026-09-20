@@ -7,6 +7,7 @@ import {
   type PersonSummary
 } from "./canonical-projection"
 import { sourceProjectionContext } from "./canonical-read"
+import { persistedSourceProjectionContext } from "./persisted-source-projection"
 
 export interface MeetingParticipantProjectionRead {
   meeting: Readonly<{
@@ -78,7 +79,7 @@ export function projectMeetingParticipantRead(read: MeetingParticipantProjection
 }
 
 function projectPerson(read: PersonPersistenceRead, apiBaseUrl: string): PersonSummary {
-  const source = canonicalSource(read, "person")
+  const context = persistedSourceProjectionContext([read], apiBaseUrl, "person")
   return projectPersonSummary(
     {
       familyName: read.familyName,
@@ -89,14 +90,14 @@ function projectPerson(read: PersonPersistenceRead, apiBaseUrl: string): PersonS
       jurisdictionIds: [requiredText(read.jurisdictionId, "person jurisdictionId")],
       name: requiredText(read.name, "person name"),
       party: read.party,
-      sourceUrl: source.sourceUrl
+      sourceUrl: context.sources[0].sourceUrl
     },
-    sourceProjectionContext(source, apiBaseUrl)
+    context
   )
 }
 
 function projectOrganization(read: OrganizationPersistenceRead, apiBaseUrl: string): OrganizationSummary {
-  const source = canonicalSource(read, "organization")
+  const context = persistedSourceProjectionContext([read], apiBaseUrl, "organization")
   return projectOrganizationSummary(
     {
       chamber: canonicalChamber(read.chamber),
@@ -106,9 +107,9 @@ function projectOrganization(read: OrganizationPersistenceRead, apiBaseUrl: stri
       jurisdictionId: requiredText(read.jurisdictionId, "organization jurisdictionId"),
       name: requiredText(read.name, "organization name"),
       parentOrganizationId: read.parentOrganizationId,
-      sourceUrl: source.sourceUrl
+      sourceUrl: context.sources[0].sourceUrl
     },
-    sourceProjectionContext(source, apiBaseUrl)
+    context
   )
 }
 
@@ -119,38 +120,6 @@ function meetingSource(read: MeetingParticipantProjectionRead["meeting"]) {
     sourceUpdatedAt: read.sourceUpdatedAt,
     sourceUrl: requiredText(read.sourceUrl, "meeting sourceUrl"),
     updatedAt: read.updatedAt
-  }
-}
-
-function canonicalSource(
-  record: Readonly<{
-    createdAt: Date
-    id: string
-    provenanceComplete: boolean
-    sourceIsOfficial: boolean | null
-    sourceProvider: string | null
-    sourceRetrievedAt: Date | null
-    sourceUpdatedAt: Date | null
-    sourceUrl: string | null
-    updatedAt: Date
-  }>,
-  name: string
-) {
-  if (
-    !record.provenanceComplete ||
-    record.sourceIsOfficial === null ||
-    !isNonemptyString(record.sourceProvider) ||
-    record.sourceRetrievedAt === null ||
-    !isNonemptyString(record.sourceUrl)
-  ) {
-    throw new LegislationError("unprocessable", `${name} canonical provenance is incomplete`)
-  }
-  return {
-    createdAt: record.createdAt,
-    id: record.id,
-    sourceUpdatedAt: record.sourceUpdatedAt,
-    sourceUrl: record.sourceUrl,
-    updatedAt: record.updatedAt
   }
 }
 

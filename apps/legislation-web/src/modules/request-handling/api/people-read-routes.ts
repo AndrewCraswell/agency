@@ -7,7 +7,7 @@ import type {
   PersonSort
 } from "../../legislation/persistence/queries/people-read"
 import { projectPersonSummary } from "./canonical-projection"
-import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -16,6 +16,7 @@ import {
   sendApiJson,
   type HttpApiHandler
 } from "./http"
+import { persistedSourceProjectionContext } from "./persisted-source-projection"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -82,7 +83,7 @@ function projectPage(page: PersonPage<PersonCollectionRead>, apiBaseUrl: string)
 }
 
 export function projectPersonRead(read: PersonCollectionRead, apiBaseUrl: string) {
-  const source = canonicalSource(read)
+  const context = persistedSourceProjectionContext([read], apiBaseUrl, "person")
   return projectPersonSummary(
     {
       familyName: read.familyName,
@@ -93,30 +94,10 @@ export function projectPersonRead(read: PersonCollectionRead, apiBaseUrl: string
       jurisdictionIds: [requiredText(read.jurisdictionId, "person jurisdictionId")],
       name: requiredText(read.name, "person name"),
       party: read.party,
-      sourceUrl: source.sourceUrl
+      sourceUrl: context.sources[0].sourceUrl
     },
-    sourceProjectionContext(source, apiBaseUrl)
+    context
   )
-}
-
-function canonicalSource(read: PersonCollectionRead) {
-  if (
-    !read.provenanceComplete ||
-    read.sourceIsOfficial === null ||
-    !isNonemptyString(read.sourceProvider) ||
-    read.sourceRetrievedAt === null ||
-    !isNonemptyString(read.sourceUrl)
-  ) {
-    throw new LegislationError("unprocessable", "person canonical provenance is incomplete")
-  }
-  return {
-    createdAt: read.createdAt,
-    id: read.id,
-    sourceUpdatedAt: read.sourceUpdatedAt,
-    sourceUrl: read.sourceUrl,
-    updatedAt: read.updatedAt,
-    upstreamIds: read.upstreamIds
-  }
 }
 
 function routeMatch(method: string | undefined, pathname: string): boolean {
