@@ -13,6 +13,8 @@ copy, and layout adjustments belong in the owning implementation and stories, no
   `components.json` selects the `new-york` style, React Server Component support, TypeScript, and CSS-variable theming.
   Reuse these primitives rather than introducing a parallel component system.
 - **Lucide React:** the icon library selected by the shadcn configuration.
+- **react-diff-view:** the read-only comparison renderer. It consumes standard unified diff output from
+  `@repo/legislation-diffing`; the app supplies document metadata and maps its CSS variables to existing theme tokens.
 - **Tailwind CSS:** utility styling for shadcn/ui and AI Elements components. The shared `cn` utility in
   `src/components/ui/utils.ts` composes classes.
 - **vanilla-extract:** typed custom component styles in colocated `Component.css.ts` files, imported as generated

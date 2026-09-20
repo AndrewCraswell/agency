@@ -47,29 +47,11 @@ function service(overrides: Partial<DocumentDiffApi> = {}): DocumentDiffApi {
     readDocumentDiff: async () => ({
       left: {
         document: document("document:left"),
-        sections: [
-          {
-            id: "section:left",
-            ordinal: 0,
-            sectionIdentifier: "1",
-            sourceEndOffset: 11,
-            sourceStartOffset: 0,
-            text: "old funding"
-          }
-        ]
+        text: "old funding"
       },
       right: {
         document: document("document:right"),
-        sections: [
-          {
-            id: "section:right",
-            ordinal: 0,
-            sectionIdentifier: "1",
-            sourceEndOffset: 11,
-            sourceStartOffset: 0,
-            text: "new funding"
-          }
-        ]
+        text: "new funding"
       }
     }),
     ...overrides
@@ -125,9 +107,9 @@ describe("document diff route", () => {
         hunks: [
           {
             classification: "changed",
-            leftSectionId: "section:left",
+            leftStart: 0,
             operations: expect.arrayContaining([expect.objectContaining({ classification: "delete", leftStart: 0 })]),
-            rightSectionId: "section:right"
+            rightStart: 0
           }
         ],
         leftDocument: { id: "document:left", ocrStatus: "processed", type: "document" },
@@ -180,45 +162,11 @@ describe("document diff route", () => {
         readDocumentDiff: async () => ({
           left: {
             document: document("document:left"),
-            sections: [
-              {
-                id: "section:left:1",
-                ordinal: 0,
-                sectionIdentifier: "1",
-                sourceEndOffset: 3,
-                sourceStartOffset: 0,
-                text: "old"
-              },
-              {
-                id: "section:left:2",
-                ordinal: 1,
-                sectionIdentifier: "2",
-                sourceEndOffset: 3,
-                sourceStartOffset: 0,
-                text: "old"
-              }
-            ]
+            text: "old\n\nRetained paragraph.\n\nold"
           },
           right: {
             document: document("document:right"),
-            sections: [
-              {
-                id: "section:right:1",
-                ordinal: 0,
-                sectionIdentifier: "1",
-                sourceEndOffset: 3,
-                sourceStartOffset: 0,
-                text: "new"
-              },
-              {
-                id: "section:right:2",
-                ordinal: 1,
-                sectionIdentifier: "2",
-                sourceEndOffset: 3,
-                sourceStartOffset: 0,
-                text: "new"
-              }
-            ]
+            text: "new\n\nRetained paragraph.\n\nnew"
           }
         })
       })
@@ -240,7 +188,9 @@ describe("document diff route", () => {
     expect(first.status).toBe(200)
     expect(firstData.hunks).toHaveLength(1)
     expect(firstData.nextCursor).toEqual(expect.any(String))
-    await expect(second.json()).resolves.toMatchObject({ data: { hunks: [{ ordinal: 1 }], nextCursor: null } })
+    await expect(second.json()).resolves.toMatchObject({
+      data: { hunks: [{ classification: "changed" }], nextCursor: null }
+    })
     expect(changedFilter.status).toBe(400)
   })
 })

@@ -6,7 +6,7 @@ import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin"
 const config: StorybookConfig = {
   ...baseConfig,
   framework: "@storybook/nextjs-vite",
-  stories: ["../src/modules/conversations/stories/**/*.stories.tsx"],
+  stories: ["../src/modules/conversations/stories/**/*.stories.tsx", "../src/modules/comparisons/**/*.stories.tsx"],
   staticDirs: ["../public"],
   async viteFinal(config) {
     const { mergeConfig } = await import("vite")

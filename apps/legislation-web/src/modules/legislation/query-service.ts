@@ -103,12 +103,14 @@ import {
   validateSearchInput
 } from "../search/search"
 import { createAnalyticsTelemetry } from "./analytics-telemetry"
+import { createDocumentComparisonPage, parseDocumentComparisonRequest } from "./document-comparison"
 import {
   assertBillRelatedParentExists,
   BILL_RELATION_CLASSIFICATIONS,
   listBillRelatedBills
 } from "./persistence/queries/bill-related-read"
 import { findChangeEvents, type CanonicalChangeType } from "./persistence/queries/changes"
+import { readDocumentDiff } from "./persistence/queries/document-diff-read"
 import { voteDateBound, voteSortTimestamp } from "./persistence/queries/vote-occurrence"
 
 const CHILD_LIMIT = 100
@@ -1607,16 +1609,6 @@ function passageSearchPage<T extends { rerankScore: number | null; score: number
     nextCursor: hasMore ? encodePassageSearchCursor(offset + limit, input) : undefined,
     truncated: capped || hasMore
   }
-}
-
-function comparisonClassification(before: string | undefined, after: string | undefined) {
-  if (before === undefined) {
-    return "added"
-  }
-  if (after === undefined) {
-    return "removed"
-  }
-  return before === after ? "unchanged" : "changed"
 }
 
 function encodeOffset(offset: number): string {
@@ -3488,84 +3480,14 @@ export class LegislationQueryService {
   }
 
   async compareBillVersions(input: VersionComparisonInput) {
-    const limit = Math.min(Math.max(input.limit ?? 25, 1), 100)
-    const binding = createHash("sha256")
-      .update(JSON.stringify([input.billId, input.documentIds, limit]))
-      .digest("base64url")
-    let offset = 0
-    if (input.cursor) {
-      try {
-        const cursor = JSON.parse(Buffer.from(input.cursor, "base64url").toString())
-        if (cursor.binding !== binding || !Number.isSafeInteger(cursor.offset) || cursor.offset < 0) {
-          throw new Error("Invalid cursor")
-        }
-        offset = cursor.offset
-      } catch {
-        throw new LegislationError("invalid_request", "Comparison cursor does not match the selected versions")
-      }
-    }
-    const documents = await this.#database
-      .select(documentMetadataColumns)
-      .from(billDocuments)
-      .where(and(eq(billDocuments.billId, input.billId), inArray(billDocuments.id, input.documentIds)))
-    if (documents.length !== 2) {
-      throw new LegislationError("invalid_request", "Both selected documents must belong to the requested bill")
-    }
-    if (documents.some((document) => document.processingStatus !== "processed")) {
-      throw new LegislationError("conflict", "Both selected versions must have processed text before comparison")
-    }
-    const identities = await this.#database
-      .select({
-        id: documentSections.id,
-        documentId: documentSections.documentId,
-        sectionIdentifier: documentSections.sectionIdentifier,
-        ordinal: documentSections.ordinal
-      })
-      .from(documentSections)
-      .where(inArray(documentSections.documentId, input.documentIds))
-      .orderBy(asc(documentSections.ordinal), asc(documentSections.id))
-    const left = identities.filter((section) => section.documentId === input.documentIds[0])
-    const right = identities.filter((section) => section.documentId === input.documentIds[1])
-    const sectionKey = (section: (typeof identities)[number]) =>
-      section.sectionIdentifier ?? `ordinal:${section.ordinal}`
-    const leftByKey = new Map(left.map((section) => [sectionKey(section), section]))
-    const rightByKey = new Map(right.map((section) => [sectionKey(section), section]))
-    const keys = [...left.map(sectionKey), ...right.map(sectionKey).filter((key) => !leftByKey.has(key))]
-    const pageKeys = [...new Set(keys)].slice(offset, offset + limit)
-    const selectedIds = pageKeys
-      .flatMap((key) => [leftByKey.get(key)?.id, rightByKey.get(key)?.id])
-      .filter((id): id is string => id !== undefined)
-    const texts = selectedIds.length
-      ? await this.#database
-          .select({ id: documentSections.id, text: documentSections.text })
-          .from(documentSections)
-          .where(inArray(documentSections.id, selectedIds))
-      : []
-    const textById = new Map(texts.map((section) => [section.id, section.text]))
-    const changes = pageKeys.map((key, index) => {
-      const before = key === undefined ? undefined : leftByKey.get(key)
-      const after = key === undefined ? undefined : rightByKey.get(key)
-      return {
-        after: after ? textById.get(after.id) : undefined,
-        before: before ? textById.get(before.id) : undefined,
-        classification: comparisonClassification(
-          before ? textById.get(before.id) : undefined,
-          after ? textById.get(after.id) : undefined
-        ),
-        identifier: after?.sectionIdentifier ?? before?.sectionIdentifier,
-        ordinal: offset + index
-      }
-    })
-    const truncated = new Set(keys).size > offset + pageKeys.length
-    return {
+    const request = parseDocumentComparisonRequest({
       billId: input.billId,
-      changes,
-      documents,
-      truncated,
-      nextCursor: truncated
-        ? Buffer.from(JSON.stringify({ binding, offset: offset + pageKeys.length })).toString("base64url")
-        : undefined
-    }
+      leftDocumentId: input.documentIds[0],
+      rightDocumentId: input.documentIds[1],
+      limit: input.limit,
+      cursor: input.cursor
+    })
+    return createDocumentComparisonPage(await readDocumentDiff(this.#database, request), request)
   }
 
   async findRelatedBills(input: EntityLookup & { classification?: string; mode?: "lexical" | "semantic" }) {

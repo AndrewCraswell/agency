@@ -35,7 +35,7 @@ pnpm exec vitest run src/modules/conversations/components/ChatWorkspace.test.tsx
 pnpm exec vitest list --filesOnly --project web
 ```
 
-The web test project includes routes, shared components, conversation/evaluation/theme modules and the proxy.
+The web test project includes routes, shared components, comparison/conversation/evaluation modules and the proxy.
 Its `@/` alias resolves to `src/`, matching Next and TypeScript. Backend tests exclude those paths so moved suites
 are collected exactly once. Tests remain colocated with their implementation, not collected under `app/` by convention.
 
@@ -81,7 +81,7 @@ with import guards against loading production runtimes.
 ## Full verification
 
 The legislation-only entrypoint is `pnpm verify:legislation` from the repository root. The root manifest runs types,
-lint, scoped strict knip and non-database coverage across C/W/I/M, then I's Python suite, serialized C/I/W database
+lint, scoped strict knip and non-database coverage across C/W/I/M and `@repo/legislation-diffing`, then I's Python suite, serialized C/I/W database
 profiles, and W followed by M built acceptance. I's coverage includes its parsing project.
 
 W has no `test:all` script. Its Node webhook receiver remains the separate
@@ -98,12 +98,12 @@ dependency-manifest changes or a confirmed dependency-state failure. Diagnose co
 do not reinstall blindly or bypass hooks. Serialize installation with other workspace activity, then rerun the
 original command through normal hooks.
 
-Types, lint and non-database coverage use Turbo with four explicit legislation package filters, `--concurrency=1`
+Types, lint and non-database coverage use Turbo with five explicit legislation package filters, `--concurrency=1`
 and `--cache=local:rw`. Unchanged tasks replay their local cache; coverage restores the configured `coverage/**`
 outputs. Shared dependency task relationships remain part of cache invalidation. A previous direct Vitest or recursive
 pnpm run does not populate Turbo's cache: the first Turbo run for a new hash executes the task normally.
 The web app's shared Storybook configuration remains a lint/type prerequisite; unrelated product workspaces are not
-selected. Coverage runs only the four legislation packages.
+selected. Coverage runs only the five legislation packages.
 
 Knip, Python, database and built-acceptance stages remain outside Turbo and execute on every full invocation.
 No remote cache uploads are enabled by these scoped scripts. When diagnosing a cached task, append `--force` to its

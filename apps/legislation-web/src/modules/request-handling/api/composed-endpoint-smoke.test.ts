@@ -870,29 +870,11 @@ async function startComposedServer(): Promise<string> {
     readDocumentDiff: async () => ({
       left: {
         document: document(DOCUMENT_ID),
-        sections: [
-          {
-            id: "section:left",
-            ordinal: 0,
-            sectionIdentifier: "1",
-            sourceEndOffset: 14,
-            sourceStartOffset: 0,
-            text: "old text"
-          }
-        ]
+        text: "old text"
       },
       right: {
         document: document(DOCUMENT_ID_B),
-        sections: [
-          {
-            id: "section:right",
-            ordinal: 0,
-            sectionIdentifier: "1",
-            sourceEndOffset: 14,
-            sourceStartOffset: 0,
-            text: "new text"
-          }
-        ]
+        text: "new text"
       }
     })
   }
@@ -1065,7 +1047,7 @@ describe("composed server endpoint smoke coverage", () => {
     const diffBody = resourceBody(await diffResponse.json(), "/api/document-diffs")
     expect(diffBody.data).toMatchObject({
       billId: BILL_ID,
-      granularity: "section",
+      granularity: "paragraph",
       leftDocument: { id: DOCUMENT_ID, type: "document" },
       rightDocument: { id: DOCUMENT_ID_B, type: "document" },
       truncated: false

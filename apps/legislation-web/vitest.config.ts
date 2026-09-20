@@ -5,7 +5,7 @@ import { configDefaults, defineConfig } from "vitest/config"
 const webTests = [
   "src/app/**/*.test.{ts,tsx}",
   "src/components/**/*.test.{ts,tsx}",
-  "src/modules/{conversations,evaluations}/**/*.test.{ts,tsx}",
+  "src/modules/{comparisons,conversations,evaluations}/**/*.test.{ts,tsx}",
   "src/modules/representatives/components/**/*.test.{ts,tsx}",
   "src/proxy.test.ts"
 ]

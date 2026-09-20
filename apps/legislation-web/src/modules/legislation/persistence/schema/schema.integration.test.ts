@@ -441,7 +441,7 @@ describePostgres.sequential("legislation PostgreSQL serving", () => {
     await expect(
       service.compareBillVersions({ billId: "bill:us:119:hr:1234", documentIds: [documentId, secondDocumentId] })
     ).resolves.toMatchObject({
-      changes: expect.arrayContaining([expect.objectContaining({ classification: "changed" })])
+      hunks: expect.arrayContaining([expect.objectContaining({ classification: "changed" })])
     })
     await expect(service.findRelatedBills({ id: "bill:us:119:hr:1234" })).resolves.toMatchObject({
       items: [{ bill: { id: "bill:wa:2025-2026:sb:5678" }, classification: "related" }]
