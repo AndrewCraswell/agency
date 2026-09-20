@@ -1,6 +1,6 @@
 # Annual package observations and revision dates
 
-Owner: ING-04 in the [production backlog](ingestion-production-tasks.md). The parser's printed revision date,
+The [acquisition workflow](acquisition-workflows.md) owns this source observation. The parser's printed revision date,
 the publisher's package year and legal currency are separate facts. A later package can contain old bytes.
 
 The normalized importer now resolves a date-blocked annual volume only when a matching revision-year volume has

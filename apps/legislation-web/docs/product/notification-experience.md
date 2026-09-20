@@ -13,7 +13,7 @@ experience; the user does not need a Novu account or see its operational dashboa
 [Novu workflow and inbox concepts](https://docs.novu.co/platform/how-novu-works).
 
 The [IA](information-architecture.md#primary-work) defines monitoring surfaces, and
-[conversation integration](../design/conversations.md#9-writing-back-to-the-product) defines chat confirmation/receipts.
+[conversation integration](../design/design.md) defines chat confirmation/receipts.
 This document owns delivery semantics; neither design silently extends API enums or approves new channels.
 
 ## Ownership and event flow

@@ -22,7 +22,7 @@ Field rows below retain that provider/adapter inventory, not a fresh September p
 cadences are inactive transitional definitions, not the approved freshness path. Current self-hosted state work and
 acceptance live in the [runtime build](../operations/openstates-runtime-build.md) and
 [rollout checklist](../operations/openstates-rollout-checklist.md); regulatory acquisition has its own
-[implementation and production gates](../regulations/production-backlog.md). Do not infer absence of newer normalized
+[regulatory implementation contract](../regulations/implementation.md). Do not infer absence of newer normalized
 fields or nationwide availability from an older catalog row.
 Federal committee, subcommittee, and membership materialization is implemented from GovInfo Congressional Directory
 text renditions only. State committee, subcommittee, and membership materialization may use OpenStates only. No other
@@ -518,7 +518,7 @@ beyond the common contract.
 
 GovInfo legislative ingestion includes BILLSTATUS and the separate CDIR committee importer. Official bill-version URLs
 carried by BILLSTATUS feed document processing; this is not standalone traversal of BILLS. Regulatory FR/CFR acquisition
-and local publication have separate [evidence](../regulations/implementation-progress.md) and production gates.
+and local publication have separate acceptance evidence and production gates.
 
 ### GovInfo legislative collection coverage
 

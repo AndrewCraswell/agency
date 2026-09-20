@@ -38,8 +38,9 @@ pnpm install
 
 For legislation setup, including local credentials after the workspace moves, see the
 [runtime guide](apps/legislation-web/docs/operations/development.md). From the repository root,
-`pnpm verify:legislation` runs the four-workspace legislation verification suite; `pnpm verify` remains the full
-repository gate. Database release commands are owned by web and delegate to core.
+`pnpm verify:legislation` runs the five-package legislation verification suite, including the diffing package.
+`pnpm verify` currently delegates to that same legislation-only gate; it is not a full monorepo check. Database release
+commands are owned by web and delegate to core.
 
 ### Utilities
 

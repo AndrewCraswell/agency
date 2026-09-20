@@ -4,7 +4,8 @@
 
 Regulatory work is specified in [backfills and workflows](../regulations/acquisition-workflows.md), with its own bounded
 admission and source budgets. Preparation/copy/rights workers exist locally; that does not add active source schedules
-to this inventory. Activation follows the [production gates](../regulations/production-backlog.md).
+to this inventory. Activation follows the capability gates in the
+[regulatory implementation contract](../regulations/implementation.md).
 
 Trigger.dev is the only orchestration system for recurring synchronization and bounded historical backfills. TypeScript
 workers own provider calls, normalization, transactions, checkpoints, idempotency, leases, and failure classification.

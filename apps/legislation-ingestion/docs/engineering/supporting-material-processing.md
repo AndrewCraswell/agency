@@ -109,7 +109,7 @@ under DRV-010 through DRV-026.
 ## Search and retrieval
 
 W owns [material search and document delivery](../../../legislation-web/docs/engineering/api/legislative-records.md)
-and [retrieval dispatch](../../../legislation-web/docs/engineering/retrieval-acceptance.md).
+and [retrieval dispatch](../../../legislation-web/docs/engineering/api/search-and-diffs.md).
 C owns [canonical material records](../../../../packages/legislation-core/docs/engineering/data-model.md) and
 [embedding/storage contracts](../../../../packages/legislation-core/docs/engineering/embeddings.md).
 M owns [tool registration](../../../legislation-mcp/docs/engineering/tool-contracts.md).

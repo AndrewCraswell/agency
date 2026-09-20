@@ -1,8 +1,8 @@
 # Canonical civic identity
 
 This contract separates canonical invariants from proposed office/geography expansion. Proposed records below are not
-implemented or live merely because the contract moved. [W's roadmap](../../../../apps/legislation-web/docs/engineering/identity-and-representative-roadmap.md)
-owns sequencing; [I's source policy](../../../../apps/legislation-ingestion/docs/engineering/identity-sources.md) owns authority and maintenance.
+implemented or live merely because they appear here. Linear owns sequencing; [I's source policy](../../../../apps/legislation-ingestion/docs/engineering/identity-sources.md)
+owns authority and maintenance.
 
 ## Identity rules
 
@@ -34,9 +34,9 @@ Existing `people`, `organizations`, `legislative_terms`, `organization_membershi
 | `document_citations` | Source passage references to bills, amendments, votes, laws, regulations, reports or documents |
 | `person_profiles` | Biography, portrait, contact and official-link projection with field provenance and licensing |
 
-Reuse existing `person_external_identifiers` and `person_aliases` instead of creating competing tables. IDN-103/104 in W
-record their partial acceptance. Canonical relationships use foreign keys; JSON is bounded unqueried source evidence,
-not a generic profile for geometry, aliases, identifiers or terms.
+Reuse existing `person_external_identifiers` and `person_aliases` instead of creating competing tables. Canonical
+relationships use foreign keys; JSON is bounded unqueried source evidence, not a generic profile for geometry, aliases,
+identifiers or terms.
 
 ## Entity taxonomy
 

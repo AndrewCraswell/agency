@@ -27,7 +27,7 @@ not a competing conversation contract or proof of implemented capabilities.
 
 | Deliverable | Owning design specification |
 | --- | --- |
-| Open chat anywhere, manage turns/references, render answers, inspect citations and write selected work back | [Conversations and product integration](conversations.md) |
+| Open chat anywhere, manage turns/references, render answers, inspect citations and write selected work back | [Conversation screens](#5-conversation-screens) |
 | Maintain issues, prepare/review briefs and navigate exact evidence | [IA objects, surfaces and connected flows](../product/information-architecture.md) |
 | Configure monitoring and in-app/email delivery | [Notification experience](../product/notification-experience.md) |
 | Govern account/integrations and conditional shared work | [Product boundaries](../product/product-spec.md), [organization behavior](../product/organization-features.md) |
@@ -147,7 +147,7 @@ versions when switching views. The on-screen keyboard must not conceal the compo
 
 ## 5 Conversation screens
 
-The [conversation integration specification](conversations.md) is the canonical handoff for these screens and supersedes
+This conversation-screen section is the canonical handoff for these screens and supersedes
 earlier conversation/context/citation/action examples wherever they disagree. It defines global and contextual entry,
 linear turns, the composer, supported content blocks, reference tagging, evidence citations, truthful activity and explicit
 write-back. Its canvas alignment section distinguishes reusable components from unsupported visible controls.
@@ -361,7 +361,7 @@ Webhook management accounts for destination creation, verification, editing, sec
 feedback. Secret handling is an advanced flow; include one-time display and clear recovery states without exposing
 secrets in screenshots or shared prototype examples. Novu's operational dashboard is not an end-user page.
 
-The [account/integrations plan](../product/account-integrations-action-plan.md) owns current privacy, provider and billing gates.
+The [product specification](../product/product-spec.md) owns current privacy, provider and billing boundaries.
 
 ## 11 Components and required state coverage
 
@@ -510,8 +510,8 @@ be called out explicitly for product review.
 
 ## 16 Supporting specifications
 
-The [product implementation backlog](../backlog/backlog.md) maps this brief to features, pages, integrations, dependencies,
-and completion evidence.
+The [product specification](../product/product-spec.md) maps this brief to product boundaries and acceptance. Linear
+owns implementation tracking.
 
 This is the canonical design brief; it supersedes the preliminary experience requirements and simulated persona critique. Use the following focused contracts for additional detail:
 
@@ -537,9 +537,9 @@ completed work orders or superseded token replacements. It does not certify the 
 
 ### Design authority and scope
 
-- Use the [product specification](../product/product-spec.md), [information architecture](../product/information-architecture.md), and
-  the screen requirements above for product behavior. Use the [product backlog](../backlog/backlog.md)
-  for implementation acceptance; completing mockups does not mark a product task Done.
+- Use the [product specification](../product/product-spec.md), [information architecture](../product/information-architecture.md),
+  and the screen requirements above for product behavior. Track implementation acceptance in Linear; completing
+  mockups does not complete product work.
 - Billing and address lookup are allowed in design exploration. Their payment, entitlement, geography/provider and
   release requirements remain deferred. The removed representative-lookup API is not an available implementation.
 - Mobile push has no approved delivery contract. Current personal notification scope is in-app/email; organization

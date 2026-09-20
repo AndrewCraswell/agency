@@ -27,7 +27,7 @@ evidence only. No vendor was contacted, no quote/trial was purchased, and no acc
 
 Rostra is assessed as documented services plus a developing product/design, **not a shipped equivalent to every listed
 offering**. [ICP readiness](icp.md#2-what-we-can-credibly-offer), [state rollout](../../../legislation-ingestion/docs/operations/openstates-rollout-checklist.md),
-[API acceptance](../operations/passage-search-delivery.md), and [regulatory progress](../../../legislation-ingestion/docs/regulations/implementation-progress.md)
+[API acceptance](../engineering/api/search-and-diffs.md), and [regulatory progress](../../../legislation-ingestion/docs/regulations/implementation.md)
 govern what can be demonstrated. A source-supported field or designed screen is not verified nationwide product coverage.
 
 ## 2. ICP-dependent shortlists

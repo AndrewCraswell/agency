@@ -2,12 +2,15 @@
 
 The agent-facing project summary lives in [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) and
 links here. These conventions apply to all TypeScript/React code in the monorepo. Many are enforced by `oxlint` (see
-[`packages/oxlint-config/base.json`](../packages/oxlint-config/base.json)) — run `pnpm verify` before pushing.
+[`packages/oxlint-config/base.json`](../packages/oxlint-config/base.json)).
 
 ## Quality gates
 
-- **`pnpm verify` must be green before finishing.** It runs, in order: `check:format` (oxfmt), `check:lint` (oxlint,
-  `--max-warnings=0`), `check:types` (TypeScript 7 RC, `--noEmit`), `check:unused` (knip), and `test:coverage` (Vitest).
+- **Run the gate required by the owning workspace before finishing.** Root `pnpm verify` currently delegates to the
+  five-package legislation gate: scoped types, lint, unused-code analysis, coverage, Python tests, database tests, and
+  built acceptance. It does not run formatting or verify unrelated workspaces.
+- **Run `pnpm check:format` for formatting** and use the relevant workspace scripts when changing code outside the
+  legislation packages.
 - **New code ships with co-located tests** and must keep the relevant app or package's Vitest coverage thresholds
   green.
 - Git hooks (lefthook) run `oxlint --fix` + `oxfmt` on commit and `check:types` on push. Don't bypass with
@@ -42,7 +45,7 @@ Legislation's [workspace boundaries](../apps/legislation-web/docs/engineering/ar
 are web, ingestion, MCP and core. Apps consume explicit `@repo/legislation-core` exports, never sibling app source;
 core imports no app. MCP calls web over HTTPS. Web owns explicit migration releases and delegates to core's single
 migration implementation. The [legislation gate](../apps/legislation-web/docs/operations/testing.md#full-verification)
-is `pnpm verify:legislation`; it does not replace the full repository gate above.
+is `pnpm verify:legislation`; root `pnpm verify` currently delegates to the same gate.
 
 ## Logging
 
@@ -56,6 +59,8 @@ is `pnpm verify:legislation`; it does not replace the full repository gate above
   `@storybook/addon-vitest` on Playwright).
 - **Drive interactions with `@testing-library/user-event`**; query by role/text, not implementation details.
 - **Mock the minimum.** Favor integration-style tests that exercise real collaborators over fully-mocked units.
+
+<a id="files--component-layout"></a>
 
 ## Files & component layout
 

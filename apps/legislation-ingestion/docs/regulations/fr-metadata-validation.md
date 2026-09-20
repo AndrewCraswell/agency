@@ -5,7 +5,7 @@ The local `audit:fr-inventory` command checks for missing issue XML before docum
 the source listing's complete unit set; removing a listed issue and recomputing the manifest ID does not pass.
 Seven tests cover missing XML/metadata, empty observations, excluded-only days, scope mismatch and evidence changes.
 The audit does not certify acquired artifacts or enable release. Historical January 2000 findings are recorded in
-[implementation progress](implementation-progress.md).
+[implementation contract](implementation.md).
 
 Implemented September 14, 2026. Local frozen backfill acquisition and reconciliation are complete for the pilot below.
 The metadata collector itself makes no canonical database writes. Subsequent PDF retention and XML/HTML canonical
@@ -133,7 +133,7 @@ in test construction; the reconciliation tests use real XML excerpts and corresp
 totals, empty days, unsafe links, cache corruption, HTTP 429/503, failed-page resume, exclusive final manifests and
 replay tampering. A combined rerun also passed all 16 parser/bridge checks, for 44 focused checks in total.
 Service TypeScript and scoped lint passed. Root `pnpm verify` passed; counts and the retained log are recorded in the
-[implementation progress page](implementation-progress.md).
+[implementation contract](implementation.md).
 
 ## PDF rendition acquisition
 

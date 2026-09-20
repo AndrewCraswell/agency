@@ -8,7 +8,7 @@ that registry on September 16, 2026: 25 baseline read tools plus organization-ga
 `list_legal_editions`, `get_legal_edition`, `list_legal_provisions`, `search_regulations` and `get_legal_text` pilots,
 with no calendar, raw-address, conversation or mutation tools. Product chat
 actions use authorized application services, not an assumed MCP mutation surface. See [authentication](../operations/authentication.md)
-and [W API acceptance](../../../legislation-web/docs/operations/passage-search-delivery.md) for serving and release gates.
+and the [W search contract](../../../legislation-web/docs/engineering/api/search-and-diffs.md) for serving behavior.
 
 Regulatory tools and their API mappings are in [legal tools](legal-tools.md).
 [W code discovery](../../../legislation-web/docs/regulations/legal-code-discovery.md),

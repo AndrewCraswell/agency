@@ -317,7 +317,7 @@ Before release, verify the effective service uses the Dockerfile builder, `apps/
 health check. Railway injects `PORT`; the service binds it on `0.0.0.0`. Apply migrations as a separate, explicit
 release operation with `pnpm --filter legislation-web db:migrate`; neither image build nor W/I/M startup runs migrations.
 
-Use [API closeout](passage-search-delivery.md#september-14-scope-and-acceptance) for the latest recorded deployment
+Use the [API contract](../engineering/api/README.md) for current behavior
 and [Next.js runtime](#nextjs-runtime) for the active runtime contract. Do not copy historical deployment IDs into a
 new rollback command; identify and verify the immediately preceding successful `legislation-web` artifact. The old
 `legislation-api` service is deleted. M owns API-backed MCP and separate authentication; extraction is not live acceptance.
@@ -373,9 +373,9 @@ credentials.
 ### Current release boundary
 
 The September 14 recorded baseline contains 81 HTTP operations and 25 advertised MCP tools.
-Use [API closeout](passage-search-delivery.md#september-14-scope-and-acceptance) for the latest recorded deployment,
-accepted civic fixtures and remaining passage-search gate. Historical September 2 smoke does not establish current
-full-corpus search acceptance. This documentation audit did not perform a fresh production smoke.
+Use the [API contract](../engineering/api/README.md) for current behavior and inspect the target environment for the
+running deployment, accepted civic fixtures, and search readiness. Historical smoke does not establish current
+full-corpus search acceptance.
 
 The locally implemented [regulatory text pilot](../regulations/legal-text-serving.md) adds one organization-gated HTTP
 operation and MCP tool beyond that deployed baseline. Its production credentials and deployment checks remain open.
@@ -414,7 +414,8 @@ For search, document-difference, and research smoke, configure the audited query
 and research-fixture variables. Before repeating an expensive profile, verify no index build is active. The harness keeps fixture
 identities, query text, coordinates, research prompts, tokens, and model errors out of its stable report.
 
-Use [API acceptance](passage-search-delivery.md) for the retained release gates. Identify the currently running and preceding successful artifacts in Railway before an operational change.
+Use the [API contract](../engineering/api/README.md) and search-specific contracts for release requirements. Identify
+the currently running and preceding successful artifacts in Railway before an operational change.
 
 <a id="observability"></a>
 

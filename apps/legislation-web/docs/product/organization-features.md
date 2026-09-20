@@ -4,8 +4,7 @@
 
 Documented September 14, 2026 for companies, lobbying firms, unions and law firms using Rostra for shared legislative
 research. This is the proposed organization layer over the existing personal experience, not an implementation or
-release claim. The [personal product backlog](../backlog/backlog.md) remains unchanged in scope; these additions require
-their own delivery work and acceptance.
+release claim. These additions require their own delivery work and acceptance.
 
 WorkOS already handles login. API, webhooks and MCP already belong in Settings, Integrations. Reuse those foundations;
 neither a new login system nor a new integration destination is required. Organization membership, resource ownership
@@ -16,9 +15,9 @@ The [pricing and offerings](pricing.md) page owns the flat-pricing proposal, Fre
 
 ## Placement in the existing design
 
-The [organization and workspace design specification](../design/organization-workspace-design.md) owns the screen-level handoff:
-organization switcher at the top of navigation, workspace switcher at the bottom, and organization management screens.
-It supersedes the earlier proposal to select workspaces only within Issues. This document owns broader product behavior.
+This page owns the screen-level handoff: organization switcher at the top of navigation, workspace switcher at the
+bottom, and organization management screens. It supersedes the earlier proposal to select workspaces only within
+Issues.
 
 Extend the [information architecture](information-architecture.md) and [Rostra mockups](../../legislation.pen). The issue
 frames `ifkHQ` (issue detail), `wO1CP` (comparison) and `PMdsp`/`AGG8U` (brief preparation/review) anchor the research-to-report journey.
@@ -429,7 +428,7 @@ Recommended defaults are restricted client workspaces; one workspace per shared 
 permission; revision-specific independent review for external briefs; and report-only external access.
 
 Before implementation, agree exact role combinations and the cancellation and retention policy that organization closure
-depends on. The [design handoff](../design/organization-workspace-design.md) settles the rest: invitations last seven
+depends on. This specification settles the remaining defaults: invitations last seven
 days, a solo organization ships work labeled Prepared without independent review rather than blocked work, owner
 recovery appoints a replacement Manager without granting the owner research access, and closure stays out of the first
 release. Pricing still owns seat policy, Free entitlements and API/MCP packaging. Later extensions

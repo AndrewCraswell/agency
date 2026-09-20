@@ -76,7 +76,7 @@ No mandatory persona, organization, address or integration setup. A useful one-o
 From an existing issue, Resume research carries explicit selected context; Records, Findings, Compare and Brief remain
 within that issue, not top-level applications. Do not make the user revisit chat just to copy a reviewed brief.
 
-The [conversation integration design](../design/conversations.md) owns access from every surface. One header command
+The [conversation integration design](../design/design.md) owns access from every surface. One header command
 opens the active authorized conversation or an empty draft without attaching the current page. Contextual Ask/Add to
 context use the same surface and explicitly stage references without sending. The same contract owns turn content,
 reference tagging, citations, progress and confirmed write-back; no floating assistant or per-record conversation store.
@@ -179,7 +179,7 @@ Preserve source terminology and real relationships without decorative metrics, s
 | Billing | Owning account/organization settings, only when commercial contracts are approved | Provider-backed terms and entitlements; no invented cancellation consequences, seats or unlimited promises |
 | Sign-in | Authentication-provider route, to be confirmed | Authorize and restore intended destination; do not replay pending mutations |
 
-The [organization behavior](organization-features.md) and [management design](../design/organization-workspace-design.md)
+The [organization behavior](organization-features.md) and [management design](organization-features.md)
 own shared work. Show the organization selector at the sidebar top for active membership; show the workspace selector
 below Settings only in organization context. Personal has no workspace selector or mandatory organization setup.
 

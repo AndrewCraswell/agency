@@ -9,7 +9,8 @@ Legislation workspace documentation: [web](../apps/legislation-web/docs/README.m
 [ingestion](../apps/legislation-ingestion/docs/README.md), [MCP](../apps/legislation-mcp/docs/README.md),
 and [core](../packages/legislation-core/docs/README.md). See
 [runtime setup](../apps/legislation-web/docs/operations/development.md) for local credentials after the move and
-[verification](../apps/legislation-web/docs/operations/testing.md#full-verification) for `pnpm verify:legislation`.
+[verification](../apps/legislation-web/docs/operations/testing.md#full-verification) for the current `pnpm verify`
+legislation gate.
 The [prototype telemetry specification](../apps/legislation-web/docs/engineering/telemetry-spec.md) focuses on
 debugging failures and slowness with safe Sentry/Langfuse diagnostics, not product analytics or replay.
 The [legislation diffing package](../packages/legislation-diffing/README.md) owns deterministic full-text comparison;

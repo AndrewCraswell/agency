@@ -4,7 +4,8 @@
 
 This is the desired acquisition scope, not a live-coverage promise. Per-jurisdiction activation, content/search acceptance
 and remaining gaps are recorded in the [state rollout](../operations/openstates-rollout-checklist.md) and
-[API acceptance](../../../legislation-web/docs/operations/passage-search-delivery.md). Source availability alone does not satisfy either gate.
+[W search contract](../../../legislation-web/docs/engineering/api/search-and-diffs.md). Source availability alone does
+not satisfy either gate.
 
 - Open States session JSON archives are the state historical source. Import every discoverable archive for all 50
   states, Washington, D.C., and Puerto Rico from 2017 onward. Older or missing archives are reported as source gaps,
@@ -54,7 +55,7 @@ release evidence.
 
 This is I's collection/completeness report, not a public HTTP schema. W owns
 [coverage response presentation](../../../legislation-web/docs/engineering/api/schemas.md) and
-[API acceptance](../../../legislation-web/docs/operations/passage-search-delivery.md).
+[search behavior](../../../legislation-web/docs/engineering/api/search-and-diffs.md).
 
 ## Provider references
 

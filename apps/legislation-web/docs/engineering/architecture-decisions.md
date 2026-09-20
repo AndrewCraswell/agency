@@ -5,7 +5,7 @@
 | ID | Decision | Rationale |
 | --- | --- | --- |
 | ADR-001 | Separate W `apps/legislation-web`, I `apps/legislation-ingestion`, M `apps/legislation-mcp` and C `packages/legislation-core`. | Supersedes the single-workspace decision. Apps consume C, never sibling source; M calls W over HTTPS. The physical rename is complete; ignored local state was not moved. |
-| ADR-002 | Use PostgreSQL full-text search and pgvector as the only MVP retrieval stores. | Canonical PostgreSQL remains authoritative. The later isolated passage-search exception is recorded in passage-search-delivery.md; it does not authorize replacing the canonical database. |
+| ADR-002 | Use PostgreSQL full-text search and pgvector as the only MVP retrieval stores. | Canonical PostgreSQL remains authoritative. The isolated passage-search design is documented by the ingestion search-maintenance and serving contracts; it does not authorize replacing the canonical database. |
 | ADR-003 | Use Open States JSON archives for state history and state committee data, GovInfo bulk XML for federal history, GovInfo for federal committee data, and Congress.gov API v3 for federal updates other than standalone committee organization and membership materialization. | GovInfo is the sole approved federal committee-data source and OpenStates is the sole approved state committee-data source; the GovInfo CDIR importer is implemented, with edition acceptance and quarantine gaps recorded in committee-membership-history.md. |
 | ADR-004 | Use OpenRouter as the model gateway and pin full provider/model IDs in code. | One gateway centralizes credentials and privacy controls; ADR-012 supersedes the original single-model assumption with evaluated product-specific routes. |
 | ADR-005 | Use WorkOS as identity and organization authority. | Authentication and tenant identity share one externally managed contract. |
@@ -28,7 +28,7 @@ reconsideration trigger.
 
 - Status: accepted runtime separation; live deployment acceptance of the separated apps remains unverified here.
   The September 14 recorded baseline is 81 HTTP operations and 25 MCP tools;
-  see [API closeout](../operations/passage-search-delivery.md) for dated deployment evidence and the remaining passage-search gate.
+  see the [API contract](api/README.md) for current behavior. Establish deployment status from the live environment.
   The local [regulatory text pilot](../regulations/legal-text-serving.md) adds one gated HTTP operation and MCP tool;
   its deployed acceptance is still open.
 - Explicit API handlers belong under W's `src/app/api`; M owns `/mcp`, discovery, transport and outbound API credentials.

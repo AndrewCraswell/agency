@@ -33,7 +33,7 @@ plan implementation. The newer public search implementation below replaces inter
 edition/code selection. Exact-text serving has a separate registered route and client
 method, using the same WorkOS API boundary with local signed-token audience tests.
 
-The [cross-edition application canary](edition-search-canary.md) additionally accepts discovered edition IDs rather
+The [cross-edition search service](legal-search-serving.md) accepts discovered edition IDs rather
 than internal preparation/version IDs. It validates selected copy receipts and metadata signatures, ranks unique
 versions across editions and hydrates exact canonical passages. The public route and typed client now use this service
 with provenance projection, current-code selection and frozen paging, including API-backed MCP parity. Publication/agency search,
@@ -292,9 +292,8 @@ challenged targeted fixes, followed by a fairness comparison against the same re
 Both naming layouts were considered valid; preference for the existing layout was weak and based on consistency.
 The subsequent product decision selects `/api/legal/` and `/api/search/legal`; the inventory and mappings above use
 that approved naming. The retained judge report describes the earlier evaluated draft, not an alternative active contract.
-These are model judgments, not runtime or real-user acceptance. The review protocol, score summaries, evidence references
-and scenario dispositions are retained in [the review report](../../../legislation/artifacts/regulatory-api-review/review-2026-09-14.md).
-This is ignored local historical evidence retained under `apps/legislation`, not a tracked file guaranteed in a fresh checkout.
+These model judgments were design input, not runtime or real-user acceptance. The selected contract above is canonical;
+ignored local review artifacts are not required to understand or implement it.
 
 The adopted contract preserves the original resource identities and now contains 25 planned operations: the original
 22 plus bounded source text, reverse edition-membership discovery and a publisher-agency reference directory.

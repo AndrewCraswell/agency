@@ -2,7 +2,7 @@
 
 Source adapters record the artifact, retrieval time, source ID, parser version and authority tier. Serving remains
 local when a source is unavailable. [C identity](../../../../packages/legislation-core/docs/engineering/identity.md)
-owns invariants; [W's roadmap](../../../legislation-web/docs/engineering/identity-and-representative-roadmap.md) owns product sequencing.
+owns invariants; Linear owns product sequencing and delivery status.
 
 ## Source and authority matrix
 
@@ -17,14 +17,12 @@ owns invariants; [W's roadmap](../../../legislation-web/docs/engineering/identit
 
 ## Maintenance
 
-Renaming and cleanup are not an identity roadmap. Keep reusable smoke/evaluation/recovery tools and source decisions;
-remove obsolete outputs only after identifying replacements. Retire tasks only after checking schedules, callers,
-recovery ownership and in-flight runs. Incident records are dated evidence, not a parallel backlog.
+Keep reusable smoke, evaluation and recovery tools together with source decisions. Remove obsolete outputs only after
+identifying replacements and checking schedules, callers, recovery ownership and in-flight runs. Incident records are
+dated evidence, not a parallel backlog.
 
-Source synchronization and enrichment tasks retain their original OFF-201 through OFF-210 and ENR-601 through ENR-606
-IDs in [the program roadmap](../../../legislation-web/docs/engineering/identity-and-representative-roadmap.md).
-I owns their acquisition, normalization, quarantine, archival, source-governance and refresh implementation. W owns
-the customer acceptance; C owns schema/identity changes. Those retained task tables are not copied into another backlog.
+I owns acquisition, normalization, quarantine, archival, source governance and refresh implementation. W owns customer
+acceptance; C owns schema and identity changes. Linear owns active tasks and dependencies.
 
 ## Retained coverage decisions
 
