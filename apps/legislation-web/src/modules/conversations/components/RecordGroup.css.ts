@@ -4,7 +4,6 @@ import * as full from "./EntityResults.css"
 
 export const group = style({
   width: "100%",
-  maxWidth: 560,
   minWidth: 0,
   border: "1px solid var(--border)",
   borderRadius: 8,
