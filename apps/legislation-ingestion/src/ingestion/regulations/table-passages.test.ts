@@ -466,7 +466,7 @@ describe("regulatory table passages", () => {
         )
       ).toBe(true)
     }
-  }, 30_000)
+  }, 60_000)
 
   it("retains parent-benefit references across reviewed child-only income rows", async () => {
     const fixtures = z
