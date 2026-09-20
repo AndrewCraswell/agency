@@ -1974,6 +1974,156 @@ describe("ConversationResponse inline composition", () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger))
   })
 
+  it.each(["RecordCard", "CompactRecordCard", "RecordGroup", "CompactRecordGroup"] as const)(
+    "isolates the meeting inspector to its activating %s, result list or inline mention",
+    async (component) => {
+      const meeting: EntityCard = {
+        ...selectedRecord,
+        id: "selected-meeting",
+        kind: "meeting",
+        title: "Selected meeting"
+      }
+      const other: EntityCard = { ...meeting, id: "another-meeting", title: "Another meeting" }
+      const details: MeetingDetails = { record: meeting, agenda: [], participants: [], documents: [] }
+      const fetchDetails = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json(details))
+      const reference = { resultId, recordId: meeting.id }
+      const references = [reference, { resultId, recordId: other.id }]
+      const isGroup = component === "RecordGroup" || component === "CompactRecordGroup"
+      const data: PresentationBlock = {
+        state: "ready",
+        blockId: "meeting-card",
+        records: isGroup ? [meeting, other] : [meeting],
+        spec: {
+          root: "record",
+          elements: {
+            record: isGroup
+              ? { type: component, props: { records: references }, children: [] }
+              : { type: component, props: reference, children: [] }
+          }
+        }
+      }
+      const page: EntityPage = {
+        ...resultPart().output.resultSet,
+        kind: "meeting",
+        items: [meeting, other],
+        hasNext: false
+      }
+      const contentId = "33333333-3333-4333-8333-333333333333"
+      const list: PresentationBlock = {
+        state: "ready",
+        blockId: "meeting-list",
+        records: [],
+        content: { id: contentId, kind: "result-list", page },
+        spec: { root: "list", elements: { list: { type: "ResultList", props: { contentId }, children: [] } } }
+      }
+      const parts: UIMessage["parts"] = [
+        mentionedResult(meeting),
+        { type: "text", text: mention(meeting, "Meeting mention") },
+        { type: "data-presentation", id: data.blockId, data },
+        { type: "data-presentation", id: list.blockId, data: list }
+      ]
+      const view = render(inlineResponse(parts), { wrapper: InlineProviders })
+      const user = userEvent.setup()
+      const triggers = [
+        screen.getByRole("button", { name: "Selected meeting" }),
+        within(screen.getByRole("region", { name: "Meetings" })).getByRole("button", { name: /Selected meeting/ }),
+        screen.getByRole("button", { name: "Meeting mention" })
+      ]
+      for (const trigger of triggers) {
+        trigger.focus()
+        await user.keyboard("{Enter}")
+        const dialog = await screen.findByRole("dialog", { name: "Meeting" })
+        await within(dialog).findByRole("heading", { name: meeting.title })
+        expect(screen.getAllByRole("dialog")).toHaveLength(1)
+        const activeLoads = fetchDetails.mock.calls.filter(([, options]) => !options?.signal?.aborted)
+        expect(activeLoads).toHaveLength(1)
+        expect(JSON.parse(String(activeLoads[0]?.[1]?.body))).toEqual(
+          expect.objectContaining({ action: "inspect-record", resultId, recordId: meeting.id })
+        )
+        const callsBeforeUpdate = fetchDetails.mock.calls.length
+        view.rerender(inlineResponse([...parts, { type: "text", text: "The answer continues." }]))
+        expect(screen.getByRole("dialog", { name: "Meeting" })).toBe(dialog)
+        expect(fetchDetails).toHaveBeenCalledTimes(callsBeforeUpdate)
+        await user.keyboard("{Escape}")
+        await waitFor(() => expect(document.activeElement).toBe(trigger))
+        expect(screen.queryByRole("dialog")).toBeNull()
+      }
+    }
+  )
+
+  it("keeps the active meeting snapshot and returns focus to its group when the trigger disappears", async () => {
+    const meeting: EntityCard = {
+      ...selectedRecord,
+      id: "selected-meeting",
+      kind: "meeting",
+      title: "Selected meeting"
+    }
+    const other: EntityCard = { ...meeting, id: "another-meeting", title: "Another meeting" }
+    const last: EntityCard = { ...meeting, id: "last-meeting", title: "Last meeting" }
+    const details: MeetingDetails = { record: meeting, agenda: [], participants: [], documents: [] }
+    const fetchDetails = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json(details))
+    function group(records: EntityCard[]) {
+      const data: PresentationBlock = {
+        state: "ready",
+        blockId: "meeting-group",
+        records,
+        spec: {
+          root: "group",
+          elements: {
+            group: {
+              type: "RecordGroup",
+              props: { records: records.map((record) => ({ resultId, recordId: record.id })) },
+              children: []
+            }
+          }
+        }
+      }
+      return inlineResponse([{ type: "data-presentation", id: data.blockId, data }])
+    }
+    const view = render(group([meeting, other, last]), { wrapper: InlineProviders })
+    const user = userEvent.setup()
+    const trigger = screen.getByRole("button", { name: meeting.title })
+    await user.click(trigger)
+    const dialog = await screen.findByRole("dialog", { name: "Meeting" })
+    await within(dialog).findByRole("heading", { name: meeting.title })
+    const callsBeforeUpdate = fetchDetails.mock.calls.length
+    view.rerender(group([other, last]))
+    expect(trigger.isConnected).toBe(false)
+    expect(screen.getByRole("dialog", { name: "Meeting" })).toBe(dialog)
+    expect(fetchDetails).toHaveBeenCalledTimes(callsBeforeUpdate)
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: other.title })))
+  })
+
+  it.each(["close", "unmount"] as const)(
+    "aborts meeting retrieval on %s without reopening on a late response",
+    async (action) => {
+      const meeting: EntityCard = {
+        ...selectedRecord,
+        id: "selected-meeting",
+        kind: "meeting",
+        title: "Selected meeting"
+      }
+      const details: MeetingDetails = { record: meeting, agenda: [], participants: [], documents: [] }
+      const pending = Promise.withResolvers<Response>()
+      const fetchDetails = vi.spyOn(globalThis, "fetch").mockImplementation(() => pending.promise)
+      const view = render(inlineResponse([presentationPart(meeting)]), { wrapper: InlineProviders })
+      const user = userEvent.setup()
+      await user.click(screen.getByRole("button", { name: meeting.title }))
+      await screen.findByText("Loading meeting details...")
+      const signal = fetchDetails.mock.calls.at(-1)?.[1]?.signal
+      expect(signal?.aborted).toBe(false)
+      if (action === "close") {
+        await user.keyboard("{Escape}")
+      } else {
+        view.unmount()
+      }
+      await waitFor(() => expect(signal?.aborted).toBe(true))
+      pending.resolve(Response.json(details))
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    }
+  )
+
   it.each(["person", "organization", "material"] as const)("preserves the trusted %s profile route", (kind) => {
     const record: EntityCard = { ...selectedRecord, kind, id: "record/with spaces" }
     render(inlineResponse([presentationPart(record)]), { wrapper: InlineProviders })

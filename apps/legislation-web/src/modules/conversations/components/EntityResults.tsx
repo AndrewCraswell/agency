@@ -862,7 +862,7 @@ export function EntityResults({ initialPage, answerId }: Readonly<{ initialPage:
   const expiredNotice = useRef<HTMLDivElement>(null)
   const shouldFocusResult = useRef(false)
   const [selectedVote, setSelectedVote] = useState<{ resultId: string; recordId: string }>()
-  const { meetingSelection, setMeetingSelection } = useConversationSession()
+  const [meetingSelection, setMeetingSelection] = useState<{ resultId: string; recordId: string }>()
   const voteTrigger = useRef<HTMLElement | null>(null)
   const { loadResultPage } = useConversationSession()
   const { stopScroll } = useStickToBottomContext()
@@ -1032,7 +1032,7 @@ export function EntityResults({ initialPage, answerId }: Readonly<{ initialPage:
         returnFocus={() => voteTrigger.current?.focus({ preventScroll: true })}
       />
       <MeetingDetails
-        selection={meetingSelection?.resultId === page.id ? meetingSelection : undefined}
+        selection={meetingSelection}
         onClose={() => setMeetingSelection(undefined)}
         returnFocus={() => {
           if (voteTrigger.current?.isConnected) {

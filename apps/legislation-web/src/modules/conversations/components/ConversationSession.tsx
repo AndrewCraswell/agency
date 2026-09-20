@@ -170,8 +170,6 @@ type ConversationSessionValue = Readonly<{
     cursor?: string,
     parentRecordId?: string
   ) => Promise<ProfileDetails>
-  meetingSelection: { resultId: string; recordId: string } | undefined
-  setMeetingSelection: (selection: { resultId: string; recordId: string } | undefined) => void
 }>
 
 const ConversationSessionContext = createContext<ConversationSessionValue | undefined>(undefined)
@@ -183,7 +181,6 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   const [isConfirmingClarification, setIsConfirmingClarification] = useState(false)
   const [draft, setDraft] = useState<ComposerDraft>([])
   const [references, setReferences] = useState<StagedReference[]>([])
-  const [meetingSelection, setMeetingSelection] = useState<{ resultId: string; recordId: string }>()
   const [isRestoringConversation, setIsRestoringConversation] = useState(process.env.NODE_ENV === "development")
   const [hasReloadRecoveryError, setHasReloadRecoveryError] = useState(false)
   const [interruptedMessageId, setInterruptedMessageId] = useState<string>()
@@ -441,7 +438,6 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   }
 
   function startConversation(nextDraft: ComposerDraft) {
-    setMeetingSelection(undefined)
     cancelClarification()
     void chat.stop()
     const selected = composerReferences(nextDraft, references)
@@ -560,9 +556,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
         loadResultPage,
         loadVoteDetails,
         loadMeetingDetails,
-        loadProfileDetails,
-        meetingSelection,
-        setMeetingSelection
+        loadProfileDetails
       }}
     >
       {children}

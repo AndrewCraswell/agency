@@ -23,6 +23,9 @@ scoped cursors with bounded, explicit recovery.
 [Bill progress and latest action](engineering/conversation-bill-progress.md) use recorded action chronology while
 preserving introduction, source-order ties, unknown milestones, missing dates and incomplete history.
 
+[Record inspectors](engineering/conversation-record-inspectors.md) keep meeting selection local to its activating
+presentation, with one detail load, cancellation, and focus return even when a meeting also appears elsewhere.
+
 [Conversation model settings](operations/development.md#development-chat-research-connection) use Luna with high
 reasoning for answers; suggestions and offline judges retain their separately configured low reasoning.
 

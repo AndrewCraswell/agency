@@ -16,7 +16,6 @@ import {
 import type { EntityCard } from "../entityResults"
 import { contentComponentSchema, type PresentationContent, type ContentComponent } from "../presentationContent"
 import type { CitationSelection } from "./citationPresentation"
-import { useConversationSession } from "./ConversationSession"
 import { CompactRecordCard, RecordCard } from "./EntityResults"
 import { InlinePresentation } from "./InlinePresentation"
 import { MeetingDetails } from "./MeetingDetails"
@@ -198,7 +197,7 @@ const { registry } = defineRegistry(answerCatalog, {
 
 function ReadyRecord({ block }: ReadyRecordProps) {
   const [selectedVote, setSelectedVote] = useState<PresentationReference>()
-  const { meetingSelection, setMeetingSelection } = useConversationSession()
+  const [meetingSelection, setMeetingSelection] = useState<PresentationReference>()
   const { stopScroll } = useStickToBottomContext()
   const trigger = useRef<HTMLElement | null>(null)
   const content = useRef<HTMLDivElement>(null)
@@ -241,14 +240,7 @@ function ReadyRecord({ block }: ReadyRecordProps) {
       </div>
       <VoteDetails selection={selectedVote} onClose={() => setSelectedVote(undefined)} returnFocus={returnFocus} />
       <MeetingDetails
-        selection={
-          references.some(
-            (reference) =>
-              meetingSelection?.resultId === reference.resultId && meetingSelection.recordId === reference.recordId
-          )
-            ? meetingSelection
-            : undefined
-        }
+        selection={meetingSelection}
         onClose={() => setMeetingSelection(undefined)}
         returnFocus={returnFocus}
       />
