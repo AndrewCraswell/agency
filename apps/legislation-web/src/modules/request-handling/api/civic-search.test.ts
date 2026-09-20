@@ -20,9 +20,6 @@ afterEach(async () => {
 
 function createService(overrides: Partial<CivicSearchApi> = {}): CivicSearchApi {
   return {
-    compareBillVersions: async () => ({ changes: [], truncated: false }),
-    searchAmendments: async () => ({ items: [], truncated: false }),
-    searchBillText: async () => ({ items: [], search: { isReranked: false, models: [] }, truncated: false }),
     searchBills: async () => ({ items: [], truncated: false }),
     searchSupportingMaterialHits: async () => ({
       items: [],
@@ -30,7 +27,6 @@ function createService(overrides: Partial<CivicSearchApi> = {}): CivicSearchApi 
       truncated: false,
       warnings: []
     }),
-    searchSupportingMaterials: async () => ({ items: [], truncated: false }),
     ...overrides
   }
 }
@@ -576,22 +572,22 @@ describe("civic and search HTTP API handler", () => {
 
   it("leaves blocked amendment, passage, and document-diff routes unregistered without calling the query service", async () => {
     const calls: string[] = []
-    const baseUrl = await startApi(
-      createService({
-        compareBillVersions: async () => {
-          calls.push("compareBillVersions")
-          return { changes: [], truncated: false }
-        },
-        searchAmendments: async () => {
-          calls.push("searchAmendments")
-          return { items: [], truncated: false }
-        },
-        searchBillText: async () => {
-          calls.push("searchBillText")
-          return { items: [], search: { isReranked: false, models: [] }, truncated: false }
-        }
-      })
-    )
+    const service = {
+      ...createService(),
+      compareBillVersions: async () => {
+        calls.push("compareBillVersions")
+        return { changes: [], truncated: false }
+      },
+      searchAmendments: async () => {
+        calls.push("searchAmendments")
+        return { items: [], truncated: false }
+      },
+      searchBillText: async () => {
+        calls.push("searchBillText")
+        return { items: [], search: { isReranked: false, models: [] }, truncated: false }
+      }
+    }
+    const baseUrl = await startApi(service)
 
     const responses = await Promise.all([
       fetch(`${baseUrl}/api/search/amendments`, {

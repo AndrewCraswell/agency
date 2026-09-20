@@ -3,17 +3,10 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { z } from "zod"
 import {
   decodeSupportingMaterialSearchCursor,
-  type AmendmentSearchInput,
   type SupportingMaterialSearchHitResult,
-  type SupportingMaterialSearchInput,
-  type VersionComparisonInput
+  type SupportingMaterialSearchInput
 } from "../../legislation/query-service"
-import {
-  decodeSearchCursor,
-  type PassageSearchInput,
-  type PassageSearchResultPage,
-  type SearchInput
-} from "../../search/search"
+import { decodeSearchCursor, type SearchInput } from "../../search/search"
 import { projectSupportingMaterialSearchHits } from "./canonical-material-search"
 import { CanonicalProjectionError } from "./canonical-projection"
 import { projectBillSearchHits, type BillSearchCandidateRead } from "./canonical-search"
@@ -37,16 +30,10 @@ type QueryPage<T> = Readonly<{
 }>
 
 export type CivicSearchApi = Readonly<{
-  compareBillVersions: (input: VersionComparisonInput) => Promise<unknown>
-  searchAmendments: (input: AmendmentSearchInput) => Promise<QueryPage<unknown>>
-  searchBillText: (
-    input: PassageSearchInput & { mode?: "hybrid" | "lexical" | "semantic" }
-  ) => Promise<PassageSearchResultPage>
   searchBills: (
     input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }
   ) => Promise<QueryPage<BillSearchCandidateRead>>
   searchSupportingMaterialHits: (input: SupportingMaterialSearchInput) => Promise<SupportingMaterialSearchHitResult>
-  searchSupportingMaterials: (input: SupportingMaterialSearchInput) => Promise<QueryPage<unknown>>
 }>
 
 const identifierSchema = z.string().trim().min(1).max(256)

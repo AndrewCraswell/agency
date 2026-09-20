@@ -19,6 +19,12 @@ The standalone server path is retained for testing; the former Railway `legislat
 a rollback target. The application, public API and MCP adapter share canonical application-service behavior and source
 attribution. Runtime ownership is documented in [Next.js runtime](../../operations/development.md#nextjs-runtime).
 
+Handler service contracts declare only the operations their routes consume, rather than the complete query service.
+`CoreReadQueryApi` owns bill browsing, scoped-parent checks and supporting-material/document-section reads;
+`CivicSearchApi` requires only bill and supporting-material hit searches. Universal search composes the bill/material,
+amendment-hit and passage contracts. Research retrieval declares its own amendment collection dependency alongside
+bill/material and passage search. These injectable boundaries do not remove capabilities from the live query service.
+
 The operational liveness and readiness endpoints remain public `GET /health` and `GET /ready` contract paths. Their
 explicit Next.js handlers live at `apps/legislation-web/src/app/health/route.ts` and
 `apps/legislation-web/src/app/ready/route.ts`; documented `/api/**` operations remain under the `src/app/api` boundary. All

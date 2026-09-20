@@ -4,22 +4,23 @@ import type { LegislationConfig } from "../../configuration/config"
 import { readDocumentDiff } from "../../legislation/persistence/queries/document-diff-read"
 import { getNextLegislationApplication } from "../../legislation/runtime/runtime"
 import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "../api/amendment-search"
-import { createCivicSearchApiHandler, type CivicSearchApi } from "../api/civic-search"
+import { createCivicSearchApiHandler } from "../api/civic-search"
 import { createDocumentDiffApiHandler } from "../api/document-diff-routes"
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "../api/http"
-import { createPassageSearchApiHandler, type PassageSearchApi } from "../api/passage-search"
+import { createPassageSearchApiHandler } from "../api/passage-search"
 import {
   createCanonicalResearchEvidenceRetriever,
   createOpenRouterResearchAnswerGenerator,
   createResearchAnswerApiHandler,
   createResearchAnswerService,
-  createUnavailableResearchAnswerApi
+  createUnavailableResearchAnswerApi,
+  type ResearchSearchApi
 } from "../api/research-answers"
 import { createUniversalSearchApiHandler } from "../api/universal-search"
 import { createProductionUniversalSearchApi } from "../api/universal-search-adapter"
 import { executeAuthenticatedApiRequest } from "./authenticated-api-request"
 
-type SearchResearchQueryService = CivicSearchApi & AmendmentSearchApi & PassageSearchApi
+type SearchResearchQueryService = ResearchSearchApi & AmendmentSearchApi
 
 type SearchResearchApplication = Readonly<{
   config: Pick<LegislationConfig, "model" | "passageSearch" | "server">

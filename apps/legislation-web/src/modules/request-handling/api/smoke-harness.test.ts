@@ -7,6 +7,7 @@ import type { CivicSearchApi } from "./civic-search"
 import type { CoreReadQueryApi } from "./core-read"
 import type { DocumentReadApi } from "./document-read-routes"
 import { createLegislationApiHandler } from "./handlers"
+import type { PassageSearchApi } from "./passage-search"
 import { runApiSmoke, SMOKE_MANIFEST } from "./smoke-harness"
 import type { Delivery, Subscription, SubscriptionEvent, SubscriptionRepository, Webhook } from "./subscriptions"
 import type { WebhookReadRepository } from "./webhook-read-repository"
@@ -1085,7 +1086,6 @@ describe("local API smoke harness", () => {
   })
 
   it("runs against the composed Node server with canonical fixture records", async () => {
-    const page = () => ({ items: [canonical("fixture:item")], truncated: false, warnings: [] })
     const subscription = subscriptionRead()
     const event = subscriptionEventRead()
     const delivery = deliveryRead()
@@ -1131,16 +1131,8 @@ describe("local API smoke harness", () => {
         truncated: false
       })
     }
-    const service: CoreReadQueryApi & CivicSearchApi & AmendmentSearchApi = {
+    const service: CoreReadQueryApi & CivicSearchApi & AmendmentSearchApi & PassageSearchApi = {
       browseBills: async () => ({ items: [billSummaryRead("bill:fixture")], truncated: false, warnings: [] }),
-      compareBillVersions: async () => ({ changes: [] }),
-      findRelatedBills: async () => page(),
-      getAmendment: async () => canonical("amendment:fixture"),
-      getBill: async () => canonical("bill:fixture"),
-      getBillText: async () => ({ sections: [canonical("section:fixture")], truncated: false, warnings: [] }),
-      getBillTimeline: async () => ({ events: [canonical("event:fixture")], truncated: false, warnings: [] }),
-      getBillVotes: async () => page(),
-      getDocument: async () => canonical("document:fixture"),
       getDocumentSection: async () => ({
         document: {
           billId: "bill:fixture",
@@ -1159,7 +1151,6 @@ describe("local API smoke harness", () => {
           text: "Fixture text"
         }
       }),
-      getDocumentSections: async () => page(),
       getJurisdiction: async () => canonical("jurisdiction:fixture"),
       getSession: async () => canonical("session:fixture"),
       getSupportingMaterial: async () => ({ material: supportingMaterialRead("material:fixture") }),
@@ -1173,19 +1164,14 @@ describe("local API smoke harness", () => {
           text: "Fixture text"
         }
       }),
-      getVote: async () => canonical("vote:fixture"),
-      listJurisdictions: async () => page(),
-      listSessions: async () => page(),
       searchAmendmentHits: async () => ({
         items: [],
         search: { isReranked: false, models: [] },
         truncated: false,
         warnings: []
       }),
-      searchAmendments: async () => page(),
       searchBills: async () => ({ items: [], truncated: false, warnings: [] }),
       searchBillText: async () => ({ items: [], search: { isReranked: false, models: [] }, truncated: false }),
-      searchChanges: async () => page(),
       searchSupportingMaterials: async () => ({
         items: [supportingMaterialRead("material:fixture")],
         truncated: false,
@@ -1196,8 +1182,7 @@ describe("local API smoke harness", () => {
         search: { isReranked: false, models: [] },
         truncated: false,
         warnings: []
-      }),
-      searchVotes: async () => page()
+      })
     }
     const apiHandler = createLegislationApiHandler(service, {
       apiBaseUrl: "https://api.example.test",

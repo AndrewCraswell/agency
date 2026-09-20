@@ -26,8 +26,6 @@ import { createBillRelatedReadApiHandler, type BillRelatedReadApi } from "./bill
 import { createBillTextReadApiHandler, type BillTextReadApi } from "./bill-text-read-routes"
 import type { AmendmentDetail, AmendmentSummary } from "./canonical-projection"
 import { createChangeFeedApiHandler, type ChangeFeedApi } from "./change-feed-routes"
-import type { CivicSearchApi } from "./civic-search"
-import type { CoreReadQueryApi } from "./core-read"
 import { createDocumentDiffApiHandler, type DocumentDiffApi } from "./document-diff-routes"
 import { createCompositeHttpApiHandler } from "./http"
 import {
@@ -39,7 +37,7 @@ import {
   createOrganizationDetailReadApiHandler,
   type OrganizationDetailReadApi
 } from "./organization-detail-read-routes"
-import { createPassageSearchApiHandler } from "./passage-search"
+import { createPassageSearchApiHandler, type PassageSearchApi } from "./passage-search"
 import { createPersonAmendmentApiHandler, type PersonAmendmentsApi } from "./person-amendment-routes"
 import { createPersonDetailReadApiHandler, type PersonDetailReadApi } from "./person-detail-read-routes"
 import { createResearchAnswerApiHandler, type ResearchAnswer, type ResearchAnswerApi } from "./research-answers"
@@ -616,41 +614,13 @@ function researchAnswerApi(): ResearchAnswerApi {
   return { answer: async () => answer }
 }
 
-function coreService(): CoreReadQueryApi & CivicSearchApi {
+function passageSearchService(): PassageSearchApi {
   return {
-    browseBills: async () => ({ items: [billSummaryRead()], truncated: false }),
-    compareBillVersions: async () => ({ changes: [] }),
-    findRelatedBills: async () => ({ items: [], truncated: false }),
-    getAmendment: async () => amendmentDetail(),
-    getBill: async () => ({ ...billSummaryRead(), type: "bill" }),
-    getBillText: async () => ({ sections: [], truncated: false }),
-    getBillTimeline: async () => ({ events: [], truncated: false }),
-    getBillVotes: async () => ({ items: [], truncated: false }),
-    getDocument: async () => document(DOCUMENT_ID),
-    getDocumentSection: async () => documentSection(DOCUMENT_ID),
-    getDocumentSections: async () => ({ items: [], truncated: false }),
-    getJurisdiction: async () => jurisdiction(),
-    getSession: async () => ({ id: "session:fixture" }),
-    getSupportingMaterial: async () => ({ material: {} }),
-    getVote: async () => vote(),
-    listJurisdictions: async () => ({ items: [], truncated: false }),
-    listSessions: async () => ({ items: [], truncated: false }),
-    searchAmendments: async () => ({ items: [], truncated: false }),
     searchBillText: async () => ({
       items: [passageCandidate()],
       search: { isReranked: false, models: [] },
       truncated: false
-    }),
-    searchBills: async () => ({ items: [], truncated: false }),
-    searchChanges: async () => ({ items: [], truncated: false }),
-    searchSupportingMaterialHits: async () => ({
-      items: [],
-      search: { isReranked: false, models: [] },
-      truncated: false,
-      warnings: []
-    }),
-    searchSupportingMaterials: async () => ({ items: [], truncated: false }),
-    searchVotes: async () => ({ items: [], truncated: false })
+    })
   }
 }
 
@@ -954,7 +924,7 @@ async function startComposedServer(): Promise<string> {
     createJurisdictionCollectionReadApiHandler(jurisdictionCollectionReadApi, { apiBaseUrl: API_BASE_URL }),
     createMeetingReadApiHandler(meetingReadApi, { apiBaseUrl: API_BASE_URL }),
     createOrganizationDetailReadApiHandler(organizationDetailReadApi),
-    createPassageSearchApiHandler(coreService(), { apiBaseUrl: API_BASE_URL }),
+    createPassageSearchApiHandler(passageSearchService(), { apiBaseUrl: API_BASE_URL }),
     createPersonAmendmentApiHandler(personAmendmentsApi, { apiBaseUrl: API_BASE_URL }),
     createPersonDetailReadApiHandler(personDetailReadApi, { apiBaseUrl: API_BASE_URL }),
     createResearchAnswerApiHandler(researchAnswerApi()),

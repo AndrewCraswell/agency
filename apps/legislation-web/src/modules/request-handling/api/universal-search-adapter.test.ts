@@ -2,6 +2,7 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { AmendmentSearchApi } from "./amendment-search"
 import type { CivicSearchApi } from "./civic-search"
+import type { PassageSearchApi } from "./passage-search"
 import { createProductionUniversalSearchApi } from "./universal-search-adapter"
 
 const mocks = vi.hoisted(() => ({
@@ -36,16 +37,14 @@ function canonical(type: "bill" | "meeting" | "person", id: string) {
   }
 }
 
-function service(): CivicSearchApi & AmendmentSearchApi {
+function service(): CivicSearchApi & AmendmentSearchApi & PassageSearchApi {
   return {
-    compareBillVersions: async () => ({}),
     searchAmendmentHits: async () => ({
       items: [],
       search: { isReranked: false, models: [] },
       truncated: false,
       warnings: []
     }),
-    searchAmendments: async () => ({ items: [], truncated: false }),
     searchBillText: async () => ({ items: [], search: { isReranked: false, models: [] }, truncated: false }),
     searchBills: async () => ({ items: [], search: { isReranked: false, models: [] }, truncated: false }),
     searchSupportingMaterialHits: async () => ({
@@ -53,8 +52,7 @@ function service(): CivicSearchApi & AmendmentSearchApi {
       search: { isReranked: false, models: [] },
       truncated: false,
       warnings: []
-    }),
-    searchSupportingMaterials: async () => ({ items: [], truncated: false })
+    })
   }
 }
 

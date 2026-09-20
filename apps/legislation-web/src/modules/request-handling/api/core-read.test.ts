@@ -71,13 +71,6 @@ function supportingMaterial(id = "material:us:119:committee-report:1") {
 function service(): CoreReadQueryApi {
   return {
     browseBills: async () => ({ items: [bill()], truncated: false }),
-    findRelatedBills: async () => ({ items: [], truncated: false }),
-    getAmendment: async ({ id }) => ({ amendment: { id } }),
-    getBill: async ({ id }) => ({ bill: { id } }),
-    getBillText: async () => ({ sections: [{ id: "section:1" }], truncated: false }),
-    getBillTimeline: async () => ({ events: [{ id: "action:1" }], truncated: false }),
-    getBillVotes: async ({ billId }) => ({ items: [], billId, truncated: false }),
-    getDocument: async ({ id }) => ({ document: { id } }),
     getDocumentSection: async ({ documentId, sectionId }) => ({
       document: {
         billId: "bill:us:119:hr:1",
@@ -99,7 +92,6 @@ function service(): CoreReadQueryApi {
         text: "Text"
       }
     }),
-    getDocumentSections: async () => ({ items: [], truncated: false }),
     getJurisdiction: async (id) => ({ id }),
     getSession: async (id) => ({ id }),
     getSupportingMaterial: async ({ id }) => ({ material: supportingMaterial(id) }),
@@ -113,13 +105,7 @@ function service(): CoreReadQueryApi {
       },
       section: { contentHash: "b".repeat(64), heading: null, id: sectionId, ordinal: 0, text: "Text" }
     }),
-    getVote: async ({ id }) => ({ vote: { id } }),
-    listJurisdictions: async () => ({ items: [{ id: "jurisdiction:us" }], truncated: false }),
-    listSessions: async () => ({ items: [{ id: "session:us:119" }], truncated: false }),
-    searchAmendments: async () => ({ items: [], truncated: false, warnings: [] }),
-    searchChanges: async () => ({ items: [], truncated: false }),
-    searchSupportingMaterials: async () => ({ items: [], truncated: false }),
-    searchVotes: async () => ({ items: [], truncated: false })
+    searchSupportingMaterials: async () => ({ items: [], truncated: false })
   }
 }
 
@@ -191,9 +177,9 @@ describe("core read API handler", () => {
   it("keeps incomplete canonical amendment routes unregistered", async () => {
     let amendmentReads = 0
     let amendmentSearches = 0
-    const baseUrl = await startServer({
+    const amendmentService = {
       ...service(),
-      getAmendment: async ({ id }) => {
+      getAmendment: async ({ id }: { id: string }) => {
         amendmentReads += 1
         return { amendment: { id } }
       },
@@ -201,7 +187,8 @@ describe("core read API handler", () => {
         amendmentSearches += 1
         return { items: [], truncated: false }
       }
-    })
+    }
+    const baseUrl = await startServer(amendmentService)
 
     const responses = await Promise.all([
       fetch(`${baseUrl}/api/amendments`),
@@ -660,7 +647,7 @@ describe("core read API handler", () => {
     let documentReads = 0
     let documentSectionPages = 0
     let relatedBillSearches = 0
-    const baseUrl = await startServer({
+    const relationshipService = {
       ...service(),
       findRelatedBills: async () => {
         relatedBillSearches += 1
@@ -686,7 +673,8 @@ describe("core read API handler", () => {
         changeSearches += 1
         return { items: [], truncated: false }
       }
-    })
+    }
+    const baseUrl = await startServer(relationshipService)
     const billId = "bill%3Aus%3A119%3Ahr%3A1"
     const responses = await Promise.all([
       fetch(`${baseUrl}/api/bills/amendments/batch`, {

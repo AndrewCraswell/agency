@@ -73,7 +73,7 @@ import { createOrganizationMembersRepository } from "./organization-members-read
 import { createOrganizationMembersReadApiHandler } from "./organization-members-read-routes"
 import { createOrganizationReadRepository } from "./organization-read-repository"
 import { createOrganizationReadApiHandler } from "./organization-read-routes"
-import { createPassageSearchApiHandler } from "./passage-search"
+import { createPassageSearchApiHandler, type PassageSearchApi } from "./passage-search"
 import { createPeopleReadApiHandler } from "./people-read-routes"
 import { createPersonAmendmentApiHandler } from "./person-amendment-routes"
 import { createPersonBillActivityApiHandler } from "./person-bill-activity-routes"
@@ -112,7 +112,7 @@ import { createWebhookReadApiHandler } from "./webhook-read-routes"
  * handler here; the HTTP server and CLI remain unaware of individual routes.
  */
 export function createLegislationApiHandler(
-  queryService: CoreReadQueryApi & CivicSearchApi & AmendmentSearchApi,
+  queryService: CoreReadQueryApi & CivicSearchApi & AmendmentSearchApi & PassageSearchApi,
   options: Readonly<{
     apiBaseUrl: string
     documentDatabase?: LegislationDatabase

@@ -4,6 +4,7 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { z } from "zod"
 import type { ResearchAnswerModelClient } from "../../../services/openrouter/openrouter-retrieval"
 import { documentSectionReadFromPersistence } from "../../legislation/persistence/queries/document-reads"
+import type { AmendmentSearchInput } from "../../legislation/query-service"
 import { projectSupportingMaterialSearchHits } from "./canonical-material-search"
 import { isRfc3339Timestamp } from "./canonical-projection"
 import { projectDocumentSectionRead, sourceProjectionContext, type SourceDocument } from "./canonical-read"
@@ -18,6 +19,7 @@ import {
   sendApiJson,
   type HttpApiHandler
 } from "./http"
+import type { PassageSearchApi } from "./passage-search"
 import { searchExecution, type SearchExecution } from "./search-execution"
 
 type SearchMode = "hybrid" | "lexical" | "semantic"
@@ -121,13 +123,21 @@ export interface ResearchAnswerGenerator {
   ): Promise<Readonly<{ answer: string; claims: readonly ResearchClaim[]; model: ModelUsage }>>
 }
 
+export type ResearchSearchApi = CivicSearchApi &
+  PassageSearchApi &
+  Readonly<{
+    searchAmendments: (
+      input: AmendmentSearchInput
+    ) => Promise<Readonly<{ items: readonly unknown[]; search?: SearchExecution }>>
+  }>
+
 /**
  * Adapts the canonical ranked searches into compact evidence citations. A
  * record type is never searched when its canonical search surface cannot
  * apply every requested scope constraint, so scope is fail-closed.
  */
 export function createCanonicalResearchEvidenceRetriever(
-  search: Pick<CivicSearchApi, "searchAmendments" | "searchBillText" | "searchBills" | "searchSupportingMaterialHits">,
+  search: ResearchSearchApi,
   apiBaseUrl: string
 ): ResearchEvidenceRetriever {
   return {
@@ -578,7 +588,7 @@ function citationFromBillHit(hit: ReturnType<typeof projectBillSearchHits>[numbe
 }
 
 function citationFromPassage(
-  item: Awaited<ReturnType<CivicSearchApi["searchBillText"]>>["items"][number]
+  item: Awaited<ReturnType<PassageSearchApi["searchBillText"]>>["items"][number]
 ): ResearchCitation {
   const section = projectDocumentSectionRead(
     documentSectionReadFromPersistence(item.document, item.section),

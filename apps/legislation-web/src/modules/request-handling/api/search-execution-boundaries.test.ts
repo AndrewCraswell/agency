@@ -2,10 +2,10 @@ import { createServer } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { afterEach, describe, expect, it } from "vitest"
 import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "./amendment-search"
-import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search"
+import { createCivicSearchApiHandler } from "./civic-search"
 import type { HttpApiHandler } from "./http"
 import { createPassageSearchApiHandler } from "./passage-search"
-import { createCanonicalResearchEvidenceRetriever } from "./research-answers"
+import { createCanonicalResearchEvidenceRetriever, type ResearchSearchApi } from "./research-answers"
 import { createUniversalSearchApiHandler } from "./universal-search"
 import { createProductionUniversalSearchApi } from "./universal-search-adapter"
 
@@ -41,7 +41,7 @@ afterEach(async () => {
   servers.clear()
 })
 
-function service(model: string | undefined, isReranked = false): CivicSearchApi & AmendmentSearchApi {
+function service(model: string | undefined, isReranked = false): ResearchSearchApi & AmendmentSearchApi {
   const page = {
     items: [],
     search: {
@@ -52,13 +52,11 @@ function service(model: string | undefined, isReranked = false): CivicSearchApi 
     warnings: []
   }
   return {
-    compareBillVersions: async () => ({}),
     searchAmendmentHits: async () => page,
     searchAmendments: async () => page,
     searchBillText: async () => ({ ...page, search: { ...page.search, isReranked } }),
     searchBills: async () => ({ ...page, search: { ...page.search, isReranked } }),
-    searchSupportingMaterialHits: async () => page,
-    searchSupportingMaterials: async () => page
+    searchSupportingMaterialHits: async () => page
   }
 }
 
@@ -80,7 +78,7 @@ async function start(handlers: readonly HttpApiHandler[]) {
   return `http://127.0.0.1:${address.port}`
 }
 
-function handlers(api: CivicSearchApi & AmendmentSearchApi) {
+function handlers(api: ResearchSearchApi & AmendmentSearchApi) {
   return [
     createCivicSearchApiHandler(api, options),
     createPassageSearchApiHandler(api, options),

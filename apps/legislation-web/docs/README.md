@@ -63,7 +63,7 @@ spec closure is not a clean verification or deployment claim.
 | What are we building and for whom? | [Product specification](product/product-spec.md), [ICPs](product/icp.md), [competitors](product/competitors.md) |
 | What should we build next? | [Public chat backlog](backlog/public-chat.md), [product backlog](backlog/backlog.md) |
 | How does the experience fit together? | [Design](design/design.md), [information architecture](product/information-architecture.md), [design source](../legislation.pen) |
-| What are the API and serving contracts? | [HTTP index](engineering/api/README.md), [retrieval dispatch](engineering/retrieval-acceptance.md), [authentication](operations/authentication.md) |
+| What are the API and serving contracts? | [HTTP index and handler dependencies](engineering/api/README.md), [retrieval dispatch](engineering/retrieval-acceptance.md), [authentication](operations/authentication.md) |
 | How will we measure usage, performance and reliability? | [Telemetry specification](engineering/telemetry-spec.md), [coverage and events](engineering/telemetry-events.md), [reporting and acceptance](operations/telemetry-acceptance.md) |
 | What has recorded acceptance? | [API/passage delivery](operations/passage-search-delivery.md); dated evidence, not a fresh deployment audit |
 | How do I work on W? | [Source and service organization](../README.md#structure), [runtime/development](operations/development.md), [testing and final gate](operations/testing.md), [frontend styling](engineering/frontend-styling.md) |

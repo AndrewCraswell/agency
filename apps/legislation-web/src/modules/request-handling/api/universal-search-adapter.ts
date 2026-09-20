@@ -10,7 +10,7 @@ import { projectBillSearchHits } from "./canonical-search"
 import type { CivicSearchApi } from "./civic-search"
 import { projectMeetingRead } from "./meeting-read-projection"
 import { projectOrganizationRow } from "./organization-summary-read-projection"
-import { projectPassageSearchHit } from "./passage-search"
+import { projectPassageSearchHit, type PassageSearchApi } from "./passage-search"
 import { projectPersonRead } from "./people-read-routes"
 import { searchExecution } from "./search-execution"
 import {
@@ -20,7 +20,7 @@ import {
   type UniversalSearchCandidate
 } from "./universal-search"
 
-type SearchServices = CivicSearchApi & AmendmentSearchApi
+type SearchServices = CivicSearchApi & AmendmentSearchApi & PassageSearchApi
 
 /**
  * Adapts the already canonical product-search/read boundaries to the universal

@@ -1,17 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type {
-  AmendmentSearchInput,
-  BillBrowseInput,
-  BillLookup,
-  ChangeSearchInput,
-  DocumentSectionLookup,
-  EntityLookup,
-  JurisdictionSearchInput,
-  SessionSearchInput,
-  SupportingMaterialSearchInput,
-  VoteSearchInput
-} from "../../legislation/query-service"
+import type { BillBrowseInput, EntityLookup, SupportingMaterialSearchInput } from "../../legislation/query-service"
 import {
   projectBillSummaryRead,
   projectDocumentSectionRead,
@@ -42,50 +31,20 @@ import {
 } from "./http"
 
 export interface CoreReadQueryApi {
-  findRelatedBills: (input: BillLookup & { includeSemantic?: boolean; limit?: number }) => Promise<CorePage>
-  getAmendment: (input: EntityLookup) => Promise<unknown>
-  getBill: (input: BillLookup) => Promise<unknown>
-  getBillText: (
-    input: BillLookup & { cursor?: string; documentId?: string; versionCode?: string }
-  ) => Promise<SectionPage>
-  getBillTimeline: (input: BillLookup) => Promise<TimelinePage>
-  getBillVotes: (input: Readonly<{ billId: string; cursor?: string; limit?: number }>) => Promise<CorePage>
   getSupportingMaterial: (input: EntityLookup) => Promise<Readonly<{ material: unknown }>>
   getSupportingMaterialSection?: (
     input: Readonly<{ materialId: string; sectionId: string }>
   ) => Promise<SupportingMaterialSectionRead>
-  getDocument: (input: EntityLookup) => Promise<unknown>
   getDocumentSection?: (input: Readonly<{ documentId: string; sectionId: string }>) => Promise<DocumentSectionRead>
-  getDocumentSections: (input: DocumentSectionLookup) => Promise<CorePage>
   getJurisdiction: (id: string) => Promise<unknown>
   getSession: (id: string) => Promise<unknown>
-  getVote: (input: EntityLookup) => Promise<unknown>
   browseBills: (input: BillBrowseInput) => Promise<CorePage>
-  listJurisdictions: (input: JurisdictionSearchInput) => Promise<CorePage>
-  listSessions: (input: SessionSearchInput) => Promise<CorePage>
-  searchAmendments: (input: AmendmentSearchInput) => Promise<CorePage>
-  searchChanges: (input: ChangeSearchInput) => Promise<CorePage>
   searchSupportingMaterials: (input: SupportingMaterialSearchInput) => Promise<CorePage>
-  searchVotes: (input: VoteSearchInput) => Promise<CorePage>
 }
 
 interface CorePage<T = unknown> {
   items: readonly T[]
   nextCursor?: string
-  truncated: boolean
-  warnings?: readonly string[]
-}
-
-interface SectionPage {
-  nextCursor?: string
-  sections: readonly unknown[]
-  truncated: boolean
-  warnings?: readonly string[]
-}
-
-interface TimelinePage {
-  events: readonly unknown[]
-  nextChildCursor?: string
   truncated: boolean
   warnings?: readonly string[]
 }

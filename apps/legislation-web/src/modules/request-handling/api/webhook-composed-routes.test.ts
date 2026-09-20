@@ -7,6 +7,7 @@ import type { CivicSearchApi } from "./civic-search"
 import type { CoreReadQueryApi } from "./core-read"
 import { createLegislationApiHandler } from "./handlers"
 import { prepareApiResponse } from "./http"
+import type { PassageSearchApi } from "./passage-search"
 import {
   type IdempotentResponse,
   type IdempotencyRequest,
@@ -45,7 +46,7 @@ afterEach(async () => {
   servers.clear()
 })
 
-function queryService(): CoreReadQueryApi & CivicSearchApi & AmendmentSearchApi {
+function queryService(): CoreReadQueryApi & CivicSearchApi & AmendmentSearchApi & PassageSearchApi {
   const page = () => ({ items: [], truncated: false })
   const searchPage = () => ({ items: [], search: { isReranked: false as const, models: [] }, truncated: false })
   const amendmentSearchPage = () => ({
@@ -56,29 +57,14 @@ function queryService(): CoreReadQueryApi & CivicSearchApi & AmendmentSearchApi 
   })
   return {
     browseBills: async () => page(),
-    compareBillVersions: async () => ({ changes: [] }),
-    findRelatedBills: async () => page(),
-    getAmendment: async () => ({}),
-    getBill: async () => ({}),
-    getBillText: async () => ({ sections: [], truncated: false }),
-    getBillTimeline: async () => ({ events: [], truncated: false }),
-    getBillVotes: async () => page(),
-    getDocument: async () => ({}),
-    getDocumentSections: async () => page(),
     getJurisdiction: async () => ({}),
     getSession: async () => ({}),
     getSupportingMaterial: async () => ({ material: {} }),
-    getVote: async () => ({}),
-    listJurisdictions: async () => page(),
-    listSessions: async () => page(),
     searchAmendmentHits: async () => amendmentSearchPage(),
-    searchAmendments: async () => page(),
     searchBillText: async () => searchPage(),
     searchBills: async () => searchPage(),
-    searchChanges: async () => page(),
     searchSupportingMaterialHits: async () => amendmentSearchPage(),
-    searchSupportingMaterials: async () => page(),
-    searchVotes: async () => page()
+    searchSupportingMaterials: async () => page()
   }
 }
 
