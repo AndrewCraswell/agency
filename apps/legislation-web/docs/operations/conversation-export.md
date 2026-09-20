@@ -1,7 +1,16 @@
 # Conversation export
 
-Enter `/export` in an existing conversation to download a local JSON snapshot. Exporting does not call the model or
-send another chat request, and it remains available when the research service is disconnected.
+Enter `/export` in an existing conversation to render a local JSON snapshot in a scrollable code block inside the chat.
+Use **Copy JSON** to copy the exact JSON, or select the text manually if clipboard access fails. Focus stays in the
+composer. No dialog or browser download is triggered. Exporting does not call the model or send another chat request,
+and it remains available when the research service is disconnected or a response is streaming.
+
+The inline component holds a point-in-time snapshot, separate from chat messages and subsequent model context.
+Run `/export` again to replace it with updated content. JSON is rendered as literal code, not interpreted as HTML
+or Markdown from research content. Long exports scroll without truncation or syntax-highlighting work over the payload.
+Browser automation can read the region named `Conversation export` and code block labeled `Conversation export JSON`;
+no clipboard permission or download interception is required to capture evidence. The adaptive driver excludes this
+diagnostic region from its conversation input.
 
 The snapshot includes:
 
@@ -26,8 +35,8 @@ The snapshot includes:
   Explicit Stop is cancellation; an abort or missing terminal event alone does not establish who cancelled a request
   or prove a timeout. A completed terminal answer survives a late transport failure, with the raw browser observation
   retained in message metadata. Partial text remains available and the composer stays usable.
-  Exhaustion requires an observed output-length finish or an explicit `step_limit` measurement without a completed
-  answer. Payload-size rejection (`result_limit`), dependency timeout, and tool interruption are not proof of exhaustion.
+  Exhaustion requires an observed output-length finish. Research has no tool-call count or model-step cutoff.
+  Payload-size rejection (`result_limit`), dependency timeout, and tool interruption are not proof of exhaustion.
 
 Reasoning parts and known credential fields are removed recursively before serialization. URL user information and
 credential-like query or fragment parameters are removed, and recognized bearer, basic, OpenRouter, and Langfuse
@@ -42,4 +51,4 @@ the parent conversation observation.
 
 An export is a diagnostic browser snapshot, not a complete server execution ledger. Replaced or regenerated messages,
 provider retries, exact tool timings, and data outside the browser's retained conversation may be absent. Research text
-can contain sensitive information even after credential redaction, so review the file before sharing it.
+can contain sensitive information even after credential redaction, so review the JSON before sharing it.

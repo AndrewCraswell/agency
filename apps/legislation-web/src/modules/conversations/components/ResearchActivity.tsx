@@ -73,6 +73,11 @@ const activityInputSchema = z
   })
 const activityOutputSchema = z.object({ data: z.object({ items: z.array(z.unknown()) }) })
 const activityResultSchema = z.object({ resultSet: entityPageSchema.pick({ items: true }) })
+const partialOutputSchema = z.object({
+  assembly: z.object({ status: z.enum(["pending", "complete"]) }).optional(),
+  evidencePage: z.object({ partial: z.boolean() }).optional(),
+  data: z.object({ partial: z.boolean().optional() }).optional()
+})
 const comparisonOutputSchema = z.object({
   data: z.object({
     billId: z.string(),
@@ -535,9 +540,18 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
       ? input.data.sessionIds?.map((id) => sessionLabel(id, sessionNames.get(id))).join(", ")
       : undefined
   if (part.state === "output-available") {
-    state = "Complete"
-    Icon = CircleCheck
-    stateClass = styles.activityComplete
+    const partial = partialOutputSchema.safeParse(part.output)
+    if (partial.success && partial.data.assembly?.status === "pending") {
+      state = "Partial record"
+    } else if (partial.success && partial.data.evidencePage?.partial) {
+      state = "More evidence available"
+    } else if (partial.success && !partial.data.assembly && partial.data.data?.partial) {
+      state = "Partial text"
+    } else {
+      state = partial.success && partial.data.assembly?.status === "complete" ? "Record assembled" : "Complete"
+      Icon = CircleCheck
+      stateClass = styles.activityComplete
+    }
   } else if (part.state === "output-error" || part.state === "output-denied") {
     state = part.state === "output-denied" ? "Denied" : "Failed"
     Icon = CircleAlert

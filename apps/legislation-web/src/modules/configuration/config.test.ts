@@ -14,6 +14,42 @@ const workosEnvironment = {
 } as const
 
 describe("loadConfig", () => {
+  it("configures retrieval deadlines independently without changing their defaults", () => {
+    expect(loadConfig({}).model).toMatchObject({
+      embeddingTimeoutMs: 30_000,
+      generationTimeoutMs: 30_000,
+      rerankTimeoutMs: 30_000
+    })
+    expect(
+      loadConfig({
+        OPENROUTER_EMBEDDING_TIMEOUT_MS: "45000",
+        OPENROUTER_GENERATION_TIMEOUT_MS: "90000",
+        OPENROUTER_RERANK_TIMEOUT_MS: "20000"
+      }).model
+    ).toMatchObject({
+      embeddingTimeoutMs: 45_000,
+      generationTimeoutMs: 90_000,
+      rerankTimeoutMs: 20_000
+    })
+  })
+
+  it.each(["0", "300001", "1.5", "invalid"])("rejects invalid retrieval deadlines %s", (value) => {
+    expect(() => loadConfig({ OPENROUTER_EMBEDDING_TIMEOUT_MS: value })).toThrow(ConfigurationError)
+    expect(() => loadConfig({ OPENROUTER_GENERATION_TIMEOUT_MS: value })).toThrow(ConfigurationError)
+    expect(() => loadConfig({ OPENROUTER_RERANK_TIMEOUT_MS: value })).toThrow(ConfigurationError)
+  })
+  it("keeps the direct API endpoint separate from the pooled research endpoint", () => {
+    const pooled = "postgresql://fixture:fixture@pool.example:6432/legislation"
+    const direct = "postgresql://fixture:fixture@db.example:5432/legislation"
+    expect(loadConfig({ DATABASE_URL: pooled, DATABASE_DIRECT_URL: ` ${direct} ` }).database).toMatchObject({
+      url: pooled,
+      directUrl: direct,
+      apiStatementTimeoutMs: 15_000
+    })
+    expect(loadConfig({ DATABASE_DIRECT_URL: " " }).database.directUrl).toBeUndefined()
+    expect(() => loadConfig({ DATABASE_DIRECT_URL: "https://db.example" })).toThrow(ConfigurationError)
+  })
+
   it("keeps Geocodio server credentials optional and validates the configured base URL", () => {
     expect(loadConfig({}).geocodio).toEqual({ baseUrl: "https://api.geocod.io/v2" })
     expect(

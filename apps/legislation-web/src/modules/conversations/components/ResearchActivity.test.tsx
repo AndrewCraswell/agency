@@ -8,6 +8,30 @@ import { ResearchActivity } from "./ResearchActivity"
 afterEach(cleanup)
 
 it.each([
+  { output: { assembly: { status: "pending" }, data: { partial: true } }, status: "Partial record" },
+  { output: { assembly: { status: "complete" }, data: { partial: true } }, status: "Record assembled" },
+  { output: { evidencePage: { partial: true } }, status: "More evidence available" },
+  { output: { data: { partial: true } }, status: "Partial text" }
+])("exposes $status without presenting transport fragments as completed evidence", ({ output, status }) => {
+  render(
+    <ResearchActivity
+      isRunning={false}
+      part={{
+        type: "dynamic-tool",
+        toolCallId: "partial",
+        toolName: "get_bill",
+        state: "output-available",
+        input: {},
+        output
+      }}
+    />
+  )
+  expect(screen.getByLabelText(`Read bill: ${status}`)).toBeDefined()
+  expect(screen.queryByText("Complete")).toBeNull()
+  expect(screen.queryByText("0 returned")).toBeNull()
+})
+
+it.each([
   { toolName: "search_people", input: { limit: 5, mode: "lexical" }, label: "List people" },
   { toolName: "search_people", input: { isActive: false, limit: 5 }, label: "Search people" },
   { toolName: "search_organizations", input: { limit: 5 }, label: "List organizations" },

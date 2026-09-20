@@ -18,6 +18,10 @@ afterEach(() => {
 })
 
 describe("OpenRouter retrieval client", () => {
+  it.each([0, -1, Infinity, 11])("rejects an unbounded or invalid attempt count %s", (maximumAttempts) => {
+    expect(() => new OpenRouterRetrievalClient({ apiKey: "fixture", maximumAttempts })).toThrow(z.ZodError)
+  })
+
   it("routes bill queries to Voyage and selectively reranks bill candidates", { timeout: 30_000 }, async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -114,17 +118,15 @@ describe("OpenRouter retrieval client", () => {
     }
   )
 
-  it.each([
-    [401, " \n Invalid key\t ", ": Invalid key"],
-    [429, "", ""],
-    [503, "x".repeat(510), `: ${"x".repeat(500)}`]
-  ] as const)("preserves HTTP %s error details without retrying generation", async (status, body, detail) => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(body, { status }))
+  it.each([401, 402, 413, 501])("sanitizes permanent HTTP %s failures without retrying", async (status) => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockImplementation(async () => new Response("private provider detail", { status }))
     const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock, maximumAttempts: 3 })
 
-    await expect(client.completeChat(completion)).rejects.toThrow(
-      `OpenRouter research generation failed with HTTP ${status}${detail}`
-    )
+    const result = client.completeChat(completion)
+    await expect(result).rejects.toThrow(`OpenRouter research generation failed with HTTP ${status}`)
+    await expect(result).rejects.not.toThrow("private provider detail")
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -135,6 +137,7 @@ describe("OpenRouter retrieval client", () => {
       const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock })
 
       await expect(client.completeChat(completion)).rejects.toThrow(z.ZodError)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
     }
   )
 
@@ -148,7 +151,12 @@ describe("OpenRouter retrieval client", () => {
         signal.addEventListener("abort", () => reject(signal.reason), { once: true })
       })
     })
-    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock, timeoutMs: 1500 })
+    const client = new OpenRouterRetrievalClient({
+      apiKey: "fixture-key",
+      fetch: fetchMock,
+      generationTimeoutMs: 1500,
+      maximumAttempts: 1
+    })
     const result = client.completeChat(completion)
     const error = new DOMException("Request timed out", "TimeoutError")
     controller.abort(error)
@@ -165,6 +173,133 @@ describe("OpenRouter retrieval client", () => {
     const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock })
 
     await expect(client.completeChat(completion)).rejects.toBe(error)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("configures each retrieval dependency deadline independently", { timeout: 30_000 }, async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout")
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        Response.json({
+          data: [{ embedding: Array.from({ length: 1024 }, () => 0.25), index: 0 }],
+          model: "voyage-4"
+        })
+      )
+      .mockResolvedValueOnce(Response.json({ results: [{ index: 0, relevance_score: 0.9 }] }))
+      .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: "complete" } }] }))
+    const client = new OpenRouterRetrievalClient({
+      apiKey: "fixture-key",
+      fetch: fetchMock,
+      embeddingTimeoutMs: 15_000,
+      rerankTimeoutMs: 20_000,
+      generationTimeoutMs: 25_000
+    })
+    await client.embed("bill", ["source"])
+    await client.rerank("search_bills", "policy", [{ id: "one", text: "source" }])
+    await client.completeChat(completion)
+    expect(timeout.mock.calls.map(([milliseconds]) => milliseconds)).toEqual([15_000, 20_000, 25_000])
+  })
+
+  it("retains a 30-second default for both non-embedding retrieval operations", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout")
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ results: [{ index: 0, relevance_score: 0.9 }] }))
+      .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: "complete" } }] }))
+    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock })
+    await client.rerank("search_bills", "policy", [{ id: "one", text: "source" }])
+    await client.completeChat(completion)
+    expect(timeout.mock.calls.map(([milliseconds]) => milliseconds)).toEqual([30_000, 30_000])
+  })
+
+  it.each(["rerank", "chat"] as const)("retries transient %s requests with frozen input", async (operation) => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response("busy", { status: 503 }))
+      .mockResolvedValueOnce(
+        Response.json(
+          operation === "rerank"
+            ? { results: [{ index: 0, relevance_score: 0.9 }] }
+            : { choices: [{ message: { content: "complete" } }] }
+        )
+      )
+    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock })
+    await (operation === "rerank"
+      ? client.rerank("search_bills", "policy", [{ id: "one", text: "source" }])
+      : client.completeChat(completion))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(fetchMock.mock.calls[1]?.[1]?.body)
+  })
+
+  it("retries known transport failures, including body failures, but not malformed JSON", async () => {
+    const failure = new TypeError("fetch failed", {
+      cause: Object.assign(new Error("socket reset"), { code: "ECONNRESET" })
+    })
+    const brokenBody = Response.json({})
+    vi.spyOn(brokenBody, "text").mockRejectedValueOnce(failure)
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce(brokenBody)
+      .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: "complete" } }] }))
+    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock })
+    await expect(client.completeChat(completion)).resolves.toMatchObject({ content: "complete" })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    fetchMock.mockReset().mockResolvedValue(new Response("not JSON"))
+    await expect(client.completeChat(completion)).rejects.toThrow(SyntaxError)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("bounds transient HTTP retries", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => new Response("busy", { status: 429 }))
+    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock })
+    await expect(client.completeChat(completion)).rejects.toThrow("HTTP 429")
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it.each(["rerank", "chat", "embed"] as const)("rejects pre-cancelled %s without a request", async (operation) => {
+    const reason = new DOMException("Caller cancelled", "AbortError")
+    const fetchMock = vi.fn<typeof fetch>()
+    const client = new OpenRouterRetrievalClient({
+      apiKey: "fixture-key",
+      fetch: fetchMock,
+      signal: AbortSignal.abort(reason)
+    })
+    const operations = {
+      rerank: () => client.rerank("search_bills", "policy", [{ id: "one", text: "source" }]),
+      embed: () => client.embed("bill", ["policy"]),
+      chat: () => client.completeChat(completion)
+    }
+    await expect(operations[operation]()).rejects.toBe(reason)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("propagates caller cancellation into an active request", async () => {
+    const controller = new AbortController()
+    const reason = new DOMException("Caller cancelled", "AbortError")
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (_url, options) => {
+      const signal = options?.signal
+      invariant(signal)
+      return await new Promise<Response>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true })
+      })
+    })
+    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock, signal: controller.signal })
+    const result = client.completeChat(completion)
+    controller.abort(reason)
+    await expect(result).rejects.toBe(reason)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("stops during retry backoff without another provider request", async () => {
+    const controller = new AbortController()
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => {
+      setTimeout(() => controller.abort(), 20)
+      return new Response("busy", { status: 503 })
+    })
+    const client = new OpenRouterRetrievalClient({ apiKey: "fixture-key", fetch: fetchMock, signal: controller.signal })
+    await expect(client.completeChat(completion)).rejects.toMatchObject({ name: "AbortError" })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

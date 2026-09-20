@@ -12519,6 +12519,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "supporting_materials_title_search_gin_idx": {
+          "name": "supporting_materials_title_search_gin_idx",
+          "columns": [
+            {
+              "expression": "to_tsvector('english', \"title\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
         }
       },
       "foreignKeys": {

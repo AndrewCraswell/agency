@@ -19,6 +19,8 @@ rather than rejecting legitimate undiscovered documents.
 The index accepts structured metadata, not IDs embedded in prose. It is bounded to 1,600 entries and 180,000 serialized
 bytes; exceeding either limit produces a reported `result_limit` failure instead of silently dropping selections.
 Evidence, result-store records and successful research-memory observations keep canonical IDs.
+Consumed fragment and citation-only continuations are retired after successful delivery; independent record and child
+continuations remain available. Catalog transport continuations are registered without indexing catalog example IDs.
 
 ## Bounded recovery
 
@@ -31,10 +33,11 @@ Selection failures remain failures with their original category and reference. T
   bill and any version filter. Choices are not automatic corrections; an ambiguous intended source requires resolution.
 - A scoped document-resolution or bill-document metadata read when no safe choice is available.
 
-Further selection failures direct the model to finish with supported findings and an explicit limitation. Recovery
-does not execute another request automatically. Every model-issued attempt, including rejected selections, consumes
-the existing research-call budget. The answer-only final step remains unchanged. Empty or heading-only text is not
-evidence that legal duties are absent.
+Further selection failures offer guidance to finish with supported findings and an explicit limitation; this is not
+a tool-call or step cutoff. Recovery does not execute another request automatically. Research has no fixed call or
+step budget and no forced answer-only final step. Explicit cancellation and provider or dependency failures remain
+visible outcomes. Findings must distinguish completed reads from failed or unread coverage. Empty or heading-only
+text is not evidence that legal duties are absent.
 
 ## Payload limits and measurements
 
@@ -47,21 +50,49 @@ byte-safe pagination.
 Oversized candidates are halved in memory until a complete page fits; this makes no additional dependency requests.
 Sizing previews do not retain result snapshots, consume citation references or publish presentation content.
 All omitted records/positions remain accessible through the existing bound continuations, with vote snapshot
-validation unchanged. An indivisible oversized record or position remains a reported, non-retryable core error.
-Unpaginated detail contracts still require explicit narrower reads; the paginator does not invent new tool inputs.
+validation unchanged. Indivisible sections continue through Unicode-character text windows with their original
+identity, provenance and explicit text offsets. Other indivisible records, positions or attribution use lossless
+`partialResult` JSON fragments, capped at 10,000 UTF-16 units and reduced further for either byte budget. Surrogate
+pairs are never split. Every research tool accepts a bound transport `cursor`, including singleton reads; that cursor
+is consumed by transport rather than passed to singleton query implementations.
 `get_person`, `get_organization` and `get_event` use that same budget check to shorten inline relationship previews,
 down to identity-only when necessary. One shared helper handles arrays and nested item pages. Identity, provenance
 and warnings remain intact. Root and collection truncation flags distinguish unread relationships from absence.
 Their `continuations` name existing tools and first-page inputs; read each full collection from the beginning, then
-follow that tool's cursors. Nested preview cursors are not exposed as collection continuations. The ID-only contracts
-are unchanged. Oversized identity/context still fails explicitly, with recovery pointing to supported collection
-reads rather than unsupported limits.
+follow that tool's cursors. Nested preview cursors are not exposed as collection continuations. Singleton query
+contracts remain ID-only; oversized identity and context are retained in transport fragments rather than discarded.
 
 Supporting-material links are a count-bounded service preview with a complete `material-links` collection read.
 Research output sizes that preview jointly with the current section page: links can be omitted while retaining at
 least one section, or an empty terminal section collection. `nextCursor` continues sections; `continuations.links`
 starts the independent link collection. A short link preview never means that all links were read. One indivisible
-section still fails explicitly, with recovery pointing to `material-sections` and its section/text-offset inputs.
+section continues through bounded text windows, using the same offset conventions as `material-sections`.
+
+The model follows `data.nextCursor` with unchanged inputs. JSON fragments carry a source tool, snapshot digest,
+UTF-16 offsets and total length; concatenate them in order and parse only after the terminal fragment. The app
+independently validates and reconstructs them within the research run. Until then `assembly.status` is `pending`,
+no complete evidence or result cards are published, and activity displays “Partial record.” Completed reconstruction
+registers stable citations and projects result cards; model data remains the finite transport fragment, not an
+unbounded copy of the reconstructed JSON. The activity distinguishes “Record assembled” from unread citation pages.
+
+If reconstructed citation enrichment does not fit one model response, `evidencePage.nextCursor` retrieves bounded
+citation packets through the same tool with unchanged inputs and no extra dependency request. This continuation is
+independent of the source record's `data.nextCursor`. `evidencePage.partial` and “More evidence available” keep unread
+evidence explicit. Run-local fragment and citation buffers share the existing tool-instance lifetime and are not
+restored as previous-turn continuations. No call or step budget truncates these continuations. If explicit
+cancellation, a provider or dependency failure, or an unfinished read prevents completion, report unread coverage
+rather than claiming the record was fully reviewed.
+Oversized analytics keeps the original rows and execution receipt in the tool-instance/run lifetime until its final
+transport page. Reexecuting each fragment would change receipt timestamps and invalidate its snapshot. New first-page
+queries still execute normally; completing transport releases the retained analytics snapshot.
+
+The existing result store drains transport fragments inside one logical UI page load before projecting records,
+then resumes its ordinary record/upstream cursor. It retains the existing session ownership, cancellation and
+persistence lifetimes. Citation titles, version labels, locators and card labels are bounded display projections;
+full metadata remains retrievable in the raw fragments and source identity hashing retains the full bill title.
+Oversized source URLs are not clipped into invalid links: display citations explicitly set `sourceUrlOmitted`,
+while exact provenance remains in source JSON.
+
 The final serialization is also guarded. Rejected enrichment is not turned into a successful empty result, stripped
 of provenance, or retried automatically. No successful memory observation or presentation content is published for
 an oversized projection. A `result_limit` error offers an explicit `narrow` recovery: restart without a cursor at
@@ -84,8 +115,8 @@ credentials, reasoning, guessed token usage or estimated billing belongs in this
 
 `describe_analytics` uses the service's static catalog through the same shared schema and analytics telemetry wrapper,
 without opening a read-only research database transaction. It retains conversation admission and cancellation checks;
-catalog field descriptions and examples remain model-visible schema data, not evidence, presentation content, selection
-registrations or research-memory observations. `analyze_legislation` retains actual rows and receipts and still executes
+catalog field descriptions and examples remain model-visible schema data, not evidence, presentation content, document
+selections or research-memory observations. Its transport continuations remain usable. `analyze_legislation` retains actual rows and receipts and still executes
 through the read-only runtime. Runtime deadline and recognized database failures
 retain explicit timeout/unavailability categories. An unknown historical failure remains `internal`, not an inferred
 SQLSTATE or a claim that records do not exist.

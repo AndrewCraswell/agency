@@ -1,7 +1,9 @@
 packages:
   - "apps/legislation-web"
   - "packages/legislation-core"
+  - "packages/legislation-diffing"
   - "packages/oxlint-config"
+  - "packages/storybook-config"
   - "packages/typescript-config"
 
 # Keep lockfile-affecting configuration identical to the repository while using

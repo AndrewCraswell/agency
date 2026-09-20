@@ -39,35 +39,39 @@ function errorText(error: unknown) {
 
 async function exportConversation(page: Page) {
   const textbox = page.getByRole("textbox", { name: "Your question", exact: true })
+  const code = page
+    .getByRole("region", { name: "Conversation export", exact: true })
+    .getByLabel("Conversation export JSON", { exact: true })
+  const previous = (await code.count()) ? await code.textContent() : null
   await textbox.fill("/export")
-  const [download] = await Promise.all([
-    page.waitForEvent("download", { timeout: 15_000 }),
-    page.getByRole("button", { name: "Send question", exact: true }).click()
-  ])
-  const stream = await download.createReadStream()
-  if (!stream) {
-    throw new Error("The conversation export download is unavailable.")
+  await page.getByRole("button", { name: "Send question", exact: true }).click()
+  await code.waitFor({ timeout: 15_000 })
+  if (previous !== null) {
+    await page.waitForFunction(
+      (old) => document.querySelector("[data-conversation-export] code")?.textContent !== old,
+      previous,
+      { timeout: 15_000 }
+    )
   }
-  const chunks: Buffer[] = []
-  let size = 0
-  for await (const chunk of stream) {
-    const value: unknown = chunk
-    if (!Buffer.isBuffer(value)) {
-      throw new Error("Unexpected conversation export stream content.")
-    }
-    size += value.length
-    if (size > 10_000_000) {
-      stream.destroy()
-      throw new Error("Conversation export exceeds the driver read limit; nothing was truncated.")
-    }
-    chunks.push(value)
+  const json = await code.textContent()
+  if (!json) {
+    throw new Error("The conversation export is empty.")
   }
-  return snapshotSchema.parse(redactCredentials(JSON.parse(Buffer.concat(chunks).toString("utf8"))))
+  if (Buffer.byteLength(json, "utf8") > 10_000_000) {
+    throw new Error("Conversation export exceeds the driver read limit; nothing was truncated.")
+  }
+  return snapshotSchema.parse(redactCredentials(JSON.parse(json)))
 }
 
 async function visibleConversation(page: Page): Promise<VisibleConversation> {
   const conversation = page.getByRole("log", { name: "Conversation", exact: true })
-  const transcript = await conversation.innerText()
+  const transcript = (
+    await conversation
+      .locator(
+        'article[aria-label="Your question"], article[aria-label="Rostra response"], [role="alert"], form[aria-label="Clarification"]'
+      )
+      .allInnerTexts()
+  ).join("\n\n")
   const form = page.getByRole("form", { name: "Clarification", exact: true })
   let clarification: VisibleConversation["clarification"] = null
   if (await form.isVisible()) {

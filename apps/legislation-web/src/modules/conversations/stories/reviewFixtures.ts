@@ -41,7 +41,6 @@ const failures: Record<ResearchFailureCode, true> = {
   not_found: true,
   forbidden: true,
   invalid_response: true,
-  step_limit: true,
   interrupted: true,
   internal: true
 }

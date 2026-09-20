@@ -40,5 +40,5 @@ App-relative imports are extensionless. Shared-core imports use the existing `@r
 exports so NodeNext consumers and Turbopack resolve the same TypeScript sources. Relative `.js` specifiers have no
 emitted file here; Turbopack does not support Webpack's `.js` extension alias.
 
-See [Storybook](storybook.md) for the component workshop infrastructure and
+See [Storybook](../operations/testing.md) for the component workshop infrastructure and
 [testing](../operations/testing.md) for verification commands and ownership.

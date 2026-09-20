@@ -324,7 +324,7 @@ head comparisons, same-date correction rejection, revoked rights, real-source da
 Fault injection at outbox insertion tests rollback after a head write, both for an outbox failure and mid-transaction
 lease expiry. A damaged raw file is rejected before registration. A 206-record hierarchy crosses transaction boundaries.
 
-Actual pilot counts, timings, reports and final verification are recorded in [implementation progress](implementation-progress.md).
+Pilot counts, timings, reports, and final verification belong with the corresponding run rather than this contract.
 The earlier eCFR focused run passed all 18 checks, and root `pnpm verify` passed. That retained pilot contains 40,441
 canonical eCFR members with zero comparison mismatches; its 431 annual CFR/FR staging rows remain unchanged. The later
 separate FR pilot described above has 63 canonical publications, and the expanded focused run passed 23 checks.

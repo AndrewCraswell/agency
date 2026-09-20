@@ -749,8 +749,8 @@ describe("createCompositionStream", () => {
     )
   })
 
-  it.each(["step_limit", "result_limit", "timeout", "interrupted"])(
-    "distinguishes explicit call exhaustion from %s per-tool failure",
+  it.each(["result_limit", "timeout", "interrupted"])(
+    "does not treat %s per-tool failure as research exhaustion",
     async (failureCode) => {
       const chunks = await collect(
         createCompositionStream(
@@ -791,7 +791,7 @@ describe("createCompositionStream", () => {
         expect.objectContaining({
           type: "data-response-outcome",
           data: expect.objectContaining({
-            status: failureCode === "step_limit" ? "exhausted" : "failed",
+            status: "failed",
             hasAnswer: false,
             finishReason: "stop"
           })

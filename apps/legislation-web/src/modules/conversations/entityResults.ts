@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { displayText } from "./displayText"
 import { humanReadableUrl, sourceUrlSchema } from "./evidence"
 import { sessionLabel } from "./sessionLabels"
 
@@ -233,7 +234,10 @@ const pageSchema = z.object({
 
 function text(record: Record<string, unknown>, key: string) {
   const value = record[key]
-  return typeof value === "string" && value.trim() ? value : undefined
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined
+  }
+  return key === "id" || key.endsWith("Id") || key.endsWith("Url") ? value : displayText(value)
 }
 
 function chamberLabel(record: Record<string, unknown>) {
@@ -271,13 +275,18 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
   if (!id || !title) {
     return undefined
   }
-  const source = sourceUrlSchema.safeParse(record.sourceUrl ?? record.websiteUrl)
+  const source = sourceUrlSchema.pipe(z.string().max(8192)).safeParse(record.sourceUrl ?? record.websiteUrl)
   const fields: EntityCard["fields"] = []
   const metadata: string[] = []
   let membershipCompleteness: NonNullable<EntityCard["organizationSummary"]>["membershipCompleteness"] = "unknown"
   const addText = (id: EntityFactId, value: string | undefined, detail?: string) => {
     if (value) {
-      fields.push({ id, label: entityFactLabels[id], value, detail })
+      fields.push({
+        id,
+        label: entityFactLabels[id],
+        value: displayText(value),
+        detail: detail ? displayText(detail) : detail
+      })
     }
   }
   const addDate = (id: EntityFactId, value: unknown) => {

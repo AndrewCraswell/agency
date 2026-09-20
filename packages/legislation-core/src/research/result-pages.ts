@@ -7,13 +7,33 @@ type JSONValue = z.infer<ReturnType<typeof z.json>>
 export type ResultPageMeasurement = (data: JSONValue) => number
 
 export const researchResultByteLimit = 180000
+export const researchResultFragmentSchema = z.object({
+  partialResult: z.strictObject({
+    sourceTool: z.string(),
+    snapshot: z.string(),
+    format: z.literal("json"),
+    offsetUnit: z.literal("utf16"),
+    text: z.string().min(1),
+    textOffset: z.number().int().nonnegative(),
+    nextTextOffset: z.number().int().positive().nullable(),
+    totalCharacters: z.number().int().positive()
+  }),
+  nextCursor: z.string().nullable()
+})
 const prefix = "research-page:"
 const scopedPrefix = "research-cursor:"
+const fragmentSchema = z.strictObject({
+  format: z.enum(["section-text", "json"]),
+  textOffset: z.number().int().nonnegative(),
+  correlationId: z.string().min(1).max(256).optional()
+})
+type ResultFragment = z.infer<typeof fragmentSchema>
 const cursorSchema = z.object({
   binding: z.string(),
-  offset: z.number().int().min(1).max(1000000),
+  offset: z.number().int().min(0).max(1000000),
   upstream: z.string().optional(),
-  snapshot: z.string().optional()
+  snapshot: z.string().optional(),
+  fragment: fragmentSchema.optional()
 })
 
 function binding(name: string, input: Readonly<Record<string, unknown>>) {
@@ -57,10 +77,15 @@ function readContentPage(name: string, input: Readonly<Record<string, unknown>>)
   }
   try {
     const parsed = cursorSchema.parse(JSON.parse(Buffer.from(cursor.slice(prefix.length), "base64url").toString()))
-    if (parsed.binding !== binding(name, input)) {
+    if (parsed.binding !== binding(name, input) || (parsed.offset === 0 && !parsed.fragment)) {
       throw new Error("Selection mismatch")
     }
-    return { input: { ...input, cursor: parsed.upstream }, offset: parsed.offset, snapshot: parsed.snapshot }
+    return {
+      input: { ...input, cursor: parsed.upstream },
+      offset: parsed.offset,
+      snapshot: parsed.snapshot,
+      fragment: parsed.fragment
+    }
   } catch {
     throw new LegislationError("invalid_request", "Invalid result cursor. Keep the original tool inputs and limits.")
   }
@@ -104,7 +129,7 @@ function selectResultPage(
   length: number,
   candidate: (end: number) => JSONValue,
   fits: (page: JSONValue) => boolean,
-  message: string,
+  partial: (page: JSONValue) => JSONValue,
   minimum = 1
 ) {
   // Halve only the in-memory page, not the query. Omitted units remain behind the continuation.
@@ -113,7 +138,144 @@ function selectResultPage(
     if (fits(page)) return page
     if (end === offset + minimum) break
   }
-  throw new LegislationError("payload_too_large", message, { details: { retryable: false } })
+  return partial(candidate(Math.min(length, offset + minimum)))
+}
+
+function resultSnapshot(value: JSONValue) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("base64url")
+}
+
+function apiCorrelationId(value: JSONValue): string | undefined {
+  return isRecord(value) &&
+    "data" in value &&
+    "links" in value &&
+    isRecord(value.meta) &&
+    typeof value.meta.correlationId === "string"
+    ? value.meta.correlationId
+    : undefined
+}
+
+function preparePartialResult(
+  name: string,
+  input: Readonly<Record<string, unknown>>,
+  data: JSONValue,
+  offset: number,
+  snapshot: string,
+  measureResult?: ResultPageMeasurement,
+  fragment?: ResultFragment
+): JSONValue {
+  const nextCursor = isRecord(data) ? (data.nextCursor ?? null) : null
+  const correlationId = apiCorrelationId(data)
+  const cursor = (format: ResultFragment["format"], textOffset: number) =>
+    `${prefix}${Buffer.from(
+      JSON.stringify({
+        binding: binding(name, input),
+        offset,
+        upstream: input.cursor,
+        snapshot,
+        fragment: { format, textOffset, ...(correlationId === undefined ? {} : { correlationId }) }
+      })
+    ).toString("base64url")}`
+  const fits = (page: JSONValue) => resultPageFits(name, input, page, measureResult)
+  const collection = isRecord(data) && Array.isArray(data.sections) ? "sections" : "items"
+  const records = isRecord(data) ? data[collection] : undefined
+  const record = Array.isArray(records) && records.length === 1 ? records[0] : undefined
+  const isSection =
+    collection === "sections" ||
+    name === "get_document_sections" ||
+    (name === "read_record_collection" &&
+      (input.collection === "document-sections" || input.collection === "material-sections"))
+  if (
+    fragment?.format !== "json" &&
+    isSection &&
+    isRecord(data) &&
+    isRecord(record) &&
+    typeof record.text === "string"
+  ) {
+    // Collection-reader offsets count Unicode characters, like PostgreSQL substring, not UTF-16 units.
+    const characters = Array.from(record.text)
+    const start = fragment?.textOffset ?? 0
+    const base = typeof record.textOffset === "number" ? record.textOffset : 0
+    if (start >= characters.length && fragment) {
+      throw new LegislationError("invalid_request", "The section continuation is outside this text window.")
+    }
+    for (let length = Math.min(10000, characters.length - start); length > 0; length = Math.floor(length / 2)) {
+      const end = start + length
+      const hasRemaining = end < characters.length
+      const page = {
+        ...data,
+        [collection]: [
+          {
+            ...record,
+            text: characters.slice(start, end).join(""),
+            textOffset: base + start,
+            totalCharacters: record.totalCharacters ?? base + characters.length,
+            nextTextOffset: hasRemaining ? base + end : (record.nextTextOffset ?? null),
+            textTruncated: hasRemaining || record.textTruncated === true || typeof record.nextTextOffset === "number"
+          }
+        ],
+        partial: true,
+        truncated: true,
+        nextCursor: hasRemaining ? cursor("section-text", end) : nextCursor
+      }
+      if (fits(page)) return page
+    }
+  }
+  // Indivisible metadata/provenance is still evidence. Encode the whole minimum page, including its
+  // original identities and scoped continuations, rather than silently deleting or clipping any field.
+  const text = JSON.stringify(wrapResultCursors(name, input, data))
+  const contentSnapshot = createHash("sha256").update(text).digest("base64url")
+  const continuations: { end: number; value: { [key: string]: JSONValue } }[] = []
+  const seen = new Set<string>()
+  function retainContinuations(value: JSONValue) {
+    if (Array.isArray(value)) {
+      value.forEach(retainContinuations)
+    } else if (isRecord(value)) {
+      for (const [key, item] of Object.entries(value)) {
+        if ((key === "nextCursor" || key === "nextChildCursor") && typeof item === "string") {
+          const encoded = JSON.stringify(scopedCursor(name, input, key, item))
+          if (!seen.has(encoded)) {
+            seen.add(encoded)
+            continuations.push({ end: text.indexOf(encoded) + encoded.length, value: { [key]: item } })
+          }
+        } else {
+          retainContinuations(item)
+        }
+      }
+    }
+  }
+  retainContinuations(data)
+  const start = fragment?.format === "json" ? fragment.textOffset : 0
+  if (start >= text.length) {
+    throw new LegislationError("invalid_request", "The result continuation is outside this content.")
+  }
+  for (let length = Math.min(10000, text.length - start); length > 0; length = Math.floor(length / 2)) {
+    let end = start + length
+    if (/[\uD800-\uDBFF]/.test(text[end - 1] ?? "") && /[\uDC00-\uDFFF]/.test(text[end] ?? "")) end++
+    const hasRemaining = end < text.length
+    const page = {
+      partial: true,
+      truncated: true,
+      partialResult: {
+        sourceTool: name,
+        snapshot: contentSnapshot,
+        format: "json",
+        offsetUnit: "utf16",
+        text: text.slice(start, end),
+        textOffset: start,
+        nextTextOffset: hasRemaining ? end : null,
+        totalCharacters: text.length
+      },
+      // Expose tokens as data too, so selection guards can register even nested continuations without
+      // interpreting incomplete JSON. The complete reconstructed page retains their original paths.
+      continuations: continuations.filter((item) => item.end > start && item.end <= end).map((item) => item.value),
+      nextCursor: hasRemaining ? cursor("json", end) : nextCursor
+    }
+    if (fits(page)) return page
+  }
+  throw new LegislationError("payload_too_large", "The response envelope exceeds the budget even without evidence.", {
+    details: { retryable: false }
+  })
 }
 
 function detailPreview(name: string, data: { [key: string]: JSONValue }) {
@@ -196,12 +358,10 @@ function prepareVotePage(
   data: JSONValue,
   offset: number,
   expectedSnapshot?: string,
-  measureResult?: ResultPageMeasurement
+  measureResult?: ResultPageMeasurement,
+  fragment?: ResultFragment
 ): JSONValue {
-  if (!isRecord(data)) return data
-  const records = name === "get_vote" ? [data] : data.items
-  if (!Array.isArray(records)) return data
-  const snapshot = createHash("sha256").update(JSON.stringify(data)).digest("base64url")
+  const snapshot = resultSnapshot(data)
   if (
     (offset > 0 && expectedSnapshot === undefined) ||
     (expectedSnapshot !== undefined && expectedSnapshot !== snapshot)
@@ -211,7 +371,12 @@ function prepareVotePage(
   function fits(value: JSONValue) {
     return resultPageFits(name, input, value, measureResult)
   }
-  if (offset === 0 && fits(data)) return data
+  const partial = (page: JSONValue) =>
+    preparePartialResult(name, input, page, offset, snapshot, measureResult, fragment)
+  if (!isRecord(data)) return !fragment && fits(data) ? data : partial(data)
+  const records = name === "get_vote" ? [data] : data.items
+  if (!Array.isArray(records)) return !fragment && fits(data) ? data : partial(data)
+  if (!fragment && offset === 0 && fits(data)) return data
   const units = records.flatMap((record, recordIndex) => {
     const detail = name === "get_votes" && isRecord(record) ? record.data : record
     if (isRecord(detail) && Array.isArray(detail.positions) && detail.positions.length > 0) {
@@ -274,13 +439,8 @@ function prepareVotePage(
           truncated: hasRemaining || positionsIncomplete || data.truncated === true
         }
   }
-  return selectResultPage(
-    offset,
-    units.length,
-    candidate,
-    fits,
-    "One vote position or its attribution exceeds the response budget."
-  )
+  if (fragment) return partial(candidate(Math.min(units.length, offset + 1)))
+  return selectResultPage(offset, units.length, candidate, fits, partial)
 }
 
 function prepareContentPage(
@@ -289,10 +449,11 @@ function prepareContentPage(
   value: JSONValue,
   offset: number,
   snapshot?: string,
-  measureResult?: ResultPageMeasurement
+  measureResult?: ResultPageMeasurement,
+  fragment?: ResultFragment
 ): JSONValue {
   if (["get_bill_votes", "get_vote", "get_votes"].includes(name)) {
-    return prepareVotePage(name, input, value, offset, snapshot, measureResult)
+    return prepareVotePage(name, input, value, offset, snapshot, measureResult, fragment)
   }
   const data = projectDiscoveryRecord(value, name !== "get_bill_text")
   const collection =
@@ -301,31 +462,27 @@ function prepareContentPage(
       : name === "get_bill_timeline"
         ? "events"
         : "items"
-  if (data === null || typeof data !== "object" || Array.isArray(data)) {
-    return data
-  }
-  const preview = detailPreview(name, data)
   function fits(value: JSONValue) {
     return resultPageFits(name, input, value, measureResult)
   }
+  const partial = (page: JSONValue) =>
+    preparePartialResult(name, input, page, offset, resultSnapshot(value), measureResult, fragment)
+  if (!isRecord(data)) return !fragment && fits(data) ? data : partial(data)
+  const preview = detailPreview(name, data)
   const records = data[collection]
   if (!Array.isArray(records)) {
+    if (fragment) return partial(preview ? preview.candidate(0) : data)
     return preview
-      ? selectResultPage(
-          0,
-          preview.length,
-          preview.candidate,
-          fits,
-          "The record identity or its context exceeds the response budget. Read its relationships with the collection tools instead.",
-          0
-        )
-      : data
+      ? selectResultPage(0, preview.length, preview.candidate, fits, partial, 0)
+      : fits(data)
+        ? data
+        : partial(data)
   }
   if (offset > 0 && offset >= records.length) {
     throw new LegislationError("invalid_request", "The result page changed. Start the search again.")
   }
   const complete = preview ? preview.candidate(preview.length) : data
-  if (offset === 0 && fits(complete)) {
+  if (!fragment && offset === 0 && fits(complete)) {
     return complete
   }
   const candidate = (count: number) => {
@@ -345,12 +502,13 @@ function prepareContentPage(
       ...(hasRemaining ? { nextCursor: cursor, truncated: true } : {})
     }
   }
+  if (fragment) return partial(candidate(preview ? 0 : 1))
   return selectResultPage(
     0,
     Math.max(records.length - offset, preview?.length ?? 0),
     candidate,
     fits,
-    "One result or its attribution exceeds the response budget. Read selected source passages instead.",
+    partial,
     preview ? 0 : 1
   )
 }
@@ -361,9 +519,23 @@ export function prepareResultPage(
   value: JSONValue,
   offset: number,
   snapshot?: string,
-  measureResult?: ResultPageMeasurement
+  measureResult?: ResultPageMeasurement,
+  fragment?: ResultFragment
 ): JSONValue {
-  const page = prepareContentPage(name, input, value, offset, snapshot, measureResult)
+  let content = value
+  if (
+    fragment?.correlationId !== undefined &&
+    apiCorrelationId(value) !== undefined &&
+    isRecord(value) &&
+    isRecord(value.meta)
+  ) {
+    // Keep the first response's diagnostics while still detecting changes to every source field.
+    content = { ...value, meta: { ...value.meta, correlationId: fragment.correlationId } }
+  }
+  if (fragment && snapshot !== resultSnapshot(content)) {
+    throw new LegislationError("invalid_request", "The result content changed. Start the request again.")
+  }
+  const page = prepareContentPage(name, input, content, offset, snapshot, measureResult, fragment)
   return wrapResultCursors(name, input, page)
 }
 
@@ -374,14 +546,20 @@ function wrapResultCursors(name: string, input: Readonly<Record<string, unknown>
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => {
         if ((key === "nextCursor" || key === "nextChildCursor") && typeof item === "string") {
-          return [
-            key,
-            `${scopedPrefix}${Buffer.from(JSON.stringify({ binding: binding(name, input), upstream: item, field: key === "nextCursor" ? "cursor" : "childCursor" })).toString("base64url")}`
-          ]
+          return [key, scopedCursor(name, input, key, item)]
         }
         return [key, wrap(item)]
       })
     )
   }
   return wrap(value)
+}
+
+function scopedCursor(
+  name: string,
+  input: Readonly<Record<string, unknown>>,
+  key: "nextCursor" | "nextChildCursor",
+  upstream: string
+) {
+  return `${scopedPrefix}${Buffer.from(JSON.stringify({ binding: binding(name, input), upstream, field: key === "nextCursor" ? "cursor" : "childCursor" })).toString("base64url")}`
 }

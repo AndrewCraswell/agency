@@ -57,5 +57,5 @@ read pool follows the existing snapshot-persistence pattern, with a five-second 
 deadline compatible with transaction poolers. There are no database writes or new ingestion sources.
 
 Production rollout, saved addresses, historical district resolution, and MCP location tools are not
-part of this diagnostic. The [identity roadmap](../engineering/identity-and-representative-roadmap.md)
+part of this diagnostic. The [identity roadmap](../../../../packages/legislation-core/docs/engineering/identity.md)
 retains those separate acceptance gates.

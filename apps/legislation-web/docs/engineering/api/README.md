@@ -4,16 +4,16 @@
 
 This is the approved public and first-party application contract. The approved runtime is the Next.js 16 App Router
 application in `apps/legislation-web`, with one explicit `route.ts` for every documented HTTP operation under
-`apps/legislation-web/src/app/api`. Current acceptance is tracked in [API closeout](../../operations/passage-search-delivery.md).
+`apps/legislation-web/src/app/api`. The focused pages below define behavior; Linear and the target environment own
+delivery status and acceptance evidence.
 
 The implemented route inventory contains 86 operations: 81 existing legislative operations plus five organization-gated
 regulatory reads: [codes](../../regulations/legal-code-discovery.md), [editions and provisions](../../regulations/legal-edition-browsing.md),
 and [version text](../../regulations/legal-text-serving.md), plus [lexical search](../../regulations/legal-search-serving.md).
 These regulatory slices are locally implemented;
-deployed acceptance remains open, and their MCP tools are opt-in. Calendar, meeting-outcome and representative-lookup operations are removed.
-Authentication and API-backed MCP are implemented. The latest recorded acceptance and remaining passage-search gate are
-in [API closeout](../../operations/passage-search-delivery.md#september-14-scope-and-acceptance). This contract defines behavior;
-source presence and earlier endpoint smoke do not imply complete corpus coverage or close later search failures.
+deployed acceptance remains open, and their MCP tools are opt-in. Calendar, meeting-outcome and representative-lookup
+operations are removed. Authentication and API-backed MCP are implemented. Source presence and earlier endpoint smoke
+do not imply complete corpus coverage or close later search failures.
 
 The standalone server path is retained for testing; the former Railway `legislation-api` service is deleted and is not
 a rollback target. The application, public API and MCP adapter share canonical application-service behavior and source

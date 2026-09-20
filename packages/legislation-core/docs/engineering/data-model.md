@@ -56,7 +56,8 @@ explicit collision error instead of silently overwriting each other.
 
 The planned expansion from source people to durable officials, offices, service intervals, districts, aliases, external
 identifiers, extracted mentions, and canonical links is specified in the
-[C identity contract](identity.md) and [W roadmap](../../../../apps/legislation-web/docs/engineering/identity-and-representative-roadmap.md). Those records will remain in the
+[C identity contract](identity.md); [I's source policy](../../../../apps/legislation-ingestion/docs/engineering/identity-sources.md)
+defines acquisition authority. Those records will remain in the
 `legislation` schema because they are part of the same transactional civic graph; embeddings also remain in that schema
 as derived indexes with foreign keys to their canonical source rows.
 

@@ -13,7 +13,8 @@ status; status, bill, jurisdiction, session and dates remain canonical parent pr
 Synchronous database triggers copy the actual stored section vector after the heading/text vector trigger. Insertion,
 replacement, section moves, title/classification changes and cascading deletes maintain the projection in the same
 transaction. Section maintenance takes parent share locks; parent writers hold write locks. Deadlocks abort for normal
-transaction retry, never silently skip maintenance. [W query behavior](../../../../apps/legislation-web/docs/engineering/amendment-search-projection.md)
+transaction retry, never silently skip maintenance.
+[W query behavior](../../../../apps/legislation-web/docs/engineering/api/search-and-diffs.md)
 defines matching/ranking; the schema does not impose an arbitrary candidate cap.
 
 ## Legal lexical and vector identity

@@ -49,8 +49,8 @@ docker build -f apps/legislation-web/Dockerfile -t legislation-web:local .
 
 From W, `pnpm docker:build` runs the same root-context build for local service work. The recorded Railway service is
 named `legislation-web`; its Next.js deployment configuration and historical release evidence are recorded in
-[the runtime guide](docs/operations/development.md) and [API acceptance](docs/operations/passage-search-delivery.md).
-The former standalone `legislation-api` service was deleted and must not be recreated as a rollback target. Database
+[the runtime guide](docs/operations/development.md) and [API acceptance](docs/engineering/api/search-and-diffs.md). The
+former standalone `legislation-api` service was deleted and must not be recreated as a rollback target. Database
 migrations live once in C and are released explicitly through `pnpm --filter legislation-web db:migrate`; no W, I or M
 startup applies them. Separate runtime ownership is not evidence of a completed deployment cutover or live acceptance.
 
@@ -58,7 +58,7 @@ startup applies them. Separate runtime ownership is not evidence of a completed 
 
 Standalone calendar, meeting-outcome and representative-lookup API operations were removed from the public contract.
 Address-lookup mockups do not imply an available API or activated provider. See the
-[product backlog](docs/backlog/backlog.md) and [current API acceptance](docs/operations/passage-search-delivery.md).
+[product backlog](docs/product/product-spec.md) and [current API acceptance](docs/engineering/api/search-and-diffs.md).
 
 A separate [development representative diagnostic](docs/operations/representative-lookup.md) is available at
 `/dev/representatives` with Geocodio credentials. It uses browser location with permission and matches returned

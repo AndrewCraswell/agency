@@ -60,7 +60,7 @@ boundary is not deployed WorkOS/standalone acceptance. Evidence remains at its r
 `artifacts/regulatory-backfills/fr-jan18-legal-text-mcp.json` in the former combined checkout.
 
 Real consent, delegated credential provisioning, revocation, deployed text and composed multi-call acceptance remain
-gates in [M authentication](../operations/authentication.md) and [W API tasks](../../../legislation-web/docs/regulations/api-mcp-production-tasks.md).
+gates in [M authentication](../operations/authentication.md) and [W API tasks](../../../legislation-web/docs/regulations/api-mcp-contract.md).
 
 ## Retained search pilot evidence
 

@@ -25,6 +25,49 @@ describe("OpenRouter embedding client", () => {
     await embeddingTokenizer(EMBEDDING_ROUTES.bill.model)
   }, 30_000)
 
+  it("rejects an already-cancelled embedding request before tokenization or HTTP", async () => {
+    const reason = new DOMException("Caller cancelled", "AbortError")
+    const fetchMock = vi.fn<typeof fetch>()
+    const client = new OpenRouterEmbeddingClient({
+      apiKey: "fixture",
+      fetch: fetchMock,
+      signal: AbortSignal.abort(reason)
+    })
+    await expect(client.embed(["source"])).rejects.toBe(reason)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it.each([0, -1, Infinity, 11])("rejects an unbounded or invalid attempt count %s", (maximumAttempts) => {
+    expect(() => new OpenRouterEmbeddingClient({ apiKey: "fixture", maximumAttempts })).toThrow()
+  })
+
+  it("propagates caller cancellation to fetch without retrying it", async () => {
+    const controller = new AbortController()
+    const reason = new DOMException("Caller cancelled", "AbortError")
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (_url, options) => {
+      controller.abort(reason)
+      options?.signal?.throwIfAborted()
+      return successfulResponse()
+    })
+    const client = new OpenRouterEmbeddingClient({ apiKey: "fixture", fetch: fetchMock, signal: controller.signal })
+    await expect(client.embed(["source"])).rejects.toBe(reason)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true)
+    expect(client.metrics).toMatchObject({ retries: 0, failed: 1 })
+  })
+
+  it("cancels an embedding retry wait instead of starting another request", async () => {
+    const controller = new AbortController()
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => {
+      setTimeout(() => controller.abort(), 20)
+      return new Response("busy", { status: 503 })
+    })
+    const client = new OpenRouterEmbeddingClient({ apiKey: "fixture", fetch: fetchMock, signal: controller.signal })
+    await expect(client.embed(["source"])).rejects.toMatchObject({ name: "AbortError" })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(client.metrics).toMatchObject({ failed: 1, created: 0 })
+  })
+
   it.each(["headers", "body"])("retries a deadline during %s with unchanged input", async (phase) => {
     const timeout = new DOMException("deadline", "TimeoutError")
     const timedResponse = successfulResponse()
@@ -196,7 +239,7 @@ describe("OpenRouter embedding client", () => {
     await expect(wrongDimensions.embed(["text"])).rejects.toThrow("1536-dimensional")
   })
 
-  it.each(["ENOTFOUND", "EAI_AGAIN", "ECONNRESET", "ETIMEDOUT", "UND_ERR_SOCKET"])(
+  it.each(["EAI_AGAIN", "ECONNRESET", "ETIMEDOUT", "UND_ERR_SOCKET"])(
     "retries wrapped connection failure %s with identical inputs",
     async (code) => {
       const failure = new TypeError("fetch failed", { cause: Object.assign(new Error("connection failed"), { code }) })
@@ -211,7 +254,7 @@ describe("OpenRouter embedding client", () => {
 
   it("bounds persistent DNS retries and preserves the original failure", async () => {
     const failure = new TypeError("fetch failed", {
-      cause: Object.assign(new Error("DNS unavailable"), { code: "ENOTFOUND" })
+      cause: Object.assign(new Error("DNS unavailable"), { code: "EAI_AGAIN" })
     })
     const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(failure)
     const client = new OpenRouterEmbeddingClient({ apiKey: "test", fetch: fetchMock, maximumAttempts: 2 })
@@ -220,7 +263,7 @@ describe("OpenRouter embedding client", () => {
     expect(client.metrics).toMatchObject({ retries: 1, failed: 1, created: 0 })
   })
 
-  it.each(["CERT_HAS_EXPIRED", "ERR_INVALID_URL", "UNKNOWN"])(
+  it.each(["ENOTFOUND", "CERT_HAS_EXPIRED", "ERR_INVALID_URL", "UNKNOWN"])(
     "does not retry unapproved connection code %s",
     async (code) => {
       const failure = new TypeError("fetch failed", { cause: Object.assign(new Error("connection failed"), { code }) })
@@ -238,7 +281,8 @@ describe("OpenRouter embedding client", () => {
     })
     const rejection = await client.embed(["text"]).catch((error: unknown) => error)
     expect(String(rejection)).not.toContain("super-secret")
-    expect(String(rejection)).toContain("denied")
+    expect(String(rejection)).toContain("HTTP 401")
+    expect(String(rejection)).not.toContain("denied")
     expect(client.metrics.failed).toBe(1)
   })
 })

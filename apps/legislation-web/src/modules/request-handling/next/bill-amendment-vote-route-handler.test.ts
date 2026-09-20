@@ -3,6 +3,8 @@ import type { HttpApiHandler } from "../api/http"
 
 type HandlerFactory = (...arguments_: readonly unknown[]) => HttpApiHandler
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
+type ObserveDatabaseQuery = (_input: unknown, operation: () => Promise<unknown>) => Promise<unknown>
+type TimelineRead = () => Promise<{ items: never[]; truncated: false }>
 
 const mocks = vi.hoisted(() => {
   const handler = () => vi.fn<HttpApiHandler>(async () => true)
@@ -32,6 +34,10 @@ const mocks = vi.hoisted(() => {
     ),
     documentHandler: vi.fn<HandlerFactory>(handler),
     execute: vi.fn<NextHttpApiExecutor>(),
+    observeDatabaseQuery: vi.fn<ObserveDatabaseQuery>(
+      async (_input: unknown, operation: () => Promise<unknown>) => await operation()
+    ),
+    timelineRead: vi.fn<TimelineRead>(async () => ({ items: [], truncated: false })),
     voteHandler: vi.fn<HandlerFactory>(handler),
     voteRepository: vi.fn<(...arguments_: readonly unknown[]) => string>(() => "vote-repository")
   }
@@ -51,6 +57,9 @@ vi.mock("../api/bill-text-read-routes.js", () => ({ createBillTextReadApiHandler
 vi.mock("../api/bill-timeline-read-routes.js", () => ({
   createBillTimelineReadApiHandler: mocks.billTimelineHandler
 }))
+vi.mock("../../legislation/persistence/queries/bill-timeline-read.js", () => ({
+  listBillTimeline: mocks.timelineRead
+}))
 vi.mock("../api/change-feed-routes.js", () => ({ createChangeFeedApiHandler: mocks.changeFeedHandler }))
 vi.mock("../api/document-read-routes.js", () => ({ createDocumentReadApiHandler: mocks.documentHandler }))
 vi.mock("../api/vote-read-repository.js", () => ({ createVoteReadRepository: mocks.voteRepository }))
@@ -59,6 +68,7 @@ vi.mock("../../legislation/runtime/runtime.js", () => ({
   getNextLegislationApplication: vi.fn<() => unknown>(() => ({
     config: { auth: { mode: "disabled" }, server: { publicApiBaseUrl: "https://api.example.test" } },
     database: {},
+    observeDatabaseQuery: mocks.observeDatabaseQuery,
     queryService: {}
   }))
 }))
@@ -98,6 +108,15 @@ describe("bill, amendment, and vote route handler", () => {
     expect(mocks.billTextHandler).toHaveBeenCalledWith(expect.any(Object), options)
     expect(mocks.billRelatedHandler).toHaveBeenCalledWith(expect.any(Object), options)
     expect(mocks.billTimelineHandler).toHaveBeenCalledWith(expect.any(Object), options)
+    const timelineApi = mocks.billTimelineHandler.mock.calls[0]?.[0]
+    const timelineRead = Reflect.get(timelineApi ?? {}, "listBillTimeline")
+    expect(typeof timelineRead).toBe("function")
+    await Reflect.apply(timelineRead, timelineApi, [{ billId: "bill:us:119:hr:1", limit: 5 }])
+    expect(mocks.observeDatabaseQuery).toHaveBeenCalledWith(
+      { name: "bill.timeline", pool: "canonical", revision: 1 },
+      expect.any(Function)
+    )
+    expect(mocks.timelineRead).toHaveBeenCalledWith({}, { billId: "bill:us:119:hr:1", limit: 5 })
 
     const composition = mocks.createComposite.mock.results[0]?.value
     if (typeof composition !== "function") {

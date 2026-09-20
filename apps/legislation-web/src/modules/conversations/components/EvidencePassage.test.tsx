@@ -1,11 +1,33 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen, within } from "@testing-library/react"
 import { afterEach, expect, it } from "vitest"
-import { markdownEvidenceFixture, qualifiedEvidenceFixture } from "./citationEvidenceFixtures"
+import {
+  billVersionCitationFixtures,
+  markdownEvidenceFixture,
+  qualifiedEvidenceFixture
+} from "./citationEvidenceFixtures"
 import { EvidencePanel } from "./EvidencePanel"
 import { EvidencePassage } from "./EvidencePassage"
 
 afterEach(cleanup)
+
+it.each(billVersionCitationFixtures)(
+  "preserves the projected bill heading and version in the panel: $title",
+  async (evidence) => {
+    render(
+      <EvidencePanel
+        selection={{ answerId: "bill-version-fixture", number: 1, evidence }}
+        onClose={() => undefined}
+        returnFocus={() => undefined}
+      />
+    )
+    const panel = within(await screen.findByRole("dialog", { name: "Source 1" }))
+    expect(panel.getByRole("heading", { name: evidence.title })).toBeDefined()
+    expect(panel.getByText(evidence.versionLabel!)).toBeDefined()
+    expect(panel.getByText("Section 2")).toBeDefined()
+    expect(panel.getByRole("link", { name: "Open source" }).getAttribute("href")).toBe(evidence.sourceUrl)
+  }
+)
 
 it("renders safe Markdown structure and literal code without executing source HTML", () => {
   const { container } = render(

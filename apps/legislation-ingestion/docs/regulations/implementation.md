@@ -1,8 +1,7 @@
 # Regulatory implementation specification
 
-Recorded September 14, 2026. Implementation has started with local frozen-inventory and raw-backfill tooling.
-See [implementation progress](implementation-progress.md) for actual completed scope and evidence. The remaining tables,
-routes, Trigger tasks and release gates below remain proposed until their implementation checks pass.
+This page defines the durable regulatory implementation boundaries. Active work and prioritization live in Linear;
+deployment status must be established from the target environment rather than a repository-maintained progress ledger.
 
 ## Outcome and scope
 
@@ -26,8 +25,6 @@ agency guidance/enforcement and complete bill-to-rule impact analysis are later 
 | [W search serving](../../../legislation-web/docs/regulations/legal-search-serving.md) | Query behavior, pagination and the single quality/performance promotion checklist |
 | [W HTTP API](../../../legislation-web/docs/regulations/api-mcp-contract.md) | Route inventory, selectors, HTTP auth/errors/paging and product integration |
 | [M MCP tools](../../../legislation-mcp/docs/engineering/legal-tools.md) | Tool mapping, transport budgets, same-principal API adaptation and MCP acceptance |
-| [Remaining production backlog](production-backlog.md) | Current execution order, concrete remaining ingestion/search/API/MCP/operations tasks and release gates |
-| [Original implementation phases](implementation-backlog.md) | Historical task IDs and prior implementation scope; retained as prior art |
 | [Vaquill state onboarding](state-onboarding.md) | Future feed/rights contract, adapter mapping, delta recovery, per-state rollout and parity tests |
 
 The [federal baseline](federal-collector-baseline.md) explains what we adopt and change from Vaquill; the
@@ -73,12 +70,11 @@ path behind MCP. Query handlers serve locally stored records and never start bac
 
 ## Delivery and validation
 
-Implement source evidence, schema, adapters, orchestration and frozen current/historical backfills first. The user's
-September 14 execution instruction takes precedence over the earlier recurrence-first ordering: keep recurring source
-collection disabled until the selected backfill gate G4 passes; SYNC-11 owns activation.
+Implement source evidence, schema, adapters, orchestration and frozen current/historical backfills first. Keep recurring
+source collection disabled until the selected backfill is reconciled and accepted.
 Search development proceeds from validated backfills; API contracts can be developed against synthetic data earlier.
 Then complete API, MCP and deployed federal release gates. State synthetic contract tests start with the schema; real
-licensed onboarding follows federal delivery and vendor validation. See the task backlog for the exact dependency graph.
+licensed onboarding follows federal delivery and vendor validation. Track implementation dependencies in Linear.
 
 All numeric queue, latency, relevance and cadence values are initial implementation or launch targets, not observed
 performance promises. Retain measured evidence and revise a target only through an explicit documented scope/design
@@ -90,7 +86,7 @@ readiness -> authenticated API -> API-backed MCP, under retries and live ingesti
 healthy HTTP endpoint alone does not establish coverage. Regulated text/source correctness and rights have zero tolerance
 for fabricated matches or forbidden text; unavailable history and partial states remain explicit.
 
-The [production backlog](production-backlog.md) names current tasks, smoke artifacts and acceptance cases. Tests should verify
+Linear names current tasks and acceptance evidence. Tests should verify
 implemented runtime behavior, not this prose. Use the [single legislation verification handoff](../../../legislation-web/docs/operations/testing.md#full-verification) after coherent changes. Any regulatory
 UI requires integrated-browser acceptance; no mockup or component test substitutes for that workflow check.
 

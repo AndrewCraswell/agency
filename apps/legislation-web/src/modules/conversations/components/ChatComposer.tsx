@@ -127,7 +127,7 @@ export function ChatComposer({
               onClick={onStop}
               disabled={!onStop}
             >
-              <Square className="size-[18px]" aria-hidden="true" />
+              <Square className="size-[18px] fill-current" aria-hidden="true" />
             </Button>
           ) : (
             <Button type="submit" className={styles.send} aria-label="Send question" disabled={!canSend}>

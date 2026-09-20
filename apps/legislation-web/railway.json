@@ -6,7 +6,9 @@
     "watchPatterns": [
       "/apps/legislation-web/**",
       "/packages/legislation-core/**",
+      "/packages/legislation-diffing/**",
       "/packages/oxlint-config/**",
+      "/packages/storybook-config/**",
       "/packages/typescript-config/**",
       "/package.json",
       "/pnpm-lock.yaml",

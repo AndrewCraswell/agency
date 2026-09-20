@@ -9,16 +9,16 @@ bounded result data, immutable evidence identity and version/provision provenanc
 tool categories. Stream completion does not prove that the research goal was satisfied. Interrupted turns retain
 that qualification. Proposed statutory text must remain distinct from uncertain judicial interpretation.
 
-Each response permits eight tool-capable research steps and reserves a ninth model step for synthesis without tools.
-Each model step allows 8,192 output tokens shared by reasoning and visible text; a reasoning-heavy response can
-otherwise consume its allowance before delivering the answer. A length termination remains an incomplete outcome,
-not proof that all requested findings were delivered.
-The separate 24-call budget remains a hard safety bound across those research steps; reaching it disables tools on
-the next step so the model can synthesize without repeatedly making rejected calls. If a non-error response still
+Research has no tool-call count or model-step cutoff. The model can continue gathering evidence until it finishes
+or requests clarification; cancellation and execution failures still stop the run. Tools are not disabled to force
+an answer after a fixed number of steps, and failed calls do not consume a separate research allowance.
+The agent does not override the provider's output-token allowance. Provider and context-window limits still apply;
+a length termination remains an incomplete outcome, not proof that all requested findings were delivered.
+If a non-error response still
 finishes without prose, a completed presentation, or a clarification request, the stream emits an explicit incomplete
 outcome instead of settling as an empty answer. This outcome is reported to composition telemetry and marks the saved
 turn interrupted. The raw model finish reason remains in the server capture; an empty answer alone does not establish
-whether a step limit, call limit, or another condition caused it. Valid clarification and presentation-only responses
+why research ended. Valid clarification and presentation-only responses
 remain distinct from incomplete research.
 
 ## Bounds and lifetime
@@ -62,7 +62,8 @@ The chat route regression exercises two POST requests with the real SDK and tool
 and checks that the second request sees prior operative text without another database read. Memory tests cover owner
 and conversation isolation, expiration, colliding markers, byte limits, failures and reload. Citation tests cover
 keyboard activation and retained-source telemetry. Deterministic fixtures establish wiring, evidence availability,
-final-step synthesis, and explicit empty-answer handling, not live-model legal accuracy or a resumed evaluation campaign.
+research beyond the former step/call cutoffs, clarification and cancellation stops, and explicit empty-answer handling,
+not live-model legal accuracy or a resumed evaluation campaign.
 
 ## Claim fidelity
 

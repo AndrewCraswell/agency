@@ -75,7 +75,7 @@ Index creation, jobs and W queries consume the same C definitions; app environme
 
 ### Exact MCP query dispatch
 
-W owns [query dispatch](../../../legislation-web/docs/engineering/retrieval-acceptance.md#exact-mcp-query-dispatch).
+W owns [query dispatch](../../../legislation-web/docs/engineering/api/search-and-diffs.md).
 M performs transport/API adaptation only, without a database or model client.
 
 ### Runtime ownership
@@ -113,7 +113,7 @@ It is neither an I task nor an M model runtime. M calls W's complete query opera
 
 ## MCP access plan
 
-See [W's retrieve/traverse/deliver acceptance](../../../legislation-web/docs/engineering/retrieval-acceptance.md#mcp-access-plan).
+See [W's retrieve/traverse/deliver acceptance](../../../legislation-web/docs/engineering/api/search-and-diffs.md).
 
 ### Corpus gaps the bakeoff must represent
 
@@ -235,7 +235,7 @@ the added operational and storage complexity.
 ## Evaluation set
 
 I retains the immutable corpus, provider and generation evidence. W owns
-[judged query fields and API/MCP evaluation](../../../legislation-web/docs/engineering/retrieval-acceptance.md#evaluation-and-promotion).
+[judged query fields and API/MCP evaluation](../../../legislation-web/docs/engineering/api/search-and-diffs.md).
 
 ## Required measurements
 
@@ -244,7 +244,7 @@ idempotency. W's linked evaluation adds retrieval metrics and partial-coverage d
 
 ## Promotion gates
 
-Use [W's single retrieval promotion checklist](../../../legislation-web/docs/engineering/retrieval-acceptance.md#evaluation-and-promotion).
+Use [W's single retrieval promotion checklist](../../../legislation-web/docs/engineering/api/search-and-diffs.md).
 It includes I's budget, storage, retry and load evidence. An inconclusive canary does not authorize expansion.
 
 ## Rollout sequence

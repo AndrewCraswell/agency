@@ -6,20 +6,22 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { HomepageLanding } from "../../homepage/components/HomepageLanding"
 import { chatRequestSchema, referenceSearchSchema, type StagedReference } from "../chatRequest"
-import { downloadConversationExport } from "../conversationExport"
 import { incompleteAnswerText } from "../responseOutcome"
 import { ChatProviders } from "./ChatProviders"
 import { ChatWorkspace } from "./ChatWorkspace"
+import { ConversationExport } from "./ConversationExport"
 import { useConversationSession } from "./ConversationSession"
 import { ReferencePicker } from "./ReferencePicker"
 import * as composerStyles from "./ChatComposer.css"
 
 const navigation = vi.hoisted(() => ({ push: vi.fn<(url: string) => void>() }))
+const interactionTestTimeoutMs = 15_000
 
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
   vi.clearAllMocks()
+  vi.restoreAllMocks()
 })
 
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }))
@@ -27,15 +29,15 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn<typeof import("@sentry/nextjs").captureException>(),
   getReplay: () => ({ getReplayId: () => "replay-1" })
 }))
-vi.mock("../conversationExport", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../conversationExport")>()),
-  downloadConversationExport: vi.fn<typeof downloadConversationExport>()
-}))
 // The independent homepage mention example has its own lookup coverage in page.test.tsx.
 vi.mock("../../homepage/components/HomepageConnections", () => ({ HomepageConnections: () => null }))
 
 function navigatedConversationId() {
   return z.string().parse(navigation.push.mock.lastCall?.[0].split("/").at(-1))
+}
+
+function renderedExport() {
+  return JSON.parse(screen.getByLabelText("Conversation export JSON").textContent ?? "")
 }
 
 function streamedAnswer(text: string) {
@@ -55,6 +57,24 @@ function streamedChunks(chunks: UIMessageChunk[]) {
 }
 
 describe("ChatWorkspace", () => {
+  it("keeps the entire JSON as literal selectable code when clipboard access fails", async () => {
+    const user = userEvent.setup()
+    const json = JSON.stringify(
+      { text: "```json\n<script>alert('not executable')</script>", data: "x".repeat(100_000) },
+      null,
+      2
+    )
+    render(<ConversationExport json={json} />, { wrapper: ChatProviders })
+    const copy = vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(new Error("denied"))
+    expect(screen.getByLabelText("Conversation export JSON").textContent).toBe(json)
+    expect(screen.getByRole("region", { name: "Conversation export" }).querySelector("script")).toBeNull()
+    expect(screen.queryByRole("dialog")).toBeNull()
+    await user.click(screen.getByRole("button", { name: "Copy JSON" }))
+    expect(copy).toHaveBeenCalledWith(json)
+    expect(await screen.findByText("Couldn't copy. Select the JSON and copy it manually.")).toBeDefined()
+    expect(screen.getByLabelText("Conversation export JSON").textContent).toBe(json)
+  })
+
   it.each([
     {
       status: "failed",
@@ -111,184 +131,219 @@ describe("ChatWorkspace", () => {
       expect(screen.getByText(text)).toBeDefined()
       await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
       await user.keyboard("{Enter}")
-      expect(downloadConversationExport).toHaveBeenCalledWith(
-        conversationId,
+      expect(renderedExport()).toEqual(
         expect.objectContaining({
           interactionStatus: "ready",
           currentResponseOutcome: expect.objectContaining({ status, hasAnswer, finishReason })
         })
       )
       expect(fetchMock).toHaveBeenCalledOnce()
-    }
+    },
+    interactionTestTimeoutMs
   )
 
-  it("retains a complete terminal answer without an interruption alert after a late abort", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn<typeof fetch>().mockImplementation(async () =>
-        streamedChunks([
-          { type: "start", messageId: "answer" },
-          { type: "text-start", id: "text" },
-          { type: "text-delta", id: "text", delta: "A fully delivered answer." },
-          { type: "text-end", id: "text" },
-          {
-            type: "data-response-outcome",
-            data: {
-              status: "completed",
-              finishReason: "stop",
-              hasAnswer: true,
-              pendingToolCalls: [],
-              failedToolCalls: []
-            }
-          },
-          { type: "finish", finishReason: "stop" },
-          { type: "abort" }
-        ])
-      )
-    )
-    const user = userEvent.setup()
-    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
-    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
-    await user.click(screen.getByRole("button", { name: "Send question" }))
-    await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
-    const conversationId = navigatedConversationId()
-    view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
-    await screen.findByText("A fully delivered answer.")
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
-    expect(screen.queryByRole("alert")).toBeNull()
-    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
-    await user.keyboard("{Enter}")
-    expect(downloadConversationExport).toHaveBeenCalledWith(
-      conversationId,
-      expect.objectContaining({
-        currentResponseOutcome: expect.objectContaining({ status: "completed", hasAnswer: true })
-      })
-    )
-  })
-
-  it("does not silently mark an early EOF with a pending search as a completed answer", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn<typeof fetch>().mockImplementation(async () =>
-        streamedChunks([
-          { type: "start", messageId: "answer" },
-          { type: "tool-input-start", toolCallId: "pending-search", toolName: "search_bill_text" }
-        ])
-      )
-    )
-    const user = userEvent.setup()
-    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
-    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
-    await user.click(screen.getByRole("button", { name: "Send question" }))
-    await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
-    const conversationId = navigatedConversationId()
-    view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
-    await screen.findByText("Completion could not be confirmed. Your question is still in this conversation.")
-    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
-    await user.keyboard("{Enter}")
-    expect(downloadConversationExport).toHaveBeenCalledWith(
-      conversationId,
-      expect.objectContaining({
-        interactionStatus: "ready",
-        currentResponseOutcome: expect.objectContaining({
-          status: "unknown",
-          hasAnswer: false,
-          finishReason: null,
-          pendingToolCalls: ["pending-search"]
-        })
-      })
-    )
-  })
-
-  it("records explicit Stop separately from a transport abort and keeps partial text", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn<typeof fetch>().mockImplementation(
-        async (_request, init) =>
-          new Response(
-            new ReadableStream({
-              start(controller) {
-                const encoder = new TextEncoder()
-                for (const chunk of [
-                  { type: "start", messageId: "answer" },
-                  { type: "text-start", id: "text" },
-                  { type: "text-delta", id: "text", delta: "Findings before Stop." }
-                ]) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`))
-                }
-                init?.signal?.addEventListener(
-                  "abort",
-                  () => controller.error(new DOMException("Aborted", "AbortError")),
-                  { once: true }
-                )
+  it(
+    "retains a complete terminal answer without an interruption alert after a late abort",
+    async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn<typeof fetch>().mockImplementation(async () =>
+          streamedChunks([
+            { type: "start", messageId: "answer" },
+            { type: "text-start", id: "text" },
+            { type: "text-delta", id: "text", delta: "A fully delivered answer." },
+            { type: "text-end", id: "text" },
+            {
+              type: "data-response-outcome",
+              data: {
+                status: "completed",
+                finishReason: "stop",
+                hasAnswer: true,
+                pendingToolCalls: [],
+                failedToolCalls: []
               }
-            }),
-            { headers: { "content-type": "text/event-stream", "x-vercel-ai-ui-message-stream": "v1" } }
-          )
+            },
+            { type: "finish", finishReason: "stop" },
+            { type: "abort" }
+          ])
+        )
       )
-    )
-    const user = userEvent.setup()
-    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
-    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
-    await user.click(screen.getByRole("button", { name: "Send question" }))
-    await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
-    const conversationId = navigatedConversationId()
-    view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
-    const response = await screen.findByRole("article", { name: "Rostra response" })
-    // Streaming prose is split across animation spans.
-    await waitFor(() => expect(response.textContent).toContain("Findings before Stop."))
-    await user.click(screen.getByRole("button", { name: "Stop response" }))
-    await screen.findByText("Response stopped. Any research received is still available.")
-    expect(response.textContent).toContain("Findings before Stop.")
-    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
-    await user.keyboard("{Enter}")
-    expect(downloadConversationExport).toHaveBeenCalledWith(
-      conversationId,
-      expect.objectContaining({
-        currentResponseOutcome: expect.objectContaining({ status: "cancelled", hasAnswer: true }),
-        messages: expect.arrayContaining([
-          expect.objectContaining({
-            role: "assistant",
-            parts: expect.arrayContaining([expect.objectContaining({ type: "text", text: "Findings before Stop." })])
-          })
-        ])
-      })
-    )
-  })
+      const user = userEvent.setup()
+      const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
+      await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
+      await user.click(screen.getByRole("button", { name: "Send question" }))
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
+      const conversationId = navigatedConversationId()
+      view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
+      await screen.findByText("A fully delivered answer.")
+      await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
+      expect(screen.queryByRole("alert")).toBeNull()
+      await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
+      await user.keyboard("{Enter}")
+      expect(renderedExport()).toEqual(
+        expect.objectContaining({
+          currentResponseOutcome: expect.objectContaining({ status: "completed", hasAnswer: true })
+        })
+      )
+    },
+    interactionTestTimeoutMs
+  )
 
-  it("exports locally by command without another model request, even when research is disconnected", async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => streamedAnswer("An exportable response"))
-    vi.stubGlobal("fetch", fetchMock)
-    const user = userEvent.setup()
-    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
-    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "First question")
-    await user.click(screen.getByRole("button", { name: "Send question" }))
-    await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
-    const conversationId = navigatedConversationId()
-    view.rerender(<ChatWorkspace conversationId={conversationId} />)
-    await screen.findByText("An exportable response")
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
-    const input = screen.getByRole("textbox", { name: "Your question" })
-    await user.type(input, "/export")
-    await user.keyboard("{Enter}")
-    await waitFor(() => expect(downloadConversationExport).toHaveBeenCalledOnce())
-    expect(downloadConversationExport).toHaveBeenCalledWith(
-      conversationId,
-      expect.objectContaining({
-        sessionId: conversationId,
-        replayId: "replay-1",
-        messages: expect.arrayContaining([
-          expect.objectContaining({ role: "user" }),
-          expect.objectContaining({ role: "assistant" })
-        ])
-      })
-    )
-    expect(JSON.stringify(vi.mocked(downloadConversationExport).mock.calls)).not.toContain("sessionKey")
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toHaveProperty("sessionId", conversationId)
-    await waitFor(() => expect(input.textContent).toBe(""))
-    expect(fetchMock).toHaveBeenCalledOnce()
-    expect(screen.queryByRole("button", { name: "Export conversation" })).toBeNull()
-  })
+  it(
+    "does not silently mark an early EOF with a pending search as a completed answer",
+    async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn<typeof fetch>().mockImplementation(async () =>
+          streamedChunks([
+            { type: "start", messageId: "answer" },
+            { type: "tool-input-start", toolCallId: "pending-search", toolName: "search_bill_text" }
+          ])
+        )
+      )
+      const user = userEvent.setup()
+      const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
+      await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
+      await user.click(screen.getByRole("button", { name: "Send question" }))
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
+      const conversationId = navigatedConversationId()
+      view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
+      await screen.findByText("Completion could not be confirmed. Your question is still in this conversation.")
+      await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
+      await user.keyboard("{Enter}")
+      expect(renderedExport()).toEqual(
+        expect.objectContaining({
+          interactionStatus: "ready",
+          currentResponseOutcome: expect.objectContaining({
+            status: "unknown",
+            hasAnswer: false,
+            finishReason: null,
+            pendingToolCalls: ["pending-search"]
+          })
+        })
+      )
+    },
+    interactionTestTimeoutMs
+  )
+
+  it(
+    "records explicit Stop separately from a transport abort and keeps partial text",
+    async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn<typeof fetch>().mockImplementation(
+          async (_request, init) =>
+            new Response(
+              new ReadableStream({
+                start(controller) {
+                  const encoder = new TextEncoder()
+                  for (const chunk of [
+                    { type: "start", messageId: "answer" },
+                    { type: "text-start", id: "text" },
+                    { type: "text-delta", id: "text", delta: "Findings before Stop." }
+                  ]) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`))
+                  }
+                  init?.signal?.addEventListener(
+                    "abort",
+                    () => controller.error(new DOMException("Aborted", "AbortError")),
+                    { once: true }
+                  )
+                }
+              }),
+              { headers: { "content-type": "text/event-stream", "x-vercel-ai-ui-message-stream": "v1" } }
+            )
+        )
+      )
+      const user = userEvent.setup()
+      const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
+      await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
+      await user.click(screen.getByRole("button", { name: "Send question" }))
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
+      const conversationId = navigatedConversationId()
+      view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
+      const response = await screen.findByRole("article", { name: "Rostra response" })
+      // Streaming prose is split across animation spans.
+      await waitFor(() => expect(response.textContent).toContain("Findings before Stop."))
+      await user.click(screen.getByRole("button", { name: "Stop response" }))
+      await screen.findByText("Response stopped. Any research received is still available.")
+      expect(response.textContent).toContain("Findings before Stop.")
+      await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
+      await user.keyboard("{Enter}")
+      expect(renderedExport()).toEqual(
+        expect.objectContaining({
+          currentResponseOutcome: expect.objectContaining({ status: "cancelled", hasAnswer: true }),
+          messages: expect.arrayContaining([
+            expect.objectContaining({
+              role: "assistant",
+              parts: expect.arrayContaining([expect.objectContaining({ type: "text", text: "Findings before Stop." })])
+            })
+          ])
+        })
+      )
+    },
+    interactionTestTimeoutMs
+  )
+
+  it(
+    "exports locally by command without another model request, even when research is disconnected",
+    async () => {
+      const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => streamedAnswer("An exportable response"))
+      vi.stubGlobal("fetch", fetchMock)
+      const user = userEvent.setup()
+      const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
+      await user.type(await screen.findByRole("textbox", { name: "Your question" }), "First question")
+      await user.click(screen.getByRole("button", { name: "Send question" }))
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
+      const conversationId = navigatedConversationId()
+      view.rerender(<ChatWorkspace conversationId={conversationId} />)
+      await screen.findByText("An exportable response")
+      await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
+      const input = screen.getByRole("textbox", { name: "Your question" })
+      await user.type(input, "/export")
+      await user.keyboard("{Enter}")
+      const exported = await screen.findByRole("region", { name: "Conversation export" })
+      expect(screen.getByRole("log", { name: "Conversation" }).contains(exported)).toBe(true)
+      expect(screen.queryByRole("dialog")).toBeNull()
+      expect(document.activeElement).toBe(input)
+      expect(renderedExport()).toEqual(
+        expect.objectContaining({
+          sessionId: conversationId,
+          replayId: "replay-1",
+          messages: expect.arrayContaining([
+            expect.objectContaining({ role: "user" }),
+            expect.objectContaining({ role: "assistant" })
+          ])
+        })
+      )
+      expect(JSON.stringify(renderedExport())).not.toContain("sessionKey")
+      const clipboard = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue()
+      const json = screen.getByLabelText("Conversation export JSON").textContent
+      await user.click(screen.getByRole("button", { name: "Copy JSON" }))
+      expect(clipboard).toHaveBeenCalledWith(json)
+      expect(exported.querySelector("output")?.textContent).toBe("Copied")
+      expect(exported.querySelector("output")?.className).toBe("sr-only")
+      expect(
+        screen.getByRole("button", { name: "Copy JSON" }).querySelector("svg")?.classList.contains("text-green-700")
+      ).toBe(true)
+      expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toHaveProperty("sessionId", conversationId)
+      await waitFor(() => expect(input.textContent).toBe(""))
+      expect(fetchMock).toHaveBeenCalledOnce()
+      expect(screen.queryByRole("button", { name: "Export conversation" })).toBeNull()
+      view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
+      await user.type(input, "Follow-up question")
+      await user.keyboard("{Enter}")
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+      const followUpTurn = await screen.findByText("Follow-up question")
+      expect(exported.compareDocumentPosition(followUpTurn)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+      const followUp = String(fetchMock.mock.calls[1]?.[1]?.body)
+      expect(followUp).toContain("Follow-up question")
+      expect(followUp).not.toContain("rostra-conversation")
+      expect(followUp).not.toContain("/export")
+      expect(followUp).not.toContain("Conversation export")
+    },
+    interactionTestTimeoutMs
+  )
 
   it("does not send an export command from an empty conversation to the model", async () => {
     function EmptyConversation() {

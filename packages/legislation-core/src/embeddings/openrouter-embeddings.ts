@@ -1,3 +1,8 @@
+import {
+  isTransientHttpStatus,
+  isTransientRequestFailure,
+  waitForRequestRetry
+} from "@repo/legislation-core/api-client/request-retry"
 import { EMBEDDING_ROUTES, type EmbeddingRoute } from "@repo/legislation-core/embeddings/embedding-routing"
 import { validateEmbeddingTokenBudget } from "@repo/legislation-core/embeddings/embedding-tokenizer"
 import { z } from "zod"
@@ -7,33 +12,6 @@ export const EMBEDDING_MODEL = DEFAULT_EMBEDDING_ROUTE.model
 export const EMBEDDING_DIMENSIONS = DEFAULT_EMBEDDING_ROUTE.dimensions
 export const MAX_EMBEDDING_INPUT_CHARACTERS = 16_000
 const MAXIMUM_BATCH_SIZE = 64
-
-const RETRYABLE_CONNECTION_CODES = new Set([
-  "EAI_AGAIN",
-  "ENOTFOUND",
-  "ECONNRESET",
-  "ETIMEDOUT",
-  "UND_ERR_CONNECT_TIMEOUT",
-  "UND_ERR_HEADERS_TIMEOUT",
-  "UND_ERR_BODY_TIMEOUT",
-  "UND_ERR_SOCKET"
-])
-
-function isRetryableConnectionFailure(error: unknown): boolean {
-  // Node fetch wraps DNS/socket failures in `cause`. Bound traversal and never
-  // classify arbitrary TypeErrors, certificate failures or cancellation by text.
-  let current = error
-  for (let depth = 0; depth < 4 && current instanceof Error; depth += 1) {
-    if (current.name === "AbortError") {
-      return false
-    }
-    if ("code" in current && typeof current.code === "string" && RETRYABLE_CONNECTION_CODES.has(current.code)) {
-      return true
-    }
-    current = current.cause
-  }
-  return false
-}
 
 export function limitEmbeddingInput(value: string): string {
   return value.slice(0, MAX_EMBEDDING_INPUT_CHARACTERS)
@@ -61,6 +39,7 @@ export interface OpenRouterEmbeddingClientOptions {
   maximumAttempts?: number
   route?: EmbeddingRoute
   timeoutMs?: number
+  signal?: AbortSignal
 }
 
 export interface EmbeddingClientMetrics {
@@ -87,22 +66,45 @@ export class OpenRouterEmbeddingClient {
   }
   readonly #route: EmbeddingRoute
   readonly #timeoutMs: number
+  readonly #signal: AbortSignal | undefined
 
   constructor(options: OpenRouterEmbeddingClientOptions) {
     this.#apiKey = options.apiKey
     const configuredBaseUrl = options.baseUrl ?? new URL("https://openrouter.ai/api/v1/")
     this.#baseUrl = new URL(`${configuredBaseUrl.href.replace(/\/+$/, "")}/`)
     this.#fetch = options.fetch ?? fetch
-    this.#maximumAttempts = options.maximumAttempts ?? 3
+    this.#maximumAttempts = z
+      .number()
+      .int()
+      .min(1)
+      .max(10)
+      .parse(options.maximumAttempts ?? 3)
     this.#route = options.route ?? DEFAULT_EMBEDDING_ROUTE
-    this.#timeoutMs = options.timeoutMs ?? 30_000
+    this.#timeoutMs = z
+      .number()
+      .int()
+      .min(1)
+      .max(300_000)
+      .parse(options.timeoutMs ?? 30_000)
+    this.#signal = options.signal
   }
 
   get metrics(): Readonly<EmbeddingClientMetrics> {
     return { ...this.#metrics }
   }
 
+  async #waitForRetry(attempt: number, inputCount: number) {
+    this.#metrics.retries += 1
+    try {
+      await waitForRequestRetry(attempt, this.#signal)
+    } catch (error) {
+      this.#metrics.failed += inputCount
+      throw error
+    }
+  }
+
   async embed(values: string[], inputType: "document" | "query" = "document"): Promise<EmbeddingResult> {
+    this.#signal?.throwIfAborted()
     const input = [...values]
     if (input.length < 1 || input.length > MAXIMUM_BATCH_SIZE || input.some((value) => value.trim().length === 0)) {
       throw new Error(`Embedding batch must contain 1 to ${MAXIMUM_BATCH_SIZE} nonempty inputs`)
@@ -116,6 +118,7 @@ export class OpenRouterEmbeddingClient {
       throw new Error("Embedding inputs must contain well-formed Unicode")
     }
     await validateEmbeddingTokenBudget(this.#route.model, input)
+    this.#signal?.throwIfAborted()
     this.#metrics.batches += 1
     this.#metrics.requested += input.length
     // Freeze once: every retry must embed exactly the text the caller hashed, even if its array changes.
@@ -133,7 +136,9 @@ export class OpenRouterEmbeddingClient {
     for (let attempt = 1; attempt <= this.#maximumAttempts; attempt += 1) {
       let response: Response
       let body: string
-      const signal = AbortSignal.timeout(this.#timeoutMs)
+      this.#signal?.throwIfAborted()
+      const timeout = AbortSignal.timeout(this.#timeoutMs)
+      const signal = this.#signal ? AbortSignal.any([this.#signal, timeout]) : timeout
       try {
         response = await this.#fetch(new URL("embeddings", this.#baseUrl), {
           body: requestBody,
@@ -142,15 +147,24 @@ export class OpenRouterEmbeddingClient {
           signal
         })
         // The request deadline also covers receiving the body, not just headers.
-        body = await response.text()
+        if (response.ok) {
+          body = await response.text()
+        } else {
+          await response.body?.cancel().catch(() => undefined)
+          body = ""
+        }
+        signal.throwIfAborted()
       } catch (error) {
-        const deadlineExpired = signal.aborted || (error instanceof Error && error.name === "TimeoutError")
-        if ((!deadlineExpired && !isRetryableConnectionFailure(error)) || attempt === this.#maximumAttempts) {
+        if (
+          this.#signal?.aborted ||
+          (!timeout.aborted && !isTransientRequestFailure(error)) ||
+          attempt === this.#maximumAttempts
+        ) {
           this.#metrics.failed += input.length
+          this.#signal?.throwIfAborted()
           throw error
         }
-        this.#metrics.retries += 1
-        await new Promise((resolve) => setTimeout(resolve, Math.min(250 * 2 ** (attempt - 1), 2_000)))
+        await this.#waitForRetry(attempt, input.length)
         continue
       }
 
@@ -158,7 +172,7 @@ export class OpenRouterEmbeddingClient {
         const result = responseSchema.parse(JSON.parse(body))
         const providerModel = this.#route.model.split("/").at(-1)
         if (result.model !== this.#route.model && result.model !== providerModel) {
-          throw new Error(`Embedding response used unexpected model ${result.model}`)
+          throw new Error("Embedding response used unexpected model")
         }
         const ordered = result.data.toSorted((left, right) => left.index - right.index)
         if (ordered.some((item, index) => item.index !== index)) {
@@ -182,19 +196,15 @@ export class OpenRouterEmbeddingClient {
         }
       }
 
-      const detail = body.replaceAll(/\s+/g, " ").trim().slice(0, 500)
-      const retryable = response.status === 429 || response.status >= 500
+      const retryable = isTransientHttpStatus(response.status)
       if (response.status === 429) {
         this.#metrics.rateLimited += 1
       }
       if (!retryable || attempt === this.#maximumAttempts) {
         this.#metrics.failed += input.length
-        throw new Error(
-          `OpenRouter embedding request failed with HTTP ${response.status}${detail.length === 0 ? "" : `: ${detail}`}`
-        )
+        throw new Error(`OpenRouter embedding request failed with HTTP ${response.status}`)
       }
-      this.#metrics.retries += 1
-      await new Promise((resolve) => setTimeout(resolve, Math.min(250 * 2 ** (attempt - 1), 2_000)))
+      await this.#waitForRetry(attempt, input.length)
     }
 
     throw new Error("OpenRouter embedding request exhausted retries")

@@ -62,9 +62,9 @@ AI chat, bill counts and database size are means to that outcome, not sufficient
 | External AI/developer access | API/MCP foundations exist; client authorization, rights, service limits and commercial packaging still require verification | Potential distribution path, not a unique feature or an approved data-resale entitlement |
 
 Evidence owners: [data catalog](../../../legislation-ingestion/docs/engineering/data-sync-catalog.md),
-[API acceptance](../operations/passage-search-delivery.md),
+[API acceptance](../engineering/api/search-and-diffs.md),
 [state rollout](../../../legislation-ingestion/docs/operations/openstates-rollout-checklist.md),
-[regulatory progress](../../../legislation-ingestion/docs/regulations/implementation-progress.md), and [product backlog](../backlog/backlog.md).
+[regulatory progress](../../../legislation-ingestion/docs/regulations/implementation.md), and [product backlog](../product/product-spec.md).
 These documents have different observation dates and some historical entries. No fresh database census or deployed
 customer acceptance was performed for this commercial analysis. A clean repository test run is not a release gate substitute.
 

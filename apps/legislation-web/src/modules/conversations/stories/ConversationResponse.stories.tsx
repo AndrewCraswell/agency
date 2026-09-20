@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import type { UIMessage } from "ai"
 import { useRef, useState } from "react"
-import { expect, fn, within } from "storybook/test"
+import { expect, fn, waitFor, within } from "storybook/test"
 import invariant from "tiny-invariant"
 import { StickToBottom } from "use-stick-to-bottom"
-import { malformedCitationFixtures } from "../components/citationEvidenceFixtures"
+import { billVersionCitationFixtures, malformedCitationFixtures } from "../components/citationEvidenceFixtures"
 import type { CitationSelection } from "../components/citationPresentation"
 import { ConversationResponse } from "../components/ConversationResponse"
 import { EvidencePanel } from "../components/EvidencePanel"
@@ -98,6 +98,67 @@ const meta: Meta<typeof ConversationResponse> = {
 }
 export default meta
 type Story = StoryObj<typeof meta>
+
+function BillVersionCitationExamples() {
+  const [selection, setSelection] = useState<CitationSelection>()
+  const trigger = useRef<HTMLElement | null>(null)
+  return (
+    <>
+      <ConversationResponse
+        message={{
+          id: "bill-version-citations",
+          role: "assistant",
+          parts: [
+            {
+              type: "text",
+              text: `Synthetic bill-version citation examples ${billVersionCitationFixtures.map((source, index) => `[${index + 1}](#citation-${source.citationRef})`).join(" ")}.`
+            }
+          ]
+        }}
+        evidence={billVersionCitationFixtures}
+        isRunning={false}
+        isIncomplete={false}
+        onEvidence={(citation) => {
+          trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          setSelection(citation)
+        }}
+      />
+      <EvidencePanel
+        selection={selection}
+        onClose={() => setSelection(undefined)}
+        returnFocus={() => trigger.current?.focus()}
+      />
+    </>
+  )
+}
+
+export const BillVersionCitations: Story = {
+  render: () => <BillVersionCitationExamples />,
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
+    const disclosure = canvas.getByRole("button", { name: "Sources 4" })
+    if (disclosure.getAttribute("aria-expanded") !== "true") {
+      await userEvent.click(disclosure)
+    }
+    const sources = within(canvas.getByRole("region", { name: "Sources" }))
+    await expect(sources.getAllByRole("button", { name: /^Read source/ })).toHaveLength(4)
+    const trigger = sources.getByRole("button", {
+      name: "Read source 1: S 1 (119th Congress): Synthetic Data Access Act"
+    })
+    trigger.focus()
+    await userEvent.keyboard("{Enter}")
+    const body = within(canvasElement.ownerDocument.body)
+    const dialog = within(await body.findByRole("dialog", { name: "Source 1" }))
+    await expect(dialog.getByRole("heading", { name: "S 1 (119th Congress): Synthetic Data Access Act" })).toBeVisible()
+    await expect(dialog.getByText("Introduced in Senate, 2025-01-03")).toBeVisible()
+    await expect(dialog.getByRole("link", { name: "Open source" })).toHaveAttribute(
+      "href",
+      "https://publisher.example/fixture/0.pdf"
+    )
+    await userEvent.keyboard("{Escape}")
+    await waitFor(() => expect(trigger).toHaveFocus())
+  }
+}
 
 function MalformedCitationExamples() {
   const [selection, setSelection] = useState<CitationSelection>()

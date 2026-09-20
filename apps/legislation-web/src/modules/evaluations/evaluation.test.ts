@@ -504,7 +504,7 @@ describe("shared SDK execution", () => {
           streamStep({
             tool: {
               name: "get_bill",
-              input: { ...capturedBillFailure.input, childLimit: null }
+              input: { ...capturedBillFailure.input, childLimit: null, cursor: null }
             }
           }),
           streamStep({ text: "The requested document ID was not found." })
@@ -534,7 +534,7 @@ describe("shared SDK execution", () => {
       doStream: [
         streamStep({
           id: "gen-research",
-          tool: { name: "get_bill", input: { id: "bill:us:119:hr:9001", childLimit: null } }
+          tool: { name: "get_bill", input: { id: "bill:us:119:hr:9001", childLimit: null, cursor: null } }
         }),
         streamStep({ id: "gen-answer", costUsd })
       ]
@@ -838,7 +838,7 @@ describe("shared SDK execution", () => {
     expect(model.doStreamCalls[0]?.prompt[0]).toMatchObject({
       role: "system",
       content: expect.stringMatching(
-        /^Pinned instructions\n\nWhen tools are disabled, finish with an answer from the evidence already retrieved\./
+        /^Pinned instructions\n\nCite supported findings and state what remains unresolved, including failed reads and incomplete coverage\./
       )
     })
   })

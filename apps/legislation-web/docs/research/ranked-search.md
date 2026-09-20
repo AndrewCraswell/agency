@@ -1,6 +1,6 @@
 # Ranked search performance decision
 
-Research decision: the canonical-database migration is on hold. The subsequently approved isolated passage service is a separate decision; see [passage delivery](../operations/passage-search-delivery.md). Historical experiment instructions below are not production rollout authorization.
+Research decision: the canonical-database migration is on hold. The subsequently approved isolated passage service is a separate decision; see [passage delivery](../engineering/api/search-and-diffs.md). Historical experiment instructions below are not production rollout authorization.
 
 
 September 12, 2026. Decision: **hold production migration**.
@@ -39,7 +39,7 @@ are not full-corpus migration estimates. Benchmark shared buffers differ from pr
 Production read-only probes of the existing full-section query and an amendment-first alternative both exceeded
 15 seconds for broad terms. One original phrase probe also hit a PostgreSQL shared-memory allocation error;
 that is not evidence of a full persistent volume. Evidence: `tmp/amendment-query-diagnostic-2026-09-12T13-46-53.607Z.json`.
-The next implementation uses a [narrow native amendment projection](../engineering/amendment-search-projection.md), retaining
+The implementation uses a [narrow native amendment projection](../../../../packages/legislation-core/docs/engineering/search-projections.md), retaining
 exact existing ranking and canonical filters without rewriting the whole section table or any HNSW index.
 
 ## Update-regression diagnostic
@@ -214,12 +214,12 @@ deployment or database configuration was changed.
 
 ## Isolated ranked text-index evaluation
 
-September 12 update: [paired performance comparison and migration decision](ranked-search.md).
+The September 12 paired performance comparison and migration decision is recorded below.
 Production adoption is on hold; the implementation below remains an isolated candidate, not a deployed solution.
 
 September 11 historical candidate: ranked-query implementation and isolated correctness canary completed at that time.
 Its in-place migration plan was not adopted; the later native amendment projection and isolated passage service have
-their own [acceptance](../operations/passage-search-delivery.md). Do not use this section as the active implementation queue.
+their own [acceptance](../engineering/api/search-and-diffs.md). Do not use this section as the active implementation queue.
 
 <a id="text-search-index-evaluation--selected-direction-and-current-implementation"></a>
 

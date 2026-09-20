@@ -376,6 +376,8 @@ describe("vote attribution evidence-to-synthesis boundary", () => {
                     input = { cursor: null, documentId: null, limit: null, versionCode: null, ...request.input }
                   } else if (request.toolName === "get_vote") {
                     input = { cursor: null, ...request.input }
+                  } else if (request.toolName === "get_amendment") {
+                    input = { cursor: null, ...request.input }
                   }
                   controller.enqueue({
                     type: "tool-call",

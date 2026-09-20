@@ -11,6 +11,43 @@ const spanId = "b".repeat(16)
 const policy = { models: ["approved/model"], providers: ["approved"], release: "release-123" }
 const spy = () => vi.fn<NonNullable<NonNullable<Parameters<typeof createSentryPrivacy>[0]>["onDiagnostic"]>>()
 
+it("keeps allowlisted query identity and pool measurements while removing SQL text", () => {
+  const span = projectSentrySpan(
+    {
+      trace_id: traceId,
+      span_id: spanId,
+      start_timestamp: 10,
+      timestamp: 11,
+      description: "supporting_material.search.semantic",
+      op: "db.query",
+      data: {
+        "db.query.name": "supporting_material.search.semantic",
+        "db.query.revision": 1,
+        "db.pool.name": "canonical",
+        "db.pool.saturation": 0.8,
+        "db.pool.waiting": 3,
+        "db.duration_ms": 15_000,
+        "db.statement": privateText
+      }
+    },
+    policy
+  )
+
+  expect(span).toMatchObject({
+    description: "supporting_material.search.semantic",
+    op: "db.query",
+    data: {
+      "db.query.name": "supporting_material.search.semantic",
+      "db.query.revision": 1,
+      "db.pool.name": "canonical",
+      "db.pool.saturation": 0.8,
+      "db.pool.waiting": 3,
+      "db.duration_ms": 15_000
+    }
+  })
+  expect(JSON.stringify(span)).not.toContain(privateText)
+})
+
 function errorFixture(): ErrorEvent {
   return {
     type: undefined,

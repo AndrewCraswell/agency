@@ -1,6 +1,6 @@
 # Federal Register source identities and disputed numbers
 
-Owner: ING-05 in the [production backlog](ingestion-production-tasks.md). Source identity registration is distinct
+The [acquisition workflow](acquisition-workflows.md) owns source identity registration, which is distinct
 from publication of text and metadata. The source-record denominator must include every supported XML publication,
 including multiple publications sharing one printed document number.
 

@@ -8,8 +8,8 @@ and review work, not simply more tracked bills or another AI answer.
 
 This specification owns product priorities and boundaries. The [information architecture](information-architecture.md)
 owns navigation and proposed browser routes; the [design handoff](../design/design.md) owns detailed interactions and
-acceptance. The [product backlog](../backlog/backlog.md) tracks delivery. Designs, API contracts and passing tests are
-not interchangeable evidence of a released customer workflow.
+acceptance. Linear tracks delivery. Designs, API contracts and passing tests are not interchangeable evidence of a
+released customer workflow.
 
 ## Primary user
 
@@ -33,7 +33,7 @@ Conversation remains home and the flexible entry for a new question. Issues prov
 the user can open an issue, inspect evidence and prepare a brief directly without starting another conversation. No
 dashboard, persona selection, mandatory issue creation or MCP setup stands before the first useful answer.
 
-The [conversation integration design](../design/conversations.md) defines access from any surface, turns, rendered
+The [conversation integration design](../design/design.md) defines access from any surface, turns, rendered
 content, references/citations, truthful work progress and explicit writes back to the owning feature. Chat history,
 research references and saved findings/follows remain distinct; this does not add private reasoning display or a second
 issue/brief editor.
@@ -135,7 +135,7 @@ These are evaluation requirements, not claims of achieved production performance
 | Version comparison | Unambiguous input versions; added/removed/unchanged passages distinguished; truncation disclosed |
 
 Release requires clean repository verification, accurate [data documentation](../../../legislation-ingestion/docs/engineering/data-sync-catalog.md),
-validated external services and current [API/passage acceptance](../operations/passage-search-delivery.md), plus the
+validated external services and current [API/passage acceptance](../engineering/api/search-and-diffs.md), plus the
 relevant customer workflows above. State activation/freshness follows per-jurisdiction
 [Open States acceptance](../../../legislation-ingestion/docs/operations/openstates-rollout-checklist.md); ingestion fixtures alone are insufficient.
 
@@ -149,7 +149,7 @@ Client authorization, data rights, service commitments and commercial entitlemen
 
 Core representative research includes historical/current service, source profiles, sponsorship, amendments, vote
 positions and committee/event activity. Address lookup and extracted mentions remain separately governed by the
-[identity roadmap](../engineering/identity-and-representative-roadmap.md). Manual discovery requires no address;
+[identity roadmap](../../../../packages/legislation-core/docs/engineering/identity.md). Manual discovery requires no address;
 raw address input is not an MCP contract and is not retained by default.
 
 ## Explicit exclusions

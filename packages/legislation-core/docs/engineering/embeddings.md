@@ -3,7 +3,7 @@
 C owns `src/embeddings/embedding-routing.ts`, tokenizers, exact-input preparation and the shared OpenRouter client.
 Index jobs and W query runtime consume the same route, dimension, role and input-contract definitions. M calls W over
 HTTP and does not embed or rerank. [I rollout](../../../../apps/legislation-ingestion/docs/engineering/embedding-rollout-plan.md)
-owns dated evidence and the deferred full rebuild; [W retrieval](../../../../apps/legislation-web/docs/engineering/retrieval-acceptance.md)
+owns dated evidence and the deferred full rebuild; [W retrieval](../../../../apps/legislation-web/docs/engineering/api/search-and-diffs.md)
 owns dispatch and quality gates. Moving this contract does not approve regeneration.
 
 ## Retrieval products and embedding inputs

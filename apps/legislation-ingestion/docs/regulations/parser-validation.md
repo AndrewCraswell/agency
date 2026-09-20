@@ -2,7 +2,7 @@
 
 September 14, 2026 parser evidence, with later regression notes. Local normalization and canonical pilot import now
 exist; current storage scope is in [storage validation](storage-validation.md), and production delivery remains gated.
-Parent: [implementation progress](implementation-progress.md).
+Parent: [implementation contract](implementation.md).
 
 ## Implemented contract
 
@@ -107,7 +107,7 @@ text/footnotes/table evidence, document-number corrections, date mismatch, empty
 DTD/entities, deep/truncated XML, wrong title, timeouts, corrupted input/output, parent validation and independent
 deterministic re-parsing across the 5,000-record shard boundary. Together with acquisition and Trigger configuration,
 38 focused tests passed. Service type-check, scoped lint and root `pnpm verify` passed. The coverage run passed 2,742
-legislation tests, with 83 skipped. Full verification evidence is recorded in the [progress page](implementation-progress.md).
+legislation tests, with 83 skipped. Full verification evidence is recorded in the [progress page](implementation.md).
 
 Source/parser qualification remains partial. Newer metadata pagination/join, canonical storage, required-PDF pilots,
 alternate HTML publication and diagnostic embedding comparisons are recorded in their owning validation/progress pages;

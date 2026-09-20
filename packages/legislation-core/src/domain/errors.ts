@@ -43,7 +43,7 @@ export function normalizeLegislationError(error: unknown): LegislationError {
   }
   const code = postgresErrorCode(error)
   if (code === "57014") {
-    return new LegislationError("dependency_unavailable", "The database query timed out. Narrow the selection.", {
+    return new LegislationError("dependency_unavailable", "The database query timed out. Try again.", {
       cause: error,
       details: { reason: "timeout", retryable: true }
     })

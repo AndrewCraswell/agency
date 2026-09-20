@@ -55,7 +55,7 @@ function sourceFormat(url: string, source: Rendition) {
 }
 
 function readableSource(source: Rendition) {
-  const explicit = sourceUrlSchema.safeParse(source.readableUrl)
+  const explicit = sourceUrlSchema.pipe(z.string().max(8192)).safeParse(source.readableUrl)
   if (
     explicit.success &&
     !["xml", "json", "txt"].includes(sourceFormat(explicit.data, {})) &&
@@ -63,7 +63,7 @@ function readableSource(source: Rendition) {
   ) {
     return { url: explicit.data, rank: sourceFormat(explicit.data, {}) === "pdf" ? 1 : 0 }
   }
-  const url = sourceUrlSchema.safeParse(source.sourceUrl ?? source.url)
+  const url = sourceUrlSchema.pipe(z.string().max(8192)).safeParse(source.sourceUrl ?? source.url)
   if (!url.success) {
     return undefined
   }

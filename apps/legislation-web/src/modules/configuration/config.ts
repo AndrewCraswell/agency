@@ -21,6 +21,7 @@ const configSchema = z
     database: z.object({
       apiStatementTimeoutMs: z.coerce.number().int().min(1_000).max(60_000),
       connectionTimeoutMs: z.coerce.number().int().positive(),
+      directUrl: z.url({ protocol: /^postgres(?:ql)?$/ }).optional(),
       idleTimeoutMs: z.coerce.number().int().positive(),
       maxConnections: z.coerce.number().int().positive(),
       url: z.url({ protocol: /^postgres(?:ql)?$/ })
@@ -40,6 +41,9 @@ const configSchema = z
     model: z.object({
       apiKey: optionalSecret,
       baseUrl: z.url({ protocol: /^https$/ }),
+      embeddingTimeoutMs: z.coerce.number().int().min(1).max(300_000),
+      generationTimeoutMs: z.coerce.number().int().min(1).max(300_000),
+      rerankTimeoutMs: z.coerce.number().int().min(1).max(300_000),
       researchAnswerModel: optionalSecret
     }),
     passageSearch: z.discriminatedUnion("enabled", [
@@ -170,6 +174,7 @@ export function loadConfig(environment: Readonly<Record<string, string | undefin
     database: {
       apiStatementTimeoutMs: environment.DATABASE_API_STATEMENT_TIMEOUT_MS ?? "15000",
       connectionTimeoutMs: environment.DATABASE_CONNECTION_TIMEOUT_MS ?? "10000",
+      directUrl: environment.DATABASE_DIRECT_URL?.trim() || undefined,
       idleTimeoutMs: environment.DATABASE_IDLE_TIMEOUT_MS ?? "30000",
       maxConnections: environment.DATABASE_MAX_CONNECTIONS ?? "10",
       url: environment.DATABASE_URL ?? "postgresql://legislation:legislation@127.0.0.1:55432/legislation"
@@ -189,6 +194,9 @@ export function loadConfig(environment: Readonly<Record<string, string | undefin
     model: {
       apiKey: environment.OPENROUTER_API_KEY?.trim() || undefined,
       baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
+      embeddingTimeoutMs: environment.OPENROUTER_EMBEDDING_TIMEOUT_MS ?? "30000",
+      generationTimeoutMs: environment.OPENROUTER_GENERATION_TIMEOUT_MS ?? "30000",
+      rerankTimeoutMs: environment.OPENROUTER_RERANK_TIMEOUT_MS ?? "30000",
       researchAnswerModel: environment.RESEARCH_ANSWER_MODEL
     },
     passageSearch,

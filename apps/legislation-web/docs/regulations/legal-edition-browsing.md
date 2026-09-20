@@ -80,5 +80,5 @@ by exact source reconstruction of 3 CFR 100.1. The annual pilot verifies three p
 of two unpublished editions. A retained-database provision canary also read the same current eCFR version through exact
 edition context, default-head selection and context-neutral version selection; both contextual paths reported
 `isLatestValidated: true`. The same retained database also served its version catalog and exact reverse edition
-membership through the production reader SQL. See the [implementation ledger](../../../legislation-ingestion/docs/regulations/implementation-progress.md) for reports and limitations.
+membership through the production reader SQL. See the [implementation ledger](../../../legislation-ingestion/docs/regulations/implementation.md) for reports and limitations.
 This does not certify deployed routing, live credentials, search/embedding readiness or national historical coverage.

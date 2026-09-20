@@ -1,7 +1,7 @@
 # Annual Title 5 quoted-revision scope
 
 Reviewed September 15, 2026. This is a normalization correction for one immutable publisher artifact, not a general
-rule for deciding when regulations take effect. ING-03 in the [production tasks](ingestion-production-tasks.md) owns
+rule for deciding when regulations take effect. The [acquisition workflow](acquisition-workflows.md) owns
 the source reconciliation; annual title publication remains subject to the complete-volume and source-date gates.
 
 ## Source evidence

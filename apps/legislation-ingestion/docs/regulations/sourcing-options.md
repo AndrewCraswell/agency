@@ -1,7 +1,7 @@
 # Regulatory sourcing options and tradeoffs
 
 Recorded September 14, 2026. Sourcing/rights evaluation, not a signed vendor decision. Direct federal local acquisition,
-storage and search foundations now exist; [implementation progress](implementation-progress.md) records their limits.
+storage and search foundations now exist; the [implementation contract](implementation.md) records their limits.
 
 ## Recommended evaluation direction
 

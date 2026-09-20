@@ -1,6 +1,6 @@
 # Canonical passage shape inventory
 
-Owner: [remaining search tasks](search-production-tasks.md), PASS-01. The inventory reads canonical memberships,
+Owner: [remaining search tasks](search-indexing.md), PASS-01. The inventory reads canonical memberships,
 checks their content hashes, reconstructs reader text and identifies unsupported table layouts. Optional `--prepare`
 adds offline full-version passage preparation with both pinned tokenizers. Neither mode calls embedding providers,
 writes preparation rows or establishes serving readiness.

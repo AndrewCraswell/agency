@@ -7,6 +7,7 @@ import {
   type EntityKind
 } from "./entityResults"
 import { entityCardSchema, entityKindSchema } from "./entityResults"
+import { readCompleteResearchResult } from "./researchFragments"
 
 export const retainedResultSchema = z.object({
   sessionKey: z.uuid(),
@@ -160,7 +161,12 @@ export function createResultStore(now = Date.now, persistence?: ResultPersistenc
         const cursor = snapshot.nextCursor
         snapshot.pending = (async () => {
           signal.throwIfAborted()
-          const data = await snapshot.load(cursor, signal)
+          const data = await readCompleteResearchResult(
+            snapshot.toolName,
+            await snapshot.load(cursor, signal),
+            snapshot.load,
+            signal
+          )
           signal.throwIfAborted()
           const next = projectEntityResult(snapshot.toolName, data)
           if (!next || next.nextCursor === cursor || (next.items.length === 0 && next.nextCursor)) {

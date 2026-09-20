@@ -136,6 +136,47 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const SearchBills: Story = { args: { toolName: "search_bills" } }
+export const Timeout: Story = { args: { toolName: "search_bills", failureCode: "timeout" } }
+export const FragmentAssembly: Story = {
+  render: () => {
+    const capture = toolCaptures.find((candidate) => candidate.toolName === "get_person")
+    invariant(capture, "Missing person fixture")
+    const samples = [
+      { label: "Partial record", output: { assembly: { status: "pending" }, data: { partial: true } } },
+      { label: "Record assembled", output: { assembly: { status: "complete" }, data: { partial: true } } },
+      { label: "More evidence available", output: { evidencePage: { partial: true } } },
+      { label: "Partial text", output: { data: { partial: true } } }
+    ]
+    return (
+      <section aria-label="Synthetic oversized-result states" className={styles.grid}>
+        {samples.map(({ label, output }) => (
+          <section key={label} aria-label={label} className={styles.sample}>
+            <h3 className={styles.label}>{label}</h3>
+            <ResearchActivity
+              isRunning={false}
+              part={{
+                type: "dynamic-tool",
+                toolName: capture.toolName,
+                toolCallId: `fragment-fixture-${label}`,
+                input: capture.input,
+                state: "output-available",
+                output
+              }}
+            />
+          </section>
+        ))}
+      </section>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    for (const label of ["Partial record", "Record assembled", "More evidence available", "Partial text"]) {
+      const sample = within(canvas.getByRole("region", { name: label }))
+      await expect(sample.getByLabelText(`Read person: ${label}`)).toBeVisible()
+      await expect(sample.getByText(label, { selector: "span" })).toBeVisible()
+    }
+  }
+}
 export const ReadBill: Story = { args: { toolName: "get_bill" } }
 export const ReadBills: Story = { args: { toolName: "get_bills" } }
 export const ReadBillTimeline: Story = { args: { toolName: "get_bill_timeline" } }

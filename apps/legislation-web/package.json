@@ -16,6 +16,7 @@
     "db:down": "pnpm --filter @repo/legislation-core db:down",
     "db:generate": "pnpm --filter @repo/legislation-core db:generate",
     "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
+    "db:query-plan": "tsx scripts/query-plan.ts",
     "db:reset": "pnpm --filter @repo/legislation-core db:reset",
     "db:status": "pnpm --filter @repo/legislation-core db:status",
     "db:up": "pnpm --filter @repo/legislation-core db:up",

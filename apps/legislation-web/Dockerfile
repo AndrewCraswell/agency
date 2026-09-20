@@ -17,8 +17,10 @@ WORKDIR /workspace
 # extends shared workspace configuration and uses the committed lockfile.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/oxlint-config ./packages/oxlint-config
+COPY packages/storybook-config ./packages/storybook-config
 COPY packages/typescript-config ./packages/typescript-config
 COPY packages/legislation-core ./packages/legislation-core
+COPY packages/legislation-diffing ./packages/legislation-diffing
 COPY apps/legislation-web ./apps/legislation-web
 COPY apps/legislation-web/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml
 

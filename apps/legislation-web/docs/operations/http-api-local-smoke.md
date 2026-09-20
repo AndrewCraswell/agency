@@ -60,7 +60,7 @@ deadline is needed. The harness separately asserts unauthenticated `401` rejecti
 The final release profile must have no skipped checks once every manifest operation is unblocked: its reviewed
 full-profile report must have `status: "passed"`, with empty `blocked`, `failed`, and `skipped` arrays. Until then, the
 missing/blocked fixture checks must remain explicit and cannot be promoted by omitting their fixtures. Historical
-OCR blockers are not current route status; use [API acceptance](passage-search-delivery.md). Provide jurisdiction and session IDs, bill ID, vote
+OCR blockers are not current route status; use [API acceptance](../engineering/api/search-and-diffs.md). Provide jurisdiction and session IDs, bill ID, vote
 ID, change ID, material ID, document ID plus document section ID, material section ID, subscription ID, webhook ID,
 both search-query variables, and authenticated mode with an explicit smoke token. A report with any skipped check is
 evidence of an incomplete fixture configuration, not a pass.

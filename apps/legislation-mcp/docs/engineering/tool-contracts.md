@@ -8,7 +8,7 @@ that registry on September 16, 2026: 25 baseline read tools plus organization-ga
 `list_legal_editions`, `get_legal_edition`, `list_legal_provisions`, `search_regulations` and `get_legal_text` pilots,
 with no calendar, raw-address, conversation or mutation tools. Product chat
 actions use authorized application services, not an assumed MCP mutation surface. See [authentication](../operations/authentication.md)
-and [W API acceptance](../../../legislation-web/docs/operations/passage-search-delivery.md) for serving and release gates.
+and the [W search contract](../../../legislation-web/docs/engineering/api/search-and-diffs.md) for serving behavior.
 
 Regulatory tools and their API mappings are in [legal tools](legal-tools.md).
 [W code discovery](../../../legislation-web/docs/regulations/legal-code-discovery.md),
@@ -37,6 +37,15 @@ as proof that the jurisdiction has no such people, committees, events, votes, am
 Stable error categories are `invalid_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`,
 `dependency_unavailable`, and `internal`. Errors include a safe message and correlation ID and never include SQL,
 credentials, stack traces, or provider secrets.
+
+The shared registry does not impose a second whole-tool 30-second timer. M's typed HTTP client still applies its
+configured API deadline and propagates request cancellation to the transport. W owns database and provider deadlines;
+a genuine dependency timeout is reported as such rather than inferred from an operation's duration.
+Oversized singleton records and metadata continue through lossless, snapshot-bound JSON fragments while each response
+still fits the combined text-and-structured budget. Fragment continuations retain the first API response's
+`meta.correlationId`, so per-request diagnostics do not invalidate unchanged source snapshots. Reconstructed envelopes
+retain their original shape and correlation ID; each HTTP request and error still has its own telemetry correlation.
+Changes to source content continue to invalidate the snapshot.
 
 ## Locked tools
 

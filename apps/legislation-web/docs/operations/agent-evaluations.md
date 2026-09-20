@@ -70,6 +70,8 @@ All cases remain draft; schema validation and authored rubrics do not establish 
 `pnpm tool agent/run-scenarios --scenario authored.json` validates and prints a plan without loading a browser,
 sending requests or creating run output. `--scenario -` reads JSON from stdin; `--help` describes the input.
 This tracked driver replaces ad hoc campaign scripts for new runs, not their historical journals.
+Export capture reads the inline JSON code block rendered in the chat by `/export`.
+It does not depend on browser downloads or clipboard access and does not pass diagnostic JSON to the adaptive planner.
 
 The plan declares full jurisdiction names, up to eight exchanges, ordered prompts and any discovery dependencies.
 Jurisdiction clarification rules supply structured choices rather than inferred matches. Optional radio/checkbox

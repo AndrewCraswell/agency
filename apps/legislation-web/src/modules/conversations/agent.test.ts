@@ -1,8 +1,9 @@
 import { propagateAttributes } from "@langfuse/tracing"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
-import { jsonSchema, streamText } from "ai"
+import { APICallError, jsonSchema, streamText } from "ai"
+import { MockLanguageModelV4 } from "ai/test"
 import { describe, expect, it, vi } from "vitest"
-import { createResearchModel, researchAgentLimits, researchModelId, runResearchAgent } from "./agent"
+import { createResearchModel, researchAgentSettings, researchModelId, runResearchAgent } from "./agent"
 
 const { chat } = vi.hoisted(() => ({ chat: vi.fn<() => string>(() => "test-model") }))
 vi.mock("@openrouter/ai-sdk-provider", () => ({
@@ -21,6 +22,57 @@ vi.mock("ai", async (importOriginal) => ({
 }))
 
 describe("runResearchAgent", () => {
+  it.each([true, false])("only retries SDK-classified transient provider failures: %s", async (isRetryable) => {
+    const actual = await vi.importActual<typeof import("ai")>("ai")
+    vi.mocked(streamText).mockImplementationOnce(actual.streamText)
+    const failure = new APICallError({
+      message: "Provider failure",
+      url: "https://provider.example",
+      requestBodyValues: {},
+      statusCode: isRetryable ? 503 : 401,
+      isRetryable,
+      responseHeaders: { "retry-after-ms": "0" }
+    })
+    const doStream = vi.fn<InstanceType<typeof MockLanguageModelV4>["doStream"]>().mockRejectedValue(failure)
+    const result = runResearchAgent({
+      sessionId: "retry-policy",
+      model: new MockLanguageModelV4({ doStream }),
+      instructions: "Research the source.",
+      messages: [{ role: "user", content: "Read the source." }],
+      tools: {},
+      signal: new AbortController().signal
+    })
+    await result.consumeStream()
+    expect(doStream).toHaveBeenCalledTimes(isRetryable ? 3 : 1)
+    expect(doStream.mock.calls[0]?.[0]).not.toHaveProperty("maxOutputTokens", 8192)
+  })
+
+  it("honors caller cancellation during the SDK retry delay", async () => {
+    const actual = await vi.importActual<typeof import("ai")>("ai")
+    vi.mocked(streamText).mockImplementationOnce(actual.streamText)
+    const controller = new AbortController()
+    const doStream = vi.fn<InstanceType<typeof MockLanguageModelV4>["doStream"]>().mockImplementation(async () => {
+      setTimeout(() => controller.abort(), 20)
+      throw new APICallError({
+        message: "Busy",
+        url: "https://provider.example",
+        requestBodyValues: {},
+        statusCode: 503,
+        isRetryable: true
+      })
+    })
+    const result = runResearchAgent({
+      sessionId: "cancel-retry",
+      model: new MockLanguageModelV4({ doStream }),
+      instructions: "Research the source.",
+      messages: [{ role: "user", content: "Read the source." }],
+      tools: {},
+      signal: controller.signal
+    })
+    await result.consumeStream()
+    expect(doStream).toHaveBeenCalledTimes(1)
+  })
+
   it("adds web trust and citation guidance only when web tools are available", () => {
     runResearchAgent({
       sessionId: "web-research",
@@ -81,9 +133,12 @@ describe("runResearchAgent", () => {
     })
   })
 
-  it("shares the injected prompt, model, tools and production limits", () => {
+  it("shares the injected prompt, model, tools and step preparation without overriding tool choice", () => {
     const signal = new AbortController().signal
     const onChunk = vi.fn<() => void>()
+    const prepareStep = vi.fn<NonNullable<Parameters<typeof runResearchAgent>[0]["prepareStep"]>>(() => ({
+      toolChoice: "auto"
+    }))
     const result = runResearchAgent({
       sessionId: "conversation-123",
       model: "test-model",
@@ -91,7 +146,8 @@ describe("runResearchAgent", () => {
       messages: [{ role: "user", content: "Research this bill" }],
       tools: {},
       signal,
-      onChunk
+      onChunk,
+      prepareStep
     })
 
     expect(result).toEqual({ stream: "test-stream" })
@@ -105,14 +161,14 @@ describe("runResearchAgent", () => {
         instructions: expect.stringContaining("Pinned instructions"),
         messages: [{ role: "user", content: "Research this bill" }],
         tools: {},
-        stopWhen: [expect.any(Function), expect.any(Function)],
-        maxOutputTokens: researchAgentLimits.outputTokens,
-        maxRetries: 0,
+        stopWhen: expect.any(Function),
+        maxRetries: researchAgentSettings.maxRetries,
         telemetry: { recordInputs: false, recordOutputs: false },
         onChunk,
-        prepareStep: expect.any(Function),
+        prepareStep,
         abortSignal: signal
       })
     )
+    expect(vi.mocked(streamText).mock.calls.at(-1)?.[0]).not.toHaveProperty("maxOutputTokens")
   })
 })

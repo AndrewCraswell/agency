@@ -9,8 +9,14 @@ import { PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
 import { afterAll, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
+import type { DatabaseQueryObserver } from "../../services/sentry/databaseQueryTelemetry"
 import type { RankedPassageSearch } from "../search/ranked-passage-search"
-import { buildLexicalPassageSearchQuery, lexicalBillSearch, semanticBillSearch } from "../search/search"
+import {
+  buildLexicalPassageSearchQuery,
+  buildSemanticSupportingMaterialSearchQuery,
+  lexicalBillSearch,
+  semanticBillSearch
+} from "../search/search"
 import {
   billSearchExecution,
   amendmentSearchPageState,
@@ -32,6 +38,7 @@ import {
   lexicalSupportingMaterialPageState,
   LegislationQueryService,
   projectDocumentBackedAmendment,
+  resolveSupportingMaterialHybridBranches,
   type SupportingMaterialSearchInput
 } from "./query-service"
 
@@ -49,15 +56,217 @@ afterAll(async () => {
   await pool.end()
 })
 
+describe("document parent bill identity", () => {
+  const bill = {
+    id: "bill:us:119:s:2937",
+    identifier: "S. 2937",
+    title: "A bill to establish requirements for automated decision systems.",
+    sessionId: "session:us:119"
+  }
+  const document = {
+    id: "document:us:119:s:2937:is",
+    billId: bill.id,
+    title: "Introduced in Senate",
+    classification: "version",
+    versionCode: "is",
+    documentDate: "2025-10-01",
+    sourceUrl: "https://www.congress.gov/bill/119th-congress/senate-bill/2937/text",
+    processingStatus: "processed",
+    text: "Exact published text"
+  }
+  const section = {
+    id: "section:2937:1",
+    documentId: document.id,
+    ordinal: 0,
+    heading: "Requirements",
+    text: "Exact published text"
+  }
+  const documentValues: Record<string, unknown> = document
+  const sectionValues: Record<string, unknown> = section
+  const documentRow = Object.keys(getTableColumns(schema.billDocuments)).map((key) => documentValues[key] ?? null)
+  const sectionRow = Object.keys(getTableColumns(schema.documentSections)).map((key) => sectionValues[key] ?? null)
+  const sectionMetadata = [
+    document.billId,
+    document.title,
+    document.classification,
+    document.versionCode,
+    document.documentDate,
+    document.sourceUrl
+  ]
+  const billRow = Object.values(bill)
+
+  function expectBillJoin(statement: string) {
+    expect(statement).toContain('inner join "legislation"."bills"')
+    expect(statement).toContain('"legislation"."bills"."id" = "legislation"."bill_documents"."bill_id"')
+    for (const field of ["id", "identifier", "title", "session_id"]) {
+      expect(statement).toContain(`"bills"."${field}"`)
+    }
+  }
+
+  it("returns the persisted parent beside unmodified bill text document metadata", async () => {
+    const metadataRow = Object.keys(getTableColumns(schema.billDocuments))
+      .filter((key) => key !== "text")
+      .map((key) => documentValues[key] ?? null)
+    const query = vi
+      .spyOn(pool, "query")
+      .mockImplementationOnce(async () => ({
+        rows: [[...metadataRow, bill.identifier, ...billRow, 1]],
+        fields: [],
+        command: "SELECT",
+        rowCount: 1,
+        oid: 0
+      }))
+      .mockImplementationOnce(async () => ({ rows: [sectionRow], fields: [], command: "SELECT", rowCount: 1, oid: 0 }))
+    try {
+      const result = await new LegislationQueryService(database).getBillText({
+        id: bill.id,
+        documentId: document.id,
+        versionCode: document.versionCode,
+        limit: 1
+      })
+      expect(result.document).toMatchObject({
+        id: document.id,
+        billId: bill.id,
+        title: document.title,
+        versionCode: document.versionCode,
+        billIdentifier: bill.identifier,
+        bill
+      })
+      expect(result.document).not.toHaveProperty("text")
+      expect(result.sections).toEqual([expect.objectContaining(section)])
+      expectBillJoin(z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text)
+      expect(query.mock.calls[0]?.[1]).toEqual([bill.id, document.id, document.versionCode, 2])
+      expect(query.mock.calls[1]?.[1]).toEqual([document.id, 2])
+      expect(query).toHaveBeenCalledTimes(2)
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("returns parent identity on direct document details and their section items without extra queries", async () => {
+    const query = vi
+      .spyOn(pool, "query")
+      .mockImplementationOnce(async () => ({
+        rows: [[...documentRow, ...billRow]],
+        fields: [],
+        command: "SELECT",
+        rowCount: 1,
+        oid: 0
+      }))
+      .mockImplementationOnce(async () => ({
+        rows: [[...sectionRow, ...sectionMetadata, ...billRow]],
+        fields: [],
+        command: "SELECT",
+        rowCount: 1,
+        oid: 0
+      }))
+    try {
+      const result = await new LegislationQueryService(database).getDocument({ id: document.id, limit: 1 })
+      expect(result.document).toMatchObject({ ...document, bill })
+      expect(result.sections.items).toEqual([
+        expect.objectContaining({
+          ...section,
+          billId: bill.id,
+          title: document.title,
+          classification: document.classification,
+          versionCode: document.versionCode,
+          documentDate: document.documentDate,
+          sourceUrl: document.sourceUrl,
+          bill
+        })
+      ])
+      for (const call of query.mock.calls) {
+        expectBillJoin(z.object({ text: z.string() }).parse(call[0]).text)
+      }
+      expect(query.mock.calls[0]?.[1]).toEqual([document.id, 1])
+      expect(query.mock.calls[1]?.[1]).toEqual([document.id, 2])
+      expect(query).toHaveBeenCalledTimes(2)
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("keeps exact document and section bindings on a direct section read", async () => {
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(async () => ({
+      rows: [[...documentRow, ...sectionRow, ...billRow]],
+      fields: [],
+      command: "SELECT",
+      rowCount: 1,
+      oid: 0
+    }))
+    try {
+      const result = await new LegislationQueryService(database).getDocumentSection({
+        documentId: document.id,
+        sectionId: section.id
+      })
+      expect(result).toMatchObject({ document: { ...document, bill }, section })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expectBillJoin(statement)
+      expect(statement).toContain('"document_sections"."document_id" = "legislation"."bill_documents"."id"')
+      expect(query.mock.calls[0]?.[1]).toEqual([document.id, section.id, 1])
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("preserves count-plus-one pagination and parent metadata for independently fetched sections", async () => {
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(async () => ({
+      rows: [
+        [...sectionRow, ...sectionMetadata, ...billRow],
+        [...sectionRow, ...sectionMetadata, ...billRow]
+      ],
+      fields: [],
+      command: "SELECT",
+      rowCount: 2,
+      oid: 0
+    }))
+    try {
+      const result = await new LegislationQueryService(database).getDocumentSections({
+        documentId: document.id,
+        limit: 1,
+        cursor: Buffer.from(JSON.stringify({ offset: 1 })).toString("base64url")
+      })
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          ...section,
+          billId: bill.id,
+          title: document.title,
+          classification: document.classification,
+          versionCode: document.versionCode,
+          documentDate: document.documentDate,
+          sourceUrl: document.sourceUrl,
+          bill
+        })
+      ])
+      expect(result.truncated).toBe(true)
+      expect(result.nextCursor).toBe(Buffer.from(JSON.stringify({ offset: 2 })).toString("base64url"))
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expectBillJoin(statement)
+      expect(statement).toContain('"bill_documents"."id" = "legislation"."document_sections"."document_id"')
+      expect(statement).toContain('"bill_documents"."classification"')
+      expect(query.mock.calls[0]?.[1]).toEqual([document.id, 2, 1])
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+})
+
 describe("mention discovery", () => {
   it("applies timeline pagination to a single ordered action and vote query", async () => {
     const stopped = new Error("Timeline query captured")
+    const observed = vi.fn<(input: Parameters<DatabaseQueryObserver>[0]) => void>()
+    const observe: DatabaseQueryObserver = async (input, operation) => {
+      observed(input)
+      return await operation()
+    }
     const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
       throw stopped
     })
     try {
       await expect(
-        new LegislationQueryService(database).getBillTimeline({
+        new LegislationQueryService(database, undefined, undefined, observe).getBillTimeline({
           id: "bill:us:116:hr:1",
           limit: 1,
           cursor: Buffer.from(JSON.stringify({ offset: 1 })).toString("base64url")
@@ -73,6 +282,7 @@ describe("mention discovery", () => {
       expect(statement).toContain("offset")
       expect(query.mock.calls[0]?.[1]).toEqual(["bill:us:116:hr:1", "bill:us:116:hr:1", 2, 1])
       expect(query).toHaveBeenCalledOnce()
+      expect(observed).toHaveBeenCalledWith({ name: "bill.timeline", pool: "canonical", revision: 1 })
     } finally {
       query.mockRestore()
     }
@@ -935,6 +1145,84 @@ describe("lexical supporting material candidate search", () => {
     expect(rendered.sql.indexOf("section_candidates as")).toBeLessThan(rendered.sql.indexOf("ts_headline("))
     expect(rendered.sql).not.toContain('inner join "legislation"."supporting_materials" on')
     expect(rendered.sql).not.toContain('left join "legislation"."supporting_material_links"')
+  })
+
+  describe("semantic supporting material search", () => {
+    it("filters relationships through one correlated existence check without expanding ranked rows", () => {
+      const rendered = buildSemanticSupportingMaterialSearchQuery(database, {
+        amendmentIds: ["amendment:fixture"],
+        billIds: ["bill:fixture"],
+        embedding: Array.from({ length: 1024 }, () => 0),
+        eventIds: ["event:fixture"],
+        jurisdictionIds: ["jurisdiction:fixture"],
+        limit: 20,
+        organizationIds: ["organization:fixture"],
+        sessionIds: ["session:fixture"]
+      }).toSQL()
+
+      expect(rendered.sql).toContain(
+        'exists (select "legislation"."supporting_material_links"."material_id" from "legislation"."supporting_material_links" left join "legislation"."bills"'
+      )
+      expect(rendered.sql).toContain(
+        '"legislation"."supporting_material_links"."material_id" = "legislation"."supporting_materials"."id"'
+      )
+      expect(rendered.sql).toContain('with "nearest_supporting_material_sections" as')
+      const relationshipScope = rendered.sql.indexOf("exists (select")
+      expect(relationshipScope).toBeGreaterThan(-1)
+      expect(relationshipScope).toBeLessThan(rendered.sql.indexOf("order by"))
+      expect(rendered.sql.slice(0, relationshipScope)).not.toContain(
+        'left join "legislation"."supporting_material_links"'
+      )
+      const nearestOrder = rendered.sql.indexOf(
+        'order by "legislation"."supporting_material_section_embeddings"."embedding" <=>'
+      )
+      const nearestLimit = rendered.sql.indexOf("limit", nearestOrder)
+      expect(rendered.sql.slice(nearestOrder, nearestLimit)).not.toContain(
+        '"legislation"."supporting_material_sections"."id"'
+      )
+      expect(rendered.sql).toContain('order by "distance" asc, "nearest_supporting_material_sections"."id" asc')
+    })
+
+    it("keeps the successful branch when one hybrid retrieval branch times out", () => {
+      const timeout = Object.assign(new Error("private database message"), { code: "57014" })
+
+      expect(
+        resolveSupportingMaterialHybridBranches(
+          { status: "rejected", reason: timeout },
+          { status: "fulfilled", value: ["lexical"] }
+        )
+      ).toEqual({
+        lexical: ["lexical"],
+        warnings: ["Semantic retrieval timed out. Results use lexical matching only."]
+      })
+      expect(
+        resolveSupportingMaterialHybridBranches(
+          { status: "fulfilled", value: ["semantic"] },
+          { status: "rejected", reason: timeout }
+        )
+      ).toEqual({
+        semantic: ["semantic"],
+        warnings: ["Lexical retrieval timed out. Results use semantic matching only."]
+      })
+    })
+
+    it("does not hide deterministic or complete hybrid retrieval failures", () => {
+      const timeout = Object.assign(new Error("private database message"), { code: "57014" })
+      const invalid = new LegislationError("invalid_request", "Invalid filter")
+
+      expect(() =>
+        resolveSupportingMaterialHybridBranches(
+          { status: "rejected", reason: invalid },
+          { status: "fulfilled", value: ["lexical"] }
+        )
+      ).toThrow(invalid)
+      expect(() =>
+        resolveSupportingMaterialHybridBranches(
+          { status: "rejected", reason: timeout },
+          { status: "rejected", reason: timeout }
+        )
+      ).toThrow(timeout)
+    })
   })
 
   it("calculates exact best-section ranks only within the declared stable section sample", () => {

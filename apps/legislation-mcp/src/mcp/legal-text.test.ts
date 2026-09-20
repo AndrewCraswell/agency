@@ -32,6 +32,7 @@ import { generateKeyPair, SignJWT } from "jose"
 import { afterEach, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { createMcpApplication } from "../application.js"
+import { readFragmentedResult } from "./fragment-test-helper.js"
 
 const pair = await generateKeyPair("RS256")
 const environment = {
@@ -537,7 +538,7 @@ it("searches through the typed HTTP client and checks identity on every call", a
 
 it("applies the combined MCP response budget to legal search metadata", async () => {
   const { client, search } = await setup()
-  search.mockResolvedValueOnce({
+  const source: Awaited<ReturnType<typeof search>> = {
     items: [],
     truncated: false,
     warnings: ["x".repeat(460_000)],
@@ -548,14 +549,21 @@ it("applies the combined MCP response budget to legal search metadata", async ()
       degraded: false,
       candidateSetTruncated: false
     }
-  })
-  const result = await client.callTool({
+  }
+  search.mockResolvedValue(source)
+  const input = { query: "ethical", corpora: ["regulation"] }
+  const result = await readFragmentedResult(client, "search_regulations", input)
+  expect(legalSearchPageSchema.parse(result)).toMatchObject({ meta: { warnings: source.warnings } })
+
+  const first = await client.callTool({ name: "search_regulations", arguments: input })
+  const { data } = z.object({ data: z.object({ nextCursor: z.string() }) }).parse(first.structuredContent)
+  search.mockResolvedValue({ ...source, warnings: ["Changed source warning"] })
+  const changed = await client.callTool({
     name: "search_regulations",
-    arguments: { query: "ethical", corpora: ["regulation"] }
+    arguments: { ...input, cursor: data.nextCursor }
   })
-  expect(result.isError).toBe(true)
-  expect(JSON.stringify(result)).toContain("result_limit")
-  expect(result.structuredContent).toBeUndefined()
+  expect(changed.isError).toBe(true)
+  expect(JSON.stringify(changed.content)).toContain("The result content changed")
 })
 
 it("discovers codes through the authenticated API client and refuses changed API identities", async () => {

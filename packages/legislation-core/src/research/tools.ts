@@ -75,7 +75,6 @@ const searchFilters = {
 }
 const outputSchema = z.object({ data: z.json() })
 const MAXIMUM_RESPONSE_BYTES = 900_000
-const TOOL_TIMEOUT_MILLISECONDS = 30_000
 const MAXIMUM_BATCH_LOOKUPS = 25
 const internalSearchFields = new Set(["embedding", "embeddingInputHash", "embeddingModel", "searchVector"])
 
@@ -312,19 +311,9 @@ async function executeTool<T>(
     userId: context?.identity?.userId
   }
   const execute = telemetry === undefined ? operation : () => telemetry.observe(`mcp.${name}`, metadata, operation)
-  let timeout: NodeJS.Timeout | undefined
   const startedAt = performance.now()
   try {
-    const value = await Promise.race([
-      execute(),
-      new Promise<never>((_resolve, reject) => {
-        timeout = setTimeout(
-          () => reject(new LegislationError("dependency_unavailable", "The tool execution timed out")),
-          TOOL_TIMEOUT_MILLISECONDS
-        )
-        timeout.unref()
-      })
-    ])
+    const value = await execute()
     return { value: toJsonValue(value) }
   } catch (error) {
     telemetry?.reportFailure?.(
@@ -333,8 +322,6 @@ async function executeTool<T>(
       error
     )
     return failure(error, logger)
-  } finally {
-    clearTimeout(timeout)
   }
 }
 
@@ -374,7 +361,12 @@ type ResearchToolDefinition = Readonly<{
   execute: (input: unknown, measureResult?: ResultPageMeasurement) => Promise<ResearchToolResult>
 }>
 
-export function createLegislationResearchTools(service: LegislationQueryApi, logger: Logger, telemetry?: Telemetry) {
+export function createLegislationResearchTools(
+  service: LegislationQueryApi,
+  logger: Logger,
+  telemetry?: Telemetry,
+  analyticsSnapshots = new Map<string, JSONValue>()
+) {
   function tool<T>(
     name: string,
     input: Readonly<Record<string, unknown>>,
@@ -391,25 +383,64 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
       definition: Omit<ResearchToolDefinition, "name" | "execute" | "inputSchema"> & { inputSchema: Schema },
       execute: (input: z.output<Schema>) => Promise<Awaited<ReturnType<typeof executeTool>>>
     ) {
+      const requestSchema =
+        definition.inputSchema instanceof z.ZodPipe ? definition.inputSchema.in : definition.inputSchema
+      if (!(requestSchema instanceof z.ZodObject)) {
+        throw new Error("Research tools require object inputs")
+      }
+      const acceptsCursor = "cursor" in requestSchema.shape
+      const inputSchema = acceptsCursor ? definition.inputSchema : requestSchema.safeExtend({ cursor: cursorSchema })
       definitions.push({
         ...definition,
+        inputSchema,
+        description:
+          `${definition.description} Oversized evidence may return partial section text or partialResult JSON text windows. ` +
+          "Follow nextCursor with unchanged inputs. For partialResult, concatenate text by textOffset for the same snapshot " +
+          "and parse the complete JSON to recover all record identity, provenance and content; no fragment is a complete record.",
         name,
         execute: async (input, measureResult) => {
           const startedAt = performance.now()
           let stage = "validation"
           try {
-            const parsed = definition.inputSchema.parse(input)
+            const parsed = inputSchema.parse(input)
             const selection = z.record(z.string(), z.unknown()).parse(parsed)
             const page = readResultPage(name, selection)
             stage = "execution"
-            const result = await execute(definition.inputSchema.parse(page.input))
+            const { cursor: _cursor, ...withoutCursor } = page.input
+            const executionInput = definition.inputSchema.parse(acceptsCursor ? page.input : withoutCursor)
+            const snapshotKey = JSON.stringify([name, executionInput])
+            const retained =
+              name === "analyze_legislation" && page.snapshot !== undefined
+                ? analyticsSnapshots.get(snapshotKey)
+                : undefined
+            const result = retained !== undefined ? { value: retained } : await execute(executionInput)
             if (!("value" in result)) {
               return result
             }
             stage = "serialization"
-            const response = success(
-              prepareResultPage(name, page.input, result.value, page.offset, page.snapshot, measureResult)
+            const prepared = prepareResultPage(
+              name,
+              page.input,
+              result.value,
+              page.offset,
+              page.snapshot,
+              measureResult,
+              page.fragment
             )
+            // Analytics receipts include execution timestamps; continuations read the original query snapshot.
+            if (name === "analyze_legislation") {
+              if (
+                prepared !== null &&
+                typeof prepared === "object" &&
+                !Array.isArray(prepared) &&
+                typeof prepared.nextCursor === "string"
+              ) {
+                analyticsSnapshots.set(snapshotKey, result.value)
+              } else {
+                analyticsSnapshots.delete(snapshotKey)
+              }
+            }
+            const response = success(prepared)
             if ("isError" in response && response.isError) {
               telemetry?.reportFailure?.(
                 `mcp.${name}`,

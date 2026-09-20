@@ -1,5 +1,7 @@
 import { z } from "zod"
 import { citationReferenceSchema } from "./citationReference"
+import { displayText } from "./displayText"
+import { sessionLabel } from "./sessionLabels"
 
 const billIdentitySchema = z.strictObject({
   id: z.string().regex(/^bill:[a-z0-9-]+:[^:]+:[a-z0-9-]+:[a-z0-9-]+$/),
@@ -30,6 +32,7 @@ export const evidenceSnapshotSchema = z.strictObject({
   versionLabel: z.string().trim().min(1).max(240).optional(),
   locator: z.string().trim().min(1).max(240).optional(),
   sourceUrl: sourceUrlSchema.nullable(),
+  sourceUrlOmitted: z.literal(true).optional(),
   readableUrl: sourceUrlSchema.optional(),
   content: z.discriminatedUnion("state", [
     z.strictObject({
@@ -84,6 +87,13 @@ export function projectModelEvidence({ citationRef: _citationRef, ...source }: E
 
 export const researchContextSchema = z.object({ evidence: z.array(evidenceSnapshotSchema).max(320) })
 
+const sourceBillSchema = z.object({
+  id: billIdentitySchema.shape.id,
+  identifier: z.string().nullish(),
+  title: z.string().trim().min(1),
+  origin: z.enum(["canonical", "web"]).optional()
+})
+
 const sourceRecordSchema = z.object({
   origin: z.enum(["canonical", "web"]).optional(),
   id: z.string().nullish(),
@@ -98,6 +108,7 @@ const sourceRecordSchema = z.object({
   ordinal: z.number().int().nullish(),
   sourceLocator: z.string().nullish(),
   billId: z.string().nullish(),
+  bill: sourceBillSchema.nullish(),
   identifier: z.string().nullish(),
   classification: z
     .union([z.string(), z.array(z.string())])
@@ -133,24 +144,33 @@ const sourceRecordSchema = z.object({
 
 export type EvidenceSourceContext = z.infer<typeof sourceRecordSchema>
 
-function billIdentity(source: EvidenceSourceContext) {
-  if (
-    source.origin === "web" ||
-    source.documentId ||
-    source.materialId ||
-    !source.id ||
-    !source.title ||
-    !billIdentitySchema.shape.id.safeParse(source.id).success
-  ) {
+function sourceBill(source: EvidenceSourceContext) {
+  if (source.origin === "web" || source.materialId || source.provisionId) {
     return undefined
   }
-  const [, jurisdiction, session] = source.id.split(":")
+  if (!source.documentId && source.id && source.title && billIdentitySchema.shape.id.safeParse(source.id).success) {
+    return { id: source.id, title: source.title, identifier: source.identifier }
+  }
+  return source.bill?.origin !== "web" && source.bill?.id === source.billId ? source.bill : undefined
+}
+
+function billIdentity(source: EvidenceSourceContext) {
+  const bill = sourceBill(source)
+  if (!bill) {
+    return undefined
+  }
+  const [, jurisdiction, session] = bill.id.split(":")
   return billIdentitySchema.parse({
-    id: source.id,
+    id: bill.id,
     sessionId: `session:${jurisdiction}:${session}`,
-    identifier: source.identifier ?? undefined,
-    title: source.title
+    identifier: bill.identifier ? displayText(bill.identifier, 240) : undefined,
+    title: displayText(bill.title)
   })
+}
+
+function withParentBill(source: EvidenceSourceContext, parent?: EvidenceSourceContext): EvidenceSourceContext {
+  const bill = source.bill ?? parent?.bill
+  return bill && source.billId === bill.id && source.origin !== "web" ? { ...source, bill } : source
 }
 
 const actionRecordSchema = z.object({
@@ -273,8 +293,10 @@ function evidenceIdentity(source: EvidenceSourceContext, sourceUrl: string | nul
     source.text ?? source.contentHash ?? null,
     source.textOffset ?? 0
   ]
-  const bill = billIdentity(source)
-  return JSON.stringify(bill ? [...identity, bill] : identity)
+  const bill = sourceBill(source)
+  return JSON.stringify(
+    bill ? [...identity, { id: bill.id, identifier: bill.identifier, title: bill.title }] : identity
+  )
 }
 
 export function projectResearchEvidence(
@@ -309,15 +331,16 @@ export function projectResearchEvidence(
       const document = sourceRecordSchema.safeParse(value.document)
       context = undefined
       if (document.success && (!parsed.success || matchesDocumentVersion(parsed.data, document.data))) {
-        context = document.data
+        context = withParentBill(document.data, parsed.success ? parsed.data : undefined)
       }
     }
     if (parsed.success) {
       const record = parsed.data
-      const source = actionSource(value, collection, context) ?? inheritDocument(record, context)
+      const source =
+        actionSource(value, collection, context) ?? withParentBill(inheritDocument(record, context), context)
       const rawUrl = source.sourceUrl ?? source.url ?? source.canonicalUrl
       const url = sourceUrlSchema.safeParse(rawUrl)
-      const sourceUrl = url.success ? url.data : null
+      const sourceUrl = url.success && url.data.length <= 8192 ? url.data : null
       const title = source.title ?? source.name ?? source.heading
       const hasSource = Boolean(rawUrl || ((source.recordId ?? source.id ?? source.documentId) && title))
       if (hasSource && sources.length < 1600) {
@@ -326,17 +349,35 @@ export function projectResearchEvidence(
       const key = evidenceIdentity(source, sourceUrl)
       if (hasSource && evidence.length < 1600 && !seen.has(key)) {
         const quote = source.text
+        let displayTitle = title ? displayText(title) : undefined
+        if (!displayTitle && url.success) {
+          displayTitle = new URL(url.data).hostname
+        }
+        const bill = billIdentity(source)
+        const isBillVersion = source.classification === "version" && bill !== undefined
+        if (isBillVersion) {
+          const identity = [bill.identifier, `(${sessionLabel(bill.sessionId)})`].filter(Boolean).join(" ")
+          displayTitle = displayText(`${identity}: ${bill.title}`)
+        }
         const snapshot = evidenceSnapshotSchema.safeParse({
           id: createId(key),
           recordId:
             source.recordId ?? source.documentId ?? source.materialId ?? source.provisionId ?? source.id ?? undefined,
-          billId: source.billId ?? billIdentity(source)?.id,
-          billIdentity: billIdentity(source),
-          title: title ?? (url.success ? new URL(url.data).hostname : undefined),
+          billId: source.billId ?? bill?.id,
+          billIdentity: bill,
+          title: displayTitle,
           origin: source.origin ?? "canonical",
           sourceUrl,
-          versionLabel: [source.versionCode, source.documentDate].filter(Boolean).join(", ") || undefined,
-          locator: source.sourceLocator ?? source.sectionIdentifier ?? source.heading ?? undefined,
+          ...(url.success && url.data.length > 8192 ? { sourceUrlOmitted: true } : {}),
+          versionLabel:
+            displayText(
+              [isBillVersion ? (source.title ?? source.versionCode) : source.versionCode, source.documentDate]
+                .filter(Boolean)
+                .join(", "),
+              240
+            ) || undefined,
+          locator:
+            displayText(source.sourceLocator ?? source.sectionIdentifier ?? source.heading ?? "", 240) || undefined,
           content: evidenceContent(source, quote)
         })
         if (snapshot.success) {
@@ -344,7 +385,10 @@ export function projectResearchEvidence(
           evidence.push({ snapshot: snapshot.data, source })
         }
       }
-      if (!("document" in value) && (record.id || record.documentId || record.recordId || record.billId)) {
+      if (
+        !("document" in value) &&
+        (record.id || record.documentId || record.recordId || record.billId || record.bill)
+      ) {
         context = source
       }
     }

@@ -9,7 +9,8 @@ Legislation workspace documentation: [web](../apps/legislation-web/docs/README.m
 [ingestion](../apps/legislation-ingestion/docs/README.md), [MCP](../apps/legislation-mcp/docs/README.md),
 and [core](../packages/legislation-core/docs/README.md). See
 [runtime setup](../apps/legislation-web/docs/operations/development.md) for local credentials after the move and
-[verification](../apps/legislation-web/docs/operations/testing.md#full-verification) for `pnpm verify:legislation`.
+[verification](../apps/legislation-web/docs/operations/testing.md#full-verification) for the current `pnpm verify`
+legislation gate.
 The [prototype telemetry specification](../apps/legislation-web/docs/engineering/telemetry-spec.md) focuses on
 debugging failures and slowness with safe Sentry/Langfuse diagnostics, not product analytics or replay.
 The [legislation diffing package](../packages/legislation-diffing/README.md) owns deterministic full-text comparison;
@@ -22,6 +23,8 @@ its app consumers and Storybook prototypes do not perform legal interpretation o
 | [react.md](react.md)             | React component conventions, product-level UI-system selection and styling, and the state/error/URL/routing/form libraries.                                 |
 | [typescript.md](typescript.md)   | TypeScript/type conventions **and** the type-helper libraries (`ts-extras`, `ts-pattern`, `tiny-invariant`, `zod`) — read before writing a new type helper. |
 | [hooks.md](hooks.md)             | React hook conventions **and** the full `@mantine/hooks` catalog — read before writing a new hook.                                                          |
+| [database-performance.md](database-performance.md) | Privacy-safe PostgreSQL query statistics and the targeted AI diagnosis workflow. |
+| [environments-and-deployments.md](environments-and-deployments.md) | Legislation CI/CD, Railway environments, database refreshes, migration ownership, previews and CDN policy. |
 | [shopify-app-generator.md](../packages/fc-theme-base/docs/shopify-app-generator.md) | Creating a neutral embedded Shopify app with the local Turbo generator.                                                               |
 | [shopify-policy-pages.md](../packages/fc-theme-base/docs/shopify-policy-pages.md) | Policy page templates, store-managed content, responsive reading, and footer menu wiring. |
 | [shopify-content-installation.md](../packages/fc-theme-base/docs/shopify-content-installation.md) | Fencing Club migration content, portable manifests, menu wiring, and safe reruns. |

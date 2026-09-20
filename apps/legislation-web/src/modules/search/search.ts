@@ -18,7 +18,7 @@ import {
 } from "@repo/legislation-core/database/schema/schema"
 import { billActionTimestamp } from "@repo/legislation-core/domain/bill-action-timestamp"
 import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
-import { and, arrayOverlaps, asc, desc, eq, gte, inArray, like, lte, sql } from "drizzle-orm"
+import { and, arrayOverlaps, asc, desc, eq, exists, gte, inArray, like, lte, sql } from "drizzle-orm"
 import { getTableColumns, type SQL } from "drizzle-orm"
 
 const DEFAULT_LIMIT = 20
@@ -1469,70 +1469,123 @@ export async function semanticDocumentAmendmentSearch(
     .limit(limit)
 }
 
-export async function semanticSupportingMaterialSearch(
+type SemanticSupportingMaterialSearchInput = Readonly<{
+  amendmentIds?: readonly string[]
+  billIds?: readonly string[]
+  classifications?: readonly string[]
+  documentFrom?: string
+  documentTo?: string
+  embedding: number[]
+  eventIds?: readonly string[]
+  jurisdictionIds?: readonly string[]
+  limit?: number
+  organizationIds?: readonly string[]
+  processingStatus?: "failed" | "pending" | "processed" | "processing" | "unsupported"
+  sessionIds?: readonly string[]
+  updatedFrom?: Date
+  updatedTo?: Date
+  updatedToExclusive?: Date
+}>
+
+export function buildSemanticSupportingMaterialSearchQuery(
   database: LegislationDatabase,
-  input: Readonly<{
-    amendmentIds?: readonly string[]
-    billIds?: readonly string[]
-    classifications?: readonly string[]
-    documentFrom?: string
-    documentTo?: string
-    embedding: number[]
-    eventIds?: readonly string[]
-    jurisdictionIds?: readonly string[]
-    limit?: number
-    organizationIds?: readonly string[]
-    processingStatus?: "failed" | "pending" | "processed" | "processing" | "unsupported"
-    sessionIds?: readonly string[]
-    updatedFrom?: Date
-    updatedTo?: Date
-    updatedToExclusive?: Date
-  }>
+  input: SemanticSupportingMaterialSearchInput
 ) {
   const route = embeddingRouteFor("supporting-material-section")
   const limit = Math.min(Math.max(input.limit ?? DEFAULT_LIMIT, 1), MAXIMUM_LIMIT)
   const distance = sql<number>`${supportingMaterialSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
-  return database
-    .select({ distance, material: supportingMaterialSummaryColumns, sectionId: supportingMaterialSections.id })
-    .from(supportingMaterialSections)
-    .innerJoin(
-      supportingMaterialSectionEmbeddings,
-      eq(supportingMaterialSectionEmbeddings.sectionId, supportingMaterialSections.id)
-    )
-    .innerJoin(supportingMaterials, eq(supportingMaterialSections.materialId, supportingMaterials.id))
-    .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
-    .leftJoin(bills, eq(bills.id, supportingMaterialLinks.billId))
-    .where(
-      and(
-        eq(supportingMaterialSectionEmbeddings.model, route.model),
-        eq(supportingMaterialSectionEmbeddings.inputContract, route.embeddingInputContract),
-        input.jurisdictionIds === undefined
-          ? undefined
-          : inArray(supportingMaterials.jurisdictionId, input.jurisdictionIds),
-        input.classifications === undefined
-          ? undefined
-          : inArray(supportingMaterials.classification, input.classifications),
-        input.billIds === undefined ? undefined : inArray(supportingMaterialLinks.billId, input.billIds),
-        input.amendmentIds === undefined ? undefined : inArray(supportingMaterialLinks.amendmentId, input.amendmentIds),
-        input.eventIds === undefined ? undefined : inArray(supportingMaterialLinks.eventId, input.eventIds),
-        input.organizationIds === undefined
-          ? undefined
-          : inArray(supportingMaterialLinks.organizationId, input.organizationIds),
-        input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
-        input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
-        input.processingStatus === undefined
-          ? undefined
-          : eq(supportingMaterials.processingStatus, input.processingStatus),
-        input.sessionIds === undefined ? undefined : inArray(bills.sessionId, input.sessionIds),
-        input.updatedFrom === undefined ? undefined : gte(supportingMaterials.updatedAt, input.updatedFrom),
-        input.updatedTo === undefined ? undefined : lte(supportingMaterials.updatedAt, input.updatedTo),
-        input.updatedToExclusive === undefined
-          ? undefined
-          : sql`${supportingMaterials.updatedAt} < ${input.updatedToExclusive}`
+  const hasRelationshipFilters =
+    input.billIds !== undefined ||
+    input.amendmentIds !== undefined ||
+    input.eventIds !== undefined ||
+    input.organizationIds !== undefined ||
+    input.sessionIds !== undefined
+  const relationshipScope = hasRelationshipFilters
+    ? exists(
+        database
+          .select({ materialId: supportingMaterialLinks.materialId })
+          .from(supportingMaterialLinks)
+          .leftJoin(bills, eq(bills.id, supportingMaterialLinks.billId))
+          .where(
+            and(
+              eq(supportingMaterialLinks.materialId, supportingMaterials.id),
+              input.billIds === undefined ? undefined : inArray(supportingMaterialLinks.billId, input.billIds),
+              input.amendmentIds === undefined
+                ? undefined
+                : inArray(supportingMaterialLinks.amendmentId, input.amendmentIds),
+              input.eventIds === undefined ? undefined : inArray(supportingMaterialLinks.eventId, input.eventIds),
+              input.organizationIds === undefined
+                ? undefined
+                : inArray(supportingMaterialLinks.organizationId, input.organizationIds),
+              input.sessionIds === undefined ? undefined : inArray(bills.sessionId, input.sessionIds)
+            )
+          )
       )
-    )
-    .orderBy(asc(distance), asc(supportingMaterialSections.id))
-    .limit(limit)
+    : undefined
+  const nearest = database.$with("nearest_supporting_material_sections").as(
+    database
+      .select({
+        distance: distance.as("distance"),
+        materialId: supportingMaterialSections.materialId,
+        sectionId: supportingMaterialSections.id
+      })
+      .from(supportingMaterialSectionEmbeddings)
+      .innerJoin(
+        supportingMaterialSections,
+        eq(supportingMaterialSectionEmbeddings.sectionId, supportingMaterialSections.id)
+      )
+      .innerJoin(supportingMaterials, eq(supportingMaterialSections.materialId, supportingMaterials.id))
+      .where(
+        and(
+          eq(supportingMaterialSectionEmbeddings.model, route.model),
+          eq(supportingMaterialSectionEmbeddings.inputContract, route.embeddingInputContract),
+          input.jurisdictionIds === undefined
+            ? undefined
+            : inArray(supportingMaterials.jurisdictionId, input.jurisdictionIds),
+          input.classifications === undefined
+            ? undefined
+            : inArray(supportingMaterials.classification, input.classifications),
+          relationshipScope,
+          input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
+          input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
+          input.processingStatus === undefined
+            ? undefined
+            : eq(supportingMaterials.processingStatus, input.processingStatus),
+          input.updatedFrom === undefined ? undefined : gte(supportingMaterials.updatedAt, input.updatedFrom),
+          input.updatedTo === undefined ? undefined : lte(supportingMaterials.updatedAt, input.updatedTo),
+          input.updatedToExclusive === undefined
+            ? undefined
+            : sql`${supportingMaterials.updatedAt} < ${input.updatedToExclusive}`
+        )
+      )
+      .orderBy(asc(distance))
+      .limit(limit)
+  )
+  return database
+    .with(nearest)
+    .select({
+      distance: nearest.distance,
+      material: supportingMaterialSummaryColumns,
+      sectionId: nearest.sectionId
+    })
+    .from(nearest)
+    .innerJoin(supportingMaterialSections, eq(nearest.sectionId, supportingMaterialSections.id))
+    .innerJoin(supportingMaterials, eq(nearest.materialId, supportingMaterials.id))
+    .orderBy(asc(nearest.distance), asc(nearest.sectionId))
+}
+
+export async function semanticSupportingMaterialSearch(
+  database: LegislationDatabase,
+  input: SemanticSupportingMaterialSearchInput
+) {
+  return await database.transaction(async (transaction) => {
+    await transaction.execute(sql`select
+      set_config('enable_seqscan', 'off', true),
+      set_config('hnsw.ef_search', '100', true),
+      set_config('hnsw.iterative_scan', 'relaxed_order', true),
+      set_config('hnsw.max_scan_tuples', '50000', true)`)
+    return await buildSemanticSupportingMaterialSearchQuery(transaction, input)
+  })
 }
 
 export function reciprocalRankFusion<T extends { id: string }>(lexical: T[], semantic: T[], limit: number): T[] {

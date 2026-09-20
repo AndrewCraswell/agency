@@ -21,8 +21,8 @@ durable precomputed revision manifest remain required before national promotion.
 15-minute frozen-candidate pagination contract as edition search. Federal Register publication requests may also filter
 by `sourceAgencyId`.
 
-Lexical limit is 1–100, default 20. Pagination persists the frozen ranked window described in
-[cross-edition retrieval](edition-search-canary.md). Repost the same JSON filters with `meta.nextCursor` as `cursor`.
+Lexical limit is 1–100, default 20. Pagination persists a frozen ranked window. Repost the same JSON filters with
+`meta.nextCursor` as `cursor`.
 The next link is the same POST endpoint, not a GET query. Cursors also bind normalized public filters and requested
 mode/fallback permission. Default-current head changes invalidate the underlying selection; they do not silently
 resume a different generation. Publication cursors additionally bind the complete kind/date partition generation;

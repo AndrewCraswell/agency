@@ -2,7 +2,7 @@
 
 I owns copy, outbox, backfill and synchronization readiness. C owns
 [projection schema/identity](../../../../packages/legislation-core/docs/engineering/search-projections.md);
-W owns [ranking and cutover acceptance](../../../legislation-web/docs/operations/passage-search-delivery.md).
+W owns [ranking and cutover acceptance](../../../legislation-web/docs/engineering/api/search-and-diffs.md).
 Commands below run from the repository root; use the I tool manifest for current names.
 
 ## Search synchronization contract
@@ -46,8 +46,8 @@ pnpm --filter legislation-ingestion tool search/backfill-amendment-search --appl
 The worker enumerates amendment document keys, locks at most 250 parents per transaction, then upserts/verifies with
 fresh READ COMMITTED statements. Statement deadline is 15 seconds, lock deadline one second, transient retries three.
 Reruns are idempotent and never change canonical text/embeddings. Require zero vector/title/membership mismatches,
-valid indexes and completed ANALYZE. Failure is not completion. W owns query parity and deployment acceptance in
-[amendment search](../../../legislation-web/docs/engineering/amendment-search-projection.md).
+valid indexes and completed ANALYZE. Failure is not completion. W owns
+[amendment query behavior](../../../legislation-web/docs/engineering/api/search-and-diffs.md).
 
 Regulatory generation/copy mechanics and their dated evidence remain in [search indexing](../regulations/search-indexing.md)
 and [storage validation](../regulations/storage-validation.md). No procedure here authorizes vector regeneration or cutover.
