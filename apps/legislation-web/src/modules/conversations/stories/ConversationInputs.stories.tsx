@@ -4,9 +4,9 @@ import { delay, http, HttpResponse } from "msw"
 import { useRef, useState } from "react"
 import { expect, waitFor, within } from "storybook/test"
 import { network } from "../../../../.storybook/mocks"
+import { HomepageLanding } from "../../homepage/components/HomepageLanding"
 import type { StagedReference } from "../chatRequest"
 import { ChatComposer } from "../components/ChatComposer"
-import { ChatWorkspace } from "../components/ChatWorkspace"
 import type { ComposerHandle } from "../components/ComposerInput"
 import { ReferencePicker } from "../components/ReferencePicker"
 import { composerDraftText, textDraft, type ComposerDraft } from "../composerDraft"
@@ -43,6 +43,16 @@ const suggestions = Promise.resolve(
         text: "What have congressional hearings examined about accessible voting technology?",
         description: "Review testimony and questions about access barriers",
         kind: "hearings"
+      },
+      {
+        text: "How do bills address repair access?",
+        description: "Compare proposals",
+        kind: "comparison"
+      },
+      {
+        text: "What votes are recorded on school bills?",
+        description: "Review votes",
+        kind: "actions"
       }
     ]
   }).suggestions
@@ -313,7 +323,7 @@ export const MentionDismissed: Story = {
 }
 export const Suggestions: Story = {
   parameters: { layout: "fullscreen" },
-  render: () => <ChatWorkspace suggestions={suggestions} isAvailable />,
+  render: () => <HomepageLanding suggestions={suggestions} isAvailable />,
   play: async ({ canvasElement, userEvent }) => {
     const canvas = within(canvasElement)
     const question = "Which members sponsor federal proposals to cap insulin costs for patients?"
@@ -324,11 +334,11 @@ export const Suggestions: Story = {
 }
 export const SuggestionsLoading: Story = {
   parameters: { layout: "fullscreen" },
-  render: () => <ChatWorkspace suggestions={loading} isAvailable />
+  render: () => <HomepageLanding suggestions={loading} isAvailable />
 }
 export const SuggestionsUnavailable: Story = {
   parameters: { layout: "fullscreen" },
-  render: () => <ChatWorkspace suggestions={unavailable} isAvailable />
+  render: () => <HomepageLanding suggestions={unavailable} isAvailable />
 }
 export const ReferenceLibrary: Story = {
   render: () => (

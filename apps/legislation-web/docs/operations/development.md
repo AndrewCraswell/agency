@@ -129,6 +129,12 @@ succeeded; broader batch and cancellation acceptance remains open. No full unit 
 The root route `/` renders `HomepageLanding`, including the research composer, source-backed example and the
 connections and coverage sections. Its tests live in `src/app/page.test.tsx`. There is no separate preview route.
 
+`ChatWorkspace` requires a conversation ID and only renders conversation routes; it has no alternate homepage or
+first-question navigation. `HomepageLanding` starts research and navigates, while the root layout's `ChatProviders`
+retains the same session, references and active stream across that transition. The workspace integration suite starts
+from this real homepage before checking follow-ups, interruption and export. Storybook's `Conversation/Inputs`
+suggestion states also render `HomepageLanding`, including its loading and empty-result behavior.
+
 The homepage uses Luna (`openai/gpt-5.6-luna-20260709`) and the Langfuse text prompt
 `legislative-research-suggestions`, selected by its `production` label. Version 1 was created September 16, 2026;
 the existing `legislative-research` prompt is unchanged. The server compiles `{{current_date}}` as a UTC calendar date

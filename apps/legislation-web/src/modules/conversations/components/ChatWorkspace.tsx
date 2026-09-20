@@ -5,8 +5,7 @@ import { captureException, getReplay } from "@sentry/nextjs"
 import { RotateCcw } from "lucide-react"
 import { LoaderCircle } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Suspense, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import {
   Conversation,
   ConversationContent,
@@ -18,17 +17,10 @@ import { cn } from "../../../components/ui/utils"
 import { diagnosticBreadcrumb } from "../../../services/sentry/diagnosticBreadcrumb"
 import type { StagedReference } from "../chatRequest"
 import { isClarificationSubmission } from "../chatRequest"
-import {
-  composerDraftText,
-  composerMessageMetadata,
-  composerReferences,
-  messageComposerDraft,
-  textDraft
-} from "../composerDraft"
+import { composerDraftText, composerMessageMetadata, composerReferences, messageComposerDraft } from "../composerDraft"
 import { createConversationExport, downloadConversationExport } from "../conversationExport"
 import { entityPageSchema } from "../entityResults"
 import { messageResponseOutcome, responseIsIncomplete } from "../responseOutcome"
-import type { ResearchSuggestion } from "../suggestions"
 import { ChatComposer } from "./ChatComposer"
 import type { CitationSelection } from "./citationPresentation"
 import type { ComposerHandle } from "./ComposerInput"
@@ -38,21 +30,17 @@ import { EvidencePanel } from "./EvidencePanel"
 import { MessageActions } from "./MessageActions"
 import { MessageQuestion, MessageReferences } from "./MessageReferences"
 import { ReferencePicker } from "./ReferencePicker"
-import { ResearchSuggestions, ResearchSuggestionsLoading } from "./ResearchSuggestions"
 import * as styles from "./ChatWorkspace.css"
 import * as responseStyles from "./ConversationResponse.css"
 
 type ChatWorkspaceProps = Readonly<{
   isAvailable?: boolean
-  conversationId?: string
-  suggestions?: Promise<ResearchSuggestion[]>
+  conversationId: string
 }>
 
-export function ChatWorkspace({ isAvailable = false, conversationId, suggestions }: ChatWorkspaceProps) {
-  const router = useRouter()
+export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorkspaceProps) {
   const {
     chat,
-    startConversation,
     isConfirmingClarification,
     cancelClarification,
     draft,
@@ -66,7 +54,6 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
     markInterrupted,
     clarificationAnswers
   } = useConversationSession()
-  const isConversation = conversationId !== undefined
   const hasSession = conversationId === chat.id
   const [isReferencePickerOpen, setReferencePickerOpen] = useState(false)
   const [selectedCitation, setSelectedCitation] = useState<CitationSelection>()
@@ -102,12 +89,11 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
   }
   const outcomeNotice = outcomeNotices[lastOutcome?.status ?? "unknown"]
   const composer = useRef<ComposerHandle>(null)
-  const isNavigating = useRef(false)
   const isExportCommand = composerDraftText(draft).trim() === "/export"
 
   function handleSend() {
     if (isExportCommand) {
-      if (!isConversation || !hasSession || chat.messages.length === 0) {
+      if (!hasSession || chat.messages.length === 0) {
         setExportStatus("Start a conversation before exporting.")
         return
       }
@@ -140,8 +126,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
       !isAvailable ||
       isBusy ||
       !composerDraftText(draft).trim() ||
-      composerReferences(draft, references).length > 12 ||
-      isNavigating.current
+      composerReferences(draft, references).length > 12
     ) {
       let reason = "empty"
       if (!isAvailable) {
@@ -150,18 +135,10 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
         reason = "restoring"
       } else if (isBusy) {
         reason = "busy"
-      } else if (isNavigating.current) {
-        reason = "navigating"
       } else if (composerReferences(draft, references).length > 12) {
         reason = "reference_limit"
       }
       diagnosticBreadcrumb("composer.submit_blocked", { reason, origin: "browser" })
-      return
-    }
-    if (!isConversation) {
-      isNavigating.current = true
-      const id = startConversation(draft)
-      router.push(`/conversations/${encodeURIComponent(id)}`)
       return
     }
     if (!hasSession) {
@@ -184,11 +161,6 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
   }
 
   const connectionStatus = exportStatus ?? (isAvailable ? undefined : "Research is not connected yet.")
-
-  function handleSuggestion(question: string) {
-    setDraft(textDraft(question))
-    composer.current?.focus()
-  }
 
   const availableReferences = new Map<string, StagedReference>()
   for (const message of messages) {
@@ -224,49 +196,12 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
   return (
     <AppShell isResearch className={cn(styles.layout, selectedCitation && styles.withEvidence)}>
       <Conversation aria-label="Conversation" aria-live="off" className="min-h-0" initial="instant" resize="instant">
-        <ConversationContent
-          className={cn(styles.content, isConversation && styles.threadContent)}
-          scrollClassName={styles.scroll}
-        >
-          <main className={cn(styles.start, isConversation && styles.threadBody)}>
-            {!isConversation && (
-              <>
-                <div className={styles.heading}>
-                  <h1 className={styles.title}>
-                    <span className={styles.headlineWide}>
-                      Know what lawmakers are proposing. And what it means for you.
-                    </span>
-                    <span className={styles.headlineNarrow}>Know what lawmakers are proposing.</span>
-                  </h1>
-                  <p className={styles.mobileDescription}>
-                    Turn a policy question into a clearer picture of the proposals, people, and decisions behind it.
-                  </p>
-                </div>
-                <ChatComposer
-                  {...referenceProps}
-                  draft={draft}
-                  onDraftChange={setDraft}
-                  composerRef={composer}
-                  onSend={handleSend}
-                  hasHomepageGlow
-                  isAvailable={(isAvailable || isExportCommand) && !isBusy}
-                  status={connectionStatus}
-                />
-                {suggestions && (
-                  <Suspense fallback={<ResearchSuggestionsLoading />}>
-                    <ResearchSuggestions suggestions={suggestions} onSelect={handleSuggestion} />
-                  </Suspense>
-                )}
-                <p className={styles.dataNote}>
-                  Ask in your own words. Rostra brings together bill text, votes, and hearing records so you can compare
-                  proposals and check the sources. Coverage varies by jurisdiction and date.
-                </p>
-              </>
-            )}
-            {isConversation && isRestoringConversation && (
+        <ConversationContent className={styles.content} scrollClassName={styles.scroll}>
+          <main className={styles.body}>
+            {isRestoringConversation && (
               <output className="text-sm text-muted-foreground">Restoring conversation...</output>
             )}
-            {isConversation && !hasSession && !isRestoringConversation && (
+            {!hasSession && !isRestoringConversation && (
               <section className="space-y-4">
                 <h1 className="font-display text-2xl">This conversation is no longer available</h1>
                 <p className="text-sm text-muted-foreground">
@@ -277,7 +212,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
                 </Button>
               </section>
             )}
-            {isConversation && hasSession && (
+            {hasSession && (
               <>
                 {messages
                   .filter((message) => !isClarificationSubmission(message))
@@ -338,14 +273,14 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
             )}
           </main>
         </ConversationContent>
-        {isConversation && hasSession && (
+        {hasSession && (
           <ConversationScrollButton
             className={styles.jumpToLatest}
             messageIds={messages.filter((message) => !isClarificationSubmission(message)).map((message) => message.id)}
           />
         )}
       </Conversation>
-      {isConversation && hasSession && (
+      {hasSession && (
         <div className={styles.composerDock}>
           <div className="mx-auto w-full max-w-[660px]">
             <ChatComposer

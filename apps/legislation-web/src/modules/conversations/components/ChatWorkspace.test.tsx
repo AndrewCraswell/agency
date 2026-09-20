@@ -4,11 +4,13 @@ import userEvent from "@testing-library/user-event"
 import type { UIMessageChunk } from "ai"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
+import { HomepageLanding } from "../../homepage/components/HomepageLanding"
 import { chatRequestSchema, referenceSearchSchema, type StagedReference } from "../chatRequest"
 import { downloadConversationExport } from "../conversationExport"
 import { incompleteAnswerText } from "../responseOutcome"
 import { ChatProviders } from "./ChatProviders"
 import { ChatWorkspace } from "./ChatWorkspace"
+import { useConversationSession } from "./ConversationSession"
 import * as composerStyles from "./ChatComposer.css"
 
 const navigation = vi.hoisted(() => ({ push: vi.fn<(url: string) => void>() }))
@@ -28,6 +30,12 @@ vi.mock("../conversationExport", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../conversationExport")>()),
   downloadConversationExport: vi.fn<typeof downloadConversationExport>()
 }))
+// The independent homepage mention example has its own lookup coverage in page.test.tsx.
+vi.mock("../../homepage/components/HomepageConnections", () => ({ HomepageConnections: () => null }))
+
+function navigatedConversationId() {
+  return z.string().parse(navigation.push.mock.lastCall?.[0].split("/").at(-1))
+}
 
 function streamedAnswer(text: string) {
   return streamedChunks([
@@ -92,11 +100,11 @@ describe("ChatWorkspace", () => {
       )
       vi.stubGlobal("fetch", fetchMock)
       const user = userEvent.setup()
-      const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+      const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
       await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
       await user.click(screen.getByRole("button", { name: "Send question" }))
       await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
-      const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+      const conversationId = navigatedConversationId()
       view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
       await screen.findByText(notice)
       expect(screen.getByText(text)).toBeDefined()
@@ -138,11 +146,11 @@ describe("ChatWorkspace", () => {
       )
     )
     const user = userEvent.setup()
-    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
     await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
     await user.click(screen.getByRole("button", { name: "Send question" }))
     await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
-    const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+    const conversationId = navigatedConversationId()
     view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
     await screen.findByText("A fully delivered answer.")
     await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
@@ -168,11 +176,11 @@ describe("ChatWorkspace", () => {
       )
     )
     const user = userEvent.setup()
-    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
     await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
     await user.click(screen.getByRole("button", { name: "Send question" }))
     await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
-    const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+    const conversationId = navigatedConversationId()
     view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
     await screen.findByText("Completion could not be confirmed. Your question is still in this conversation.")
     await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
@@ -219,11 +227,11 @@ describe("ChatWorkspace", () => {
       )
     )
     const user = userEvent.setup()
-    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
     await user.type(await screen.findByRole("textbox", { name: "Your question" }), "Research question")
     await user.click(screen.getByRole("button", { name: "Send question" }))
     await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
-    const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+    const conversationId = navigatedConversationId()
     view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
     const response = await screen.findByRole("article", { name: "Rostra response" })
     // Streaming prose is split across animation spans.
@@ -251,11 +259,11 @@ describe("ChatWorkspace", () => {
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => streamedAnswer("An exportable response"))
     vi.stubGlobal("fetch", fetchMock)
     const user = userEvent.setup()
-    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
     await user.type(await screen.findByRole("textbox", { name: "Your question" }), "First question")
     await user.click(screen.getByRole("button", { name: "Send question" }))
     await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
-    const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+    const conversationId = navigatedConversationId()
     view.rerender(<ChatWorkspace conversationId={conversationId} />)
     await screen.findByText("An exportable response")
     await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
@@ -281,11 +289,15 @@ describe("ChatWorkspace", () => {
     expect(screen.queryByRole("button", { name: "Export conversation" })).toBeNull()
   })
 
-  it("does not send an export command from an empty homepage to the model", async () => {
+  it("does not send an export command from an empty conversation to the model", async () => {
+    function EmptyConversation() {
+      const { chat } = useConversationSession()
+      return <ChatWorkspace conversationId={chat.id} />
+    }
     const fetchMock = vi.fn<typeof fetch>()
     vi.stubGlobal("fetch", fetchMock)
     const user = userEvent.setup()
-    render(<ChatWorkspace />, { wrapper: ChatProviders })
+    render(<EmptyConversation />, { wrapper: ChatProviders })
     await user.type(await screen.findByRole("textbox", { name: "Your question" }), "/export")
     await user.keyboard("{Enter}")
     expect(await screen.findByText("Start a conversation before exporting.")).toBeDefined()
@@ -321,6 +333,90 @@ describe("ChatWorkspace", () => {
     }
   }
 
+  it.each([12, 13])("applies the homepage submission limit to %s staged references", async (count) => {
+    const references = Array.from(
+      { length: count },
+      (_, index): StagedReference => ({
+        ...person,
+        recordId: `person:staged-${index}`,
+        record: { ...person.record, id: `person:staged-${index}`, title: `Staged person ${index}` }
+      })
+    )
+    function StagedHomepage() {
+      const session = useConversationSession()
+      return (
+        <HomepageLanding isAvailable>
+          <button
+            onClick={() => {
+              session.setReferences(references)
+              session.setDraft([{ type: "text", text: "Compare these sponsors" }])
+            }}
+          >
+            Stage references
+          </button>
+        </HomepageLanding>
+      )
+    }
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => streamedAnswer("References received"))
+    vi.stubGlobal("fetch", fetchMock)
+    const user = userEvent.setup()
+    const view = render(<StagedHomepage />, { wrapper: ChatProviders })
+    await user.click(screen.getByRole("button", { name: "Stage references" }))
+    const input = await screen.findByRole("textbox", { name: "Your question" })
+    await waitFor(() => expect(input.textContent).toBe("Compare these sponsors"))
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Send question" }).disabled).toBe(count > 12)
+    await user.click(input)
+    await user.keyboard("{Enter}")
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledTimes(count > 12 ? 0 : 1))
+    expect(fetchMock).toHaveBeenCalledTimes(count > 12 ? 0 : 1)
+    if (count > 12) {
+      return
+    }
+    const submission = chatRequestSchema.parse(JSON.parse(z.string().parse(fetchMock.mock.calls[0]?.[1]?.body)))
+    expect(submission.references).toEqual(references.map(({ resultId, recordId }) => ({ resultId, recordId })))
+    view.rerender(<ChatWorkspace isAvailable conversationId={navigatedConversationId()} />)
+    await screen.findByText("References received")
+    expect(screen.getByRole("list", { name: "Submitted references" }).children).toHaveLength(12)
+  })
+
+  it("does not submit an empty or whitespace-only homepage question", async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+    vi.stubGlobal("fetch", fetchMock)
+    const user = userEvent.setup()
+    render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
+    const input = await screen.findByRole("textbox", { name: "Your question" })
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Send question" }).disabled).toBe(true)
+    await user.type(input, "   ")
+    await user.keyboard("{Enter}")
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Send question" }).disabled).toBe(true)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(navigation.push).not.toHaveBeenCalled()
+  })
+
+  it("blocks another homepage submission while researching and awaiting navigation", async () => {
+    const response = Promise.withResolvers<Response>()
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() => response.promise)
+    vi.stubGlobal("fetch", fetchMock)
+    const user = userEvent.setup()
+    render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
+    const input = await screen.findByRole("textbox", { name: "Your question" })
+    await user.type(input, "First question")
+    await user.keyboard("{Enter}")
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce())
+    await waitFor(() => expect(input.textContent).toBe(""))
+    await user.type(input, "Do not start another session")
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Send question" }).disabled).toBe(true)
+    await user.keyboard("{Enter}")
+    expect(fetchMock).toHaveBeenCalledOnce()
+    await act(async () => response.resolve(streamedAnswer("Completed before navigation")))
+    await waitFor(() =>
+      expect(screen.getByRole<HTMLButtonElement>("button", { name: "Send question" }).disabled).toBe(false)
+    )
+    await user.keyboard("{Enter}")
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(navigation.push).toHaveBeenCalledOnce()
+  })
+
   it("debounces name lookup and sends exact inline references with the first message", async () => {
     const lookups: z.infer<typeof referenceSearchSchema>[] = []
     const submissions: z.infer<typeof chatRequestSchema>[] = []
@@ -338,7 +434,7 @@ describe("ChatWorkspace", () => {
       })
     )
     const user = userEvent.setup()
-    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
     const input = await screen.findByRole("textbox", { name: "Your question" })
     input.focus()
     window.getSelection()?.collapse(input.querySelector("p"), 0)
@@ -371,7 +467,7 @@ describe("ChatWorkspace", () => {
       ]
     })
     expect(navigation.push).toHaveBeenCalledOnce()
-    const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+    const conversationId = navigatedConversationId()
     view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
     const question = await screen.findByRole("article", { name: "Your question" })
     await waitFor(() => expect(question.querySelectorAll('[data-type="mention"]')).toHaveLength(2))
@@ -393,7 +489,7 @@ describe("ChatWorkspace", () => {
       })
     )
     const user = userEvent.setup()
-    render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
     const input = await screen.findByRole("textbox", { name: "Your question" })
     await user.type(input, "@Oc")
     await waitFor(() => expect(signals).toHaveLength(1))
@@ -418,11 +514,11 @@ describe("ChatWorkspace", () => {
     const writer = stream.writable.getWriter()
     const encoder = new TextEncoder()
     const user = userEvent.setup()
-    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
     await user.type(await screen.findByRole("textbox", { name: "Your question" }), "A streamed question")
     await user.click(screen.getByRole("button", { name: "Send question" }))
     await waitFor(() => expect(navigation.push).toHaveBeenCalledTimes(1))
-    const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+    const conversationId = navigatedConversationId()
     view.rerender(<ChatWorkspace key={conversationId} isAvailable conversationId={conversationId} />)
     await screen.findByRole("textbox", { name: "Your question" })
 
@@ -468,7 +564,7 @@ describe("ChatWorkspace", () => {
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => streamedAnswer("A retained response"))
     vi.stubGlobal("fetch", fetchMock)
     const user = userEvent.setup()
-    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    const view = render(<HomepageLanding isAvailable />, { wrapper: ChatProviders })
     const field = await screen.findByRole("textbox", { name: "Your question" })
     expect(field.closest("form")?.classList.contains(composerStyles.homepageGlow)).toBe(true)
     await user.type(field, "First question")
@@ -477,7 +573,7 @@ describe("ChatWorkspace", () => {
     await waitFor(() => expect(navigation.push).toHaveBeenCalledTimes(1))
     const path = navigation.push.mock.calls[0]?.[0]
     expect(path).toMatch(/^\/conversations\/[^/]+$/)
-    const conversationId = path?.split("/").at(-1)
+    const conversationId = navigatedConversationId()
     view.rerender(<ChatWorkspace key={conversationId} isAvailable conversationId={conversationId} />)
     await screen.findByText("A retained response")
     expect(screen.getByText("First question")).toBeDefined()
@@ -506,12 +602,17 @@ describe("ChatWorkspace", () => {
 
   it("keeps the research question editable without enabling disconnected research", async () => {
     const user = userEvent.setup()
-    render(<ChatWorkspace />, { wrapper: ChatProviders })
+    const fetchMock = vi.fn<typeof fetch>()
+    vi.stubGlobal("fetch", fetchMock)
+    render(<HomepageLanding />, { wrapper: ChatProviders })
     const question = await screen.findByRole("textbox", { name: "Your question" })
     await user.type(question, "Compare housing policy")
     expect(question.textContent).toBe("Compare housing policy")
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "Send question" }).disabled).toBe(true)
-    expect(screen.getByRole("status").textContent).toBe("Research is not connected yet.")
+    expect(question.getAttribute("aria-describedby")).toBe(screen.getByText("Research is not connected yet.").id)
+    await user.keyboard("{Enter}")
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(navigation.push).not.toHaveBeenCalled()
   })
 
   it("puts a selected suggestion into the question and returns focus for editing", async () => {
@@ -519,7 +620,7 @@ describe("ChatWorkspace", () => {
     const suggestion = "How do state bills address repair access for farm equipment?"
     await act(async () => {
       render(
-        <ChatWorkspace
+        <HomepageLanding
           suggestions={Promise.resolve([
             { text: suggestion, description: "Compare repair access proposals", kind: "comparison" }
           ])}
@@ -538,7 +639,7 @@ describe("ChatWorkspace", () => {
     const suggestions = Promise.withResolvers<never[]>()
     const user = userEvent.setup()
     await act(async () => {
-      render(<ChatWorkspace suggestions={suggestions.promise} />, { wrapper: ChatProviders })
+      render(<HomepageLanding suggestions={suggestions.promise} />, { wrapper: ChatProviders })
     })
     expect(screen.getByRole("status", { name: "Loading research questions" })).toBeDefined()
     const input = await screen.findByRole("textbox", { name: "Your question" })
@@ -548,7 +649,7 @@ describe("ChatWorkspace", () => {
       await suggestions.promise
     })
     await waitFor(() => expect(screen.queryByRole("status", { name: "Loading research questions" })).toBeNull())
-    expect(screen.queryByRole("region", { name: "Suggested research questions" })).toBeNull()
+    expect(screen.queryByLabelText("Suggested research questions")).toBeNull()
     expect(screen.getByRole("textbox", { name: "Your question" }).textContent).toBe("My own question")
   })
 })
