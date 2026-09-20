@@ -9,8 +9,8 @@ The collector never returns SQL text or parameters. It reports PostgreSQL query 
 buffer, temporary-file, I/O, row and WAL counters.
 
 ```powershell
-pnpm --filter @repo/legislation-core db:query-stats -- --database=canonical --sort=total --limit=25
-pnpm --filter @repo/legislation-core db:query-stats -- --database=passage-search --sort=mean --limit=25
+pnpm --filter @repo/legislation-core db:query-stats --database=canonical --sort=total --limit=25
+pnpm --filter @repo/legislation-core db:query-stats --database=passage-search --sort=mean --limit=25
 ```
 
 Use `DATABASE_DIRECT_URL`, `DATABASE_PUBLIC_URL` or `DATABASE_URL` for the canonical database. Use
@@ -64,3 +64,30 @@ query parameters can contain private research input.
 5. Keep schema and index changes under human review.
 
 Never provide an AI agent with database credentials, raw statement parameters, embeddings or unrestricted SQL access.
+
+### Guarded plan diagnostics
+
+The plan command accepts only repository-registered query names and sanitized fixtures. It does not accept SQL or
+free-form parameter values. Each run uses a read-only transaction, a one-second lock timeout, a statement timeout from
+1 through 30 seconds, a 200-node plan limit and a 256 KB sanitized report limit. Reports exclude SQL text, parameters,
+filter expressions and result rows. The plan runs before result hashing so the digest query does not warm the plan's
+cache. An ordered SHA-256 result digest supports before-and-after equivalence checks.
+
+The initial registry entry maps observed PostgreSQL query ID `1328274108816803535` to
+`supporting_material.search.lexical` and its source query builder. Run its approved fixture locally through Railway's
+public database endpoint:
+
+```powershell
+railway run --service pgvector pnpm --filter legislation-web db:query-plan --query=supporting_material.search.lexical --fixture=student-data --timeout-ms=20000 --allow-production
+```
+
+`--allow-production` is required when Railway reports the environment as production. It authorizes only the registered,
+bounded, read-only diagnostic; it does not enable arbitrary SQL or schema changes.
+
+### Supporting-material title-search baseline
+
+The `student-data` fixture exposed a parallel sequential scan over supporting-material titles. Its baseline plan took
+854.7 ms and read 34,439 shared blocks; cumulative query statistics showed a 4,045.9 ms mean and 13,264.3 ms maximum
+over seven calls. A matching expression GIN index replaced the title scan with a bitmap index scan. The guarded
+post-change plan took 371.8 ms and read 4,325 shared blocks. Both plans returned six rows with ordered digest
+`sha256:a92d57092737b7f84be848aa8311c1e926caf610082d114309cf0d6da72cb6fa`.

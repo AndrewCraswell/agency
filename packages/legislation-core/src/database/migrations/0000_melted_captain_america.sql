@@ -4756,6 +4756,13 @@ CREATE INDEX supporting_materials_processing_idx ON legislation.supporting_mater
 
 
 --
+-- Name: supporting_materials_title_search_gin_idx; Type: INDEX; Schema: legislation; Owner: -
+--
+
+CREATE INDEX supporting_materials_title_search_gin_idx ON legislation.supporting_materials USING gin (to_tsvector('english'::regconfig, title));
+
+
+--
 -- Name: vote_positions_person_idx; Type: INDEX; Schema: legislation; Owner: -
 --
 

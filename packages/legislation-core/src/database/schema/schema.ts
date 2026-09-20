@@ -1205,7 +1205,8 @@ export const supportingMaterials = legislationSchema.table(
     index("supporting_materials_failed_retry_idx")
       .on(table.processingErrorCategory, table.nextAttemptAt, table.id)
       .where(sql`${table.processingStatus} = 'failed'`),
-    index("supporting_materials_classification_idx").on(table.jurisdictionId, table.classification, table.documentDate)
+    index("supporting_materials_classification_idx").on(table.jurisdictionId, table.classification, table.documentDate),
+    index("supporting_materials_title_search_gin_idx").using("gin", sql`to_tsvector('english', ${table.title})`)
   ]
 )
 
