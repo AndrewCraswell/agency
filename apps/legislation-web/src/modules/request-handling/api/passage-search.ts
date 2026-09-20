@@ -6,7 +6,7 @@ import {
 } from "../../legislation/persistence/queries/document-reads"
 import { decodePassageSearchCursor, type PassageSearchInput, type PassageSearchResultPage } from "../../search/search"
 import { projectBillSummaryRead, projectDocumentSectionRead } from "./canonical-read"
-import { projectDocumentSummaryRead } from "./document-read-routes"
+import { projectDocumentSummaryRead } from "./document-read-projection"
 import {
   apiSearchPage,
   assertAllowedQueryParameters,

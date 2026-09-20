@@ -28,9 +28,9 @@ import {
   type VoteDetail
 } from "../../../request-handling/api/canonical-projection"
 import { sourceProjectionContext } from "../../../request-handling/api/canonical-read"
-import { projectDocumentSummaryRead } from "../../../request-handling/api/document-read-routes"
+import { projectDocumentSummaryRead } from "../../../request-handling/api/document-read-projection"
 import { projectOrganizationRow } from "../../../request-handling/api/organization-summary-read-projection"
-import { projectVote, projectVoteDetailRead } from "../../../request-handling/api/vote-read-routes"
+import { projectVote, projectVoteDetailRead } from "../../../request-handling/api/vote-read-projection"
 import {
   amendmentContinuationCursor,
   buildDocumentAmendmentListQuery,

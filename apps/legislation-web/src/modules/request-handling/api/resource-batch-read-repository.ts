@@ -14,7 +14,8 @@ import type {
   VoteDetail
 } from "./canonical-projection"
 import { projectCoreSupportingMaterialDetailRead, type CoreReadQueryApi } from "./core-read"
-import { projectDocumentDetailRead, type DocumentReadApi } from "./document-read-routes"
+import { projectDocumentDetailRead } from "./document-read-projection"
+import type { DocumentReadApi } from "./document-read-routes"
 import type { JurisdictionReadRepository } from "./jurisdiction-read-repository"
 import { projectJurisdictionRead } from "./jurisdiction-read-routes"
 import { projectMeetingDetailRead, type MeetingReadApi } from "./meeting-read-routes"
@@ -23,7 +24,8 @@ import type { PersonDetailReadRepository } from "./person-detail-read-repository
 import { projectPersonDetailRead } from "./person-detail-read-routes"
 import type { SessionReadRepository } from "./session-read-repository"
 import { projectSessionRead } from "./session-read-routes"
-import { projectVoteDetailRead, type VoteReadApi } from "./vote-read-routes"
+import { projectVoteDetailRead } from "./vote-read-projection"
+import type { VoteReadApi } from "./vote-read-routes"
 
 export const RESOURCE_TYPES = [
   "jurisdiction",

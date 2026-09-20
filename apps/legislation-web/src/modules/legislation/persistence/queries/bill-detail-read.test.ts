@@ -1,9 +1,13 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import type { AmendmentSummary } from "../../../request-handling/api/canonical-projection"
 import { decodeAmendmentContinuationCursor } from "./amendment-reads"
 import { billDetailAmendmentPage, MAX_BILL_VOTE_LIMIT, parseBillVoteLimit } from "./bill-detail-read"
 import { assertCanonicalVotePersistence, assertVotePositionSequence } from "./vote-reads"
+
+vi.mock("../../../request-handling/api/http", () => {
+  throw new Error("Persistence projections must not load HTTP infrastructure")
+})
 
 const API_BASE_URL = "https://api.example.test"
 const BILL_ID = "bill:us:119:hr:1"

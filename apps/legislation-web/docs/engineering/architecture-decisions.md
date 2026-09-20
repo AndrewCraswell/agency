@@ -49,6 +49,19 @@ reconsideration trigger.
 - Separate deployment and positive consent require release evidence. Historical anonymous/wrong-token rejection is not
   successful browser consent, and a local extraction is not deployed acceptance.
 
+## Canonical read projection boundary
+
+Public response mapping belongs to the transport-free projection modules under `src/modules/request-handling/api`,
+alongside `canonical-projection.ts` and `canonical-read.ts`. Document and vote mappings live in
+[`document-read-projection.ts`](../../src/modules/request-handling/api/document-read-projection.ts) and
+[`vote-read-projection.ts`](../../src/modules/request-handling/api/vote-read-projection.ts).
+Handlers, batch/search/diff readers and persistence queries import those mappings directly, not through route handlers.
+Query row types are type-only dependencies; mapping does not import HTTP helpers or telemetry infrastructure.
+
+These modules preserve canonical validation, source provenance, date precision, bounded position continuation and
+unknown-versus-zero counts. Route parsing, HTTP error translation and batch error envelopes remain in the handlers.
+There is no compatibility re-export or generic repository layer.
+
 ## ADR-011 operational consequences
 
 - Status: accepted.

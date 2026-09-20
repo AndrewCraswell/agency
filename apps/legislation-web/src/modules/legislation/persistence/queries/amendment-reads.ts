@@ -22,7 +22,7 @@ import {
   type Sponsor
 } from "../../../request-handling/api/canonical-projection"
 import { sourceProjectionContext } from "../../../request-handling/api/canonical-read"
-import { projectDocumentDetailRead } from "../../../request-handling/api/document-read-routes"
+import { projectDocumentDetailRead } from "../../../request-handling/api/document-read-projection"
 import { getDocumentDetail } from "./document-reads"
 
 const DEFAULT_LIMIT = 25

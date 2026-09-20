@@ -12,8 +12,9 @@ import type {
   DocumentSectionListInput,
   ProcessingStatus
 } from "../../legislation/persistence/queries/document-reads"
-import { projectDocumentDetail, projectDocumentSection, projectDocumentSummary } from "./canonical-projection"
+import { projectDocumentSection } from "./canonical-projection"
 import { projectDocumentSectionRead, sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
+import { projectDocumentDetailRead, projectDocumentSummaryRead } from "./document-read-projection"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -143,28 +144,6 @@ function projectDocumentSectionPage(page: DocumentPage<CanonicalDocumentSectionR
   }
 }
 
-export function projectDocumentSummaryRead(value: CanonicalDocumentRead, apiBaseUrl: string) {
-  assertCanonicalDocumentStatuses(value)
-  return projectDocumentSummary(
-    {
-      ...value,
-      mimeType: value.mimeType
-    },
-    sourceProjectionContext(value, apiBaseUrl)
-  )
-}
-
-export function projectDocumentDetailRead(value: CanonicalDocumentDetailRead, apiBaseUrl: string) {
-  assertCanonicalDocumentStatuses(value)
-  return projectDocumentDetail(
-    {
-      ...value,
-      mimeType: value.mimeType
-    },
-    sourceProjectionContext(value, apiBaseUrl)
-  )
-}
-
 type DocumentReadRoute =
   | { billId: string; name: "listBillDocuments" }
   | { documentId: string; name: "getDocument" | "listDocumentSections" }
@@ -291,27 +270,5 @@ function processingStatus(value: string | undefined): ProcessingStatus | undefin
       return value
     default:
       throw new LegislationError("invalid_request", "processingStatus must be a supported processing status")
-  }
-}
-
-function assertCanonicalDocumentStatuses(value: Pick<CanonicalDocumentRead, "ocrStatus" | "processingStatus">): void {
-  if (
-    value.ocrStatus !== "not-required" &&
-    value.ocrStatus !== "pending" &&
-    value.ocrStatus !== "processing" &&
-    value.ocrStatus !== "processed" &&
-    value.ocrStatus !== "failed" &&
-    value.ocrStatus !== "unsupported"
-  ) {
-    throw new LegislationError("unprocessable", "Document OCR status is not canonical")
-  }
-  if (
-    value.processingStatus !== "pending" &&
-    value.processingStatus !== "processing" &&
-    value.processingStatus !== "processed" &&
-    value.processingStatus !== "failed" &&
-    value.processingStatus !== "unsupported"
-  ) {
-    throw new LegislationError("unprocessable", "Document processing status is not canonical")
   }
 }

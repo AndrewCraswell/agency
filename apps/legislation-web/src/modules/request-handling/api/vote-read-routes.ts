@@ -1,7 +1,6 @@
 import { mapConcurrent } from "@repo/legislation-core/concurrency/map-concurrent"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { validateVoteDateRange } from "@repo/legislation-core/domain/vote-date-range"
-import { voteOccurrence } from "../../legislation/persistence/queries/vote-occurrence"
 import type {
   Page,
   PersonVoteListInput,
@@ -15,19 +14,6 @@ import type {
   VoteSort
 } from "../../legislation/persistence/queries/vote-reads"
 import {
-  projectBillSummary,
-  projectPersonSummary,
-  projectVoteDetail,
-  projectVoteSummary,
-  type BillSummary,
-  type PersonSummary,
-  type ProjectionContext,
-  type VoteDetail,
-  type VotePosition,
-  type VoteSummary
-} from "./canonical-projection"
-import { sourceProjectionContext } from "./canonical-read"
-import {
   apiPage,
   apiResource,
   assertAllowedQueryParameters,
@@ -40,6 +26,13 @@ import {
   type HttpApiHandler,
   type JsonRecord
 } from "./http"
+import {
+  parseVoteOption,
+  projectPersonVoteActivity,
+  projectVote,
+  projectVoteDetailRead,
+  projectVotePosition
+} from "./vote-read-projection"
 
 const MAX_BATCH_BYTES = 5 * 1024 * 1024
 const MAX_BATCH_ITEMS = 25
@@ -108,7 +101,7 @@ export function createVoteReadApiHandler(
           200,
           apiPage(
             request,
-            { ...page, items: page.items.map((item) => projectPosition(item, options.apiBaseUrl)) },
+            { ...page, items: page.items.map((item) => projectVotePosition(item, options.apiBaseUrl)) },
             input.limit ?? 25
           )
         )
@@ -207,7 +200,7 @@ function votePositionsInput(url: URL, voteId: string): VotePositionListInput {
   assertSingle(url, ["cursor", "limit", "personId"])
   const options: VoteOption[] = []
   for (const value of url.searchParams.getAll("option")) {
-    const parsed = option(value.trim())
+    const parsed = parseVoteOption(value.trim())
     if (parsed === undefined) {
       throw new LegislationError("invalid_request", "option must be a canonical vote option")
     }
@@ -235,139 +228,13 @@ function personVotesInput(url: URL, personId: string): PersonVoteListInput {
     cursor: bounded(url, "cursor", 4096),
     from,
     limit: queryInteger(url, "limit", 20, 100),
-    option: option(bounded(url, "option", 16)),
+    option: parseVoteOption(bounded(url, "option", 16)),
     organizationId: bounded(url, "organizationId", 256),
     personId,
     to
   }
 }
 
-export function projectVoteDetailRead(vote: VoteRead, page: Page<VotePositionRead>, apiBaseUrl: string): VoteDetail {
-  return projectVoteDetail(
-    {
-      positions: page.items.map((item) => projectPosition(item, apiBaseUrl)),
-      positionsPageInfo: { limit: 25, nextCursor: page.nextCursor ?? null, truncated: page.truncated },
-      vote: voteInput(vote)
-    },
-    context(vote, apiBaseUrl)
-  )
-}
-function projectPersonVoteActivity(value: PersonVotePositionRead, apiBaseUrl: string) {
-  return {
-    bill: value.bill === null ? null : projectBill(value.bill, apiBaseUrl),
-    position: projectPosition(value, apiBaseUrl),
-    vote: projectVote(value.vote, apiBaseUrl)
-  }
-}
-export function projectVote(vote: VoteRead, apiBaseUrl: string): VoteSummary {
-  return projectVoteSummary(voteInput(vote), context(vote, apiBaseUrl))
-}
-function voteInput(vote: VoteRead) {
-  const { date, heldAt } = voteOccurrence(vote)
-  return {
-    billId: vote.billId,
-    classification: vote.classification,
-    counts: {
-      absent: count(vote.absentCount, "absent"),
-      abstain: count(vote.abstainCount, "abstain"),
-      no: count(vote.noCount, "no"),
-      notVoting: count(vote.notVotingCount, "notVoting"),
-      other: count(vote.otherCount, "other"),
-      paired: count(vote.pairedCount, "paired"),
-      present: count(vote.presentCount, "present"),
-      proxy: count(vote.proxyCount, "proxy"),
-      yes: count(vote.yesCount, "yes")
-    },
-    date,
-    heldAt,
-    id: vote.id,
-    motion: vote.motion,
-    organizationId: vote.organizationId,
-    question: vote.question,
-    result: storedVoteResult(vote.result),
-    sourceUrl: requiredText(vote.sourceUrl, "Vote source URL")
-  }
-}
-function projectPosition(value: VotePositionRead, apiBaseUrl: string): VotePosition {
-  const p = value.position
-  return {
-    canonicalUrl: new URL(
-      `/api/votes/${encodeURIComponent(value.vote.id)}#${encodeURIComponent(p.sourceIdentity)}`,
-      apiBaseUrl
-    ).toString(),
-    id: p.sourceIdentity,
-    option: option(p.option) ?? fail("Vote position option is invalid"),
-    person: value.person === null ? null : projectPerson(value.person, apiBaseUrl),
-    sourceName: requiredText(p.sourceName, "Vote position source name"),
-    sourcePersonId: p.sourcePersonId,
-    sources: projectVote(value.vote, apiBaseUrl).sources,
-    type: "vote-position",
-    updatedAt: p.createdAt.toISOString(),
-    voteId: value.vote.id
-  }
-}
-function projectPerson(person: NonNullable<VotePositionRead["person"]>, apiBaseUrl: string): PersonSummary {
-  if (!person.provenanceComplete || person.jurisdictionId === null || person.isActive === null) {
-    fail("Vote position person canonical provenance is incomplete")
-  }
-  return projectPersonSummary(
-    {
-      familyName: person.familyName,
-      givenName: person.givenName,
-      id: person.id,
-      imageUrl: null,
-      isActive: person.isActive,
-      jurisdictionIds: [person.jurisdictionId],
-      name: person.name,
-      party: person.party,
-      sourceUrl: requiredText(person.sourceUrl, "Person source URL")
-    },
-    context(person, apiBaseUrl)
-  )
-}
-function projectBill(bill: NonNullable<PersonVotePositionRead["bill"]>, apiBaseUrl: string): BillSummary {
-  return projectBillSummary(
-    {
-      classification: bill.classification,
-      id: bill.id,
-      identifier: bill.identifier,
-      introducedDate: bill.introducedAt,
-      jurisdictionId: bill.jurisdictionId,
-      latestActionAt: null,
-      sessionId: bill.sessionId,
-      sourceUrl: requiredText(bill.sourceUrl, "Bill source URL"),
-      status: bill.status,
-      subjects: bill.subjects,
-      title: bill.title
-    },
-    sourceProjectionContext(bill, apiBaseUrl)
-  )
-}
-function context(
-  record: Readonly<{
-    createdAt: Date
-    sourceIsOfficial: boolean | null
-    sourceProvider: string | null
-    sourceRetrievedAt: Date | null
-    sourceUpdatedAt: Date | null
-    sourceUrl: string | null
-  }>,
-  apiBaseUrl: string
-): ProjectionContext {
-  return {
-    apiBaseUrl,
-    sources: [
-      {
-        isOfficial: requiredBoolean(record.sourceIsOfficial, "Source official status"),
-        provider: requiredText(record.sourceProvider, "Source provider"),
-        retrievedAt: requiredDate(record.sourceRetrievedAt, "Source retrieval time"),
-        sourceUpdatedAt: record.sourceUpdatedAt,
-        sourceUrl: requiredText(record.sourceUrl, "Source URL")
-      }
-    ],
-    updatedAt: record.createdAt
-  }
-}
 async function batchItem(service: VoteReadApi, id: string, apiBaseUrl: string) {
   try {
     const vote = await service.getVote(id)
@@ -436,22 +303,6 @@ function bounded(url: URL, name: string, max: number) {
   }
   return normalized
 }
-function option(value: string | undefined): VoteOption | undefined {
-  switch (value) {
-    case "yes":
-    case "no":
-    case "absent":
-    case "abstain":
-    case "not-voting":
-    case "present":
-    case "proxy":
-    case "paired":
-    case "other":
-      return value
-    default:
-      return undefined
-  }
-}
 function result(value: string | null | undefined): VoteResult | undefined {
   if (value === undefined) {
     return undefined
@@ -461,12 +312,6 @@ function result(value: string | null | undefined): VoteResult | undefined {
   }
   throw new LegislationError("invalid_request", "result must be passed, failed, or other")
 }
-function storedVoteResult(value: string | null): VoteResult {
-  if (value === "passed" || value === "failed" || value === "other") {
-    return value
-  }
-  return fail("Vote result is incomplete")
-}
 function sort(value: string | undefined): VoteSort | undefined {
   if (value === undefined) {
     return undefined
@@ -475,30 +320,6 @@ function sort(value: string | undefined): VoteSort | undefined {
     return value
   }
   throw new LegislationError("invalid_request", "sort must be held-desc or held-asc")
-}
-function requiredText(value: string | null, name: string): string {
-  if (value === null || !value.trim()) {
-    fail(`${name} is incomplete`)
-  }
-  return value
-}
-function requiredDate(value: Date | null, name: string): Date {
-  if (!(value instanceof Date) || Number.isNaN(value.valueOf())) {
-    fail(`${name} is incomplete`)
-  }
-  return value
-}
-function requiredBoolean(value: boolean | null, name: string): boolean {
-  if (typeof value !== "boolean") {
-    fail(`${name} is incomplete`)
-  }
-  return value
-}
-function count(value: number | null, name: string): number {
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
-    fail(`Vote ${name} count is incomplete`)
-  }
-  return value
 }
 function fail(message: string): never {
   throw new LegislationError("unprocessable", message)

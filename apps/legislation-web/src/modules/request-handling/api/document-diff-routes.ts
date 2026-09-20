@@ -4,7 +4,7 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { z } from "zod"
 import type { CanonicalDocumentRead } from "../../legislation/persistence/queries/document-reads"
 import { buildDocumentDiff, type DiffGranularity, type DiffHunk, type DiffSection } from "./document-diff"
-import { projectDocumentSummaryRead } from "./document-read-routes"
+import { projectDocumentSummaryRead } from "./document-read-projection"
 import {
   apiResource,
   assertAllowedQueryParameters,
