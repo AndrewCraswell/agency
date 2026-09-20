@@ -1,12 +1,12 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
-import { billDocuments, documentSections } from "@repo/legislation-core/database/schema/schema"
+import { billDocuments } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { asc, inArray } from "drizzle-orm"
+import { inArray } from "drizzle-orm"
 import { documentReadFromPersistence, type CanonicalDocumentRead } from "./document-reads"
 
 export interface DocumentDiffRead {
-  left: { document: CanonicalDocumentRead; sections: Array<typeof documentSections.$inferSelect> }
-  right: { document: CanonicalDocumentRead; sections: Array<typeof documentSections.$inferSelect> }
+  left: { document: CanonicalDocumentRead; text: string }
+  right: { document: CanonicalDocumentRead; text: string }
 }
 
 export async function readDocumentDiff(
@@ -32,19 +32,17 @@ export async function readDocumentDiff(
   if (left.processingStatus !== "processed" || right.processingStatus !== "processed") {
     throw new LegislationError("conflict", "Both documents must have processed text before they can be compared")
   }
-  const sections = await database
-    .select()
-    .from(documentSections)
-    .where(inArray(documentSections.documentId, [left.id, right.id]))
-    .orderBy(asc(documentSections.documentId), asc(documentSections.ordinal), asc(documentSections.id))
+  if (!left.text?.trim() || !right.text?.trim()) {
+    throw new LegislationError("conflict", "Both documents must have stored full text before they can be compared")
+  }
   return {
     left: {
       document: documentReadFromPersistence(left),
-      sections: sections.filter((section) => section.documentId === left.id)
+      text: left.text
     },
     right: {
       document: documentReadFromPersistence(right),
-      sections: sections.filter((section) => section.documentId === right.id)
+      text: right.text
     }
   }
 }

@@ -909,7 +909,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
     "compare_bill_versions",
     {
       description:
-        "Compare two processed versions of the same canonical bill by legal section. Follow nextCursor with identical document IDs and limit. Read large sections independently with read_record_collection.",
+        "Compare the full processed texts of two documents belonging to the same canonical bill. Returns literal text hunks with exact document-relative offsets, source fingerprints and content-bound pagination. Follow nextCursor with identical document IDs and limit. Repeated chapter numbers are not provision identities; insertions/deletions do not establish legal repeal, enactment, or application of an amendment.",
       inputSchema: z.object({ ...pageSchema, billId: canonicalBillId, documentIds: z.array(z.string()).length(2) }),
       outputSchema
     },

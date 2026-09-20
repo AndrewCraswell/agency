@@ -189,6 +189,7 @@ export type StepProgress = {
   selected: "primary" | "missing-records" | null
   executedRequestIds: string[]
   answered: boolean
+  // Discovery receipts are not the assistant's selected research sample.
   records: ObservedRecord[]
 }
 
@@ -208,11 +209,11 @@ export function selectStep(scenario: Scenario, index: number, progress: readonly
   let branch: NonNullable<StepProgress["selected"]> = "primary"
   if (step.requiresRecordsFrom) {
     const dependency = step.requiresRecordsFrom
-    const records =
+    const hasRecords =
       progress
         .find((entry) => entry.id === dependency.stepId)
-        ?.records.filter((record) => record.kind === dependency.kind) ?? []
-    if (records.length === 0) {
+        ?.records.some((record) => record.kind === dependency.kind) ?? false
+    if (!hasRecords) {
       if (!dependency.onMissingRecords) {
         return {
           kind: "pause" as const,
@@ -421,6 +422,7 @@ export function requestIdentity(body: unknown) {
 
 export type RequestObservation = ReturnType<typeof requestIdentity> & {
   id: string
+  serverRequestId: string | null
   status: number | null
   terminal: "finished" | "failed" | null
   failure: string | null
@@ -464,9 +466,9 @@ export function summarizeExchange(
       })),
     delivery: outcome?.status ?? "unknown",
     answered: outcome?.status === "completed" && outcome.hasAnswer && outcome.pendingToolCalls.length === 0,
-    hasAnswer: outcome?.hasAnswer ?? false,
-    failedToolCalls: outcome?.failedToolCalls ?? [],
-    pendingToolCalls: outcome?.pendingToolCalls ?? [],
+    hasAnswer: outcome?.hasAnswer ?? null,
+    failedToolCalls: outcome?.failedToolCalls ?? null,
+    pendingToolCalls: outcome?.pendingToolCalls ?? null,
     assessment: "unassessed" as const
   }
 }
@@ -523,6 +525,7 @@ export function inspectSnapshot(snapshot: Snapshot, previousMessageIds: Readonly
     }
   }
   return {
+    messages,
     messageIds: messages.map((message) => message.id),
     outcome,
     clarification,

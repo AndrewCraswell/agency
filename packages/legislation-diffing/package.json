@@ -1,0 +1,30 @@
+{
+  "name": "@repo/legislation-diffing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic, browser-compatible literal comparison of complete legislation texts.",
+  "exports": {
+    "./comparison": "./src/comparison.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "check:types": "tsc --noEmit",
+    "lint": "oxlint --max-warnings=0",
+    "test": "vitest run --project unit",
+    "test:coverage": "vitest run --project unit --coverage"
+  },
+  "dependencies": {
+    "diff": "^9.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@repo/oxlint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@vitest/coverage-v8": "^4.1.10",
+    "typescript": "catalog:",
+    "vitest": "^4.1.10"
+  }
+}

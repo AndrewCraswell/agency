@@ -12,6 +12,8 @@ and [core](../packages/legislation-core/docs/README.md). See
 [verification](../apps/legislation-web/docs/operations/testing.md#full-verification) for `pnpm verify:legislation`.
 The [prototype telemetry specification](../apps/legislation-web/docs/engineering/telemetry-spec.md) focuses on
 debugging failures and slowness with safe Sentry/Langfuse diagnostics, not product analytics or replay.
+The [legislation diffing package](../packages/legislation-diffing/README.md) owns deterministic full-text comparison;
+its app consumers and Storybook prototypes do not perform legal interpretation or amendment application.
 
 | Page                             | What it covers                                                                                                                                              |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |

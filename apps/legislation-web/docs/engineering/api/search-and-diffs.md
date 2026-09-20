@@ -173,7 +173,7 @@ Shared and product-specific `jurisdictionIds` are intersected; a disjoint inters
 ```ts
 type DocumentDiffRequest = {
   billId: string; leftDocumentId: string; rightDocumentId: string
-  granularity?: "section" | "paragraph" | "word"
+  granularity?: "paragraph" | "word"
   includeUnchanged?: boolean; cursor?: string | null; limit?: number
 }
 type DiffOperation = {
@@ -182,21 +182,43 @@ type DiffOperation = {
 }
 type DiffHunk = {
   ordinal: number; classification: "added" | "removed" | "changed" | "unchanged"
-  leftSectionId: string | null; rightSectionId: string | null
-  leftText: string | null; rightText: string | null; operations: DiffOperation[]; sources: SourceReference[]
+  leftStart: number | null; leftEnd: number | null
+  rightStart: number | null; rightEnd: number | null
+  leftText: string | null; rightText: string | null; operations: DiffOperation[]
 }
 type DocumentDiff = {
   id: string; billId: string; leftDocument: DocumentSummary; rightDocument: DocumentSummary
-  granularity: "section" | "paragraph" | "word"; hunks: DiffHunk[]
+  left: { id: string; contentHash: string; textLength: number }
+  right: { id: string; contentHash: string; textLength: number }
+  comparisonKind: "literal-text"; offsetUnit: "utf16-code-unit"
+  leftTextHash: string; rightTextHash: string
+  granularity: "paragraph" | "word"; hunks: DiffHunk[]
   counts: { added: number; removed: number; changed: number; unchanged: number }
-  nextCursor: string | null; truncated: boolean
+  nextCursor: string | null; truncated: boolean; limitations: string[]
 }
 ```
 
-All fields except optional controls are required. `granularity` defaults `section`, `includeUnchanged` false, `limit`
-100 (1 to 100). IDs must differ and both documents must belong to the bill. Character offsets are zero-based half-open
-ranges and `start <= end`. Response is `200 ResourceResponse<DocumentDiff>`. Ownership mismatch or unprocessed text is
-`409 conflict`; bad bounds are `400`; an oversized hunk is `413`.
+Both this endpoint and `compare_bill_versions` use
+[`@repo/legislation-diffing`](../../../../../packages/legislation-diffing/README.md) through the same app adapter.
+They compare stored full texts, including preambles and repeated passages, not identifier-keyed section maps.
+`granularity` defaults to `paragraph`, `includeUnchanged` to false, and `limit` to 25 (1 to 100).
+The research tool uses those defaults and returns `hunks` rather than the obsolete section-keyed `changes` list.
+
+IDs must differ and both documents must belong to the bill with processed full text and source fingerprints.
+Offsets are absolute, zero-based, half-open UTF-16 ranges into the exact stored texts, not XML bytes or PDF coordinates.
+Document `contentHash` identifies the source bytes; `leftTextHash` and `rightTextHash` identify the compared text.
+The comparison ID fingerprints the inputs and computed edit script. Cursors bind that ID, document selection,
+granularity, unchanged visibility and limit; changed content or options require a fresh comparison.
+
+Responses are `200 ResourceResponse<DocumentDiff>`. Pages stop before 100,000 UTF-8 bytes of the app comparison data
+and retain a continuation without dropping hunks. The HTTP envelope and canonical URL projection add metadata outside
+that budget. A hunk that cannot fit fails explicitly rather than being truncated.
+Ownership mismatch or absent/unprocessed text is `409 conflict`; missing source fingerprints are `422`; bad inputs
+or stale cursors are `400`; engine resource limits or oversized hunks are `413`.
+
+Classifications describe text, not legal effect. Movement may appear as deletion and insertion. There is no inferred
+provision identity, NER, LLM analysis, or application of amendment instructions. Storybook's comparison components
+are prototypes using actual engine output; they are not registered in the production conversation renderer.
 
 ## `POST /api/research/answers` (`answerLegislativeResearchQuestion`)
 

@@ -29,6 +29,7 @@
       "entry": [
         ".storybook/{main,preview,mocks}.ts{,x}",
         "src/modules/conversations/stories/**/*.stories.tsx",
+        "src/modules/comparisons/**/*.stories.tsx",
         "scripts/capture-storybook.ts",
         "src/modules/request-handling/api/next/http.ts!",
         "src/modules/legislation/runtime/runtime.ts!",
@@ -60,6 +61,9 @@
     },
     "packages/legislation-core": {
       "entry": ["scripts/database.ts!", "drizzle.config.ts!"],
+      "ignoreDependencies": ["@repo/oxlint-config"]
+    },
+    "packages/legislation-diffing": {
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "apps/blog-writer": {
