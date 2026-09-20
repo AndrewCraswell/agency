@@ -28,11 +28,19 @@ jobs:
           # `pnpm verify` runs `beachball check`, which diffs against
           # origin/main, so the full git history must be available.
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+      - name: Install pnpm
+        run: npm install --global pnpm@11.9.0 --registry=https://registry.npmjs.org/
+      - name: Resolve pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
       - run: pnpm install --frozen-lockfile
       - run: sudo apt-get update && sudo apt-get install --yes ngspice
       # Storybook browser tests run through Playwright.

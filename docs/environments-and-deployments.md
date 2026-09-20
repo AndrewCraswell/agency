@@ -122,9 +122,11 @@ The existing root `pnpm verify` remains the required code-quality gate. Package 
 must not accidentally grant or block production deployment unless it is intentionally made a release prerequisite.
 The repository `.npmrc` intentionally routes developer installs through the Azure Artifacts proxy because the public
 npm registry is unavailable on the work VPN. The proxy contains no repository-only packages. GitHub-hosted workflows
-therefore set pnpm's higher-precedence `PNPM_CONFIG_REGISTRY` environment override before pnpm bootstrap and do not
-receive Azure registry credentials. The committed developer configuration remains unchanged. Railway Docker builds use
-the public registry explicitly or omit the repository `.npmrc` from their build context.
+therefore install the pinned pnpm version with npm's explicit public-registry command-line option, then set pnpm's
+higher-precedence `PNPM_CONFIG_REGISTRY` environment override for repository installs. Package publication also sets
+`NPM_CONFIG_REGISTRY` to the public registry. GitHub does not receive Azure registry credentials, and the committed
+developer configuration remains unchanged. Railway Docker builds use the public registry explicitly or omit the
+repository `.npmrc` from their build context.
 
 ### Merge to `main`
 
