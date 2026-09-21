@@ -153,7 +153,6 @@ export function HomepageLanding({
                 }
                 onReferenceRequested={() => setPickerOpen(true)}
                 searchMentions={(query, signal) => session.searchReferences(query, "mention", signal)}
-                status={isAvailable ? undefined : "Research is not connected yet."}
               />
             </div>
             {suggestions && (
