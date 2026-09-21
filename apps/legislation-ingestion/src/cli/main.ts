@@ -52,6 +52,7 @@ import {
   embedDocumentSections,
   embedSupportingMaterialSections
 } from "../ingestion/embeddings/jobs.js"
+import { GovInfoApiClient } from "../ingestion/govinfo/api-client.js"
 import { GovInfoClient } from "../ingestion/govinfo/client.js"
 import {
   executeGovInfoCommitteeSynchronization,
@@ -183,6 +184,7 @@ program
 program
   .command("govinfo:import")
   .description("Discover and import GovInfo BILLSTATUS XML")
+  .option("--api-discovery", "discover package IDs through the bounded GovInfo collection API")
   .option("--bill-types <types>", "comma-separated bill types", "hr,s,hjres,sjres,hconres,sconres,hres,sres")
   .option("--end-congress <number>")
   .option("--force", "restart the configured range")
@@ -817,6 +819,7 @@ async function readLocalArchive(path: string): Promise<Uint8Array> {
 }
 
 async function importGovInfo(options: {
+  apiDiscovery?: boolean
   billTypes: string
   endCongress?: string
   force?: boolean
@@ -826,7 +829,10 @@ async function importGovInfo(options: {
   const { billTypes, congresses, end, start } = parseGovInfoScope(options, config)
   const providerHttp = httpClient(config)
   const client = new GovInfoClient(providerHttp)
-  const packages = await client.discover(congresses, billTypes)
+  const packages =
+    options.apiDiscovery === true
+      ? await discoverGovInfoHistoryWithApi(config, providerHttp, congresses, billTypes)
+      : await client.discover(congresses, billTypes)
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
       database,
@@ -848,6 +854,35 @@ async function importGovInfo(options: {
     printJobResult(result)
   }, config)
   createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "govinfo" })
+}
+
+async function discoverGovInfoHistoryWithApi(
+  config: ReturnType<typeof loadConfig>,
+  http: RetryingHttpClient,
+  congresses: readonly number[],
+  billTypes: readonly string[]
+) {
+  if (config.ingestion.govInfoApiKey === undefined) {
+    throw new InvalidJobInput("GOVINFO_API_KEY is required with --api-discovery")
+  }
+  const client = new GovInfoApiClient({
+    apiKey: config.ingestion.govInfoApiKey,
+    baseUrl: new URL(config.ingestion.govInfoApiUrl),
+    http
+  })
+  const modifiedThrough = new Date()
+  const packages = []
+  for (const congress of congresses) {
+    packages.push(
+      ...(await client.discoverModified(
+        congress,
+        billTypes,
+        new Date(Date.UTC(1787 + congress * 2, 0, 1)),
+        modifiedThrough
+      ))
+    )
+  }
+  return packages
 }
 
 async function syncGovInfoCommittees(options: { endCongress?: string; restart?: boolean; startCongress?: string }) {
