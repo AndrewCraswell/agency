@@ -29,7 +29,7 @@
     "legislation:test:coverage": "turbo run test:coverage --filter=@repo/legislation-core --filter=@repo/legislation-diffing --filter=legislation-web --filter=legislation-ingestion --filter=legislation-mcp --concurrency=1 --cache=local:rw",
     "legislation:test:python": "pnpm --filter ./apps/legislation-ingestion test:python",
     "legislation:test:database": "pnpm --filter ./packages/legislation-core test:database && pnpm --filter ./apps/legislation-ingestion test:database && pnpm --filter ./apps/legislation-web test:database",
-    "legislation:test:acceptance": "pnpm --filter ./apps/legislation-web test:acceptance && pnpm --filter ./apps/legislation-web test:webhook-verification-receiver && pnpm --filter ./apps/legislation-mcp test:acceptance && node --test scripts/legislation-change-detection.test.mjs scripts/legislation-staging-schema-lease.test.mjs scripts/legislation-acceptance.test.mjs",
+    "legislation:test:acceptance": "pnpm --filter ./apps/legislation-web test:acceptance && pnpm --filter ./apps/legislation-web test:webhook-verification-receiver && pnpm --filter ./apps/legislation-mcp test:acceptance && node --test scripts/legislation-change-detection.test.mjs scripts/legislation-staging-schema-lease.test.mjs scripts/legislation-acceptance.test.mjs scripts/production-release-evidence.test.mjs scripts/production-rollback-check.test.mjs scripts/production-workflow.test.mjs",
     "change": "beachball change",
     "change:release": "beachball publish",
     "prepare": "lefthook install"
