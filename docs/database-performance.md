@@ -97,6 +97,11 @@ headline, rather than generating headlines for every match and retaining the lex
 Candidate IDs and ranking are unchanged; preview snippets may differ. Neither change increases query deadlines
 or removes scope filters. Compare the candidate digest separately from snippet content and end-to-end latency.
 
+Supporting-material lexical searches with explicit bill IDs materialize the eligible parent materials first,
+including all relationship, session, date, status and jurisdiction filters. Their section lookup is constrained
+to those parents before the existing deterministic section sample and ranking. Unscoped searches retain the
+original indexed corpus path; both paths retain the same coverage flags and page limits.
+
 ### Supporting-material title-search baseline
 
 The `student-data` fixture exposed a parallel sequential scan over supporting-material titles. Its baseline plan took

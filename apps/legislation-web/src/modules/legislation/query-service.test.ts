@@ -1111,10 +1111,25 @@ describe("lexical supporting material candidate search", () => {
     return dialect.sqlToQuery(buildLexicalSupportingMaterialCandidateQuery(input, "Build the Wall", limit, offset))
   }
 
+  it("restricts explicit bill searches to eligible materials before reading sections", () => {
+    const rendered = renderCandidateSearch({
+      query: "loan",
+      billId: "bill:us:119:hr:1",
+      sessionIds: ["session:us:119"]
+    })
+    expect(rendered.sql).toContain("scoped_materials as materialized")
+    expect(rendered.sql).toContain("from scoped_materials")
+    expect(rendered.sql).toContain("cross join lateral")
+    expect(rendered.sql).toContain('"supporting_material_sections"."material_id" = scoped_materials.id')
+    expect(rendered.sql).toContain("order by matched.section_id asc")
+    expect(rendered.params).toContain("bill:us:119:hr:1")
+    expect(rendered.params).toContain("session:us:119")
+  })
+
   it("bounds title and indexed section retrieval before material-level ranking", () => {
     const rendered = renderCandidateSearch({ query: "Build the Wall" })
 
-    expect(rendered.sql).toContain("with title_candidate_probe as")
+    expect(rendered.sql).toMatch(/with\s+title_candidate_probe as/)
     expect(rendered.sql).toContain("title_candidates as")
     expect(rendered.sql).toContain("section_match_probe as materialized")
     expect(rendered.sql).toContain("section_match_sample as materialized")
@@ -1277,7 +1292,8 @@ describe("lexical supporting material candidate search", () => {
     expect(rendered.sql.match(/"processing_status" =/g)).toHaveLength(2)
     expect(rendered.sql.match(/"updated_at" >=/g)).toHaveLength(2)
     expect(rendered.sql.match(/"updated_at" </g)).toHaveLength(2)
-    expect(rendered.sql).toContain('inner join "legislation"."supporting_materials" on')
+    expect(rendered.sql).toContain("scoped_materials as materialized")
+    expect(rendered.sql).toContain("from scoped_materials")
   })
 
   it("uses a stable bounded window for deep cursors", () => {

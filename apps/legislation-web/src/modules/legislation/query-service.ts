@@ -1276,6 +1276,10 @@ export function buildLexicalSupportingMaterialCandidateQuery(
   const sectionMatches = sql`${supportingMaterialSections.searchVector} @@ ${searchQuery}`
   const scope = supportingMaterialLexicalScope(input)
   const titleScope = scope ?? sql`true`
+  const hasBillScope = (supportingMaterialFilterValues(input.billIds, input.billId)?.length ?? 0) > 0
+  const scopedMaterials = hasBillScope
+    ? sql`scoped_materials as materialized (select ${supportingMaterials.id} as id from ${supportingMaterials} where ${titleScope}),`
+    : sql``
   const sectionMaterialJoin =
     scope === undefined
       ? sql``
@@ -1284,8 +1288,25 @@ export function buildLexicalSupportingMaterialCandidateQuery(
   const candidateLimit = lexicalSupportingMaterialCandidateLimit(limit, offset)
   const sourceCandidateLimit = LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT
   const sourceCandidateProbeLimit = sourceCandidateLimit + 1
+  const sectionProbe = hasBillScope
+    ? sql`select matched.material_id, matched.section_id
+        from scoped_materials
+        cross join lateral (
+          select ${supportingMaterialSections.materialId} as material_id, ${supportingMaterialSections.id} as section_id
+          from ${supportingMaterialSections}
+          where ${supportingMaterialSections.materialId} = scoped_materials.id and ${sectionMatches}
+          offset 0
+        ) matched
+        order by matched.section_id asc
+        limit ${sourceCandidateProbeLimit}`
+    : sql`select ${supportingMaterialSections.materialId} as material_id, ${supportingMaterialSections.id} as section_id
+        from ${supportingMaterialSections}
+        ${sectionMaterialJoin}
+        where ${sectionMatches} and ${sectionScope}
+        order by ${supportingMaterialSections.id} asc
+        limit ${sourceCandidateProbeLimit}`
   return sql`
-    with title_candidate_probe as (
+    with ${scopedMaterials} title_candidate_probe as (
       select
         ${supportingMaterials.id} as material_id,
         ${titleRank} as title_score
@@ -1301,14 +1322,7 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       limit ${sourceCandidateLimit}
     ),
     section_match_probe as materialized (
-      select
-        ${supportingMaterialSections.materialId} as material_id,
-        ${supportingMaterialSections.id} as section_id
-      from ${supportingMaterialSections}
-      ${sectionMaterialJoin}
-      where ${sectionMatches} and ${sectionScope}
-      order by ${supportingMaterialSections.id} asc
-      limit ${sourceCandidateProbeLimit}
+      ${sectionProbe}
     ),
     section_match_sample as materialized (
       select material_id, section_id
