@@ -29,7 +29,8 @@ RUN groupadd --system --gid 10001 legislation \
   && chown -R legislation:legislation /workspace
 
 USER 10001
+WORKDIR /workspace/apps/legislation-ingestion
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
-CMD ["pnpm", "--filter", "legislation-ingestion", "exec", "tsx", "src/cli/document-relay.ts"]
+CMD ["./node_modules/.bin/tsx", "src/cli/document-relay.ts"]
