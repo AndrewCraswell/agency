@@ -194,6 +194,12 @@ globalStyle(`${markdown} blockquote`, {
   fontFamily: "var(--font-newsreader), Georgia, serif",
   fontSize: 19
 })
+globalStyle(`${markdown} > [data-streamdown="table-wrapper"]:has(> div > table[data-streamdown="table"])`, {
+  border: 0,
+  borderRadius: 0,
+  background: "transparent",
+  padding: 0
+})
 globalStyle(`${markdown} table`, { width: "100%", borderCollapse: "collapse", fontSize: 14 })
 globalStyle(`${markdown} td, ${markdown} th`, {
   borderBottom: "1px solid var(--border)",
@@ -329,6 +335,10 @@ export const passagePreview = style({
   maxHeight: "16rem",
   overflow: "auto",
   overscrollBehavior: "contain",
+  padding: "12px 16px",
+  border: "1px solid var(--border)",
+  borderRadius: 4,
+  background: "var(--background)",
   ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
 })
 globalStyle(`${passageMarkdown} h1, ${passageMarkdown} h2, ${passageMarkdown} h3`, {
@@ -341,6 +351,15 @@ globalStyle(`${passageMarkdown} p`, { margin: "8px 0" })
 globalStyle(`${passageMarkdown} ul, ${passageMarkdown} ol`, { paddingLeft: 24, margin: "8px 0" })
 globalStyle(`${passageMarkdown} ul`, { listStyle: "disc" })
 globalStyle(`${passageMarkdown} ol`, { listStyle: "decimal" })
+globalStyle(
+  `${passageMarkdown} > div > [data-streamdown="table-wrapper"]:has(> div > table[data-streamdown="table"])`,
+  {
+    border: 0,
+    borderRadius: 0,
+    background: "transparent",
+    padding: 0
+  }
+)
 globalStyle(`${passageMarkdown} table`, { borderCollapse: "collapse", fontSize: 14 })
 globalStyle(`${passageMarkdown} td, ${passageMarkdown} th`, {
   padding: 8,

@@ -39,8 +39,11 @@ export const passage = style({
   width: "100%",
   maxWidth: 640,
   minWidth: 0,
-  padding: "4px 0 0 16px",
-  borderLeft: "2px solid var(--primary)"
+  padding: 16,
+  border: "1px solid var(--border)",
+  borderLeft: "2px solid var(--primary)",
+  borderRadius: 4,
+  background: "var(--card)"
 })
 export const passageText = style({
   margin: 0,

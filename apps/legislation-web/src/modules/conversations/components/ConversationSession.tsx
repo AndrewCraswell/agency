@@ -37,10 +37,13 @@ import {
 } from "../recordDetails"
 import { messageResponseOutcome, responseIsIncomplete } from "../responseOutcome"
 
+type MessageUpdater = (messages: UIMessage[] | ((messages: UIMessage[]) => UIMessage[])) => void
+
 function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string) {
   const sessionKey = snapshot?.sessionKey ?? ownerKey ?? crypto.randomUUID()
   let isExplicitlyCancelled = false
   let isRetry = false
+  let updateMessages: MessageUpdater | undefined
   const diagnostics = createConversationDiagnostics()
   const transport = new DefaultChatTransport({
     api: "/chat",
@@ -132,6 +135,13 @@ function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string
     chat,
     sessionKey,
     diagnostics,
+    setMessageUpdater: (updater: MessageUpdater | undefined) => {
+      updateMessages = updater
+    },
+    updateMessages: (messages: Parameters<MessageUpdater>[0]) => {
+      invariant(updateMessages, "Conversation message updater is unavailable")
+      updateMessages(messages)
+    },
     markCancelled: () => {
       isExplicitlyCancelled = true
       const last = chat.messages.at(-1)
@@ -176,6 +186,110 @@ type ConversationSessionValue = Readonly<{
 const ConversationSessionContext = createContext<ConversationSessionValue | undefined>(undefined)
 type ConversationSessionProps = Readonly<{ children: ReactNode }>
 
+type ConversationCheckpointProps = Readonly<{
+  session: ReturnType<typeof createChatSession>
+  draft: ComposerDraft
+  references: StagedReference[]
+  clarificationAnswers: Record<string, ClarificationResponse>
+  interruptedMessageId: string | undefined
+  isConfirmingClarification: boolean
+  isRestoringConversation: boolean
+  hasReloadRecoveryError: boolean
+  onRecoveryErrorChange: (hasError: boolean) => void
+}>
+
+// Isolate the high-frequency stream subscription so it does not invalidate every session context consumer.
+function ConversationCheckpoint({
+  session,
+  draft,
+  references,
+  clarificationAnswers,
+  interruptedMessageId,
+  isConfirmingClarification,
+  isRestoringConversation,
+  hasReloadRecoveryError,
+  onRecoveryErrorChange
+}: ConversationCheckpointProps) {
+  const { messages, status, setMessages } = useChat({ chat: session.chat, throttle: 250 })
+  const [checkpointMessages] = useDebouncedValue(messages, 250)
+  const [checkpointDraft] = useDebouncedValue(draft, 250)
+
+  useEffect(() => {
+    session.setMessageUpdater(setMessages)
+    return () => {
+      session.setMessageUpdater(undefined)
+    }
+  }, [session, setMessages])
+
+  useEffect(() => {
+    const last = messages.at(-1)
+    if (status === "streaming" && last?.role === "assistant" && messageResponseOutcome(last).hasAnswer) {
+      session.diagnostics.link(last.metadata)
+      session.diagnostics.firstContent()
+    }
+  }, [messages, status, session])
+
+  const persistConversation = useEffectEvent(() => {
+    const lastMessage = session.chat.messages.at(-1)
+    const hasTerminalAnswer =
+      lastMessage?.role === "assistant" && !responseIsIncomplete(messageResponseOutcome(lastMessage))
+    const wasInterrupted =
+      !hasTerminalAnswer &&
+      (session.chat.status === "submitted" ||
+        session.chat.status === "streaming" ||
+        session.chat.status === "error" ||
+        isConfirmingClarification)
+    const snapshot: DevelopmentConversation = {
+      id: session.chat.id,
+      sessionKey: session.sessionKey,
+      messages: session.chat.messages,
+      draft,
+      references,
+      clarificationAnswers,
+      interruptedMessageId: wasInterrupted ? session.chat.messages.at(-1)?.id : interruptedMessageId
+    }
+    try {
+      sessionStorage.setItem(developmentConversationKey, JSON.stringify(snapshot))
+      onRecoveryErrorChange(false)
+    } catch (error) {
+      if (!hasReloadRecoveryError) {
+        captureException(error)
+      }
+      onRecoveryErrorChange(true)
+      try {
+        sessionStorage.removeItem(developmentConversationKey)
+      } catch {
+        return
+      }
+    }
+  })
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development" || isRestoringConversation) {
+      return
+    }
+    const checkpoint = window.setTimeout(() => persistConversation(), 0)
+    const onPageHide = () => persistConversation()
+    window.addEventListener("pagehide", onPageHide)
+    return () => {
+      window.clearTimeout(checkpoint)
+      window.removeEventListener("pagehide", onPageHide)
+    }
+  }, [
+    session,
+    checkpointMessages,
+    checkpointDraft,
+    references,
+    status,
+    clarificationAnswers,
+    isConfirmingClarification,
+    interruptedMessageId,
+    isRestoringConversation
+  ])
+
+  return null
+}
+
 export function ConversationSession({ children }: ConversationSessionProps) {
   const [session, setSession] = useState(createChatSession)
   const [clarificationAnswers, setClarificationAnswers] = useState<Record<string, ClarificationResponse>>({})
@@ -188,17 +302,6 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   const hasRestoredConversation = useRef(false)
   const answerRequest = useRef<AbortController | null>(null)
   const { chat } = session
-  const { messages, status, setMessages } = useChat({ chat, throttle: 50 })
-  const [checkpointMessages] = useDebouncedValue(messages, 250)
-  const [checkpointDraft] = useDebouncedValue(draft, 250)
-
-  useEffect(() => {
-    const last = messages.at(-1)
-    if (status === "streaming" && last?.role === "assistant" && messageResponseOutcome(last).hasAnswer) {
-      session.diagnostics.link(last.metadata)
-      session.diagnostics.firstContent()
-    }
-  }, [messages, status, session])
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "development" || hasRestoredConversation.current) {
@@ -239,64 +342,6 @@ export function ConversationSession({ children }: ConversationSessionProps) {
     }
   }, [])
 
-  const persistConversation = useEffectEvent(() => {
-    const lastMessage = chat.messages.at(-1)
-    const hasTerminalAnswer =
-      lastMessage?.role === "assistant" && !responseIsIncomplete(messageResponseOutcome(lastMessage))
-    const wasInterrupted =
-      !hasTerminalAnswer &&
-      (chat.status === "submitted" ||
-        chat.status === "streaming" ||
-        chat.status === "error" ||
-        isConfirmingClarification)
-    const snapshot: DevelopmentConversation = {
-      id: chat.id,
-      sessionKey: session.sessionKey,
-      messages: chat.messages,
-      draft,
-      references,
-      clarificationAnswers,
-      interruptedMessageId: wasInterrupted ? chat.messages.at(-1)?.id : interruptedMessageId
-    }
-    try {
-      sessionStorage.setItem(developmentConversationKey, JSON.stringify(snapshot))
-      setHasReloadRecoveryError(false)
-    } catch (error) {
-      if (!hasReloadRecoveryError) {
-        captureException(error)
-      }
-      setHasReloadRecoveryError(true)
-      try {
-        sessionStorage.removeItem(developmentConversationKey)
-      } catch {
-        return
-      }
-    }
-  })
-
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "development" || isRestoringConversation) {
-      return
-    }
-    const checkpoint = window.setTimeout(() => persistConversation(), 0)
-    const onPageHide = () => persistConversation()
-    window.addEventListener("pagehide", onPageHide)
-    return () => {
-      window.clearTimeout(checkpoint)
-      window.removeEventListener("pagehide", onPageHide)
-    }
-  }, [
-    session,
-    checkpointMessages,
-    checkpointDraft,
-    references,
-    status,
-    clarificationAnswers,
-    isConfirmingClarification,
-    interruptedMessageId,
-    isRestoringConversation
-  ])
-
   useEffect(() => () => answerRequest.current?.abort(), [])
 
   function cancelClarification() {
@@ -308,7 +353,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
     const latest = chat.messages.at(-1)
     if (latest) {
       const metadata = z.record(z.string(), z.unknown()).safeParse(latest.metadata)
-      setMessages((messages) =>
+      session.updateMessages((messages) =>
         messages.map((message) =>
           message.id === latest.id
             ? {
@@ -344,7 +389,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
       throw new Error("The result page did not match this request.")
     }
     signal.throwIfAborted()
-    setMessages((messages) =>
+    session.updateMessages((messages) =>
       messages.map((message) => ({
         ...message,
         parts: message.parts.map((part) => {
@@ -560,6 +605,17 @@ export function ConversationSession({ children }: ConversationSessionProps) {
         loadProfileDetails
       }}
     >
+      <ConversationCheckpoint
+        session={session}
+        draft={draft}
+        references={references}
+        clarificationAnswers={clarificationAnswers}
+        interruptedMessageId={interruptedMessageId}
+        isConfirmingClarification={isConfirmingClarification}
+        isRestoringConversation={isRestoringConversation}
+        hasReloadRecoveryError={hasReloadRecoveryError}
+        onRecoveryErrorChange={setHasReloadRecoveryError}
+      />
       {children}
     </ConversationSessionContext>
   )
