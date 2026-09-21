@@ -440,10 +440,9 @@ export function modelInputSchema(schema: z.ZodType) {
     }
     fields[name] = field.isOptional()
       ? field
-          .nonoptional()
           .nullable()
           .describe(
-            `${field.description ?? "Optional filter or setting."} Use null when not needed. Do not invent placeholder values.`
+            `${field.description ?? "Optional filter or setting."} Omit or use null when not needed. Do not invent placeholder values.`
           )
       : field
   }

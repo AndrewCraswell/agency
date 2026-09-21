@@ -750,6 +750,9 @@ it("preserves canonical search limits and cursor inputs", () => {
     z.object({ query: z.string(), limit: z.number().int().min(1).max(100).optional(), cursor: z.string().optional() })
   )
   expect(schema.parse({ query: "education", limit: null, cursor: null })).toEqual({ query: "education" })
+  expect(schema.parse({ query: "education" })).toEqual({ query: "education" })
+  expect(schema.safeParse({ limit: 25 }).success).toBe(false)
+  expect(schema.safeParse({ query: "education", invented: true }).success).toBe(false)
   expect(schema.parse({ query: "education", limit: 100, cursor: "opaque" })).toEqual({
     query: "education",
     limit: 100,
@@ -766,6 +769,69 @@ it("preserves canonical batch sizes and child limits", () => {
   expect(schema.safeParse({ ids: Array.from({ length: 25 }, () => "bill:1"), childLimit: 25 }).success).toBe(true)
   expect(schema.safeParse({ ids: ["bill:1"], childLimit: 26 }).success).toBe(false)
   expect(schema.safeParse({ ids: ["invalid"], childLimit: 1 }).success).toBe(false)
+})
+
+it("executes model web calls that omit unused optional fields through SDK validation", async () => {
+  const fetchMock = vi.fn<typeof fetch>(async () =>
+    Response.json({
+      success: true,
+      data: { markdown: "Official source text", metadata: { statusCode: 200 } }
+    })
+  )
+  vi.stubGlobal("fetch", fetchMock)
+  const model = new MockLanguageModelV4({
+    doStream: async ({ prompt }) => ({
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "stream-start", warnings: [] })
+          const hasResult = prompt.some((message) => message.role === "tool")
+          if (hasResult) {
+            controller.enqueue({ type: "text-start", id: "answer" })
+            controller.enqueue({ type: "text-delta", id: "answer", delta: "The source was read." })
+            controller.enqueue({ type: "text-end", id: "answer" })
+          } else {
+            controller.enqueue({
+              type: "tool-call",
+              toolCallId: "read-page",
+              toolName: "read_web_page",
+              input: JSON.stringify({ url: "https://example.org/bill", includeTags: ["main"] })
+            })
+          }
+          controller.enqueue({
+            type: "finish",
+            finishReason: { unified: hasResult ? "stop" : "tool-calls", raw: "stop" },
+            usage: {
+              inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+              outputTokens: { total: 1, text: 1, reasoning: 0 }
+            }
+          })
+          controller.close()
+        }
+      })
+    })
+  })
+  const result = streamText({
+    model,
+    messages: [{ role: "user", content: "Read this public bill page." }],
+    tools: await webTools(),
+    stopWhen: isStepCount(2)
+  })
+  const outputs: unknown[] = []
+  for await (const chunk of result.stream) {
+    expect(chunk.type).not.toBe("tool-error")
+    expect(chunk.type).not.toBe("error")
+    if (chunk.type === "tool-result") {outputs.push(chunk.output)}
+  }
+  expect(fetchMock).toHaveBeenCalledOnce()
+  expect(outputs).toEqual([
+    expect.objectContaining({
+      evidence: [
+        expect.objectContaining({
+          content: expect.objectContaining({ state: "available", quote: "Official source text" })
+        })
+      ]
+    })
+  ])
 })
 
 it("retains normalization when model inputs use an object schema pipeline", () => {
