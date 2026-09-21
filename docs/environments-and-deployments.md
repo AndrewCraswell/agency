@@ -190,6 +190,21 @@ The complete target release sequence is:
 Deployments use explicit Railway project, environment and service identifiers. They never depend on whichever Railway
 context happens to be linked on a runner.
 
+The manual `Legislation production deployment` workflow implements steps 6 through 11. An operator supplies a full
+`main` commit SHA and selects W, M and migration operations. Before the protected approval gate appears, the workflow
+proves that one successful staging run exercised every selected service at that exact SHA. GitHub's `production`
+environment requires an authorized reviewer. After approval, a selected migration creates and waits for a named Railway
+volume backup, acquires the PostgreSQL schema-migration advisory lock through the direct administrative URL, and applies
+canonical migrations with a finite timeout. W deploys and passes readiness, API, browser and CDN checks before M can
+deploy and pass discovery, anonymous-rejection and authenticated tool smoke.
+
+Production rollback is also manual and uses the same non-cancelling deployment lock and protected reviewer gate. The
+application rollback workflow accepts only an ancestor commit. A W rollback is rejected when it crosses a database
+contract change; M may roll back independently. The database recovery workflow requires an explicit backup ID, refuses
+to combine a restore with pre-existing Railway staged changes, restores the primary volume, reapplies canonical forward
+migrations, and verifies W before M. No workflow runs a down migration. An ordinary forward fix uses the production
+deployment workflow with migration enabled.
+
 ### Failure behavior
 
 - Failed CI creates no deployment.
@@ -304,6 +319,11 @@ connection. M and I never migrate during startup.
 Runtime traffic uses pooled credentials. Migration commands use `DATABASE_DIRECT_URL` or the corresponding direct
 administrative connection and never route through transaction pooling.
 
+The protected GitHub `production` environment stores the direct URL as
+`LEGISLATION_PRODUCTION_MIGRATION_DATABASE_URL`. It also owns independent API and MCP smoke-client secrets and the
+production WorkOS issuer. These credentials are requested only after approval and are never exposed as workflow
+outputs.
+
 ## W deployment and CDN
 
 W builds from the repository root using `apps/legislation-web/Dockerfile` and serves the standalone Next.js output. The
@@ -389,6 +409,8 @@ Logs, workflow outputs and deployment metadata must not print connection strings
 ## Rollback and recovery
 
 - Application rollback selects the immediately preceding verified Railway deployment.
+- Operators may select an older verified ancestor explicitly when incident analysis requires it; the workflow records
+  the exact target SHA and rejects W rollback across database-contract changes.
 - A W rollback must verify compatibility with the current database schema before traffic is restored.
 - M can roll back independently only when its HTTP contract remains compatible with W.
 - Take a named production database backup before a risky migration.
@@ -396,6 +418,8 @@ Logs, workflow outputs and deployment metadata must not print connection strings
 - A failed staging refresh restores its previous backup or remains unavailable; it never falls back to production
   credentials.
 - After recovery, rerun readiness, API, browser and MCP smoke tests and record the deployed commit.
+- Forward recovery applies a new canonical migration. Backup recovery is a separate, typed-confirmation workflow and
+  fails if unrelated Railway staged changes are present.
 
 ## Activation checklist
 

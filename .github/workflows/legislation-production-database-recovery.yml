@@ -1,0 +1,299 @@
+name: Legislation production database recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_id:
+        description: Railway production primary backup ID to restore
+        required: true
+        type: string
+      application_commit_sha:
+        description: Full main commit SHA to migrate and redeploy after restore
+        required: true
+        type: string
+      confirmation:
+        description: Type RESTORE PRODUCTION DATABASE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legislation-production-deployment
+  cancel-in-progress: false
+
+env:
+  PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  RAILWAY_CALLER: github-actions:legislation-production-database-recovery
+  RAILWAY_AGENT_SESSION: github-actions-legislation-production-database-recovery
+  RAILWAY_PROJECT_ID: 2378281c-c1c7-4530-8525-5f313741d19b
+  RAILWAY_ENVIRONMENT_ID: 9657912c-7bf8-4ec7-a9c5-387bf3df790d
+  LEGISLATION_PRIMARY_SERVICE_ID: 18c26826-1f72-4aa8-9998-05eb8781a380
+  LEGISLATION_PRIMARY_VOLUME_INSTANCE_ID: a5c393e7-d727-417c-a7ce-4f63e31219b5
+  LEGISLATION_WEB_SERVICE_ID: 786fbca7-8798-4357-9b45-f0ba092a9750
+  LEGISLATION_MCP_SERVICE_ID: eb6deb23-26a0-41e7-8aab-f06c4e1f0b8b
+  LEGISLATION_WEB_PRODUCTION_URL: https://legislation-web-production-b024.up.railway.app
+  LEGISLATION_MCP_PRODUCTION_URL: https://legislation-mcp-production.up.railway.app
+
+jobs:
+  prepare:
+    name: Verify production database recovery request
+    if: github.ref_name == 'main' && inputs.confirmation == 'RESTORE PRODUCTION DATABASE'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify recovery identifiers
+        env:
+          APPLICATION_COMMIT_SHA: ${{ inputs.application_commit_sha }}
+          BACKUP_ID: ${{ inputs.backup_id }}
+        run: |
+          if ! [[ "$APPLICATION_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::application_commit_sha must be a full lowercase Git commit SHA."
+            exit 1
+          fi
+          if ! [[ "$BACKUP_ID" =~ ^[0-9a-f-]{36}$ ]]; then
+            echo "::error::backup_id must be a Railway UUID."
+            exit 1
+          fi
+          git fetch origin main
+          git merge-base --is-ancestor "$APPLICATION_COMMIT_SHA" origin/main
+          {
+            echo "## Production database restore approval"
+            echo
+            echo "- Backup: \`${BACKUP_ID}\`"
+            echo "- Forward-fix commit: \`${APPLICATION_COMMIT_SHA}\`"
+            echo "- Recovery will restore the backup, reapply canonical forward migrations, then deploy and verify W before M."
+            echo "- No down migration will run."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  recover:
+    name: Approve and restore production database
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.application_commit_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify protected recovery configuration
+        env:
+          DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_MIGRATION_DATABASE_URL }}
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          WORKOS_API_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_API_SMOKE_CLIENT_ID }}
+          WORKOS_API_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_API_SMOKE_CLIENT_SECRET }}
+          WORKOS_API_SMOKE_ISSUER: ${{ vars.WORKOS_API_SMOKE_ISSUER }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          missing=0
+          for name in \
+            DATABASE_URL \
+            LEGISLATION_SMOKE_BILL_ID \
+            RAILWAY_TOKEN \
+            WORKOS_API_SMOKE_CLIENT_ID \
+            WORKOS_API_SMOKE_CLIENT_SECRET \
+            WORKOS_API_SMOKE_ISSUER \
+            WORKOS_MCP_SMOKE_CLIENT_ID \
+            WORKOS_MCP_SMOKE_CLIENT_SECRET
+          do
+            if [ -z "${!name}" ]; then
+              echo "::error::The protected production environment requires ${name}."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Install recovery dependencies
+        run: |
+          npm install --global pnpm@11.9.0 @railway/cli@5.54.1 --registry=https://registry.npmjs.org/
+          pnpm install --frozen-lockfile
+
+      - name: Refuse to combine recovery with existing staged Railway changes
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          STATUS="$(
+            railway api \
+              'query Staged($environmentId: String!) {
+                environmentStagedChanges(environmentId: $environmentId) { status }
+              }' \
+              --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" |
+              jq --exit-status --raw-output '.data.environmentStagedChanges.status'
+          )"
+          if [ "$STATUS" = "STAGED" ] || [ "$STATUS" = "APPLYING" ]; then
+            echo "::error::Production has pre-existing staged Railway changes. Review or discard them before restoring a database backup."
+            exit 1
+          fi
+
+      - name: Restore the approved production primary backup
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          BASELINE_DEPLOYMENT_ID="$(
+            railway deployment list \
+              --project "$RAILWAY_PROJECT_ID" \
+              --environment "$RAILWAY_ENVIRONMENT_ID" \
+              --service "$LEGISLATION_PRIMARY_SERVICE_ID" \
+              --json |
+              jq --exit-status --raw-output '.[0].id'
+          )"
+          WORKFLOW_ID="$(
+            railway api \
+              'mutation Restore($backupId: String!, $volumeInstanceId: String!) {
+                volumeInstanceBackupRestore(
+                  volumeInstanceBackupId: $backupId
+                  volumeInstanceId: $volumeInstanceId
+                )
+              }' \
+              --raw-var backupId="${{ inputs.backup_id }}" \
+              --raw-var volumeInstanceId="$LEGISLATION_PRIMARY_VOLUME_INSTANCE_ID" |
+              jq --exit-status --raw-output '.data.volumeInstanceBackupRestore'
+          )"
+          for attempt in {1..90}; do
+            RESULT="$(
+              railway api \
+                'query Workflow($workflowId: String!) {
+                  workflowStatus(workflowId: $workflowId) { status error }
+                }' \
+                --raw-var workflowId="$WORKFLOW_ID"
+            )"
+            STATUS="$(jq --raw-output '.data.workflowStatus.status' <<<"$RESULT")"
+            case "$STATUS" in
+              Complete) break ;;
+              Error | NotFound)
+                jq --raw-output '.data.workflowStatus.error // "Railway restore workflow failed."' <<<"$RESULT"
+                exit 1
+                ;;
+            esac
+            if [ "$attempt" = 90 ]; then
+              echo "::error::Timed out waiting for the production database restore."
+              exit 1
+            fi
+            sleep 10
+          done
+          railway api \
+            'mutation CommitRestore($environmentId: String!, $message: String!) {
+              environmentPatchCommitStaged(environmentId: $environmentId, commitMessage: $message)
+            }' \
+            --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" \
+            --raw-var message="Restore production primary backup ${{ inputs.backup_id }}"
+          for attempt in {1..90}; do
+            DEPLOYMENT="$(
+              railway deployment list \
+                --project "$RAILWAY_PROJECT_ID" \
+                --environment "$RAILWAY_ENVIRONMENT_ID" \
+                --service "$LEGISLATION_PRIMARY_SERVICE_ID" \
+                --json |
+                jq --arg baseline "$BASELINE_DEPLOYMENT_ID" 'if .[0].id == $baseline then {} else .[0] end'
+            )"
+            STATUS="$(jq --raw-output '.status // ""' <<<"$DEPLOYMENT")"
+            case "$STATUS" in
+              SUCCESS) exit 0 ;;
+              FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING) exit 1 ;;
+            esac
+            sleep 10
+          done
+          exit 1
+
+      - name: Reapply canonical forward migrations
+        env:
+          DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_MIGRATION_DATABASE_URL }}
+          LEGISLATION_MIGRATION_LOCK_TIMEOUT_MS: "30000"
+        run: timeout 15m pnpm --filter legislation-web db:migrate
+
+      - name: Deploy and verify recovered production legislation-web
+        env:
+          LEGISLATION_API_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+          LEGISLATION_CDN_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+          LEGISLATION_DEPLOYMENT_COMMIT_SHA: ${{ inputs.application_commit_sha }}
+          LEGISLATION_READINESS_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          WORKOS_API_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_API_SMOKE_CLIENT_ID }}
+          WORKOS_API_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_API_SMOKE_CLIENT_SECRET }}
+          WORKOS_API_SMOKE_ISSUER: ${{ vars.WORKOS_API_SMOKE_ISSUER }}
+        run: |
+          DEPLOYMENT_ID="$(
+            railway api \
+              'mutation Deploy($environmentId: String!, $serviceId: String!, $commitSha: String!) {
+                serviceInstanceDeployV2(environmentId: $environmentId, serviceId: $serviceId, commitSha: $commitSha)
+              }' \
+              --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" \
+              --raw-var serviceId="$LEGISLATION_WEB_SERVICE_ID" \
+              --raw-var commitSha="${{ inputs.application_commit_sha }}" |
+              jq --exit-status --raw-output '.data.serviceInstanceDeployV2'
+          )"
+          for attempt in {1..90}; do
+            STATUS="$(
+              railway deployment list \
+                --project "$RAILWAY_PROJECT_ID" \
+                --environment "$RAILWAY_ENVIRONMENT_ID" \
+                --service "$LEGISLATION_WEB_SERVICE_ID" \
+                --json |
+                jq --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+            )"
+            case "$STATUS" in
+              SUCCESS) break ;;
+              FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING) exit 1 ;;
+            esac
+            sleep 10
+          done
+          node apps/legislation-web/scripts/wait-readiness.mjs
+          node apps/legislation-web/scripts/smoke-deployment.mjs
+          node apps/legislation-web/scripts/smoke-cdn.mjs
+
+      - name: Verify recovered production legislation-web in a browser
+        env:
+          LEGISLATION_BROWSER_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+        run: |
+          pnpm --filter legislation-web exec playwright install --with-deps chromium
+          pnpm --filter legislation-web smoke:browser
+
+      - name: Deploy and verify recovered production legislation-mcp
+        env:
+          LEGISLATION_DEPLOYMENT_COMMIT_SHA: ${{ inputs.application_commit_sha }}
+          LEGISLATION_MCP_SMOKE_BASE_URL: ${{ env.LEGISLATION_MCP_PRODUCTION_URL }}
+          LEGISLATION_READINESS_BASE_URL: ${{ env.LEGISLATION_MCP_PRODUCTION_URL }}
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          DEPLOYMENT_ID="$(
+            railway api \
+              'mutation Deploy($environmentId: String!, $serviceId: String!, $commitSha: String!) {
+                serviceInstanceDeployV2(environmentId: $environmentId, serviceId: $serviceId, commitSha: $commitSha)
+              }' \
+              --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" \
+              --raw-var serviceId="$LEGISLATION_MCP_SERVICE_ID" \
+              --raw-var commitSha="${{ inputs.application_commit_sha }}" |
+              jq --exit-status --raw-output '.data.serviceInstanceDeployV2'
+          )"
+          for attempt in {1..90}; do
+            STATUS="$(
+              railway deployment list \
+                --project "$RAILWAY_PROJECT_ID" \
+                --environment "$RAILWAY_ENVIRONMENT_ID" \
+                --service "$LEGISLATION_MCP_SERVICE_ID" \
+                --json |
+                jq --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+            )"
+            case "$STATUS" in
+              SUCCESS) break ;;
+              FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING) exit 1 ;;
+            esac
+            sleep 10
+          done
+          node apps/legislation-web/scripts/wait-readiness.mjs
+          pnpm --filter legislation-mcp smoke:deployment

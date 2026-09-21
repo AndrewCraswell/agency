@@ -1,0 +1,226 @@
+name: Legislation production rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_commit_sha:
+        description: Full main commit SHA to restore
+        required: true
+        type: string
+      rollback_web:
+        description: Roll back and verify production legislation-web
+        required: true
+        default: true
+        type: boolean
+      rollback_mcp:
+        description: Roll back and verify production legislation-mcp
+        required: true
+        default: true
+        type: boolean
+      confirmation:
+        description: Type ROLLBACK PRODUCTION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legislation-production-deployment
+  cancel-in-progress: false
+
+env:
+  PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  RAILWAY_CALLER: github-actions:legislation-production-rollback
+  RAILWAY_AGENT_SESSION: github-actions-legislation-production-rollback
+  RAILWAY_PROJECT_ID: 2378281c-c1c7-4530-8525-5f313741d19b
+  RAILWAY_ENVIRONMENT_ID: 9657912c-7bf8-4ec7-a9c5-387bf3df790d
+  LEGISLATION_WEB_SERVICE_ID: 786fbca7-8798-4357-9b45-f0ba092a9750
+  LEGISLATION_MCP_SERVICE_ID: eb6deb23-26a0-41e7-8aab-f06c4e1f0b8b
+  LEGISLATION_WEB_PRODUCTION_URL: https://legislation-web-production-b024.up.railway.app
+  LEGISLATION_MCP_PRODUCTION_URL: https://legislation-mcp-production.up.railway.app
+
+jobs:
+  prepare:
+    name: Verify production rollback compatibility
+    if: github.ref_name == 'main' && inputs.confirmation == 'ROLLBACK PRODUCTION'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify rollback target and database compatibility
+        env:
+          CURRENT_COMMIT_SHA: ${{ github.sha }}
+          ROLLBACK_COMMIT_SHA: ${{ inputs.target_commit_sha }}
+          ROLLBACK_MCP: ${{ inputs.rollback_mcp }}
+          ROLLBACK_WEB: ${{ inputs.rollback_web }}
+        run: node scripts/production-rollback-check.mjs
+
+      - name: Record rollback approval evidence
+        run: |
+          {
+            echo "## Production rollback approval"
+            echo
+            echo "- Current main: \`${{ github.sha }}\`"
+            echo "- Target commit: \`${{ inputs.target_commit_sha }}\`"
+            echo "- Roll back W: ${{ inputs.rollback_web }}"
+            echo "- Roll back M: ${{ inputs.rollback_mcp }}"
+            echo "- Database action: none; automatic down migrations are prohibited"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  rollback:
+    name: Approve and roll back production
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ inputs.rollback_web && env.LEGISLATION_WEB_PRODUCTION_URL || env.LEGISLATION_MCP_PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify protected rollback configuration
+        env:
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          WORKOS_API_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_API_SMOKE_CLIENT_ID }}
+          WORKOS_API_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_API_SMOKE_CLIENT_SECRET }}
+          WORKOS_API_SMOKE_ISSUER: ${{ vars.WORKOS_API_SMOKE_ISSUER }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          missing=0
+          require() {
+            if [ -z "$2" ]; then
+              echo "::error::The protected production environment requires $1."
+              missing=1
+            fi
+          }
+          require RAILWAY_TOKEN "$RAILWAY_TOKEN"
+          if [ "${{ inputs.rollback_web }}" = "true" ]; then
+            require WORKOS_API_SMOKE_CLIENT_ID "$WORKOS_API_SMOKE_CLIENT_ID"
+            require WORKOS_API_SMOKE_CLIENT_SECRET "$WORKOS_API_SMOKE_CLIENT_SECRET"
+            require WORKOS_API_SMOKE_ISSUER "$WORKOS_API_SMOKE_ISSUER"
+          fi
+          if [ "${{ inputs.rollback_mcp }}" = "true" ]; then
+            require LEGISLATION_SMOKE_BILL_ID "$LEGISLATION_SMOKE_BILL_ID"
+            require WORKOS_MCP_SMOKE_CLIENT_ID "$WORKOS_MCP_SMOKE_CLIENT_ID"
+            require WORKOS_MCP_SMOKE_CLIENT_SECRET "$WORKOS_MCP_SMOKE_CLIENT_SECRET"
+          fi
+          exit "$missing"
+
+      - name: Install rollback dependencies
+        run: |
+          npm install --global pnpm@11.9.0 @railway/cli@5.54.1 --registry=https://registry.npmjs.org/
+          pnpm install --frozen-lockfile
+
+      - name: Roll back production legislation-web
+        if: inputs.rollback_web
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          DEPLOYMENT_ID="$(
+            railway api \
+              'mutation Deploy($environmentId: String!, $serviceId: String!, $commitSha: String!) {
+                serviceInstanceDeployV2(environmentId: $environmentId, serviceId: $serviceId, commitSha: $commitSha)
+              }' \
+              --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" \
+              --raw-var serviceId="$LEGISLATION_WEB_SERVICE_ID" \
+              --raw-var commitSha="${{ inputs.target_commit_sha }}" |
+              jq --exit-status --raw-output '.data.serviceInstanceDeployV2'
+          )"
+          for attempt in {1..90}; do
+            STATUS="$(
+              railway deployment list \
+                --project "$RAILWAY_PROJECT_ID" \
+                --environment "$RAILWAY_ENVIRONMENT_ID" \
+                --service "$LEGISLATION_WEB_SERVICE_ID" \
+                --json |
+                jq --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+            )"
+            case "$STATUS" in
+              SUCCESS) exit 0 ;;
+              FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING) exit 1 ;;
+            esac
+            sleep 10
+          done
+          exit 1
+
+      - name: Verify rolled-back production legislation-web
+        if: inputs.rollback_web
+        env:
+          LEGISLATION_API_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+          LEGISLATION_CDN_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+          LEGISLATION_DEPLOYMENT_COMMIT_SHA: ${{ inputs.target_commit_sha }}
+          LEGISLATION_READINESS_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+          WORKOS_API_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_API_SMOKE_CLIENT_ID }}
+          WORKOS_API_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_API_SMOKE_CLIENT_SECRET }}
+          WORKOS_API_SMOKE_ISSUER: ${{ vars.WORKOS_API_SMOKE_ISSUER }}
+        run: |
+          node apps/legislation-web/scripts/wait-readiness.mjs
+          node apps/legislation-web/scripts/smoke-deployment.mjs
+          node apps/legislation-web/scripts/smoke-cdn.mjs
+
+      - name: Install rollback browser
+        if: inputs.rollback_web
+        run: pnpm --filter legislation-web exec playwright install --with-deps chromium
+
+      - name: Verify rolled-back production legislation-web in a browser
+        if: inputs.rollback_web
+        env:
+          LEGISLATION_BROWSER_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+        run: pnpm --filter legislation-web smoke:browser
+
+      - name: Roll back production legislation-mcp
+        if: inputs.rollback_mcp
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          DEPLOYMENT_ID="$(
+            railway api \
+              'mutation Deploy($environmentId: String!, $serviceId: String!, $commitSha: String!) {
+                serviceInstanceDeployV2(environmentId: $environmentId, serviceId: $serviceId, commitSha: $commitSha)
+              }' \
+              --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" \
+              --raw-var serviceId="$LEGISLATION_MCP_SERVICE_ID" \
+              --raw-var commitSha="${{ inputs.target_commit_sha }}" |
+              jq --exit-status --raw-output '.data.serviceInstanceDeployV2'
+          )"
+          for attempt in {1..90}; do
+            STATUS="$(
+              railway deployment list \
+                --project "$RAILWAY_PROJECT_ID" \
+                --environment "$RAILWAY_ENVIRONMENT_ID" \
+                --service "$LEGISLATION_MCP_SERVICE_ID" \
+                --json |
+                jq --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+            )"
+            case "$STATUS" in
+              SUCCESS) exit 0 ;;
+              FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING) exit 1 ;;
+            esac
+            sleep 10
+          done
+          exit 1
+
+      - name: Verify rolled-back production legislation-mcp
+        if: inputs.rollback_mcp
+        env:
+          LEGISLATION_DEPLOYMENT_COMMIT_SHA: ${{ inputs.target_commit_sha }}
+          LEGISLATION_MCP_SMOKE_BASE_URL: ${{ env.LEGISLATION_MCP_PRODUCTION_URL }}
+          LEGISLATION_READINESS_BASE_URL: ${{ env.LEGISLATION_MCP_PRODUCTION_URL }}
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          node apps/legislation-web/scripts/wait-readiness.mjs
+          pnpm --filter legislation-mcp smoke:deployment

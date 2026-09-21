@@ -1,0 +1,352 @@
+name: Legislation production deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full main commit SHA accepted in staging
+        required: true
+        type: string
+      deploy_web:
+        description: Deploy and verify production legislation-web
+        required: true
+        default: true
+        type: boolean
+      deploy_mcp:
+        description: Deploy and verify production legislation-mcp
+        required: true
+        default: true
+        type: boolean
+      migrate_database:
+        description: Back up and migrate the production primary before W
+        required: true
+        default: false
+        type: boolean
+      confirmation:
+        description: Type DEPLOY PRODUCTION
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: legislation-production-deployment
+  cancel-in-progress: false
+
+env:
+  PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  RAILWAY_CALLER: github-actions:legislation-production-deployment
+  RAILWAY_AGENT_SESSION: github-actions-legislation-production-deployment
+  RAILWAY_PROJECT_ID: 2378281c-c1c7-4530-8525-5f313741d19b
+  RAILWAY_ENVIRONMENT_ID: 9657912c-7bf8-4ec7-a9c5-387bf3df790d
+  LEGISLATION_WEB_SERVICE_ID: 786fbca7-8798-4357-9b45-f0ba092a9750
+  LEGISLATION_MCP_SERVICE_ID: eb6deb23-26a0-41e7-8aab-f06c4e1f0b8b
+  LEGISLATION_PRIMARY_VOLUME_INSTANCE_ID: a5c393e7-d727-417c-a7ce-4f63e31219b5
+  LEGISLATION_WEB_PRODUCTION_URL: https://legislation-web-production-b024.up.railway.app
+  LEGISLATION_MCP_PRODUCTION_URL: https://legislation-mcp-production.up.railway.app
+
+jobs:
+  prepare:
+    name: Verify production release evidence
+    if: github.ref_name == 'main' && inputs.confirmation == 'DEPLOY PRODUCTION'
+    runs-on: ubuntu-latest
+    outputs:
+      staging_run_url: ${{ steps.evidence.outputs.staging_run_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify commit belongs to main
+        env:
+          PRODUCTION_COMMIT_SHA: ${{ inputs.commit_sha }}
+        run: |
+          if ! [[ "$PRODUCTION_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::commit_sha must be a full lowercase Git commit SHA."
+            exit 1
+          fi
+          git fetch origin main
+          git merge-base --is-ancestor "$PRODUCTION_COMMIT_SHA" origin/main
+          test "$(git rev-parse HEAD)" = "$PRODUCTION_COMMIT_SHA"
+
+      - name: Verify selected operations cover the commit
+        id: changes
+        env:
+          PRODUCTION_COMMIT_SHA: ${{ inputs.commit_sha }}
+        run: |
+          git rev-parse "${PRODUCTION_COMMIT_SHA}^" >/dev/null
+          node scripts/legislation-change-detection.mjs \
+            --base "${PRODUCTION_COMMIT_SHA}^" \
+            --head "$PRODUCTION_COMMIT_SHA"
+
+      - name: Reject incomplete production selection
+        env:
+          DEPLOY_MCP: ${{ inputs.deploy_mcp }}
+          DEPLOY_WEB: ${{ inputs.deploy_web }}
+          MIGRATE_DATABASE: ${{ inputs.migrate_database }}
+        run: |
+          if [ "$DEPLOY_WEB" != "true" ] && [ "$DEPLOY_MCP" != "true" ] && [ "$MIGRATE_DATABASE" != "true" ]; then
+            echo "::error::Select at least one production operation."
+            exit 1
+          fi
+          if [ "${{ steps.changes.outputs.web }}" = "true" ] && [ "$DEPLOY_WEB" != "true" ]; then
+            echo "::error::The commit affects legislation-web, but deploy_web is false."
+            exit 1
+          fi
+          if [ "${{ steps.changes.outputs.mcp }}" = "true" ] && [ "$DEPLOY_MCP" != "true" ]; then
+            echo "::error::The commit affects legislation-mcp, but deploy_mcp is false."
+            exit 1
+          fi
+          if [ "${{ steps.changes.outputs.database }}" = "true" ] && [ "$MIGRATE_DATABASE" != "true" ]; then
+            echo "::error::The commit affects the database contract, but migrate_database is false."
+            exit 1
+          fi
+
+      - name: Verify exact staging acceptance
+        id: evidence
+        env:
+          DEPLOY_MCP: ${{ inputs.deploy_mcp }}
+          DEPLOY_WEB: ${{ inputs.deploy_web }}
+          GITHUB_TOKEN: ${{ github.token }}
+          MIGRATE_DATABASE: ${{ inputs.migrate_database }}
+          PRODUCTION_COMMIT_SHA: ${{ inputs.commit_sha }}
+        run: node scripts/production-release-evidence.mjs
+
+  deploy:
+    name: Approve and deploy production
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ inputs.deploy_web && env.LEGISLATION_WEB_PRODUCTION_URL || env.LEGISLATION_MCP_PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify protected production configuration
+        env:
+          DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_MIGRATION_DATABASE_URL }}
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          WORKOS_API_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_API_SMOKE_CLIENT_ID }}
+          WORKOS_API_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_API_SMOKE_CLIENT_SECRET }}
+          WORKOS_API_SMOKE_ISSUER: ${{ vars.WORKOS_API_SMOKE_ISSUER }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          missing=0
+          require() {
+            if [ -z "$2" ]; then
+              echo "::error::The protected production environment requires $1."
+              missing=1
+            fi
+          }
+          require RAILWAY_TOKEN "$RAILWAY_TOKEN"
+          if [ "${{ inputs.migrate_database }}" = "true" ]; then
+            require LEGISLATION_PRODUCTION_MIGRATION_DATABASE_URL "$DATABASE_URL"
+          fi
+          if [ "${{ inputs.deploy_web }}" = "true" ]; then
+            require WORKOS_API_SMOKE_CLIENT_ID "$WORKOS_API_SMOKE_CLIENT_ID"
+            require WORKOS_API_SMOKE_CLIENT_SECRET "$WORKOS_API_SMOKE_CLIENT_SECRET"
+            require WORKOS_API_SMOKE_ISSUER "$WORKOS_API_SMOKE_ISSUER"
+          fi
+          if [ "${{ inputs.deploy_mcp }}" = "true" ]; then
+            require LEGISLATION_SMOKE_BILL_ID "$LEGISLATION_SMOKE_BILL_ID"
+            require WORKOS_MCP_SMOKE_CLIENT_ID "$WORKOS_MCP_SMOKE_CLIENT_ID"
+            require WORKOS_MCP_SMOKE_CLIENT_SECRET "$WORKOS_MCP_SMOKE_CLIENT_SECRET"
+          fi
+          exit "$missing"
+
+      - name: Install production release dependencies
+        run: |
+          npm install --global pnpm@11.9.0 @railway/cli@5.54.1 --registry=https://registry.npmjs.org/
+          pnpm install --frozen-lockfile
+
+      - name: Back up the production primary
+        if: inputs.migrate_database
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          WORKFLOW_ID="$(
+            railway api \
+              'mutation Backup($volumeInstanceId: String!, $name: String!) {
+                volumeInstanceBackupCreate(volumeInstanceId: $volumeInstanceId, name: $name)
+              }' \
+              --raw-var volumeInstanceId="$LEGISLATION_PRIMARY_VOLUME_INSTANCE_ID" \
+              --raw-var name="Pre-migration ${{ inputs.commit_sha }}" |
+              jq --exit-status --raw-output '.data.volumeInstanceBackupCreate'
+          )"
+          for attempt in {1..90}; do
+            RESULT="$(
+              railway api \
+                'query Workflow($workflowId: String!) {
+                  workflowStatus(workflowId: $workflowId) { status error }
+                }' \
+                --raw-var workflowId="$WORKFLOW_ID"
+            )"
+            STATUS="$(jq --raw-output '.data.workflowStatus.status' <<<"$RESULT")"
+            case "$STATUS" in
+              Complete)
+                exit 0
+                ;;
+              Error | NotFound)
+                jq --raw-output '.data.workflowStatus.error // "Railway backup workflow failed."' <<<"$RESULT"
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Timed out waiting for the production database backup."
+          exit 1
+
+      - name: Migrate the production primary
+        if: inputs.migrate_database
+        env:
+          DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_MIGRATION_DATABASE_URL }}
+          LEGISLATION_MIGRATION_LOCK_TIMEOUT_MS: "30000"
+        run: timeout 15m pnpm --filter legislation-web db:migrate
+
+      - name: Deploy production legislation-web
+        id: web-deployment
+        if: inputs.deploy_web
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          DEPLOYMENT_ID="$(
+            railway api \
+              'mutation Deploy($environmentId: String!, $serviceId: String!, $commitSha: String!) {
+                serviceInstanceDeployV2(environmentId: $environmentId, serviceId: $serviceId, commitSha: $commitSha)
+              }' \
+              --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" \
+              --raw-var serviceId="$LEGISLATION_WEB_SERVICE_ID" \
+              --raw-var commitSha="${{ inputs.commit_sha }}" |
+              jq --exit-status --raw-output '.data.serviceInstanceDeployV2'
+          )"
+          for attempt in {1..90}; do
+            STATUS="$(
+              railway deployment list \
+                --project "$RAILWAY_PROJECT_ID" \
+                --environment "$RAILWAY_ENVIRONMENT_ID" \
+                --service "$LEGISLATION_WEB_SERVICE_ID" \
+                --json |
+                jq --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+            )"
+            case "$STATUS" in
+              SUCCESS)
+                echo "deployment_id=${DEPLOYMENT_ID}" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+              FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING)
+                echo "::error::Production W deployment ${DEPLOYMENT_ID} reached ${STATUS}."
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Timed out waiting for production W deployment ${DEPLOYMENT_ID}."
+          exit 1
+
+      - name: Verify production legislation-web
+        if: inputs.deploy_web
+        env:
+          LEGISLATION_API_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+          LEGISLATION_CDN_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+          LEGISLATION_DEPLOYMENT_COMMIT_SHA: ${{ inputs.commit_sha }}
+          LEGISLATION_READINESS_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+          WORKOS_API_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_API_SMOKE_CLIENT_ID }}
+          WORKOS_API_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_API_SMOKE_CLIENT_SECRET }}
+          WORKOS_API_SMOKE_ISSUER: ${{ vars.WORKOS_API_SMOKE_ISSUER }}
+        run: |
+          node apps/legislation-web/scripts/wait-readiness.mjs
+          node apps/legislation-web/scripts/smoke-deployment.mjs
+          node apps/legislation-web/scripts/smoke-cdn.mjs
+
+      - name: Install production browser
+        if: inputs.deploy_web
+        run: pnpm --filter legislation-web exec playwright install --with-deps chromium
+
+      - name: Verify production legislation-web in a browser
+        if: inputs.deploy_web
+        env:
+          LEGISLATION_BROWSER_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
+        run: pnpm --filter legislation-web smoke:browser
+
+      - name: Deploy production legislation-mcp
+        id: mcp-deployment
+        if: inputs.deploy_mcp
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          DEPLOYMENT_ID="$(
+            railway api \
+              'mutation Deploy($environmentId: String!, $serviceId: String!, $commitSha: String!) {
+                serviceInstanceDeployV2(environmentId: $environmentId, serviceId: $serviceId, commitSha: $commitSha)
+              }' \
+              --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" \
+              --raw-var serviceId="$LEGISLATION_MCP_SERVICE_ID" \
+              --raw-var commitSha="${{ inputs.commit_sha }}" |
+              jq --exit-status --raw-output '.data.serviceInstanceDeployV2'
+          )"
+          for attempt in {1..90}; do
+            STATUS="$(
+              railway deployment list \
+                --project "$RAILWAY_PROJECT_ID" \
+                --environment "$RAILWAY_ENVIRONMENT_ID" \
+                --service "$LEGISLATION_MCP_SERVICE_ID" \
+                --json |
+                jq --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+            )"
+            case "$STATUS" in
+              SUCCESS)
+                echo "deployment_id=${DEPLOYMENT_ID}" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+              FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING)
+                echo "::error::Production M deployment ${DEPLOYMENT_ID} reached ${STATUS}."
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Timed out waiting for production M deployment ${DEPLOYMENT_ID}."
+          exit 1
+
+      - name: Verify production legislation-mcp
+        if: inputs.deploy_mcp
+        env:
+          LEGISLATION_DEPLOYMENT_COMMIT_SHA: ${{ inputs.commit_sha }}
+          LEGISLATION_MCP_SMOKE_BASE_URL: ${{ env.LEGISLATION_MCP_PRODUCTION_URL }}
+          LEGISLATION_READINESS_BASE_URL: ${{ env.LEGISLATION_MCP_PRODUCTION_URL }}
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          node apps/legislation-web/scripts/wait-readiness.mjs
+          pnpm --filter legislation-mcp smoke:deployment
+
+      - name: Record production release evidence
+        env:
+          WEB_DEPLOYMENT_ID: ${{ steps.web-deployment.outputs.deployment_id }}
+          MCP_DEPLOYMENT_ID: ${{ steps.mcp-deployment.outputs.deployment_id }}
+        run: |
+          {
+            echo "## Production release complete"
+            echo
+            echo "- Commit: \`${{ inputs.commit_sha }}\`"
+            echo "- Staging acceptance: ${{ needs.prepare.outputs.staging_run_url }}"
+            echo "- W deployment: \`${WEB_DEPLOYMENT_ID:-not selected}\`"
+            echo "- M deployment: \`${MCP_DEPLOYMENT_ID:-not selected}\`"
+            echo "- Database migration: \`${{ inputs.migrate_database }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
