@@ -21,13 +21,17 @@ test("requires a bounded marker, slugs and read token", () => {
   )
 })
 
-test("polls the project events API for the exact canary tag", async () => {
+test("polls recent project events and matches the exact canary tag client-side", async () => {
   const configuration = sentryVerificationConfig(environment)
   const requests = []
   await verifySentryCanary(configuration, {
     fetch: async (input, init) => {
       requests.push({ input: String(input), init })
-      return Response.json(requests.length === 1 ? [] : [{ id: "event" }])
+      return Response.json(
+        requests.length === 1
+          ? [{ id: "other", tags: [{ key: "canary", value: "legislation-staging-123-20" }] }]
+          : [{ id: "event", tags: [{ key: "canary", value: "legislation-staging-123-2" }] }]
+      )
     },
     attempts: 2,
     delayMs: 0,
@@ -36,7 +40,9 @@ test("polls the project events API for the exact canary tag", async () => {
   assert.equal(requests.length, 2)
   const endpoint = new URL(requests[0].input)
   assert.equal(endpoint.pathname, "/api/0/projects/agency/legislation-mcp/events/")
-  assert.equal(endpoint.searchParams.get("query"), "canary:legislation-staging-123-2")
+  assert.equal(endpoint.searchParams.get("query"), null)
+  assert.equal(endpoint.searchParams.get("full"), "true")
+  assert.equal(endpoint.searchParams.get("per_page"), "100")
   assert.equal(requests[0].init.headers.authorization, "Bearer read-only-token")
 })
 

@@ -105,17 +105,36 @@ describe("standalone MCP composition", () => {
   })
   it("accepts only the configured staging smoke client on the API audience", async () => {
     const clientId = "dedicated-mcp-smoke-client"
+    const emitCanary = vi.fn(async () => {})
     const app = createMcpApplication(
-      { ...environment, WORKOS_MCP_M2M_CLIENT_ID: clientId },
-      { keys: { m2m: async () => keys.publicKey }, fetch: vi.fn<typeof globalThis.fetch>() }
+      { ...environment, SENTRY_ENVIRONMENT: "staging", WORKOS_MCP_M2M_CLIENT_ID: clientId },
+      {
+        keys: { m2m: async () => keys.publicKey },
+        fetch: vi.fn<typeof globalThis.fetch>(),
+        emitCanary
+      }
     )
     applications.push(app)
 
-    const accepted = await app.handle(request(await token(environment.WORKOS_API_AUDIENCE, clientId)))
+    const bearer = await token(environment.WORKOS_API_AUDIENCE, clientId)
+    const accepted = await app.handle(request(bearer))
     expect(accepted.status).toBe(200)
 
     const rejected = await app.handle(request(await token(environment.WORKOS_API_AUDIENCE, "other-client")))
     expect(rejected.status).toBe(401)
+
+    const canary = await app.handle(
+      new Request(environment.WORKOS_MCP_AUDIENCE, {
+        method: "POST",
+        headers: {
+          authorization: "Bearer " + bearer,
+          "x-legislation-sentry-canary": "legislation-staging-123-1"
+        }
+      })
+    )
+    expect(canary.status).toBe(500)
+    expect(await canary.json()).toEqual({ error: "controlled_telemetry_canary" })
+    expect(emitCanary).toHaveBeenCalledWith("legislation-staging-123-1")
   })
   it("rejects reuse of the outbound API client as the staging smoke client", () => {
     expect(() =>

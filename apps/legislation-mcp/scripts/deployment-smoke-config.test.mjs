@@ -3,7 +3,7 @@ import { test } from "vitest"
 import {
   deploymentSmokeConfig,
   requestMachineAccessToken,
-  sentryCanaryArguments,
+  sentryCanaryHeaders,
   sentryCanaryRedactionValue
 } from "./deployment-smoke-config.mjs"
 
@@ -90,7 +90,7 @@ test("fails closed when the controlled canary is not canonical staging", () => {
   )
 })
 
-test("builds a bounded canary failure with commit and Railway context", () => {
+test("builds bounded canary headers for canonical staging", () => {
   const configuration = deploymentSmokeConfig({
     ...base,
     LEGISLATION_SENTRY_CANARY: "true",
@@ -100,16 +100,14 @@ test("builds a bounded canary failure with commit and Railway context", () => {
     LEGISLATION_MCP_SERVICE_ID: "service",
     RAILWAY_DEPLOYMENT_ID: "deployment"
   })
-  assert.deepEqual(sentryCanaryArguments(configuration), {
-    id: "invalid",
-    canaryMarker: "legislation-staging-123-1",
-    deploymentCommitSha: commit,
-    railway: {
-      projectId: "project",
-      environmentId: "environment",
-      serviceId: "service",
-      deploymentId: "deployment"
-    },
-    authorization: sentryCanaryRedactionValue
+  assert.deepEqual(sentryCanaryHeaders(configuration), {
+    "x-legislation-sentry-canary": "legislation-staging-123-1",
+    "x-legislation-sentry-redaction-check": sentryCanaryRedactionValue
+  })
+  assert.deepEqual(configuration.railway, {
+    projectId: "project",
+    environmentId: "environment",
+    serviceId: "service",
+    deploymentId: "deployment"
   })
 })

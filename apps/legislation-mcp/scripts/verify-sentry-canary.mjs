@@ -46,7 +46,8 @@ export async function verifySentryCanary(
     `/api/0/projects/${configuration.organization}/${configuration.project}/events/`,
     configuration.apiBase
   )
-  endpoint.searchParams.set("query", `canary:${configuration.marker}`)
+  endpoint.searchParams.set("full", "true")
+  endpoint.searchParams.set("per_page", "100")
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const response = await fetch_(endpoint, {
       headers: { authorization: `Bearer ${configuration.token}` },
@@ -67,7 +68,13 @@ export async function verifySentryCanary(
       throw new Error("Sentry canary verification returned invalid JSON")
     }
     if (!Array.isArray(events)) throw new Error("Sentry canary verification returned an invalid response")
-    if (events.length > 0) return
+    const found = events.some((event) => {
+      if (typeof event !== "object" || event === null || !Array.isArray(event.tags)) return false
+      return event.tags.some(
+        (tag) => typeof tag === "object" && tag !== null && tag.key === "canary" && tag.value === configuration.marker
+      )
+    })
+    if (found) return
     if (attempt < attempts) await new Promise((resolve) => delay(resolve, delayMs))
   }
   throw new Error(`Sentry did not ingest controlled canary ${configuration.marker}`)

@@ -20,15 +20,16 @@ The unit acceptance test uses the actual SDK with an in-memory transport and ass
 tool and SQLSTATE retention plus redaction. A development export on 2026-09-17 produced Sentry issue
 `LEGISLATION-10`, correlation `0b5328c2-82d9-4bb3-a17d-9a6adfa2dd84`, marked as a controlled acceptance probe.
 This confirms local SDK delivery, not a production MCP deployment. Production acceptance must check the deployed
-release/source maps and one controlled failed tool call through authenticated MCP transport.
+release/source maps and one controlled telemetry request through authenticated MCP transport.
 
 The staging deployment smoke obtains a short-lived bearer through WorkOS `client_credentials`; it never stores or
-copies a user bearer. It sends the controlled failed tool call only when all of these guards hold: the exact
+copies a user bearer. It sends the controlled telemetry request only when all of these guards hold: the exact
 canonical staging MCP origin is selected, the telemetry environment is explicitly `staging`, and the commit, Railway
-project, environment, service and deployment identifiers are present. The invalid request includes a synthetic
-authorization sentinel so the smoke can reject any response that echoes it; runtime telemetry applies the normal
-redaction policy and retains only the commit and Railway deployment context. A missing guard, machine credential,
-fixture, readiness match or expected failure blocks the workflow.
+project, environment, service and deployment identifiers are present. A staging-only control header is accepted only
+from the exact dedicated M2M subject. The request includes a synthetic redaction sentinel so the smoke can reject any
+response that echoes it; runtime telemetry applies the normal redaction policy and retains only the marker, commit and
+Railway deployment context. A missing guard, machine credential, fixture, readiness match or expected response blocks
+the workflow.
 
 The staging services still require external configuration. Set M's `SENTRY_DSN` and `SENTRY_ENVIRONMENT=staging`;
 set W's `NEXT_PUBLIC_SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_ENVIRONMENT=staging`. GitHub's protected `staging`
@@ -53,7 +54,7 @@ Provision the machine client outside this repository in the staging WorkOS envir
 5. Rotate the client secret in WorkOS and GitHub together, then rerun the staging workflow.
 
 W's API smoke likewise uses a dedicated staging WorkOS M2M client and obtains a short-lived token from
-`WORKOS_API_SMOKE_ISSUER`; no static API bearer is stored. The controlled MCP failure carries only the synthetic
+`WORKOS_API_SMOKE_ISSUER`; no static API bearer is stored. The controlled MCP request carries only the synthetic
 `legislation-staging-<run>-<attempt>` marker plus deployment identifiers. MCP tags the event, requests a five-second
 Sentry flush, and the workflow polls Sentry's read-only project events API for the exact tag. The Sentry token requires
 only event/project read access.
