@@ -71,6 +71,9 @@ Start with [the telemetry specification](engineering/telemetry-spec.md). Support
 ## Operations
 
 - [Environments and deployments](../../../docs/environments-and-deployments.md)
+- Production releases use the manual protected deployment workflow. It requires exact staging acceptance, creates a
+  database backup before a selected migration, and verifies W readiness, API behavior, browser behavior and CDN
+  behavior before M can deploy.
 - [CDN cache operations](operations/cdn-cache.md)
 - [HTTP API smoke checks](operations/http-api-local-smoke.md)
 - [Representative lookup](operations/representative-lookup.md)

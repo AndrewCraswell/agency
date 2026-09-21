@@ -18,6 +18,9 @@ Commands from the repository root: `pnpm --filter legislation-mcp dev`, `pnpm --
 `pnpm --filter legislation-mcp start`, `pnpm --filter legislation-mcp test`. Smoke requires independently provisioned
 MCP credentials and an explicit M origin; W's API token is not an MCP token.
 
+Production M releases use the manual protected deployment workflow and always follow a verified W release for the same
+commit. Application rollback remains exact-commit and manual; database recovery never runs down migrations.
+
 Cross-owner references: [W product/API](../../legislation-web/docs/README.md),
 [W search contract](../../legislation-web/docs/engineering/api/search-and-diffs.md),
 [I evidence](../../legislation-ingestion/docs/README.md), [C contracts](../../../packages/legislation-core/docs/README.md),
