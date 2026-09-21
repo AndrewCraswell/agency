@@ -46,10 +46,6 @@ export function createDatabase(config: DatabaseConfig, session: DatabaseSessionO
   }
 }
 
-export function createDatabaseClient(client: pg.PoolClient) {
-  return drizzle(client, { schema })
-}
-
 function assertStatementTimeout(value: number | undefined): void {
   if (value === undefined) {
     return
