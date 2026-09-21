@@ -318,6 +318,7 @@ The pre-CDN route audit establishes the following origin policy:
 | `/_next/static/*` | Next.js fingerprinted assets provide immutable cache headers. | Cache using the origin headers. |
 | `/_next/image` | Next.js generates responses and controls their cache lifetime. | Cache only according to the generated headers. |
 | `/` | The page is force-dynamic, may reflect runtime chat availability and currently emits `must-revalidate, no-cache`. | Do not force-cache; reconsider explicit shared caching only after the runtime dependency is removed or bounded. |
+| `/representatives` | Static public HTML emits a shared freshness directive. | Cache in `Auto` mode using the origin header. |
 | `/conversations/*` | The page is force-dynamic and displays private conversation state. | Bypass shared caching. |
 | `/records/*` | The route consumes request parameters and query state. | Treat as dynamic until a public, parameter-safe cache contract is implemented and tested. |
 | `/dev/*` | Development-only pages are force-dynamic. | Bypass shared caching. |

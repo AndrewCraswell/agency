@@ -14,6 +14,7 @@ export function jsonResponse(
 ): NextResponse {
   return NextResponse.json(body, {
     headers: {
+      "cache-control": "private, no-store",
       "content-type": jsonContentType,
       "x-correlation-id": correlationId
     },

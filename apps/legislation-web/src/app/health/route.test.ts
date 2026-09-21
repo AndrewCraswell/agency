@@ -18,6 +18,7 @@ describe("GET /health", () => {
     const response = GET(request("GET", "health-test"))
 
     expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
     expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8")
     expect(response.headers.get("x-correlation-id")).toBe("health-test")
     await expect(response.json()).resolves.toEqual({ commitSha: null, status: "ok" })
@@ -40,6 +41,7 @@ describe("GET /health", () => {
       const response = handler(request("POST", "unsupported-test"))
 
       expect(response.status).toBe(404)
+      expect(response.headers.get("cache-control")).toBe("private, no-store")
       expect(response.headers.get("x-correlation-id")).toBe("unsupported-test")
       await expect(response.json()).resolves.toEqual({ error: "not_found" })
     }

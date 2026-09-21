@@ -60,13 +60,15 @@ export function GET() {
   return Response.json(
     { available: chatIsAvailable(process.env), researchEnabled: chatIsAvailable(process.env) },
     {
-      headers: { "cache-control": "no-store" }
+      headers: { "cache-control": "private, no-store" }
     }
   )
 }
 
 export async function POST(request: Request) {
-  return withRequestTelemetry(request, handleChatRequest)
+  const response = await withRequestTelemetry(request, handleChatRequest)
+  response.headers.set("cache-control", "private, no-store")
+  return response
 }
 
 async function handleChatRequest(request: Request) {

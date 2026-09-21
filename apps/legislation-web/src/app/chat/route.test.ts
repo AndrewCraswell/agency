@@ -120,6 +120,7 @@ it("does not schedule a run deadline and preserves request cancellation", async 
       })
     })
   )
+  expect(response.headers.get("cache-control")).toBe("private, no-store")
   const body = response.text()
   const signal = await started.promise
   expect(timeout).not.toHaveBeenCalled()
@@ -162,6 +163,7 @@ it("streams an explicit incomplete answer and persists its interruption without 
       })
     })
   )
+  expect(response.headers.get("cache-control")).toBe("private, no-store")
   expect(response.status).toBe(200)
   const stream = await response.text()
   expect(stream).toContain("Research ended before an answer was completed. Narrow the question and try again.")

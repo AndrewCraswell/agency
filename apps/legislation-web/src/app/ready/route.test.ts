@@ -35,6 +35,7 @@ describe("GET /ready", () => {
     const response = await GET(request("GET", "ready-test"))
 
     expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
     expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8")
     expect(response.headers.get("x-correlation-id")).toBe("ready-test")
     await expect(response.json()).resolves.toEqual({
@@ -82,6 +83,7 @@ describe("GET /ready", () => {
       const response = handler(request("POST", "unsupported-test"))
 
       expect(response.status).toBe(404)
+      expect(response.headers.get("cache-control")).toBe("private, no-store")
       expect(response.headers.get("x-correlation-id")).toBe("unsupported-test")
       await expect(response.json()).resolves.toEqual({ error: "not_found" })
     }
