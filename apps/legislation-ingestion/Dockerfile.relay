@@ -21,7 +21,8 @@ COPY packages/legislation-core ./packages/legislation-core
 COPY apps/legislation-ingestion ./apps/legislation-ingestion
 COPY apps/legislation-ingestion/pnpm-workspace.relay.yaml ./pnpm-workspace.yaml
 
-RUN pnpm install --prod --frozen-lockfile --trust-lockfile --filter legislation-ingestion...
+RUN pnpm install --prod --frozen-lockfile --trust-lockfile --ignore-scripts --filter legislation-ingestion...
+RUN pnpm --filter legislation-ingestion exec tsx --version
 
 RUN groupadd --system --gid 10001 legislation \
   && useradd --system --uid 10001 --gid legislation legislation \
