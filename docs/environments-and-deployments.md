@@ -13,9 +13,10 @@ This page defines the target CI/CD and environment contract for the legislation 
 Shopify deployment is outside this contract. Legislation ingestion remains deployed through Trigger.dev and is verified
 by the shared CI gate, but it is not converted into a Railway service by this design.
 
-This is the target operating model. The Railway project has a production environment and an empty staging environment;
-its application services are not connected to GitHub, web CDN caching is disabled and deployments are manual. Do not
-treat the target workflow below as active until its acceptance checklist has passed.
+This is the target operating model. Production W and M are live. Staging has a deployed W service, an empty schema-only
+primary database, an empty passage-search database, PgBouncer and a reserved M service. Production data refresh remains
+disabled. Staging W deploys only after the exact `main` commit passes CI, while staging M remains gated until its
+dedicated outbound WorkOS credential is configured. Railway CDN caching is enabled for W in both environments.
 
 ## Decisions
 
@@ -65,6 +66,12 @@ Staging contains the same service topology with environment-specific names, doma
 
 Creating the Railway environment copies service configuration, not database contents. The staging databases must be
 provisioned with their own volumes and populated by the refresh workflow.
+
+The initial cost-controlled staging bootstrap intentionally keeps both databases empty. It applies the canonical schema
+to the primary database, disables passage search until a corpus exists and uses smaller resource limits than production.
+No production records are copied. This supports application deployment, configuration and cache testing before the
+production-scale refresh is funded. Data-dependent search and representative acceptance remain blocked until that
+refresh occurs.
 
 ### Pull-request previews
 
@@ -157,7 +164,12 @@ Active work is never cancelled by a newer run. The credential check may be disab
 
 ### Merge to `main`
 
-The deployment workflow runs only after the required CI workflow succeeds for the exact commit:
+The staging deployment workflow runs only after the required CI workflow succeeds for the exact commit. It uses the
+protected `staging` GitHub environment and the non-cancelling `legislation-staging-deployment` lock. Database-contract
+changes fail closed until the protected staging migration workflow is implemented. Staging M changes are reported but
+not deployed until `LEGISLATION_STAGING_MCP_ENABLED` is explicitly enabled after its dedicated credential is configured.
+
+The complete target release sequence is:
 
 1. Determine whether W, M or database artifacts changed.
 2. If needed, migrate staging to the schema on `main`.

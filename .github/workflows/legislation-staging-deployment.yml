@@ -1,0 +1,149 @@
+name: Legislation staging deployment
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      deploy_web:
+        description: Deploy and verify staging legislation-web
+        required: true
+        default: true
+        type: boolean
+      deploy_mcp:
+        description: Deploy and verify staging legislation-mcp
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legislation-staging-deployment
+  cancel-in-progress: false
+
+env:
+  RAILWAY_CALLER: github-actions:legislation-staging-deployment
+  RAILWAY_AGENT_SESSION: github-actions-legislation-staging-deployment
+  RAILWAY_PROJECT_ID: 2378281c-c1c7-4530-8525-5f313741d19b
+  RAILWAY_ENVIRONMENT_ID: cce97dac-1cd4-4ccc-ad9c-bd08b8b13efd
+  LEGISLATION_WEB_SERVICE_ID: 786fbca7-8798-4357-9b45-f0ba092a9750
+  LEGISLATION_MCP_SERVICE_ID: eb6deb23-26a0-41e7-8aab-f06c4e1f0b8b
+  LEGISLATION_WEB_STAGING_URL: https://legislation-web-staging.up.railway.app
+  LEGISLATION_MCP_STAGING_URL: https://legislation-mcp-staging.up.railway.app
+
+jobs:
+  deploy:
+    name: Deploy affected staging services
+    if:
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository) || (github.event_name ==
+      'workflow_dispatch' && github.ref_name == 'main')
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Detect affected legislation services
+        id: changes
+        env:
+          DEPLOY_MCP: ${{ inputs.deploy_mcp }}
+          DEPLOY_WEB: ${{ inputs.deploy_web }}
+          HEAD_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "web=${DEPLOY_WEB}" >> "$GITHUB_OUTPUT"
+            echo "mcp=${DEPLOY_MCP}" >> "$GITHUB_OUTPUT"
+            echo "database=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          BASE_SHA="$(git rev-parse "${HEAD_SHA}^")"
+          node scripts/legislation-change-detection.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
+
+      - name: Reject unowned staging database changes
+        if: steps.changes.outputs.database == 'true'
+        run: |
+          echo "::error::This commit changes the legislation database contract. Run the protected staging migration workflow before deploying applications."
+          exit 1
+
+      - name: Install Railway CLI
+        if:
+          steps.changes.outputs.web == 'true' || (steps.changes.outputs.mcp == 'true' &&
+          vars.LEGISLATION_STAGING_MCP_ENABLED == 'true')
+        run: npm install --global @railway/cli@5.54.1 --registry=https://registry.npmjs.org/
+
+      - name: Deploy staging legislation-web
+        if: steps.changes.outputs.web == 'true'
+        env:
+          DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway up \
+            --project "$RAILWAY_PROJECT_ID" \
+            --environment "$RAILWAY_ENVIRONMENT_ID" \
+            --service "$LEGISLATION_WEB_SERVICE_ID" \
+            --ci \
+            --message "Deploy staging W ${DEPLOY_SHA}"
+
+      - name: Verify staging legislation-web
+        if: steps.changes.outputs.web == 'true'
+        env:
+          DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          LEGISLATION_CDN_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_STAGING_URL }}
+        run: |
+          node --input-type=module -e '
+            const response = await fetch(new URL("/ready", process.env.LEGISLATION_WEB_STAGING_URL), {
+              signal: AbortSignal.timeout(30_000)
+            })
+            const body = await response.json()
+            if (!response.ok || body.status !== "ready" || body.commitSha !== process.env.DEPLOY_SHA) {
+              throw new Error("Staging W readiness does not match the deployed commit")
+            }
+          '
+          node apps/legislation-web/scripts/smoke-cdn.mjs
+
+      - name: Report gated staging MCP deployment
+        if: steps.changes.outputs.mcp == 'true' && vars.LEGISLATION_STAGING_MCP_ENABLED != 'true'
+        run: |
+          echo "::notice::Staging M deployment remains disabled until its dedicated WorkOS client credential is configured."
+
+      - name: Install MCP smoke dependencies
+        if: steps.changes.outputs.mcp == 'true' && vars.LEGISLATION_STAGING_MCP_ENABLED == 'true'
+        run: |
+          npm install --global pnpm@11.9.0 --registry=https://registry.npmjs.org/
+          pnpm install --frozen-lockfile
+
+      - name: Deploy staging legislation-mcp
+        if: steps.changes.outputs.mcp == 'true' && vars.LEGISLATION_STAGING_MCP_ENABLED == 'true'
+        env:
+          DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway up \
+            --project "$RAILWAY_PROJECT_ID" \
+            --environment "$RAILWAY_ENVIRONMENT_ID" \
+            --service "$LEGISLATION_MCP_SERVICE_ID" \
+            --ci \
+            --message "Deploy staging M ${DEPLOY_SHA}"
+
+      - name: Verify staging legislation-mcp
+        if: steps.changes.outputs.mcp == 'true' && vars.LEGISLATION_STAGING_MCP_ENABLED == 'true'
+        env:
+          LEGISLATION_DEPLOYMENT_COMMIT_SHA:
+            ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          LEGISLATION_MCP_SMOKE_BASE_URL: ${{ env.LEGISLATION_MCP_STAGING_URL }}
+          LEGISLATION_MCP_SMOKE_TOKEN: ${{ secrets.LEGISLATION_MCP_SMOKE_TOKEN }}
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+        run: pnpm --filter legislation-mcp smoke:deployment
