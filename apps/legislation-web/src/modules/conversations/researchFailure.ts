@@ -31,6 +31,9 @@ export function researchLimitRecovery(name: string): ResearchRecovery {
       "Make a new first-page request without cursor, with limit: 1 and a narrower query. Scope to a known billId or returned documentIds when available. If one passage still exceeds the budget, discover document metadata and read selected sections instead. No omitted passage or continuation from this failed call was read; disclose that coverage remains incomplete."
   } else if (name === "describe_analytics") {
     instruction = "Request one dataset in datasets instead of the full catalog. The failed catalog was not read."
+  } else if (name === "compare_bill_versions") {
+    instruction =
+      "The full-document comparison exceeded its computation or delivery limit. Changing limit only changes output pagination; it does not reduce the full-text diff. Do not repeat the same comparison with a smaller limit. Read the relevant sections from each of the same exact document IDs using get_document_sections or read_record_collection with collection document-sections, then compare only those retrieved passages. Preserve both source versions and disclose that a complete automated diff was not obtained."
   } else if (name === "get_person") {
     instruction =
       "The person projection exceeds the delivery budget. Do not invent limit or childLimit for get_person. Follow only a successfully returned cursor with unchanged inputs. Read get_memberships with personId, get_sponsored_bills with id, or read_record_collection with collection: person-terms and recordId, starting at limit: 1. The failed projection was not read; disclose incomplete coverage."

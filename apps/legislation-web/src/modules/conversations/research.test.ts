@@ -228,9 +228,34 @@ it("rejects unsafe final URLs and publisher error pages", async () => {
     )
   )
   await expect(callWebTool("read_web_page", { url: "https://example.org" })).rejects.toMatchObject({
-    code: "dependency_unavailable"
+    code: "not_found",
+    recovery: { action: "narrow", instruction: expect.stringContaining("Do not guess replacement URL paths") }
   })
 })
+
+it.each([
+  [401, "forbidden"],
+  [403, "forbidden"],
+  [408, "timeout"],
+  [410, "not_found"],
+  [500, "dependency_unavailable"],
+  [504, "timeout"]
+])(
+  "preserves publisher status %s instead of treating every source error as a provider outage",
+  async (statusCode, code) => {
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      Response.json({
+        success: true,
+        data: { markdown: "Error page, not evidence", metadata: { statusCode, error: "Publisher error" } }
+      })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    await expect(
+      callWebTool("read_web_page", { url: "https://example.org/bill", includeTags: ["main"] })
+    ).rejects.toMatchObject({ code })
+    expect(fetchMock).toHaveBeenCalledOnce()
+  }
+)
 
 it("cancels in-flight web calls and discards late responses", async () => {
   const controller = new AbortController()
@@ -820,7 +845,9 @@ it("executes model web calls that omit unused optional fields through SDK valida
   for await (const chunk of result.stream) {
     expect(chunk.type).not.toBe("tool-error")
     expect(chunk.type).not.toBe("error")
-    if (chunk.type === "tool-result") {outputs.push(chunk.output)}
+    if (chunk.type === "tool-result") {
+      outputs.push(chunk.output)
+    }
   }
   expect(fetchMock).toHaveBeenCalledOnce()
   expect(outputs).toEqual([
@@ -1045,6 +1072,27 @@ it("preserves exact document selectors across collection, section, comparison an
     documentClassifications: undefined,
     mode: "lexical"
   })
+})
+
+it("reports an oversized full-document comparison with actionable section-level recovery", async () => {
+  const compareBillVersions = vi.fn<LegislationQueryApi["compareBillVersions"]>(async () => {
+    throw new LegislationError("payload_too_large", "The line comparison exceeds the edit-distance or time limit.")
+  })
+  const fixture = selectionTools({ compareBillVersions })
+  await expect(
+    callWebTool(
+      "compare_bill_versions",
+      { billId: selectionBillId, documentIds: [selectionDocument.id, "document:second"], limit: 100 },
+      fixture.tools
+    )
+  ).rejects.toMatchObject({
+    code: "result_limit",
+    recovery: {
+      action: "narrow",
+      instruction: expect.stringContaining("Changing limit only changes output pagination")
+    }
+  })
+  expect(compareBillVersions).toHaveBeenCalledOnce()
 })
 
 it("passes the exact returned continuation through core and rejects mutation or another turn before service execution", async () => {

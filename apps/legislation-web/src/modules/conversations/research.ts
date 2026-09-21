@@ -332,6 +332,19 @@ function createWebResearchTools(environment: NodeJS.ProcessEnv, signal: AbortSig
         }
         const { markdown, metadata } = result.data
         if ((metadata.statusCode !== undefined && metadata.statusCode >= 400) || metadata.error) {
+          if (metadata.statusCode === 404 || metadata.statusCode === 410) {
+            throw new ResearchFailure("not_found", crypto.randomUUID(), {
+              action: "narrow",
+              instruction:
+                "The publisher reports that this exact URL is missing or gone. Use search_web with the public source title and publisher domain to discover a current official URL, then read the returned URL unchanged. Do not guess replacement URL paths or repeatedly request the missing URL. This does not establish that the underlying document or policy evidence is absent."
+            })
+          }
+          if (metadata.statusCode === 401 || metadata.statusCode === 403) {
+            throw new ResearchFailure("forbidden", crypto.randomUUID())
+          }
+          if (metadata.statusCode === 408 || metadata.statusCode === 504) {
+            throw new ResearchFailure("timeout", crypto.randomUUID())
+          }
           throw new ResearchFailure("dependency_unavailable", crypto.randomUUID())
         }
         if (!markdown.trim()) {
