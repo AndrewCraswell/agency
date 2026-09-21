@@ -216,7 +216,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_MIGRATION_DATABASE_URL }}
           LEGISLATION_MIGRATION_LOCK_TIMEOUT_MS: "30000"
-        run: timeout 15m pnpm --filter legislation-web db:migrate
+        run: timeout 15m pnpm --filter legislation-web db:migrate:production
 
       - name: Deploy production legislation-web
         id: web-deployment
