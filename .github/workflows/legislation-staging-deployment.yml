@@ -16,7 +16,7 @@ on:
       deploy_mcp:
         description: Deploy and verify staging legislation-mcp
         required: true
-        default: false
+        default: true
         type: boolean
 
 permissions:
@@ -27,6 +27,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
   RAILWAY_CALLER: github-actions:legislation-staging-deployment
   RAILWAY_AGENT_SESSION: github-actions-legislation-staging-deployment
   RAILWAY_PROJECT_ID: 2378281c-c1c7-4530-8525-5f313741d19b
@@ -78,13 +79,71 @@ jobs:
           echo "::error::This commit changes the legislation database contract. Run the protected staging migration workflow before deploying applications."
           exit 1
 
+      - name: Verify staging deployment credentials
+        if: steps.changes.outputs.web == 'true' || steps.changes.outputs.mcp == 'true'
+        env:
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          SENTRY_MCP_PROJECT_SLUG: ${{ vars.SENTRY_MCP_PROJECT_SLUG }}
+          SENTRY_ORGANIZATION_SLUG: ${{ vars.SENTRY_ORGANIZATION_SLUG }}
+          SENTRY_STAGING_AUTH_TOKEN: ${{ secrets.SENTRY_STAGING_AUTH_TOKEN }}
+          WORKOS_API_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_API_SMOKE_CLIENT_ID }}
+          WORKOS_API_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_API_SMOKE_CLIENT_SECRET }}
+          WORKOS_API_SMOKE_ISSUER: ${{ vars.WORKOS_API_SMOKE_ISSUER }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          missing=0
+          require_secret() {
+            if [ -z "$2" ]; then
+              echo "::error::The protected staging environment requires the $1 secret."
+              missing=1
+            fi
+          }
+          require_secret RAILWAY_TOKEN "$RAILWAY_TOKEN"
+          if [ "${{ steps.changes.outputs.web }}" = "true" ]; then
+            require_secret WORKOS_API_SMOKE_CLIENT_ID "$WORKOS_API_SMOKE_CLIENT_ID"
+            require_secret WORKOS_API_SMOKE_CLIENT_SECRET "$WORKOS_API_SMOKE_CLIENT_SECRET"
+            if [ -z "$WORKOS_API_SMOKE_ISSUER" ]; then
+              echo "::error::The protected staging environment requires the WORKOS_API_SMOKE_ISSUER variable."
+              missing=1
+            fi
+          fi
+          if [ "${{ steps.changes.outputs.mcp }}" = "true" ]; then
+            require_secret WORKOS_MCP_SMOKE_CLIENT_ID "$WORKOS_MCP_SMOKE_CLIENT_ID"
+            require_secret WORKOS_MCP_SMOKE_CLIENT_SECRET "$WORKOS_MCP_SMOKE_CLIENT_SECRET"
+            require_secret SENTRY_STAGING_AUTH_TOKEN "$SENTRY_STAGING_AUTH_TOKEN"
+            if [ -z "$LEGISLATION_SMOKE_BILL_ID" ]; then
+              echo "::error::The protected staging environment requires the LEGISLATION_SMOKE_BILL_ID variable."
+              missing=1
+            fi
+            for variable in SENTRY_ORGANIZATION_SLUG SENTRY_MCP_PROJECT_SLUG; do
+              if [ -z "${!variable}" ]; then
+                echo "::error::The protected staging environment requires the ${variable} variable."
+                missing=1
+              fi
+            done
+          fi
+          exit "$missing"
+
       - name: Install Railway CLI
-        if:
-          steps.changes.outputs.web == 'true' || (steps.changes.outputs.mcp == 'true' &&
-          vars.LEGISLATION_STAGING_MCP_ENABLED == 'true')
+        if: steps.changes.outputs.web == 'true' || steps.changes.outputs.mcp == 'true'
         run: npm install --global @railway/cli@5.54.1 --registry=https://registry.npmjs.org/
 
+      - name: Verify staging legislation-web telemetry configuration
+        if: steps.changes.outputs.web == 'true'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway variable list \
+            --project "$RAILWAY_PROJECT_ID" \
+            --environment "$RAILWAY_ENVIRONMENT_ID" \
+            --service "$LEGISLATION_WEB_SERVICE_ID" \
+            --json |
+            node apps/legislation-mcp/scripts/verify-staging-variables.mjs web
+
       - name: Deploy staging legislation-web
+        id: web-deployment
         if: steps.changes.outputs.web == 'true'
         env:
           DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
@@ -111,10 +170,11 @@ jobs:
                 --environment "$RAILWAY_ENVIRONMENT_ID" \
                 --service "$LEGISLATION_WEB_SERVICE_ID" \
                 --json |
-                jq --exit-status --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+                jq --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
             )"
             case "$STATUS" in
               SUCCESS)
+                echo "deployment_id=${DEPLOYMENT_ID}" >> "$GITHUB_OUTPUT"
                 exit 0
                 ;;
               FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING)
@@ -130,33 +190,51 @@ jobs:
       - name: Verify staging legislation-web
         if: steps.changes.outputs.web == 'true'
         env:
-          DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          LEGISLATION_API_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_STAGING_URL }}
+          LEGISLATION_BROWSER_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_STAGING_URL }}
           LEGISLATION_CDN_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_STAGING_URL }}
+          LEGISLATION_DEPLOYMENT_COMMIT_SHA:
+            ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          LEGISLATION_READINESS_BASE_URL: ${{ env.LEGISLATION_WEB_STAGING_URL }}
+          WORKOS_API_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_API_SMOKE_CLIENT_ID }}
+          WORKOS_API_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_API_SMOKE_CLIENT_SECRET }}
+          WORKOS_API_SMOKE_ISSUER: ${{ vars.WORKOS_API_SMOKE_ISSUER }}
         run: |
-          node --input-type=module -e '
-            const response = await fetch(new URL("/ready", process.env.LEGISLATION_WEB_STAGING_URL), {
-              signal: AbortSignal.timeout(30_000)
-            })
-            const body = await response.json()
-            if (!response.ok || body.status !== "ready" || body.commitSha !== process.env.DEPLOY_SHA) {
-              throw new Error("Staging W readiness does not match the deployed commit")
-            }
-          '
+          node apps/legislation-web/scripts/wait-readiness.mjs
+          node apps/legislation-web/scripts/smoke-deployment.mjs
           node apps/legislation-web/scripts/smoke-cdn.mjs
 
-      - name: Report gated staging MCP deployment
-        if: steps.changes.outputs.mcp == 'true' && vars.LEGISLATION_STAGING_MCP_ENABLED != 'true'
-        run: |
-          echo "::notice::Staging M deployment remains disabled until its dedicated WorkOS client credential is configured."
-
-      - name: Install MCP smoke dependencies
-        if: steps.changes.outputs.mcp == 'true' && vars.LEGISLATION_STAGING_MCP_ENABLED == 'true'
+      - name: Install staging smoke dependencies
+        if: steps.changes.outputs.web == 'true' || steps.changes.outputs.mcp == 'true'
         run: |
           npm install --global pnpm@11.9.0 --registry=https://registry.npmjs.org/
           pnpm install --frozen-lockfile
 
+      - name: Install staging browser
+        if: steps.changes.outputs.web == 'true'
+        run: pnpm --filter legislation-web exec playwright install --with-deps chromium
+
+      - name: Verify staging legislation-web in a browser
+        if: steps.changes.outputs.web == 'true'
+        env:
+          LEGISLATION_BROWSER_SMOKE_BASE_URL: ${{ env.LEGISLATION_WEB_STAGING_URL }}
+        run: pnpm --filter legislation-web smoke:browser
+
+      - name: Verify staging legislation-mcp routing and telemetry configuration
+        if: steps.changes.outputs.mcp == 'true'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway variable list \
+            --project "$RAILWAY_PROJECT_ID" \
+            --environment "$RAILWAY_ENVIRONMENT_ID" \
+            --service "$LEGISLATION_MCP_SERVICE_ID" \
+            --json |
+            node apps/legislation-mcp/scripts/verify-staging-variables.mjs mcp
+
       - name: Deploy staging legislation-mcp
-        if: steps.changes.outputs.mcp == 'true' && vars.LEGISLATION_STAGING_MCP_ENABLED == 'true'
+        id: mcp-deployment
+        if: steps.changes.outputs.mcp == 'true'
         env:
           DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -182,10 +260,11 @@ jobs:
                 --environment "$RAILWAY_ENVIRONMENT_ID" \
                 --service "$LEGISLATION_MCP_SERVICE_ID" \
                 --json |
-                jq --exit-status --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+                jq --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
             )"
             case "$STATUS" in
               SUCCESS)
+                echo "deployment_id=${DEPLOYMENT_ID}" >> "$GITHUB_OUTPUT"
                 exit 0
                 ;;
               FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING)
@@ -199,11 +278,28 @@ jobs:
           exit 1
 
       - name: Verify staging legislation-mcp
-        if: steps.changes.outputs.mcp == 'true' && vars.LEGISLATION_STAGING_MCP_ENABLED == 'true'
+        if: steps.changes.outputs.mcp == 'true'
         env:
           LEGISLATION_DEPLOYMENT_COMMIT_SHA:
             ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           LEGISLATION_MCP_SMOKE_BASE_URL: ${{ env.LEGISLATION_MCP_STAGING_URL }}
-          LEGISLATION_MCP_SMOKE_TOKEN: ${{ secrets.LEGISLATION_MCP_SMOKE_TOKEN }}
+          LEGISLATION_READINESS_BASE_URL: ${{ env.LEGISLATION_MCP_STAGING_URL }}
+          LEGISLATION_SENTRY_CANARY: "true"
+          LEGISLATION_SENTRY_CANARY_MARKER: "legislation-staging-${{ github.run_id }}-${{ github.run_attempt }}"
+          LEGISLATION_SENTRY_ENVIRONMENT: staging
           LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
-        run: pnpm --filter legislation-mcp smoke:deployment
+          RAILWAY_DEPLOYMENT_ID: ${{ steps.mcp-deployment.outputs.deployment_id }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          node apps/legislation-web/scripts/wait-readiness.mjs
+          pnpm --filter legislation-mcp smoke:deployment
+
+      - name: Verify controlled staging Sentry canary
+        if: steps.changes.outputs.mcp == 'true'
+        env:
+          LEGISLATION_SENTRY_CANARY_MARKER: "legislation-staging-${{ github.run_id }}-${{ github.run_attempt }}"
+          SENTRY_MCP_PROJECT_SLUG: ${{ vars.SENTRY_MCP_PROJECT_SLUG }}
+          SENTRY_ORGANIZATION_SLUG: ${{ vars.SENTRY_ORGANIZATION_SLUG }}
+          SENTRY_STAGING_AUTH_TOKEN: ${{ secrets.SENTRY_STAGING_AUTH_TOKEN }}
+        run: pnpm --filter legislation-mcp verify:sentry-canary

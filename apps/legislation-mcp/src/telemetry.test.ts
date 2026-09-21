@@ -38,6 +38,14 @@ it("exports MCP errors with correlation and cause metadata but no credentials or
         durationMs: 15000,
         query: "HR 1",
         recordId: "bill:us:116:hr:1",
+        input: { canaryMarker: "legislation-staging-123-1" },
+        deploymentCommitSha: "a".repeat(40),
+        railway: {
+          projectId: "project-context",
+          environmentId: "environment-context",
+          serviceId: "service-context",
+          deploymentId: "deployment-context"
+        },
         authorization: "Bearer private",
         body: "private-source"
       },
@@ -50,6 +58,12 @@ it("exports MCP errors with correlation and cause metadata but no credentials or
   expect(output).toContain("57014")
   expect(output).toContain("search_bills")
   expect(output).toContain("15000")
+  expect(output).toContain("a".repeat(40))
+  expect(output).toContain("project-context")
+  expect(output).toContain("environment-context")
+  expect(output).toContain("service-context")
+  expect(output).toContain("deployment-context")
+  expect(output).toContain("legislation-staging-123-1")
   expect(output).toContain("stacktrace")
   expect(output).not.toContain("private")
 })

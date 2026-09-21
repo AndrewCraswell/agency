@@ -21,3 +21,53 @@ tool and SQLSTATE retention plus redaction. A development export on 2026-09-17 p
 `LEGISLATION-10`, correlation `0b5328c2-82d9-4bb3-a17d-9a6adfa2dd84`, marked as a controlled acceptance probe.
 This confirms local SDK delivery, not a production MCP deployment. Production acceptance must check the deployed
 release/source maps and one controlled failed tool call through authenticated MCP transport.
+
+The staging deployment smoke obtains a short-lived bearer through WorkOS `client_credentials`; it never stores or
+copies a user bearer. It sends the controlled failed tool call only when all of these guards hold: the exact
+canonical staging MCP origin is selected, the telemetry environment is explicitly `staging`, and the commit, Railway
+project, environment, service and deployment identifiers are present. The invalid request includes a synthetic
+authorization sentinel so the smoke can reject any response that echoes it; runtime telemetry applies the normal
+redaction policy and retains only the commit and Railway deployment context. A missing guard, machine credential,
+fixture, readiness match or expected failure blocks the workflow.
+
+The staging services still require external configuration. Set M's `SENTRY_DSN` and `SENTRY_ENVIRONMENT=staging`;
+set W's `NEXT_PUBLIC_SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_ENVIRONMENT=staging`. GitHub's protected `staging`
+environment supplies `RAILWAY_TOKEN`, `WORKOS_API_SMOKE_CLIENT_ID`, `WORKOS_API_SMOKE_CLIENT_SECRET`,
+`WORKOS_MCP_SMOKE_CLIENT_ID`, `WORKOS_MCP_SMOKE_CLIENT_SECRET`, and `SENTRY_STAGING_AUTH_TOKEN`. Environment variables
+supply `WORKOS_API_SMOKE_ISSUER`, `LEGISLATION_SMOKE_BILL_ID`, `SENTRY_ORGANIZATION_SLUG`, and
+`SENTRY_MCP_PROJECT_SLUG`. The MCP WorkOS credentials belong to a dedicated staging-only machine client whose resource
+audience is
+`https://legislation-mcp-staging.up.railway.app/mcp`. Never reuse production or user credentials, tokens, or DSNs.
+
+Provision the machine client outside this repository in the staging WorkOS environment:
+
+1. Create a dedicated machine-to-machine OAuth client for the incoming staging MCP resource, not the existing
+   outbound M-to-W client and not a user application.
+2. Register `https://legislation-mcp-staging.up.railway.app/mcp` as an exact Resource Indicator and grant only the
+   permissions needed by the staging smoke fixture. The workflow supplies that URL as the token request's `resource`
+   parameter so the access token receives the incoming MCP audience.
+3. Confirm the staging MCP protected-resource metadata advertises the same WorkOS issuer used by that client.
+4. Store the issued client ID and secret as the protected GitHub `staging` environment secrets named above. Do not
+   store an access token; the workflow requests a bounded short-lived token for each run.
+5. Rotate the client secret in WorkOS and GitHub together, then rerun the staging workflow.
+
+W's API smoke likewise uses a dedicated staging WorkOS M2M client and obtains a short-lived token from
+`WORKOS_API_SMOKE_ISSUER`; no static API bearer is stored. The controlled MCP failure carries only the synthetic
+`legislation-staging-<run>-<attempt>` marker plus deployment identifiers. MCP tags the event, requests a five-second
+Sentry flush, and the workflow polls Sentry's read-only project events API for the exact tag. The Sentry token requires
+only event/project read access.
+
+Provision W's smoke client in the same staging WorkOS environment. Associate it with the staging smoke organization,
+confirm its client-credentials token `aud` matches W's configured `WORKOS_API_AUDIENCE`, store its credential as
+`WORKOS_API_SMOKE_CLIENT_ID` and `WORKOS_API_SMOKE_CLIENT_SECRET`, and set `WORKOS_API_SMOKE_ISSUER` to the
+credential-free staging AuthKit issuer. This client is independent of M's outbound M-to-W credential.
+
+To repeat only the external ingestion check after the canary has executed:
+
+```powershell
+$env:LEGISLATION_SENTRY_CANARY_MARKER = 'legislation-staging-<run-id>-<attempt>'
+$env:SENTRY_ORGANIZATION_SLUG = '<organization-slug>'
+$env:SENTRY_MCP_PROJECT_SLUG = '<project-slug>'
+$env:SENTRY_STAGING_AUTH_TOKEN = '<read-only-token>'
+pnpm --filter legislation-mcp verify:sentry-canary
+```

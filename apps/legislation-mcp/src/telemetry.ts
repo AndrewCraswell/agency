@@ -118,6 +118,10 @@ export function createMcpTelemetry(): Telemetry {
     reportFailure(name, metadata, error) {
       const failure = normalizeLegislationError(error)
       const context = getRequestContext()
+      const canary = z
+        .object({ canaryMarker: z.string().regex(/^legislation-staging-[0-9]+-[0-9]+$/u) })
+        .safeParse(metadata.input)
+      const canaryMarker = canary.success ? canary.data.canaryMarker : undefined
       Sentry.withScope((scope) => {
         scope.setTag("service", "legislation-mcp")
         scope.setTag("tool", name)
@@ -127,12 +131,14 @@ export function createMcpTelemetry(): Telemetry {
         if (typeof correlation === "string") scope.setTag("correlationId", correlation)
         const code = postgresErrorCode(error)
         if (code) scope.setTag("database.code", code)
+        if (canaryMarker) scope.setTag("canary", canaryMarker)
         scope.setContext(
           "mcp",
           safeRecord({ ...metadata, errorDetails: failure.details, correlationId: context?.correlationId })
         )
         Sentry.captureException(error instanceof Error ? error : failure)
       })
+      if (canaryMarker) void Sentry.flush(5000)
     },
     shutdown: async () => {
       await Sentry.close(5000)

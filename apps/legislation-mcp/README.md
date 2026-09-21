@@ -82,9 +82,11 @@ replace this with direct raw-handler mounting.
 ## Smoke And Ownership
 
 `pnpm --filter legislation-mcp smoke:deployment` requires `LEGISLATION_MCP_SMOKE_BASE_URL`,
-`LEGISLATION_MCP_SMOKE_TOKEN`, `LEGISLATION_SMOKE_BILL_ID`, and the expected full commit in
-`LEGISLATION_DEPLOYMENT_COMMIT_SHA` or `GITHUB_SHA`. It checks the reported deployment identity, discovery, anonymous
-rejection and authenticated tool round trips. It never uses a web API token. Web's smoke is separate and uses its
+`WORKOS_MCP_SMOKE_CLIENT_ID`, `WORKOS_MCP_SMOKE_CLIENT_SECRET`, `LEGISLATION_SMOKE_BILL_ID`, and the expected full
+commit in `LEGISLATION_DEPLOYMENT_COMMIT_SHA` or `GITHUB_SHA`. It checks the reported deployment identity, discovery and
+anonymous rejection, obtains a short-lived machine token from the advertised WorkOS issuer, then runs authenticated tool
+round trips. The client-credentials request includes the canonical `/mcp` resource indicator so the token is minted for
+the incoming MCP audience. It never stores a bearer or uses a web API token. Web's smoke is separate and uses its
 explicit API origin and API token.
 
 Core owns research definitions, paging and canonical wire validation; MCP owns SDK wrapping and the outbound adapter.
