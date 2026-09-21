@@ -8,6 +8,7 @@ import {
 } from "@repo/legislation-core/domain/identifiers"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { z } from "zod"
+import { normalizeFederalAction } from "../federal-action.js"
 import { outgoingRelationProvenance } from "../relation-provenance.js"
 
 const optionalString = z.preprocess(
@@ -16,7 +17,14 @@ const optionalString = z.preprocess(
 )
 const memberSchema = z.object({ bioguideId: z.string().min(1), fullName: z.string().min(1) }).passthrough()
 const actionSchema = z
-  .object({ actionDate: optionalString, actionTime: optionalString, text: optionalString })
+  .object({
+    actionCode: optionalString,
+    actionDate: optionalString,
+    actionTime: optionalString,
+    sourceSystem: z.object({ code: optionalString, name: optionalString }).passthrough().optional(),
+    text: optionalString,
+    type: optionalString
+  })
   .passthrough()
 const textVersionSchema = z.object({
   date: optionalString,
@@ -137,6 +145,12 @@ export function normalizeCongressBillBundle(
         ? []
         : [
             {
+              ...normalizeFederalAction({
+                actionCode: action.actionCode,
+                sourceSystem: action.sourceSystem?.name ?? action.sourceSystem?.code,
+                text: action.text,
+                type: action.type
+              }),
               actionDate: action.actionDate,
               billId: canonicalBillId,
               description: action.text,

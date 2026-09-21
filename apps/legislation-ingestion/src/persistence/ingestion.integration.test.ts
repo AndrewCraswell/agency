@@ -2506,6 +2506,35 @@ describePostgres.sequential("legislation PostgreSQL ingestion", () => {
     ).toEqual(["ih", "enr"])
   })
 
+  it("does not advance a GovInfo checkpoint past a retained package that fails normalization", async () => {
+    const put = vi.fn(async () => ({
+      bytes: 1,
+      contentHash: "a".repeat(64),
+      contentPath: "source",
+      metadataPath: "metadata",
+      unchanged: false
+    }))
+    const source = {
+      billType: "hr",
+      congress: 119,
+      packageId: "BILLSTATUS-119hr9998",
+      url: new URL("https://example.test/BILLSTATUS-119hr9998.xml")
+    }
+    const result = await importGovInfoPackages(
+      database,
+      { getBillStatus: async () => "<billStatus><bill><congress>119</congress></bill></billStatus>" },
+      [source],
+      { force: true, sourceStore: { put }, stream: "govinfo-normalization-failure-test" }
+    )
+
+    expect(put).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      checkpoint: { complete: false, index: 0 },
+      counts: { failed: 1, read: 0, skipped: 0 }
+    })
+    expect(result.failures[0]).toMatchObject({ identifier: source.packageId, retryable: false })
+  })
+
   it("replays a partially failed Congress window without skipping or duplicating bills", async () => {
     const fixture = JSON.parse(
       await readFile(new URL("../../tests/fixtures/congress/119-hr-1234.json", import.meta.url), "utf8")

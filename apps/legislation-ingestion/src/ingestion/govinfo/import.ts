@@ -86,13 +86,21 @@ export async function importGovInfoPackages(
             packageId: source.packageId,
             sourceUrl: source.url.href
           })
-          let aggregate: CanonicalBillAggregate
           try {
-            aggregate = normalizeGovInfoBillStatus(xml, { retrievedAt: new Date(), sourceUrl: source.url.href })
-          } catch {
-            return { source, status: "skipped" }
+            return {
+              aggregate: normalizeGovInfoBillStatus(xml, { retrievedAt: new Date(), sourceUrl: source.url.href }),
+              source
+            }
+          } catch (error) {
+            return {
+              failure: {
+                identifier: source.packageId,
+                message: ingestionErrorSummary(error),
+                retryable: false
+              },
+              status: "failed"
+            }
           }
-          return { aggregate, source }
         } catch (error) {
           return {
             failure: {

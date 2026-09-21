@@ -324,11 +324,11 @@ remain source-identified instead of being joined by name.
 | Detail `cboCostEstimates[]` | `cboCost[]` | Artifact only | CBO cost estimate metadata is not modeled. | `congress-wave-child`, hourly. |
 | Detail `committeeReports[]` | committee report references | Artifact only | Reports arrive through their independent report job. | `congress-wave-child`, hourly. |
 | Actions `[].actionDate` | date string | Ingested | `bill_actions.action_date`. | `congress-wave-child`, hourly. |
-| Actions `[].actionTime` | time string | Partial | Used in deterministic action identity; not persisted separately. | `congress-wave-child`, hourly. |
+| Actions `[].actionTime` | time string | Partial | Used in deterministic action identity; not promoted to a timestamp because the source value has no timezone. | `congress-wave-child`, hourly. |
 | Actions `[].text` | string | Ingested | `bill_actions.description`. | `congress-wave-child`, hourly. |
-| Actions `[].actionCode` | string | Artifact only | Not persisted for bills. | `congress-wave-child`, hourly. |
-| Actions `[].type` | string | Artifact only | Bill action classification is not currently populated from Congress.gov. | `congress-wave-child`, hourly. |
-| Actions `[].sourceSystem` | object | Artifact only | Provider-system metadata is not modeled. | `congress-wave-child`, hourly. |
+| Actions `[].actionCode` | string | Ingested/derived | Contributes to canonical lifecycle classification and chamber. | `congress-wave-child`, hourly. |
+| Actions `[].type` | string | Ingested/derived | Contributes to canonical lifecycle classification and chamber. | `congress-wave-child`, hourly. |
+| Actions `[].sourceSystem` | object | Partial | Contributes to canonical action chamber; raw provider-system metadata is not modeled. | `congress-wave-child`, hourly. |
 | Committees `[].name` | string | Ingested | Bill-scoped relationship metadata only; does not materialize or update a canonical committee organization. | `congress-wave-child`, hourly. |
 | Committees `[].systemCode` | string | Ingested | Canonical bill-to-organization relationship ID only; does not materialize or update a canonical committee organization. | `congress-wave-child`, hourly. |
 | Sponsors `[].bioguideId` | string | Ingested | `bill_sponsors.person_id`, `people.source_id`. | `congress-wave-child`, hourly. |
@@ -633,13 +633,13 @@ the legislative content field families and explicitly distinguish what the curre
 | `latestAction.text` | string | Partial | `bills.status`. | `govinfo-bill-status-sync`, daily. |
 | `latestAction.links[]` | link array | Artifact only | Not modeled. | `govinfo-bill-status-sync`, daily. |
 | `actions.item[].actionDate` | date string | Ingested | `bill_actions.action_date`. | `govinfo-bill-status-sync`, daily. |
-| `actions.item[].actionTime` | time string | Partial | Used in deterministic action identity. | `govinfo-bill-status-sync`, daily. |
+| `actions.item[].actionTime` | time string | Partial | Used in deterministic action identity; not promoted to a timestamp because the source value has no timezone. | `govinfo-bill-status-sync`, daily. |
 | `actions.item[].text` | string | Ingested | `bill_actions.description`. | `govinfo-bill-status-sync`, daily. |
-| `actions.item[].actionCode` | string | Artifact only | Not normalized. | `govinfo-bill-status-sync`, daily. |
-| `actions.item[].type` | string | Artifact only | Not normalized. | `govinfo-bill-status-sync`, daily. |
+| `actions.item[].actionCode` | string | Ingested/derived | Contributes to canonical lifecycle classification and chamber. | `govinfo-bill-status-sync`, daily. |
+| `actions.item[].type` | string | Ingested/derived | Contributes to canonical lifecycle classification and chamber. | `govinfo-bill-status-sync`, daily. |
 | `actions.item[].committee.name/systemCode` | strings | Artifact only | Committee link is not taken from action child. GovInfo is the sole approved federal committee-data source, but standalone committees are materialized through the separate CDIR importer. | `govinfo-bill-status-sync`, daily. |
 | `actions.item[].links[]` | link array | Artifact only | Roll-call/Record links are not normalized. | `govinfo-bill-status-sync`, daily. |
-| `actions.item[].sourceSystem.code/name` | strings | Artifact only | Source-system processing metadata is not modeled. | `govinfo-bill-status-sync`, daily. |
+| `actions.item[].sourceSystem.code/name` | strings | Partial | Contributes to canonical action chamber; raw source-system metadata is not modeled. | `govinfo-bill-status-sync`, daily. |
 | `actions.actionByCounts`, `actionTypeCounts` | count objects | Artifact only | Provider facet/processing counts are not canonical data. | `govinfo-bill-status-sync`, daily. |
 | `sponsors.item[].fullName` | string | Ingested | Primary `bill_sponsors.name`; minimal person name. | `govinfo-bill-status-sync`, daily. |
 | `sponsors.item[].bioguideId` | string | Ingested | Canonical person link/source identity. | `govinfo-bill-status-sync`, daily. |
@@ -657,8 +657,8 @@ the legislative content field families and explicitly distinguish what the curre
 | Related bill title/latest action/identifiers | scalar/nested fields | Artifact only | Not modeled. | `govinfo-bill-status-sync`, daily. |
 | `textVersions.item[].date` | date string | Ingested | `bill_documents.document_date`. | `govinfo-bill-status-sync`, daily. |
 | `textVersions.item[].type` | string | Ingested | Document title and provider version code context. | `govinfo-bill-status-sync`, daily. |
-| `textVersions.item[].formats.item[].url` | string URL | Partial | Best-ranked official HTTPS BILLS representation becomes a bill document. | `govinfo-bill-status-sync`, daily. |
-| Text format name/type | strings | Partial | Content type is derived from chosen URL extension/signature. | `govinfo-bill-status-sync`, daily. |
+| `textVersions.item[].formats.item[].url` | string URL | Ingested | Every distinct official HTTPS BILLS representation becomes a bill document. | `govinfo-bill-status-sync`, daily. |
+| Text format name/type | strings | Partial | Content type is derived from each URL extension/signature. | `govinfo-bill-status-sync`, daily. |
 | `laws.item[].number` | string | Artifact only | Public/private law citation is not modeled. | `govinfo-bill-status-sync`, daily. |
 | `laws.item[].type` | string | Artifact only | Public/private law type is not modeled. | `govinfo-bill-status-sync`, daily. |
 | `recordedVotes.recordedVote[].chamber` | string | Artifact only | Chamber-specific House and Senate jobs provide member-level current coverage. | `govinfo-bill-status-sync`, daily. |

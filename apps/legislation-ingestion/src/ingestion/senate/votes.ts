@@ -100,8 +100,18 @@ export function normalizeSenateVote(
   )
   const members = new Map<string, { member: z.infer<typeof memberSchema>; sourceSequence: number }>()
   source.members.member.forEach((member, sourceSequence) => {
-    if (!members.has(member.lis_member_id)) {
+    const existing = members.get(member.lis_member_id)
+    if (existing === undefined) {
       members.set(member.lis_member_id, { member, sourceSequence })
+      return
+    }
+    if (
+      existing.member.vote_cast !== member.vote_cast ||
+      existing.member.first_name !== member.first_name ||
+      existing.member.last_name !== member.last_name ||
+      existing.member.member_full !== member.member_full
+    ) {
+      throw new Error(`Conflicting Senate vote positions for ${member.lis_member_id}`)
     }
   })
   const positions = [...members.values()].map(({ member, sourceSequence }) => {

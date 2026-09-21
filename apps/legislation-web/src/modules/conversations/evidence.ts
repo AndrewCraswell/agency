@@ -113,7 +113,7 @@ const sourceRecordSchema = z.object({
   classification: z
     .union([z.string(), z.array(z.string())])
     .nullish()
-    .transform((value) => (typeof value === "string" ? value : undefined)),
+    .transform((value) => (Array.isArray(value) ? value.join(", ") : (value ?? undefined))),
   title: z.string().nullish(),
   name: z.string().nullish(),
   sourceUrl: z.string().nullish(),

@@ -46,6 +46,20 @@ describe("conversation evidence", () => {
     })
     expect(source.sourceUrl.length).toBeGreaterThan(9000)
   })
+
+  it("preserves array-valued source classifications", () => {
+    const bill = { id: "bill:us:119:hr:1", identifier: "HR 1", title: "Enacted bill" }
+    expect(
+      projectResearchEvidence(
+        { id: "document:one", billId: bill.id, bill, title: "Enrolled", classification: ["version"] },
+        () => "source-1"
+      )[0]
+    ).toMatchObject({
+      title: "HR 1 (119th Congress): Enacted bill",
+      versionLabel: "Enrolled"
+    })
+  })
+
   it.each([
     [
       "https://www.govinfo.gov/bulkdata/BILLSTATUS/116/hr/BILLSTATUS-116hr5826.xml",

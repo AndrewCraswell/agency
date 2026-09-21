@@ -63,11 +63,25 @@ import {
   inArray,
   isNotNull,
   lte,
+  or,
   sql,
   type SQL,
   type SQLWrapper
 } from "drizzle-orm"
 import { alias, unionAll } from "drizzle-orm/pg-core"
+
+const billProgressClassifications = [
+  "introduction",
+  "referral-committee",
+  "committee-passage",
+  "committee-passage-favorable",
+  "committee-passage-unfavorable",
+  "passage",
+  "executive-receipt",
+  "executive-signature",
+  "executive-veto",
+  "became-law"
+]
 import type { RetrievalModelClient } from "../../services/openrouter/openrouter-retrieval"
 import {
   observeDatabaseQueryWithoutTelemetry,
@@ -3366,9 +3380,17 @@ export class LegislationQueryService {
           description: billActions.description
         })
         .from(billActions)
-        .where(eq(billActions.billId, lookup.id))
+        .where(
+          and(
+            eq(billActions.billId, lookup.id),
+            or(
+              arrayOverlaps(billActions.classification, billProgressClassifications),
+              sql`${billActions.description} ~* '^introduced in (the )?(house|senate)'`,
+              sql`${billActions.description} ~* '^referred to.*committee'`
+            )
+          )
+        )
         .orderBy(...billActionOrder(bill[0].upstreamIds, "asc"))
-        .limit(101)
     ])
     const billAmendments = [
       ...structuredBillAmendments.map((amendment) => ({ ...amendment, recordType: "structured" as const })),
@@ -3384,8 +3406,8 @@ export class LegislationQueryService {
       amendments: billAmendments.slice(0, childLimit),
       bill: { ...bill[0], status: bill[0].status ?? openStatesBillStatus(statusActions) ?? null },
       latestAction: latestActions[0] ?? null,
-      progressActions: progressActions.slice(0, 100),
-      progressTruncated: progressActions.length > 100,
+      progressActions,
+      progressTruncated: false,
       documents: documents.slice(0, childLimit),
       nextChildCursor: truncated ? encodeOffset(childOffset + childLimit) : undefined,
       organizations: linkedOrganizations.slice(0, childLimit),

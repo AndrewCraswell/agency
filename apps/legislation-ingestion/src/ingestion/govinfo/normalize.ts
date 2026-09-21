@@ -8,6 +8,7 @@ import {
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { XMLParser } from "fast-xml-parser"
 import { z } from "zod"
+import { normalizeFederalAction } from "../federal-action.js"
 import { outgoingRelationProvenance } from "../relation-provenance.js"
 
 const collection = <T extends z.ZodType>(item: T) =>
@@ -36,7 +37,14 @@ const optionalNonemptyString = z.preprocess(
 )
 const sponsorSchema = z.object({ bioguideId: optionalString, fullName: z.string().min(1) }).passthrough()
 const actionSchema = z
-  .object({ actionDate: optionalString, actionTime: optionalString, text: optionalNonemptyString })
+  .object({
+    actionCode: optionalString,
+    actionDate: optionalString,
+    actionTime: optionalString,
+    sourceSystem: z.object({ code: optionalString, name: optionalString }).passthrough().optional(),
+    text: optionalNonemptyString,
+    type: optionalString
+  })
   .passthrough()
 const committeeSchema = z.object({ name: z.string().min(1) }).passthrough()
 const relationshipDetailsSchema = z.union([
@@ -192,20 +200,6 @@ function contentType(url: URL): string | undefined {
   }[extension ?? ""]
 }
 
-function documentFormatRank(url: URL): number {
-  if (url.pathname.toLowerCase().includes("/uslm/") && url.pathname.toLowerCase().endsWith(".xml")) {
-    return 0
-  }
-  return (
-    {
-      "application/pdf": 4,
-      "application/xml": 1,
-      "text/html": 3,
-      "text/plain": 2
-    }[contentType(url) ?? ""] ?? 5
-  )
-}
-
 function embeddedDocuments(
   textVersions: z.infer<typeof textVersionSchema>[] | undefined,
   packagePrefix: string
@@ -234,11 +228,7 @@ function embeddedDocuments(
         } as GovInfoDocumentInput
       ]
     })
-    return (
-      documents.sort(
-        (left, right) => documentFormatRank(new URL(left.sourceUrl)) - documentFormatRank(new URL(right.sourceUrl))
-      )[0] ?? []
-    )
+    return documents
   })
 }
 
@@ -279,12 +269,16 @@ export function normalizeGovInfoBillStatus(xml: string, context: GovInfoNormaliz
   const documents = [
     ...(context.documents ?? []),
     ...embeddedDocuments(source.textVersions?.item, packagePrefix)
-  ].filter(
-    (document, index, all) => all.findIndex((candidate) => candidate.versionCode === document.versionCode) === index
-  )
+  ].filter((document, index, all) => all.findIndex((candidate) => candidate.sourceUrl === document.sourceUrl) === index)
 
   return {
     actions: uniqueActions(source.actions?.item).map((action, index) => ({
+      ...normalizeFederalAction({
+        actionCode: action.actionCode,
+        sourceSystem: action.sourceSystem?.name ?? action.sourceSystem?.code,
+        text: action.text,
+        type: action.type
+      }),
       actionDate: action.actionDate,
       billId: canonicalBillId,
       description: action.text,

@@ -102,8 +102,17 @@ export function normalizeCongressHouseVote(input: unknown): CongressHouseVoteSna
     { member: (typeof source.members.results)[number]; sourceSequence: number }
   >()
   source.members.results.forEach((member, sourceSequence) => {
-    if (!membersByIdentity.has(member.bioguideID)) {
+    const existing = membersByIdentity.get(member.bioguideID)
+    if (existing === undefined) {
       membersByIdentity.set(member.bioguideID, { member, sourceSequence })
+      return
+    }
+    if (
+      existing.member.voteCast !== member.voteCast ||
+      existing.member.firstName !== member.firstName ||
+      existing.member.lastName !== member.lastName
+    ) {
+      throw new Error(`Conflicting House vote positions for ${member.bioguideID}`)
     }
   })
   const uniqueMembers = [...membersByIdentity.values()]

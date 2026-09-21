@@ -130,7 +130,7 @@ describe("GovInfo normalization", () => {
     ])
   })
 
-  it("selects one preferred official format for each legislative version", () => {
+  it("preserves every distinct official format for each legislative version", () => {
     const multipleFormats = fixture.replace(
       "<item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234enr/xml/BILLS-119hr1234enr.xml</url></item>",
       "<item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234enr/pdf/BILLS-119hr1234enr.pdf</url></item><item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234enr/xml/BILLS-119hr1234enr.xml</url></item><item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234enr/uslm/BILLS-119hr1234enr.xml</url></item>"
@@ -140,8 +140,34 @@ describe("GovInfo normalization", () => {
       sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
     })
 
-    expect(aggregate.documents).toHaveLength(2)
-    expect(aggregate.documents?.[0]?.document.sourceUrl).toContain("/uslm/")
+    expect(aggregate.documents).toHaveLength(4)
+    expect(aggregate.documents?.map(({ document }) => document.sourceUrl)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("/pdf/"),
+        expect.stringContaining("/xml/"),
+        expect.stringContaining("/uslm/")
+      ])
+    )
+  })
+
+  it("preserves federal lifecycle classifications from BILLSTATUS actions", () => {
+    const enacted = fixture.replace(
+      "</actions>",
+      [
+        "<item><actionDate>2025-07-04</actionDate><type>President</type><text>Signed by President.</text></item>",
+        "<item><actionDate>2025-07-04</actionDate><type>President</type><text>Became Public Law No: 119-21.</text></item>",
+        "</actions>"
+      ].join("")
+    )
+
+    const aggregate = normalizeGovInfoBillStatus(enacted, {
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
+    })
+
+    expect(aggregate.actions?.slice(-2)).toMatchObject([
+      { classification: ["executive-signature"] },
+      { classification: ["became-law"] }
+    ])
   })
 
   it("ignores sparse empty formats and action records while retaining the bill", () => {

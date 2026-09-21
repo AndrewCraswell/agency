@@ -93,8 +93,8 @@ describe("North Carolina hosted event cycle", () => {
     })
     expect(prepared.snapshots).toHaveLength(1)
     expect(prepared.snapshots[0]?.event.sourceId).toBe("10724")
-    expect(prepared.snapshots[0]?.sessionIds).toHaveLength(1)
-    expect(prepared.snapshots[0]?.event.sessionRelationsComplete).toBe(true)
+    expect(prepared.snapshots[0]?.sessionIds).toEqual([])
+    expect(prepared.snapshots[0]?.event.sessionRelationsComplete).toBe(false)
     await expect(
       prepareArchivedNcScraperEvents({
         store,

@@ -109,6 +109,26 @@ describe("Congress.gov normalization", () => {
     ])
   })
 
+  it("preserves structured lifecycle classifications and chamber context", () => {
+    const source = congressBillBundleSchema.parse(fixture)
+    source.actions = [
+      {
+        actionDate: "2025-07-04",
+        sourceSystem: { name: "House floor actions" },
+        text: "On passage Passed by the Yeas and Nays.",
+        type: "Floor"
+      },
+      { actionDate: "2025-07-04", text: "Signed by President.", type: "President" },
+      { actionDate: "2025-07-04", text: "Became Public Law No: 119-21.", type: "President" }
+    ]
+
+    expect(normalizeCongressBillBundle(source).actions).toMatchObject([
+      { chamber: "lower", classification: ["passage"] },
+      { classification: ["executive-signature"] },
+      { classification: ["became-law"] }
+    ])
+  })
+
   it("links structured committee identifiers without replacing source names", () => {
     const source = structuredClone(fixture) as Record<string, unknown>
     source.committees = [{ name: "House Administration", systemCode: "hsha00" }]

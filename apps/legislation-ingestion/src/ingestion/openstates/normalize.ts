@@ -314,6 +314,23 @@ function providerBillUrl(upstreamId: string | undefined): string | undefined {
   return upstreamId?.startsWith("ocd-bill/") ? `https://v3.openstates.org/bills/${upstreamId}` : undefined
 }
 
+function latestAbstract(abstracts: Array<{ abstract: string; date?: string }>): string | undefined {
+  return abstracts
+    .map((abstract, index) => {
+      const timestamp = abstract.date === undefined ? undefined : Date.parse(abstract.date)
+      return {
+        ...abstract,
+        index,
+        timestamp: timestamp === undefined || Number.isNaN(timestamp) ? undefined : timestamp
+      }
+    })
+    .toSorted(
+      (left, right) =>
+        (right.timestamp ?? Number.NEGATIVE_INFINITY) - (left.timestamp ?? Number.NEGATIVE_INFINITY) ||
+        right.index - left.index
+    )[0]?.abstract
+}
+
 function jurisdictionClassification(code: string): "district" | "state" | "territory" {
   const normalized = code.toLowerCase()
   if (normalized === "dc") {
@@ -670,7 +687,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         sourceUpdatedAt: source.updated_at === undefined ? undefined : new Date(source.updated_at),
         sourceUrl: billSourceUrl,
         subjects: source.subject,
-        summary: source.abstracts[0]?.abstract,
+        summary: latestAbstract(source.abstracts),
         title: source.title,
         upstreamIds: upstreamId === undefined ? {} : { openstates: upstreamId }
       },

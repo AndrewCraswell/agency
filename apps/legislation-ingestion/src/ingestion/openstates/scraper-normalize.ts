@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util"
-import { childId, legislativeSessionId } from "@repo/legislation-core/domain/identifiers"
+import { childId } from "@repo/legislation-core/domain/identifiers"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { northCarolinaCommitteeIdentifiers } from "./committee-identifiers.js"
@@ -57,8 +57,8 @@ export function normalizeNcScraperEvents(records: readonly unknown[], retrievedA
     )
     snapshot.event.sourceId = record.upstream_id
     snapshot.event.upstreamIds = { ncNoticeDocument: record.upstream_id }
-    snapshot.event.sessionRelationsComplete = true
-    snapshot.sessionIds = [legislativeSessionId("nc", "2025")]
+    snapshot.event.sessionRelationsComplete = false
+    snapshot.sessionIds = []
     const organizationReferences = Object.keys(northCarolinaCommitteeIdentifiers(record.sources))
     snapshot.event.organizationRelationsComplete = organizationReferences.length === 1
     snapshot.organizationReferences = organizationReferences.map((reference) => [reference])

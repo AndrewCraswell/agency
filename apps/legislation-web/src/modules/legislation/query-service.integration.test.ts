@@ -120,7 +120,7 @@ describe.skipIf(!pool)("legislation PostgreSQL queries", () => {
         ...(fixture.second
           ? [{ id: "second", label: fixture.second, state: "recorded", date: "2025-02-02", sourceUrl }]
           : []),
-        { id: "executive", label: "Governor", state: "current", date: "2025-02-03", sourceUrl }
+        { id: "executive", label: "Governor", state: "recorded", date: "2025-02-03", sourceUrl }
       ])
       const detail = await getBillDetailRead(database, { id }, "https://api.example.test")
       expect(detail.latestActionAt).toBe("2025-02-03T00:00:00.000Z")

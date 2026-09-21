@@ -131,4 +131,15 @@ describe("Senate vote normalization", () => {
 
     expect(normalizeSenateVote(pairedVote, reference, new Map()).positions[0]?.option).toBe("paired")
   })
+
+  it("rejects conflicting repeated member positions", () => {
+    const conflicting = xml.replace(
+      "</members>",
+      "<member><member_full>Murray (D-WA)</member_full><first_name>Patty</first_name><last_name>Murray</last_name><vote_cast>Nay</vote_cast><lis_member_id>S229</lis_member_id></member></members>"
+    )
+
+    expect(() => normalizeSenateVote(conflicting, reference, new Map())).toThrow(
+      "Conflicting Senate vote positions for S229"
+    )
+  })
 })

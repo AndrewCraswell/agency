@@ -626,6 +626,8 @@ describe("bill summary independence from child pages", () => {
               "2023-2024 Regular Session"
             ]
           ]
+        } else if (text.includes('"description" ~*')) {
+          rows = []
         } else if (text.includes('"classification" &&')) {
           rows = hasActions ? [[50, ["executive-veto"], "upper"]] : []
         } else if (text.includes('from "legislation"."bill_actions"') && text.includes("desc nulls last")) {
@@ -663,7 +665,9 @@ describe("bill summary independence from child pages", () => {
         expect(latestQuery?.text).not.toContain("offset")
         expect(latestQuery?.text).toContain("is not null")
         expect(latestQuery?.values).toEqual([billId, 1])
-        const statusQueries = statements.filter((statement) => statement.text.includes('"classification" &&'))
+        const statusQueries = statements.filter(
+          (statement) => statement.text.includes('"classification" &&') && !statement.text.includes('"description" ~*')
+        )
         expect(statusQueries).toHaveLength(status === null && provider === "openstates" ? 1 : 0)
         for (const statement of statusQueries) {
           expect(statement.text).not.toContain("offset")

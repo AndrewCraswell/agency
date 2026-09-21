@@ -51,21 +51,19 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
         chamber: z.string().nullish(),
         jurisdictionId: z.string().optional()
       }),
-      progressActions: z
-        .array(
-          z.object({
-            id: z.string(),
-            billId: z.literal(record.id),
-            ordinal: z.number(),
-            classification: z.array(z.string()),
-            chamber: z.string().nullish(),
-            actionDate: z.iso.date().nullish(),
-            actionAt: z.union([z.iso.datetime({ offset: true }), z.date()]).nullish(),
-            sourceUrl: sourceUrlSchema.nullish(),
-            description: z.string().nullish()
-          })
-        )
-        .max(100),
+      progressActions: z.array(
+        z.object({
+          id: z.string(),
+          billId: z.literal(record.id),
+          ordinal: z.number(),
+          classification: z.array(z.string()),
+          chamber: z.string().nullish(),
+          actionDate: z.iso.date().nullish(),
+          actionAt: z.union([z.iso.datetime({ offset: true }), z.date()]).nullish(),
+          sourceUrl: sourceUrlSchema.nullish(),
+          description: z.string().nullish()
+        })
+      ),
       progressTruncated: z.boolean()
     })
     .safeParse(data)
@@ -118,7 +116,9 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
       stageId = action.chamber === bill.chamber ? "first" : "second"
     }
     if (
-      classification.some((value) => ["executive-receipt", "executive-signature", "executive-veto"].includes(value))
+      classification.some((value) =>
+        ["executive-receipt", "executive-signature", "executive-veto", "became-law"].includes(value)
+      )
     ) {
       stageId = "executive"
     }
@@ -133,7 +133,21 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
     }
   }
   const latest = stages.find((stage) => stage.id === current)
-  if (latest && !progressTruncated && progressActions.every((action) => action.actionAt || action.actionDate)) {
+  const latestAction = progressActions.findLast((action) => {
+    const classification =
+      action.classification.length > 0 ? action.classification : inferClassificationFromDescription(action.description)
+    return classification.length > 0
+  })
+  const hasTerminalOutcome =
+    latestAction?.classification.some((value) =>
+      ["executive-signature", "executive-veto", "became-law"].includes(value)
+    ) === true
+  if (
+    latest &&
+    !hasTerminalOutcome &&
+    !progressTruncated &&
+    progressActions.every((action) => action.actionAt || action.actionDate)
+  ) {
     latest.state = "current"
   }
   return billProgressSchema.parse({

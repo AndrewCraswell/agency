@@ -54,6 +54,25 @@ beforeAll(async () => {
 })
 
 describe("Open States normalization", () => {
+  it("uses the most recent dated abstract instead of source array position", () => {
+    const result = normalizeOpenStatesBill(
+      {
+        abstracts: [
+          { abstract: "Older summary", date: "2025-01-01" },
+          { abstract: "Current summary", date: "2025-02-01" },
+          { abstract: "Undated summary" }
+        ],
+        identifier: "HB 1",
+        legislative_session: "2025",
+        sources: [{ url: "https://publisher.example/bill" }],
+        title: "Bill"
+      },
+      { jurisdictionCode: "nc", jurisdictionName: "North Carolina" }
+    )
+
+    expect(result.aggregate.bill.summary).toBe("Current summary")
+  })
+
   it.each([
     [[{ note: "02/14/24 - Introduced", date: "2024-02-14" }], "2024-02-14"],
     [[{ note: "Introduced", date: "2024" }], undefined],

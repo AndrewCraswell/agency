@@ -230,6 +230,39 @@ describe("run-owned presentation records", () => {
     expect(committee?.state).toBe("current")
   })
 
+  it("records enacted executive milestones without presenting them as current", () => {
+    const store = createResultStore()
+    const data = {
+      bill: { id: "bill:us:119:hr:1", title: "Enacted bill", chamber: "lower", jurisdictionId: "jurisdiction:us" },
+      progressActions: [
+        {
+          id: "signed",
+          billId: "bill:us:119:hr:1",
+          ordinal: 1,
+          classification: ["executive-signature"],
+          actionDate: "2025-07-04",
+          description: "Signed by President."
+        },
+        {
+          id: "law",
+          billId: "bill:us:119:hr:1",
+          ordinal: 2,
+          classification: ["became-law"],
+          actionDate: "2025-07-04",
+          description: "Became Public Law No: 119-21."
+        }
+      ],
+      progressTruncated: false
+    }
+    const page = store.create("owner", "get_bill", data, undefined, async () => data)
+    invariant(page)
+    const content = projectPresentationContents("get_bill", data, [], page).find(
+      (candidate) => candidate.kind === "bill-progress"
+    )
+    invariant(content?.kind === "bill-progress")
+    expect(content.stages.at(-1)).toMatchObject({ id: "executive", state: "recorded", date: "2025-07-04" })
+  })
+
   it("resolves only exact run-owned content and preserves source snapshots", () => {
     const contents = projectPresentationContents("get_bill_text", {}, [
       {
