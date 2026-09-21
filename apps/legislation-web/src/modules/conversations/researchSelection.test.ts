@@ -249,6 +249,26 @@ it("does not substitute another version when a known exact document has a servic
   expect(selections.recover("get_bill_text", input, "not_found")).toMatchObject({ action: "resolve_document" })
 })
 
+it("offers exact witnessed version metadata for a mismatched label without changing document ownership", () => {
+  const selections = createResearchSelections()
+  const returned = { ...document, versionCode: "Reported in House" }
+  selections.register({ document: returned }, "metadata")
+  const failed = { ...input, versionCode: "rh" }
+  expect(() => selections.validate("get_bill_text", failed, "invalid")).toThrow(
+    expect.objectContaining({ code: "invalid_request" })
+  )
+  expect(selections.recover("get_bill_text", failed, "invalid_request")).toMatchObject({
+    action: "select_returned",
+    documents: [returned]
+  })
+  expect(
+    selections.recover("get_bill_text", { ...failed, id: "bill:us:118:hr:9619" }, "invalid_request")
+  ).toMatchObject({ action: "resolve_document" })
+  expect(() =>
+    selections.validate("get_bill_text", { ...failed, versionCode: returned.versionCode }, "correct")
+  ).not.toThrow()
+})
+
 it("bounds registry entries and bytes atomically without discarding earlier valid selections", () => {
   const selections = createResearchSelections()
   const returned = page()

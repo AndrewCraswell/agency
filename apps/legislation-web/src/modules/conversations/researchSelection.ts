@@ -204,6 +204,21 @@ export function createResearchSelections() {
                 "No unique returned continuation matches this request. Make at most one recovery call: restart this same tool without cursor or childCursor, retaining every other input. Do not reconstruct a token or switch documents or versions."
             }
     } else {
+      const knownDocument = selection?.ids.length === 1 ? documents.get(selection.ids[0] ?? "") : undefined
+      if (
+        name === "get_bill_text" &&
+        knownDocument?.versionCode &&
+        knownDocument.billId === selection?.billId &&
+        selection.versionCode &&
+        knownDocument.versionCode !== selection.versionCode
+      ) {
+        return {
+          action: "select_returned",
+          instruction:
+            "This exact returned document belongs to the requested bill but its versionCode differs from the supplied value. Verify that this is the intended version, then copy this document ID and its returned versionCode exactly. Do not substitute another document or infer that a shorthand version label is equivalent. If this is not the intended version, resolve that version explicitly before reading.",
+          documents: [knownDocument]
+        }
+      }
       const candidates =
         name === "get_bill_text" && selection?.ids.length === 1 && !documents.has(selection.ids[0] ?? "")
           ? [...documents.values()].filter(
