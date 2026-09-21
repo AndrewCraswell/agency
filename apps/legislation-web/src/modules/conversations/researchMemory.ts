@@ -74,6 +74,19 @@ function hasContinuation(value: JsonValue): boolean {
     : false
 }
 
+function omitObservationData(turns: ResearchTurn[]) {
+  for (const turn of turns) {
+    for (const observation of turn.observations) {
+      if (observation.data !== undefined) {
+        observation.data = undefined
+        observation.dataOmitted = true
+        return true
+      }
+    }
+  }
+  return false
+}
+
 export function createResearchTurn(sessionKey: string, sessionId: string, goal: string, now = Date.now) {
   const snapshot: ResearchTurn = {
     kind: "research-turn",
@@ -100,9 +113,8 @@ export function createResearchTurn(sessionKey: string, sessionId: string, goal: 
         dataOmitted: false
       })
       snapshot.observations.push(retained)
-      if (bytes(snapshot) > researchMemoryLimits.turnBytes) {
-        retained.data = undefined
-        retained.dataOmitted = data !== undefined
+      while (bytes(snapshot) > researchMemoryLimits.turnBytes && omitObservationData([snapshot])) {
+        snapshot.omitted++
       }
       while (snapshot.observations.length > 24 || bytes(snapshot) > researchMemoryLimits.turnBytes) {
         const oldest = snapshot.observations[0]
@@ -140,7 +152,6 @@ export async function restoreResearchMemory(
     ids.slice(-researchMemoryLimits.turns).map((id) => persistence.read(owner.sessionKey, id))
   )
   const turns: ResearchTurn[] = []
-  let contextBytes = 0
   for (const value of saved.toReversed()) {
     if (value === undefined || value === null) {
       warnings.add("Some earlier research has expired or is unavailable. Retrieve its evidence again.")
@@ -151,20 +162,22 @@ export async function restoreResearchMemory(
       warnings.add("Some earlier research has expired or is unavailable. Retrieve its evidence again.")
       continue
     }
-    if (
-      bytes(turn) > researchMemoryLimits.turnBytes ||
-      contextBytes + bytes(turn) > researchMemoryLimits.contextBytes
-    ) {
+    if (bytes(turn) > researchMemoryLimits.turnBytes) {
       warnings.add("Earlier research exceeded the context budget. Retrieve omitted evidence before relying on it.")
       continue
     }
-    contextBytes += bytes(turn)
     turns.unshift(turn)
   }
   let restored = presentResearchMemory(turns, warnings, previousReferences)
   while (bytes(restored.message) > researchMemoryLimits.contextBytes && turns.length > 0) {
-    turns.shift()
-    warnings.add("Earlier research exceeded the context budget. Retrieve omitted evidence before relying on it.")
+    if (omitObservationData(turns)) {
+      warnings.add(
+        "Raw tool data exceeded the context budget. Retained source evidence remains available; reread omitted details when needed."
+      )
+    } else {
+      turns.shift()
+      warnings.add("Earlier research exceeded the context budget. Retrieve omitted evidence before relying on it.")
+    }
     restored = presentResearchMemory(turns, warnings, previousReferences)
   }
   return { ...restored, message: history.length > 0 ? restored.message : undefined }

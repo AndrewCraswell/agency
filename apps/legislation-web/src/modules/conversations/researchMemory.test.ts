@@ -315,6 +315,51 @@ describe("server-owned research memory", () => {
     expect(fromSavedMarker.evidence).toEqual([{ ...source, citationRef: "e9007199254740994" }])
   })
 
+  it("discards raw payloads before losing a previously retrieved source", async () => {
+    const { persistence, saved } = persistenceFixture()
+    const turn = createResearchTurn(owner.sessionKey, owner.sessionId, "Compare sources", () => 0)
+    turn.record({
+      tool: "read_web_page",
+      input: { url: evidence.sourceUrl },
+      data: { text: "x".repeat(80000) },
+      evidence: [evidence]
+    })
+    turn.record({
+      tool: "get_bill_text",
+      input: { id: evidence.billId },
+      evidence: [{ ...evidence, id: "later-source", content: { state: "available", quote: "y".repeat(20000) } }]
+    })
+    await turn.save(runId, false, persistence)
+    const restored = await restoreResearchMemory(owner, history, [], persistence, () => 1)
+    expect(restored.evidence.map((source) => source.id)).toEqual(expect.arrayContaining([evidence.id, "later-source"]))
+    expect(JSON.stringify(restored.message)).toContain("A person may bring a civil action.")
+    expect(saved.get(runId)).toMatchObject({
+      observations: [expect.objectContaining({ dataOmitted: true }), expect.anything()]
+    })
+  })
+
+  it("keeps sources from earlier turns when raw payloads fill the context budget", async () => {
+    const { persistence } = persistenceFixture()
+    const messages: { role: "assistant"; researchRunId: string }[] = []
+    for (let index = 0; index < 3; index++) {
+      const id = crypto.randomUUID()
+      const turn = createResearchTurn(owner.sessionKey, owner.sessionId, "Compare sources", () => 0)
+      turn.record({
+        tool: "read_web_page",
+        input: { url: evidence.sourceUrl },
+        data: { text: "x".repeat(80000) },
+        evidence: [{ ...evidence, id: `source-${index}` }]
+      })
+      await turn.save(id, false, persistence)
+      messages.push({ role: "assistant", researchRunId: id })
+    }
+    const restored = await restoreResearchMemory(owner, messages, [], persistence, () => 1)
+    expect(restored.evidence.map((source) => source.id)).toEqual(
+      expect.arrayContaining(["source-0", "source-1", "source-2"])
+    )
+    expect(Buffer.byteLength(JSON.stringify(restored.message))).toBeLessThanOrEqual(researchMemoryLimits.contextBytes)
+  })
+
   it("bounds serialized storage and actual model context and marks omitted observations", async () => {
     const { persistence, saved } = persistenceFixture()
     const turn = createResearchTurn(owner.sessionKey, owner.sessionId, "Question".repeat(1000), () => 0)
