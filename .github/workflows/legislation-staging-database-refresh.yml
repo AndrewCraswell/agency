@@ -1,0 +1,113 @@
+name: Legislation staging database refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type REFRESH STAGING to authorize destructive replacement of staging data
+        required: true
+        type: string
+      copy_engine:
+        description: PostgreSQL copy engine
+        required: true
+        default: fallback
+        type: choice
+        options:
+          - fallback
+          - direct
+          - pg-dump
+
+permissions:
+  contents: read
+  issues: read
+
+concurrency:
+  group: legislation-staging-database-mutation
+  cancel-in-progress: false
+
+env:
+  PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  RAILWAY_CALLER: github-actions:legislation-staging-database-refresh
+  RAILWAY_AGENT_SESSION: github-actions-legislation-staging-database-refresh
+  RAILWAY_PROJECT_ID: 2378281c-c1c7-4530-8525-5f313741d19b
+  RAILWAY_ENVIRONMENT_ID: cce97dac-1cd4-4ccc-ad9c-bd08b8b13efd
+  LEGISLATION_WEB_SERVICE_ID: 786fbca7-8798-4357-9b45-f0ba092a9750
+  LEGISLATION_MCP_SERVICE_ID: eb6deb23-26a0-41e7-8aab-f06c4e1f0b8b
+  LEGISLATION_WEB_STAGING_URL: https://legislation-web-staging.up.railway.app
+  LEGISLATION_MCP_STAGING_URL: https://legislation-mcp-staging.up.railway.app
+
+jobs:
+  refresh:
+    name: Refresh staging databases
+    if: github.ref_name == 'main' && inputs.confirmation == 'REFRESH STAGING'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install protected refresh dependencies
+        run: |
+          npm install --global pnpm@11.9.0 @railway/cli@5.54.1 --registry=https://registry.npmjs.org/
+          pnpm install --frozen-lockfile
+
+      - name: Verify protected refresh configuration
+        env:
+          LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL }}
+          LEGISLATION_STAGING_PASSAGE_SEARCH_DATABASE_URL:
+            ${{ secrets.LEGISLATION_STAGING_PASSAGE_SEARCH_DATABASE_URL }}
+          LEGISLATION_STAGING_PRIMARY_DATABASE_URL: ${{ secrets.LEGISLATION_STAGING_PRIMARY_DATABASE_URL }}
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          SENTRY_STAGING_AUTH_TOKEN: ${{ secrets.SENTRY_STAGING_AUTH_TOKEN }}
+          STAGING_SCHEMA_LEASE_ISSUE: ${{ vars.LEGISLATION_STAGING_SCHEMA_LEASE_ISSUE }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          missing=0
+          for name in \
+            LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL \
+            LEGISLATION_STAGING_PASSAGE_SEARCH_DATABASE_URL \
+            LEGISLATION_STAGING_PRIMARY_DATABASE_URL \
+            LEGISLATION_SMOKE_BILL_ID \
+            RAILWAY_TOKEN \
+            SENTRY_STAGING_AUTH_TOKEN \
+            STAGING_SCHEMA_LEASE_ISSUE \
+            WORKOS_MCP_SMOKE_CLIENT_ID \
+            WORKOS_MCP_SMOKE_CLIENT_SECRET
+          do
+            if [ -z "${!name}" ]; then
+              echo "::error::The protected staging environment requires ${name}."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Refresh staging databases
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          LEGISLATION_DEPLOYMENT_COMMIT_SHA: ${{ github.sha }}
+          LEGISLATION_MCP_SMOKE_BASE_URL: ${{ env.LEGISLATION_MCP_STAGING_URL }}
+          LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL }}
+          LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          STAGING_SCHEMA_LEASE_ISSUE: ${{ vars.LEGISLATION_STAGING_SCHEMA_LEASE_ISSUE }}
+          WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
+          WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
+        run: |
+          pnpm --filter legislation-ingestion refresh:staging -- \
+            --target-primary "${{ secrets.LEGISLATION_STAGING_PRIMARY_DATABASE_URL }}" \
+            --target-passage-search "${{ secrets.LEGISLATION_STAGING_PASSAGE_SEARCH_DATABASE_URL }}" \
+            --target-web "$LEGISLATION_WEB_STAGING_URL" \
+            --target-mcp "$LEGISLATION_MCP_STAGING_URL" \
+            --railway-project "$RAILWAY_PROJECT_ID" \
+            --railway-environment "$RAILWAY_ENVIRONMENT_ID" \
+            --web-service "$LEGISLATION_WEB_SERVICE_ID" \
+            --web-scale us-west2=1 \
+            --mcp-service "$LEGISLATION_MCP_SERVICE_ID" \
+            --mcp-scale us-west2=1 \
+            --copy-engine "${{ inputs.copy_engine }}" \
+            --apply

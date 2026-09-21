@@ -13,14 +13,15 @@ Required environment variables:
 | `WORKOS_ISSUER`                | Credential-free HTTPS issuer URL                                     |
 | `WORKOS_JWKS_URL`              | Credential-free HTTPS JWKS URL                                       |
 | `WORKOS_MCP_AUDIENCE`          | Public HTTPS resource URL ending in `/mcp`                           |
+| `WORKOS_MCP_M2M_CLIENT_ID`     | Optional dedicated incoming staging smoke client                     |
 | `MCP_API_BASE_URL`             | Fixed HTTPS API origin, independently configured from the MCP origin |
 | `WORKOS_API_AUDIENCE`          | API audience, distinct from the MCP resource                         |
 | `WORKOS_API_M2M_CLIENT_ID`     | Dedicated outbound API client                                        |
 | `WORKOS_API_M2M_CLIENT_SECRET` | Dedicated outbound API credential                                    |
 
-Optional: `PORT` (3000), `MCP_API_TIMEOUT_MS` (25000, at most 30000), `LEGISLATION_LEGAL_API_ORGANIZATIONS`
-(comma-separated organization IDs; empty disables protected legal tools). Invalid configuration fails startup without
-logging values. Supply secrets through the runtime environment, never build args.
+Optional: `PORT` (3000), `MCP_API_TIMEOUT_MS` (25000, at most 30000), `WORKOS_MCP_M2M_CLIENT_ID`,
+`LEGISLATION_LEGAL_API_ORGANIZATIONS` (comma-separated organization IDs; empty disables protected legal tools). Invalid
+configuration fails startup without logging values. Supply secrets through the runtime environment, never build args.
 
 Incoming tokens authorize only the MCP audience. The caller token is never forwarded. Legal calls additionally verify
 the independently acquired API token's audience, user and organization against the incoming identity. A shared service

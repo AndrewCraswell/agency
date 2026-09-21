@@ -24,11 +24,11 @@ function create(fetch = vi.fn<typeof globalThis.fetch>()) {
   applications.push(app)
   return app
 }
-async function token(audience: string) {
+async function token(audience: string, subject = "test-client") {
   return await new SignJWT({})
     .setProtectedHeader({ alg: "RS256" })
     .setIssuer(environment.WORKOS_ISSUER)
-    .setSubject("test-client")
+    .setSubject(subject)
     .setAudience(audience)
     .setIssuedAt()
     .setExpirationTime("5m")
@@ -102,6 +102,28 @@ describe("standalone MCP composition", () => {
         "https://mcp.example.test/.well-known/oauth-protected-resource/mcp"
       )
     }
+  })
+  it("accepts only the configured staging smoke client on the API audience", async () => {
+    const clientId = "dedicated-mcp-smoke-client"
+    const app = createMcpApplication(
+      { ...environment, WORKOS_MCP_M2M_CLIENT_ID: clientId },
+      { keys: { m2m: async () => keys.publicKey }, fetch: vi.fn<typeof globalThis.fetch>() }
+    )
+    applications.push(app)
+
+    const accepted = await app.handle(request(await token(environment.WORKOS_API_AUDIENCE, clientId)))
+    expect(accepted.status).toBe(200)
+
+    const rejected = await app.handle(request(await token(environment.WORKOS_API_AUDIENCE, "other-client")))
+    expect(rejected.status).toBe(401)
+  })
+  it("rejects reuse of the outbound API client as the staging smoke client", () => {
+    expect(() =>
+      createMcpApplication({
+        ...environment,
+        WORKOS_MCP_M2M_CLIENT_ID: environment.WORKOS_API_M2M_CLIENT_ID
+      })
+    ).toThrow("Invalid MCP configuration")
   })
   it("accepts MCP-audience tokens through the native HTTP transport", async () => {
     const response = await create().handle(request(await token(environment.WORKOS_MCP_AUDIENCE)))
