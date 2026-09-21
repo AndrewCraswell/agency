@@ -127,7 +127,7 @@ describe("conversation export", () => {
     expect(exported).toMatchObject({
       responseOutcomes: [{ status: "completed", hasAnswer: true, finishReason: "stop" }],
       messages: [
-        { metadata: { responseObservation: { isAbort: true } }, parts: [{ text: "A complete delivered answer." }, {}] }
+        { metadata: { responseObservation: { isAbort: true } }, parts: [{ text: "A complete delivered answer." }] }
       ]
     })
   })
@@ -259,13 +259,11 @@ describe("conversation export", () => {
         {
           parts: [
             { type: "text", text: expected },
-            { type: "source-url", url: expected },
-            { input: { source: expected }, output: { source: expected } },
-            { errorText: expected }
+            { type: "source-url", url: expected }
           ]
         }
       ],
-      toolCalls: [{ input: { source: expected }, output: { source: expected } }, { error: expected }],
+      toolCalls: [{ input: { source: expected }, output: {}, outputOmitted: true }, { error: expected }],
       clarificationAnswers: { source: expected }
     })
     expect(JSON.stringify(exported)).not.toContain("synthetic")
@@ -313,7 +311,7 @@ describe("conversation export", () => {
     expect(JSON.stringify(exported)).not.toContain("dXNlcjpwYXNz")
   })
 
-  it("preserves text, citations, tool inputs, outputs, errors and pending calls", () => {
+  it("preserves text, citations, tool inputs, errors and pending calls without duplicate tool bodies", () => {
     const messages: UIMessage[] = [
       { id: "question", role: "user", parts: [{ type: "text", text: "Investigate school AI policy" }] },
       {
@@ -354,19 +352,136 @@ describe("conversation export", () => {
       sessionId: "conversation-1",
       interactionStatus: "error",
       replayId: null,
-      messages,
+      messages: [messages[0], { id: "answer", parts: messages[1]?.parts.slice(0, 2) }],
       toolCalls: [
         {
           toolCallId: "call-1",
           messageId: "answer",
           input: { cursor: "page-2" },
-          output: { data: { bills: [{ id: "bill-1" }] } }
+          output: {},
+          outputOmitted: true
         },
         { toolCallId: "call-2", error: "Request failed: reference-1", durationMs: null },
         { toolCallId: "call-3", state: "input-available", output: null }
       ],
       capture: { toolCallCount: 3 }
     })
+  })
+
+  it("omits large result and presentation bodies while retaining diagnostic identities", () => {
+    const body = "Large source passage ".repeat(100_000)
+    const messages: UIMessage[] = [
+      {
+        id: "answer",
+        role: "assistant",
+        parts: [
+          { type: "text", text: "The answer." },
+          {
+            type: "dynamic-tool",
+            toolName: "get_bill",
+            toolCallId: "call-1",
+            state: "output-available",
+            input: { id: "bill-1" },
+            output: {
+              data: { text: body },
+              resultSet: {
+                id: "result-1",
+                items: [{ id: "bill-1", kind: "bill", title: "A bill", text: body }],
+                warnings: ["Partial coverage"],
+                hasNextPage: true
+              }
+            }
+          },
+          { type: "data-presentation", data: { state: "ready", blockId: "block-1", content: { text: body } } }
+        ]
+      }
+    ]
+    const exported = createConversationExport({ conversationId: "session", messages, status: "ready" })
+    expect(exported).toMatchObject({
+      messages: [
+        {
+          parts: [
+            { type: "text", text: "The answer." },
+            { type: "data-presentation", data: { state: "ready", blockId: "block-1" } }
+          ]
+        }
+      ],
+      toolCalls: [
+        {
+          outputOmitted: true,
+          output: {
+            resultSet: {
+              id: "result-1",
+              items: [{ id: "bill-1", kind: "bill", title: "A bill" }],
+              warnings: ["Partial coverage"],
+              hasNextPage: true
+            }
+          }
+        }
+      ],
+      capture: { detail: "diagnostic-summary" }
+    })
+    expect(JSON.stringify(exported).length).toBeLessThan(10_000)
+    expect(JSON.stringify(exported)).not.toContain("Large source passage")
+    expect(JSON.stringify(messages)).toContain(body)
+  })
+
+  it("deduplicates source pointers within each message without copying passages or losing error flags", () => {
+    const source = {
+      id: "source-1",
+      title: "Source",
+      origin: "web",
+      sourceUrl: "https://example.org/bill?token=private",
+      content: { state: "available", quote: "Large passage that should not be exported", truncated: true }
+    }
+    const exported = createConversationExport({
+      conversationId: "session",
+      status: "ready",
+      messages: [
+        {
+          id: "answer",
+          role: "assistant",
+          parts: [
+            { type: "data-research-context", data: { evidence: [source] } },
+            {
+              type: "dynamic-tool",
+              toolName: "get_bill",
+              toolCallId: "call-1",
+              state: "output-available",
+              input: {},
+              output: {
+                evidence: [source],
+                success: false,
+                error: { code: "unavailable", message: "Source unavailable", rawBody: "omit this" }
+              }
+            }
+          ]
+        }
+      ]
+    })
+    expect(exported).toMatchObject({
+      evidence: [
+        {
+          messageId: "answer",
+          id: "source-1",
+          sourceUrl: "https://example.org/bill",
+          content: { state: "available", truncated: true }
+        }
+      ],
+      toolCalls: [
+        {
+          output: {
+            evidence: [{ id: "source-1" }],
+            success: false,
+            error: { code: "unavailable", message: "Source unavailable" }
+          }
+        }
+      ]
+    })
+    expect(exported).toHaveProperty("evidence", [expect.objectContaining({ id: "source-1" })])
+    expect(JSON.stringify(exported)).not.toContain("Large passage")
+    expect(JSON.stringify(exported)).not.toContain("private")
+    expect(JSON.stringify(exported)).not.toContain("rawBody")
   })
 
   it("omits session credentials and reasoning without mutating the live conversation", () => {

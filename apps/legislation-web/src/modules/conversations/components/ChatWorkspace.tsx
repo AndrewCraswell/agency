@@ -136,7 +136,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
           null,
           2
         )
-        setExportTurns((turns) => [...turns, { id: crypto.randomUUID(), afterMessageId, json }])
+        setExportTurns([{ id: crypto.randomUUID(), afterMessageId, json }])
         setExportStatus(undefined)
         setDraft([])
       } catch (error) {

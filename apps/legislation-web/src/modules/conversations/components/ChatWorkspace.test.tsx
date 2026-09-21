@@ -341,6 +341,12 @@ describe("ChatWorkspace", () => {
       expect(followUp).not.toContain("rostra-conversation")
       expect(followUp).not.toContain("/export")
       expect(followUp).not.toContain("Conversation export")
+      await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
+      await user.type(input, "/export")
+      await user.keyboard("{Enter}")
+      expect(screen.getAllByRole("region", { name: "Conversation export" })).toHaveLength(1)
+      expect(renderedExport()).toHaveProperty("capture.detail", "diagnostic-summary")
+      expect(fetchMock).toHaveBeenCalledTimes(2)
     },
     interactionTestTimeoutMs
   )

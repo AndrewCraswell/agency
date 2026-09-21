@@ -14,12 +14,19 @@ diagnostic region from its conversation input.
 
 The snapshot includes:
 
-- Browser-retained user and assistant messages, citations, presentation data, and tool parts.
+- Browser-retained user and assistant text, source links, clarification requests, and compact presentation states.
+  Tool parts and measurements are not duplicated inside the transcript. Full presentation payloads are omitted.
 - Public conversation and telemetry session IDs, run and trace metadata, the active replay ID when available, and
   clarification answers.
   New response metadata stores a structured `correlation` object with separate server/browser request IDs, run ID,
   Sentry/Langfuse trace IDs and the parent request trace when observed. These IDs do not establish vendor ingestion.
-- Tool names, inputs, outputs, errors, and states that remain in the browser conversation.
+- Tool names, exact inputs, errors, states, and compact output summaries. Successful result bodies (bill text,
+  passages, search snippets, nested entities, and presentation options) are omitted. Summaries retain result-set and
+  record identities, status flags, available counts, pagination flags, and warnings. `outputOmitted` explicitly marks
+  calls whose original output was excluded; a missing summary does not establish an empty or successful result.
+- Evidence pointers deduplicated by message and evidence ID, with source URLs, version/locator metadata, and content
+  availability when provided. Quoted passages are omitted. Use the run and trace IDs for source-level investigation;
+  this compact export is not sufficient by itself to verify legal claims or replay the complete research response.
 - Tool measurements when delivered by the server, matched by message/run and tool-call identity. `durationMs` measures
   the whole wrapper; `dependencyDurationMs` measures the dependency invocation, not pure database time. `resultBytes`
   is the enriched JSON projection size. Raw bytes measure prepared structured content, not full database rows;
@@ -27,7 +34,8 @@ The snapshot includes:
   byte counts, not proof of successful delivery. The measurement also records result count, continuation availability,
   timestamps, success/error and failure code. Attempt count covers wrapper attempts only;
   hidden dependency retries, model usage and cost are not inferred. Missing measurements remain null.
-- A format name, schema version, export time, conversation status, and capture limitations.
+- A format name, schema version, export time, conversation status, and capture limitations. `capture.detail` is
+  `diagnostic-summary`, distinguishing this projection from older full browser snapshots.
 - `interactionStatus` describes whether the composer can accept input; `ready` does not assert a completed answer.
   `responseOutcomes` separately records each assistant message as completed, clarification, partial, cancelled,
   exhausted, failed, or unknown, with the observed finish reason, substantive-answer presence, and pending/failed tool

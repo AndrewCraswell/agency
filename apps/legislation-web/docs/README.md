@@ -38,7 +38,7 @@ including `@repo/legislation-diffing`; it does not verify unrelated workspaces o
 - [Notification experience](product/notification-experience.md)
 - [Organization features](product/organization-features.md)
 - [Pricing](product/pricing.md) and [pricing research](research/pricing.md)
-- [Conversation export and copyable JSON snapshots](operations/conversation-export.md)
+- [Compact conversation diagnostics and copyable JSON exports](operations/conversation-export.md)
 - [Conversation research lifecycle and memory](engineering/conversation-research-memory.md)
 - [Canonical bill identity and citation titles](engineering/conversation-bill-identity.md)
 - [Exact research selections](engineering/conversation-research-selection.md)
