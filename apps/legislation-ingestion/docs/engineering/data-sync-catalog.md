@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-This is the canonical inventory of data available from Open States, Congress.gov, and GovInfo and the subset normalized
+This is the canonical inventory of data available from Open States, Congress.gov, Senate.gov, and GovInfo and the subset normalized
 into the legislation database. It is intended to support engineering decisions, capability comparisons, and later
 public documentation.
 
@@ -283,6 +283,25 @@ available through `legislation-backfill` and CLI services.
 | Nominations | `/nomination` list/detail/nominee/actions/committees/hearings | Presidential nominations, nominees, positions, actions, committees, hearings | Not ingested. | No task. |
 | CRS reports | `/crsreport` list/detail | CRS report title, summary, authors, topics, versions, formats, related material | Not ingested. | No task. |
 | Treaties | `/treaty` list/detail/actions/committees | Treaty identity, countries, topics, transmittal, resolution text, actions and committees | Not ingested. | No task. |
+
+## Senate.gov
+
+The Senate publishes roll calls separately from Congress.gov's House-only vote API. The recurring Senate worker reads
+the official session vote menu and each new vote's XML record. It stores the publisher XML, normalizes roll-call
+metadata and member positions, and maps current Senate LIS member IDs to canonical Congress people through the official
+Senate member directory's Bioguide IDs. Historical positions whose LIS identity is absent from the current directory
+remain source-identified instead of being joined by name.
+
+| Source field | Source type | Ingestion | Canonical destination or disposition | Trigger.dev task and cadence |
+| --- | --- | --- | --- | --- |
+| Vote menu `vote_number` | string integer | Ingested | Session-scoped checkpoint and canonical vote identity. | `senate-votes-sync`, hourly. |
+| Detail `vote_date` | publisher-local date/time | Partial | Exact calendar date is stored in `votes.held_date`; no timezone is invented. | `senate-votes-sync`, hourly. |
+| Detail question/document text | string | Ingested | `votes.motion`, `votes.question`, and `votes.vote_type`. | `senate-votes-sync`, hourly. |
+| Detail result/majority | string | Ingested | `votes.result` and `votes.requirement`. | `senate-votes-sync`, hourly. |
+| Detail document/amendment | object | Partial | Canonical bill and amendment links when the published identifier is supported and already stored. | `senate-votes-sync`, hourly. |
+| Member `lis_member_id` | string | Ingested | Stable position source identity. | `senate-votes-sync`, hourly. |
+| Current directory `bioguideId` | string | Ingested | Maps the LIS identity to a canonical Congress person. | `senate-votes-sync`, hourly. |
+| Member `vote_cast` | string | Ingested/derived | Normalized `vote_positions.option`; totals are derived from positions. | `senate-votes-sync`, hourly. |
 
 ### Congress.gov bill field catalog
 
@@ -642,8 +661,8 @@ the legislative content field families and explicitly distinguish what the curre
 | Text format name/type | strings | Partial | Content type is derived from chosen URL extension/signature. | `govinfo-bill-status-sync`, daily. |
 | `laws.item[].number` | string | Artifact only | Public/private law citation is not modeled. | `govinfo-bill-status-sync`, daily. |
 | `laws.item[].type` | string | Artifact only | Public/private law type is not modeled. | `govinfo-bill-status-sync`, daily. |
-| `recordedVotes.recordedVote[].chamber` | string | Artifact only | House vote job provides member-level current coverage; Senate structured positions are unavailable. | `govinfo-bill-status-sync`, daily. |
-| Recorded vote Congress/date/fullActionName/rollNumber/sessionNumber/url | scalar fields | Artifact only | BILLSTATUS recorded-vote references are not normalized. | `govinfo-bill-status-sync`, daily. |
+| `recordedVotes.recordedVote[].chamber` | string | Artifact only | Chamber-specific House and Senate jobs provide member-level current coverage. | `govinfo-bill-status-sync`, daily. |
+| Recorded vote Congress/date/fullActionName/rollNumber/sessionNumber/url | scalar fields | Artifact only | BILLSTATUS references are not normalized because the official House and Senate vote feeds provide the canonical records and positions. | `govinfo-bill-status-sync`, daily. |
 | `calendarNumbers.item[].calendar` | string | Artifact only | Calendar placement is not modeled. | `govinfo-bill-status-sync`, daily. |
 | `calendarNumbers.item[].number` | string | Artifact only | Calendar placement is not modeled. | `govinfo-bill-status-sync`, daily. |
 | `cboCostEstimates.item[].rptPubDate` | date-time string | Artifact only | CBO cost estimates are not modeled. | `govinfo-bill-status-sync`, daily. |
@@ -675,4 +694,4 @@ The catalog exposes several high-value gaps that should remain visible in future
 
 Any change to a provider parser, canonical mapping, source scope, Trigger.dev task, schedule, or checkpoint must update
 this catalog in the same commit. Recheck the three official specifications before publishing an external capability
-comparison because all three providers add fields and endpoints over time.
+comparison because all four providers add fields and endpoints over time.

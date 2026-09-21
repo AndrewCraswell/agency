@@ -153,7 +153,7 @@ describe("RepresentativeLookup", () => {
     const localStorageWrite = vi.spyOn(Storage.prototype, "setItem")
     const view = render(<RepresentativeLookup />)
     await startLookup()
-    expect(fetcher).toHaveBeenCalledExactlyOnceWith("/api/dev/representatives", {
+    expect(fetcher).toHaveBeenCalledExactlyOnceWith("/api/representatives", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ latitude: 47.67, longitude: -122.12 }),

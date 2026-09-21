@@ -4,6 +4,7 @@ import { loadConfig } from "../../config/config.js"
 import {
   createCongressSynchronizationIdentity,
   createOpenStatesSynchronizationIdentity,
+  createSenateSynchronizationIdentity,
   formatSynchronizationIdentity,
   type SynchronizationIdentity
 } from "../../trigger/identities.js"
@@ -37,6 +38,7 @@ describe("executeSynchronization", () => {
         "congress-entities": async () => routeResult(routeCalls, "congress-entities"),
         "congress-events": async () => routeResult(routeCalls, "congress-events"),
         "congress-house-votes": async () => routeResult(routeCalls, "congress-house-votes"),
+        "senate-votes": async () => routeResult(routeCalls, "senate-votes"),
         "openstates-bills": async () => routeResult(routeCalls, "openstates-bills"),
         "openstates-entities": async () => routeResult(routeCalls, "openstates-entities"),
         "openstates-events": async () => routeResult(routeCalls, "openstates-events")
@@ -97,6 +99,12 @@ describe("executeSynchronization", () => {
         operation: "committee-reports-sync",
         route: "congress-committee-reports",
         scopeKey: "committee-reports:119"
+      },
+      {
+        identity: createSenateSynchronizationIdentity(119),
+        operation: "votes-sync",
+        route: "senate-votes",
+        scopeKey: "votes:119"
       }
     ]
 

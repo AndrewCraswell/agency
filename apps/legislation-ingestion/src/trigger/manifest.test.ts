@@ -14,12 +14,14 @@ describe("synchronization schedule manifest", () => {
     const openStatesSchedules = first.filter((schedule) => schedule.identity.provider === "openstates")
     const congressSchedules = first.filter((schedule) => schedule.identity.provider === "congress")
     const govInfoSchedules = first.filter((schedule) => schedule.identity.provider === "govinfo")
+    const senateSchedules = first.filter((schedule) => schedule.identity.provider === "senate")
 
     expect(first).toEqual(second)
-    expect(first).toHaveLength(163)
+    expect(first).toHaveLength(164)
     expect(openStatesSchedules).toHaveLength(156)
     expect(congressSchedules).toHaveLength(6)
     expect(govInfoSchedules).toHaveLength(1)
+    expect(senateSchedules).toHaveLength(1)
     expect(
       first.every(
         (schedule) =>
@@ -29,8 +31,8 @@ describe("synchronization schedule manifest", () => {
           schedule.timezone === "UTC"
       )
     ).toBe(true)
-    expect(new Set(first.map((schedule) => schedule.externalId)).size).toBe(163)
-    expect(new Set(first.map((schedule) => schedule.deduplicationKey)).size).toBe(163)
+    expect(new Set(first.map((schedule) => schedule.externalId)).size).toBe(164)
+    expect(new Set(first.map((schedule) => schedule.deduplicationKey)).size).toBe(164)
 
     for (const domain of ["bills", "entities", "events"] as const) {
       const schedules = openStatesSchedules.filter((schedule) => schedule.identity.domain === domain)
@@ -74,6 +76,10 @@ describe("synchronization schedule manifest", () => {
     expect(schedule(manifest, "congress:house-votes:120").cron).toBe("35 * * * *")
     expect(schedule(manifest, "congress:committee-reports:120").cron).toBe("50 */6 * * *")
     expect(schedule(manifest, "congress:entities:120").cron).toBe("10 3 * * *")
+    expect(schedule(manifest, "senate:votes:120")).toMatchObject({
+      cron: "40 * * * *",
+      workerTaskIdentifier: "senate-votes-sync"
+    })
     expect(schedule(manifest, "congress:events:120").deduplicationKey).toBe("staging:congress:events:120")
     expect(
       congressSchedules(manifest).every((entry) => entry.workerTaskIdentifier === "congress-wave-coordinator")
@@ -94,6 +100,7 @@ describe("synchronization schedule manifest", () => {
     const activeCongress = manifest.filter((entry) => entry.identity.provider === "congress" && entry.active)
     expect(activeCongress).toEqual([expect.objectContaining({ externalId: "congress:bills:current" })])
     expect(manifest.filter((entry) => entry.identity.provider === "govinfo").every((entry) => entry.active)).toBe(true)
+    expect(manifest.filter((entry) => entry.identity.provider === "senate").every((entry) => entry.active)).toBe(true)
     expect(manifest.every((entry) => entry.taskIdentifier === "schedule-dispatcher")).toBe(true)
   })
 

@@ -76,7 +76,7 @@ it("resolves the parser from the packaged runtime root before the bundled module
 describe("federal streaming parser and bridge", { timeout: 30_000 }, () => {
   it(
     "retains both reviewed same-number FR publications with source-bound citation identities",
-    { timeout: 30_000 },
+    { timeout: 60_000 },
     async () => {
       const input = await fixtureInput("fr-2000-01-18.xml.gz")
       const xml = gunzipSync(await readFile(input.path))

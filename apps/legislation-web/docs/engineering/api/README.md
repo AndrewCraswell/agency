@@ -76,7 +76,8 @@ of these access classes:
 | Operator      | Requires an operator role and is never part of the public developer API.                          |
 
 The draft assumes all API routes are authenticated until a separate exposure review marks a route public. Subscription,
-webhook and research-answer routes remain authenticated or more restrictive. Representative lookup is not in this inventory.
+webhook and research-answer routes remain authenticated or more restrictive. Representative lookup is public but
+same-origin only.
 
 ## Endpoint inventory
 
@@ -132,6 +133,7 @@ ordering rule, and exception.
 
 | Method | Path                                              | Access        | Response schema             |
 | ------ | ------------------------------------------------- | ------------- | --------------------------- |
+| POST   | `/api/representatives`                            | Public        | `RepresentativeLookupResult` |
 | GET    | `/api/people`                                     | Authenticated | `Page<PersonSummary>`       |
 | GET    | `/api/people/{personId}`                          | Authenticated | `PersonDetail`              |
 | GET    | `/api/people/{personId}/bills`                    | Authenticated | `Page<BillActivity>`        |

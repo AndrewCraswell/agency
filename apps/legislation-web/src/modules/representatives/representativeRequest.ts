@@ -5,12 +5,11 @@ import type { createRepresentativeLookup } from "./representativeLookup"
 
 type Lookup = ReturnType<typeof createRepresentativeLookup>
 type Dependencies = Readonly<{
-  environment: () => string | undefined
   getLookup: () => Lookup | Promise<Lookup>
   now?: () => number
 }>
 
-export function createRepresentativeRequestHandler({ environment, getLookup, now = Date.now }: Dependencies) {
+export function createRepresentativeRequestHandler({ getLookup, now = Date.now }: Dependencies) {
   let windowStart = 0
   let requests = 0
   let isRunning = false
@@ -18,11 +17,11 @@ export function createRepresentativeRequestHandler({ environment, getLookup, now
     const headers = { "cache-control": "private, no-store", "referrer-policy": "no-referrer" }
     let ownsSlot = false
     try {
-      if (environment() !== "development" || request.method !== "POST") {
+      if (request.method !== "POST") {
         throw new LegislationError("not_found", "Not found")
       }
       const url = new URL(request.url)
-      if (url.pathname !== "/api/dev/representatives" || url.search) {
+      if (url.pathname !== "/api/representatives" || url.search) {
         throw new LegislationError(
           "invalid_request",
           "Use the representative lookup endpoint without query parameters."
@@ -51,7 +50,7 @@ export function createRepresentativeRequestHandler({ environment, getLookup, now
       if (isRunning || requests >= 30) {
         throw new LegislationError(
           "dependency_unavailable",
-          "The development lookup limit was reached. Try again later."
+          "The representative lookup limit was reached. Try again later."
         )
       }
       isRunning = true

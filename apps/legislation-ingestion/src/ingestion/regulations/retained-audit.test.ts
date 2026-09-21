@@ -98,7 +98,8 @@ async function fixture() {
   }
 }
 
-describe("retained regulatory reuse audit", () => {
+// Each case creates and validates a real parser generation; full-suite contention can exceed Vitest's 5-second default.
+describe("retained regulatory reuse audit", { timeout: 30_000 }, () => {
   it("verifies retained files offline without promoting database reuse or changing the artifacts", async () => {
     const data = await fixture()
     const before = await readFile(data.receiptPath, "utf8")

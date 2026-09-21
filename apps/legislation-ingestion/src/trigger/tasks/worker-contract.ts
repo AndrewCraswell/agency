@@ -1,6 +1,7 @@
 import { z } from "zod"
 import {
   formatSynchronizationIdentity,
+  parseSynchronizationIdentity,
   synchronizationQueueFor,
   synchronizationTaskIdentifierFor,
   type SynchronizationIdentity,
@@ -25,7 +26,7 @@ export type SynchronizationWorkerDispatchIntent = Readonly<{
   identity: SynchronizationIdentity
   identityKey: string
   occurrenceKey: string
-  operation: "bill-status-sync" | "current-entities" | "events-sync" | "incremental-sync"
+  operation: "bill-status-sync" | "current-entities" | "events-sync" | "incremental-sync" | "votes-sync"
   queue: SynchronizationQueue
   taskIdentifier: SynchronizationWorkerTaskIdentifier
 }>
@@ -52,10 +53,13 @@ export function createSynchronizationWorkerDispatchIntent(
     throw new SynchronizationWorkerPayloadError("Synchronization worker payload is invalid")
   }
 
-  const identity = parseManagedSynchronizationIdentity(
-    parsedPayload.data.identity,
-    createSynchronizationScheduleManifest({ currentCongress: currentCongress() })
-  )
+  const identity =
+    taskIdentifier === "senate-votes-sync"
+      ? parseSynchronizationIdentity(parsedPayload.data.identity)
+      : parseManagedSynchronizationIdentity(
+          parsedPayload.data.identity,
+          createSynchronizationScheduleManifest({ currentCongress: currentCongress() })
+        )
   const expectedTaskIdentifier = synchronizationTaskIdentifierFor(identity)
   if (taskIdentifier !== expectedTaskIdentifier) {
     throw new SynchronizationWorkerPayloadError(
@@ -108,6 +112,9 @@ function ingestionOperationFor(
   }
   if (taskIdentifier === "openstates-events-sync") {
     return "events-sync"
+  }
+  if (taskIdentifier === "senate-votes-sync") {
+    return "votes-sync"
   }
   return "bill-status-sync"
 }

@@ -84,6 +84,8 @@ import { normalizeOpenStatesEvent } from "../ingestion/openstates/events.js"
 import { importOpenStatesRecords } from "../ingestion/openstates/import.js"
 import { parseOpenStatesManifest } from "../ingestion/openstates/manifest.js"
 import { repairOpenStatesMembershipObservations } from "../ingestion/openstates/membership-observation-repair.js"
+import { SenateClient } from "../ingestion/senate/client.js"
+import { synchronizeSenateVotes } from "../ingestion/senate/votes-sync.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../ingestion/source-store.js"
 import { createTelemetry } from "../observability/telemetry.js"
 import { replaceEntitySnapshot } from "../persistence/entities.js"
@@ -248,6 +250,16 @@ program
   .option("--session <number>", "limit to session 1 or 2")
   .option("--start-congress <number>")
   .action(syncCongressHouseVoteData)
+
+program
+  .command("senate:votes")
+  .description("Synchronize Senate roll-call votes and member positions")
+  .option("--end-congress <number>")
+  .option("--limit <number>", "maximum new votes per session and Congress")
+  .option("--restart", "restart each session and Congress from its first vote")
+  .option("--session <number>", "limit to session 1 or 2")
+  .option("--start-congress <number>")
+  .action(syncSenateVoteData)
 
 program
   .command("documents:process")
@@ -1322,6 +1334,69 @@ async function syncCongressHouseVoteData(options: {
     printJobResult(result)
   }, config)
   createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
+}
+
+async function syncSenateVoteData(options: {
+  endCongress?: string
+  limit?: string
+  restart?: boolean
+  session?: string
+  startCongress?: string
+}) {
+  const config = loadConfig()
+  const start = parseInteger(options.startCongress ?? String(config.ingestion.federalStartCongress), "start Congress")
+  const end = parseInteger(options.endCongress ?? String(config.ingestion.federalEndCongress), "end Congress")
+  if (start > end) {
+    throw new InvalidJobInput("start Congress must not exceed end Congress")
+  }
+  const sessions = options.session === undefined ? [1, 2] : [parseInteger(options.session, "session")]
+  if (sessions.some((session) => session !== 1 && session !== 2)) {
+    throw new InvalidJobInput("session must be 1 or 2")
+  }
+  const limit = options.limit === undefined ? undefined : parseInteger(options.limit, "limit")
+  const providerHttp = new RetryingHttpClient({
+    maxAttempts: config.ingestion.maxAttempts,
+    minimumIntervalMs: 750,
+    requestTimeoutMs: config.ingestion.requestTimeoutMs
+  })
+  const client = new SenateClient({
+    baseUrl: new URL(config.ingestion.senateVoteBaseUrl),
+    http: providerHttp
+  })
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "senate-votes-bootstrap",
+        scope: { endCongress: end, sessions, startCongress: start },
+        scopeKey: start === end ? `senate-votes:${start}` : "senate-votes:all",
+        source: "senate"
+      },
+      async () => {
+        const counts = createJobCounts()
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        let checkpoint: Readonly<Record<string, unknown>> | undefined
+        for (let congress = start; congress <= end; congress += 1) {
+          for (const session of sessions) {
+            const synchronized = await synchronizeSenateVotes(database, client, congress, session, {
+              limit,
+              restart: options.restart,
+              sourceStore: createSourceStore(config, "federal")
+            })
+            for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+              counts[key] += synchronized.counts[key]
+            }
+            failures.push(...synchronized.failures)
+            checkpoint = { congress, session, ...synchronized.checkpoint }
+          }
+        }
+        return checkpoint === undefined ? { counts, failures } : { checkpoint, counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "senate" })
 }
 
 async function processDocuments(options: {

@@ -40,8 +40,8 @@ are preserved.
 The existing public `x-correlation-id` response/body contract is unchanged. Its arbitrary caller-provided value is
 not copied into the new telemetry correlation context. Neither the access `sessionKey` nor a raw user/workspace ID is
 used to generate or label these IDs.
-The route registry includes the development-only representative page and API under a separate development surface,
-excluded from product-usage reporting. This does not enable the deferred representative-discovery journey telemetry.
+The route registry treats the public representative page as a product surface and its same-origin API as an operational
+API route. Coordinates and addresses remain excluded from route templates and telemetry fields.
 
 ## Research runs and cross-vendor links
 

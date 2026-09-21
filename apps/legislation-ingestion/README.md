@@ -6,6 +6,8 @@ search replication and Trigger.dev orchestration. This app does not host the web
 ## Commands
 
 - `pnpm --filter legislation-ingestion cli --help`: source and maintenance commands.
+- `pnpm --filter legislation-ingestion cli senate:votes --start-congress 119 --end-congress 119`: backfill official
+  Senate roll calls and member positions.
 - `pnpm --filter legislation-ingestion tool --list`: app-local operator tools.
 - `pnpm --filter legislation-ingestion trigger:dev`: Trigger workers.
 - `pnpm --filter legislation-ingestion trigger:deploy`: validate the deployed API contract, then deploy workers.

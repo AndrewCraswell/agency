@@ -31,7 +31,7 @@ describe("planSynchronizationScheduleReconciliation", () => {
     const plan = planSynchronizationScheduleReconciliation(manifest, [])
 
     expect(plan.unchanged).toBe(0)
-    expect(plan.actions).toHaveLength(163)
+    expect(plan.actions).toHaveLength(164)
     expect(plan.actions.every((action) => action.type === "create" && action.schedule.active === false)).toBe(true)
   })
 
@@ -39,19 +39,19 @@ describe("planSynchronizationScheduleReconciliation", () => {
     const remote = manifest.map((schedule) => remoteSchedule(schedule))
     const plan = planSynchronizationScheduleReconciliation(manifest, remote)
 
-    expect(plan).toEqual({ actions: [], unchanged: 163 })
+    expect(plan).toEqual({ actions: [], unchanged: 164 })
   })
 
-  it("activates only the Congress wave and GovInfo schedules during standard activation", () => {
+  it("activates only the Congress wave, Senate, and GovInfo schedules during standard activation", () => {
     const activeManifest = createSynchronizationScheduleManifest({ active: true })
     const remote = activeManifest.map((schedule) => remoteSchedule(schedule))
     const plan = planSynchronizationScheduleReconciliation(activeManifest, remote)
 
-    expect(plan.actions).toHaveLength(2)
+    expect(plan.actions).toHaveLength(3)
     expect(plan.actions.every((action) => action.type === "activate")).toBe(true)
     expect(
       plan.actions.map((action) => (action.type === "activate" ? action.schedule.externalId : undefined)).sort()
-    ).toEqual(["congress:bills:current", "govinfo:bill-status:119"])
+    ).toEqual(["congress:bills:current", "govinfo:bill-status:119", "senate:votes:119"])
     expect(
       plan.actions.every((action) => action.type !== "activate" || action.schedule.identity.provider !== "openstates")
     ).toBe(true)
@@ -64,7 +64,7 @@ describe("planSynchronizationScheduleReconciliation", () => {
     )
     const plan = planSynchronizationScheduleReconciliation(activeManifest, remote)
 
-    expect(plan.actions.filter((action) => action.type === "activate")).toHaveLength(2)
+    expect(plan.actions.filter((action) => action.type === "activate")).toHaveLength(3)
     expect(
       plan.actions.filter((action) => action.type === "deactivate" && action.externalId?.startsWith("openstates:"))
     ).toHaveLength(156)
@@ -133,8 +133,8 @@ describe("planSynchronizationScheduleReconciliation", () => {
     expect(openStates.manifest).toHaveLength(156)
     expect(openStates.remoteSchedules).toHaveLength(156)
     expect(openStates.manifest.every((schedule) => schedule.identity.provider === "openstates")).toBe(true)
-    expect(federal.manifest).toHaveLength(7)
-    expect(federal.remoteSchedules).toHaveLength(7)
+    expect(federal.manifest).toHaveLength(8)
+    expect(federal.remoteSchedules).toHaveLength(8)
     expect(federal.manifest.every((schedule) => schedule.identity.provider !== "openstates")).toBe(true)
   })
 
@@ -236,11 +236,11 @@ describe("planSynchronizationScheduleReconciliation", () => {
       client
     )
 
-    expect(result).toEqual({ activated: 158, created: 163, deactivated: 163, updated: 163 })
-    expect(client.create).toHaveBeenCalledTimes(163)
-    expect(client.deactivate).toHaveBeenCalledTimes(163)
-    expect(client.update).toHaveBeenCalledTimes(163)
-    expect(client.activate).toHaveBeenCalledTimes(158)
+    expect(result).toEqual({ activated: 159, created: 164, deactivated: 164, updated: 164 })
+    expect(client.create).toHaveBeenCalledTimes(164)
+    expect(client.deactivate).toHaveBeenCalledTimes(164)
+    expect(client.update).toHaveBeenCalledTimes(164)
+    expect(client.activate).toHaveBeenCalledTimes(159)
     for (let index = 0; index < activeManifest.length; index += 1) {
       const createOrder = client.create.mock.invocationCallOrder[index]
       const deactivateOrder = client.deactivate.mock.invocationCallOrder[index]

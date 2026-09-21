@@ -80,7 +80,8 @@ fields. `meta.mode` records the requested mode. These schemas are implemented; r
 
 Lists return `200 Page<T>`; reads return `200 ResourceResponse<T>`; creates return `201 ResourceResponse<T>` plus
 `Location`; updates return `200`; deletes return `200 ResourceResponse<CancellationReceipt>`. Calculations
-(diff and research answer) return `200`. `304` has no body. Representative lookup is not a current public operation.
+(diff, research answer, and representative lookup) return `200`. `304` has no body. The representative lookup request
+and response are defined in [its operating contract](../../operations/representative-lookup.md).
 
 ## Batch body and response
 

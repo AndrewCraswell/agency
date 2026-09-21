@@ -4,11 +4,11 @@ import type { CongressClient, CongressHouseVoteReference } from "./client.js"
 import type { CongressHouseVoteSnapshot } from "./votes.js"
 
 const mocks = vi.hoisted(() => ({
-  upsertHouseVote: vi.fn<(database: unknown, snapshot: CongressHouseVoteSnapshot) => Promise<void>>()
+  upsertFederalVote: vi.fn<(database: unknown, snapshot: CongressHouseVoteSnapshot) => Promise<void>>()
 }))
 
 vi.mock("../../persistence/votes.js", () => ({
-  upsertCongressHouseVoteSnapshot: mocks.upsertHouseVote
+  upsertFederalVoteSnapshot: mocks.upsertFederalVote
 }))
 
 import { synchronizeCongressHouseVotes } from "./votes-sync.js"
@@ -91,7 +91,7 @@ function createDatabaseHarness(initialOffset?: number): {
 
 describe("Congress House vote synchronization", () => {
   beforeEach(() => {
-    mocks.upsertHouseVote.mockReset().mockResolvedValue()
+    mocks.upsertFederalVote.mockReset().mockResolvedValue()
   })
 
   it("runs a bounded batch concurrently without exceeding the exact limit", async () => {
@@ -127,7 +127,7 @@ describe("Congress House vote synchronization", () => {
     const attempts = new Map<number, number>()
     const starts: number[] = []
     const persisted = new Set<string>()
-    mocks.upsertHouseVote.mockImplementation(async (_database, snapshot) => {
+    mocks.upsertFederalVote.mockImplementation(async (_database, snapshot) => {
       persisted.add(snapshot.vote.id)
     })
     const getHouseVoteBundle = vi.fn<HouseVoteClient["getHouseVoteBundle"]>(async (reference) => {

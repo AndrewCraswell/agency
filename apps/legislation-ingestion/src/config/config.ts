@@ -35,6 +35,7 @@ const configSchema = z
       openStatesApiKey: optionalSecret,
       openStatesApiUrl: z.url({ protocol: /^https$/ }),
       requestTimeoutMs: z.coerce.number().int().min(1000).max(300_000),
+      senateVoteBaseUrl: z.url({ protocol: /^https$/ }),
       sourceDirectory: z.string().trim().min(1)
     }),
     logging: z.object({ level: z.enum(["debug", "info", "warn", "error"]) }),
@@ -119,6 +120,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       openStatesApiKey: environment.OPENSTATES_API_KEY,
       openStatesApiUrl: environment.OPENSTATES_API_URL ?? "https://v3.openstates.org",
       requestTimeoutMs: environment.INGESTION_REQUEST_TIMEOUT_MS ?? "30000",
+      senateVoteBaseUrl: environment.SENATE_VOTE_BASE_URL ?? "https://www.senate.gov/",
       sourceDirectory: environment.LEGISLATION_SOURCE_DIRECTORY ?? ".data/sources"
     },
     logging: { level: environment.LOG_LEVEL ?? "info" },

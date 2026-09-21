@@ -7,14 +7,14 @@ vi.mock("@sentry/core", () => ({ captureException: vi.fn<typeof import("@sentry/
 afterEach(() => vi.clearAllMocks())
 
 function request(body: unknown = { latitude: 38.889, longitude: -77.009 }, origin = "http://localhost:3000") {
-  return new Request("http://localhost:3000/api/dev/representatives", {
+  return new Request("http://localhost:3000/api/representatives", {
     method: "POST",
     headers: { origin, "content-type": "application/json" },
     body: JSON.stringify(body)
   })
 }
 const result = { status: "no_match", jurisdictions: [], representatives: [], warnings: ["No match."] } as const
-function setup(environment = "development") {
+function setup() {
   const lookup = vi.fn<ReturnType<typeof createRepresentativeLookup>>().mockResolvedValue({
     ...result,
     jurisdictions: [],
@@ -25,27 +25,18 @@ function setup(environment = "development") {
   return {
     lookup,
     getLookup,
-    handle: createRepresentativeRequestHandler({ environment: () => environment, getLookup })
+    handle: createRepresentativeRequestHandler({ getLookup })
   }
 }
 
-describe("development representative endpoint", () => {
-  it.each(["production", "test"])(
-    "is unavailable in %s before loading credentials or dependencies",
-    async (environment) => {
-      const { handle, getLookup } = setup(environment)
-      expect((await handle(request())).status).toBe(404)
-      expect(getLookup).not.toHaveBeenCalled()
-    }
-  )
-
+describe("representative endpoint", () => {
   it("returns a no-store envelope without reflecting the location", async () => {
     const { handle, lookup } = setup()
     const response = await handle(request())
     expect(response.status).toBe(200)
     expect(response.headers.get("cache-control")).toBe("private, no-store")
     expect(response.headers.get("referrer-policy")).toBe("no-referrer")
-    expect(await response.json()).toMatchObject({ data: result, links: { self: "/api/dev/representatives" } })
+    expect(await response.json()).toMatchObject({ data: result, links: { self: "/api/representatives" } })
     expect(lookup).toHaveBeenCalledWith({ latitude: 38.889, longitude: -77.009 }, expect.any(AbortSignal))
   })
 
@@ -84,7 +75,7 @@ describe("development representative endpoint", () => {
 
   it("rejects query strings and unsupported content types", async () => {
     const { handle, getLookup } = setup()
-    const queryRequest = new Request("http://localhost:3000/api/dev/representatives?latitude=1", request())
+    const queryRequest = new Request("http://localhost:3000/api/representatives?latitude=1", request())
     expect((await handle(queryRequest)).status).toBe(400)
     const input = request()
     input.headers.set("content-type", "text/plain")
@@ -108,7 +99,6 @@ describe("development representative endpoint", () => {
     let time = 100_000
     const { lookup } = setup()
     const handle = createRepresentativeRequestHandler({
-      environment: () => "development",
       getLookup: () => lookup,
       now: () => time
     })

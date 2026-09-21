@@ -2,7 +2,7 @@ import { z } from "zod"
 import { supportedOpenStatesJurisdictions } from "../ingestion/openstates/coverage.js"
 
 export const synchronizationEnvironments = ["development", "staging", "production"] as const
-export const synchronizationProviders = ["openstates", "congress", "govinfo"] as const
+export const synchronizationProviders = ["openstates", "congress", "govinfo", "senate"] as const
 export const openStatesSynchronizationDomains = ["bills", "entities", "events"] as const
 export const congressSynchronizationDomains = [
   "bills",
@@ -16,6 +16,7 @@ export const congressSynchronizationDomains = [
 const synchronizationEnvironmentSchema = z.enum(synchronizationEnvironments)
 const openStatesSynchronizationDomainSchema = z.enum(openStatesSynchronizationDomains)
 const congressSynchronizationDomainSchema = z.enum(congressSynchronizationDomains)
+const senateSynchronizationDomainSchema = z.literal("votes")
 const openStatesJurisdictionSchema = z.enum(supportedOpenStatesJurisdictions)
 
 export type SynchronizationEnvironment = z.infer<typeof synchronizationEnvironmentSchema>
@@ -24,6 +25,11 @@ export type OpenStatesSynchronizationDomain = z.infer<typeof openStatesSynchroni
 export type CongressSynchronizationDomain = z.infer<typeof congressSynchronizationDomainSchema>
 export type OpenStatesJurisdiction = (typeof supportedOpenStatesJurisdictions)[number]
 export type CongressScopedSynchronizationDomain = Exclude<CongressSynchronizationDomain, "bills">
+export type SenateSynchronizationIdentity = Readonly<{
+  domain: "votes"
+  provider: "senate"
+  scope: number
+}>
 
 export type GovInfoSynchronizationIdentity = Readonly<{
   domain: "bill-status"
@@ -53,6 +59,7 @@ export type SynchronizationIdentity =
   | OpenStatesSynchronizationIdentity
   | CongressBillsSynchronizationIdentity
   | CongressScopedSynchronizationIdentity
+  | SenateSynchronizationIdentity
   | GovInfoSynchronizationIdentity
 
 export type SynchronizationTaskIdentifier =
@@ -60,6 +67,7 @@ export type SynchronizationTaskIdentifier =
   | "openstates-entities-sync"
   | "openstates-events-sync"
   | "congress-wave-coordinator"
+  | "senate-votes-sync"
   | "govinfo-bill-status-sync"
 
 export type SynchronizationWorkerTaskIdentifier = Exclude<SynchronizationTaskIdentifier, "congress-wave-coordinator">
@@ -74,7 +82,8 @@ export const synchronizationQueues = {
   // historical work is routed through congress-wave-coordinator instead.
   congress: { concurrencyLimit: 4, name: "congress" },
   govinfo: { concurrencyLimit: 1, name: "govinfo" },
-  openstates: { concurrencyLimit: 3, name: "openstates" }
+  openstates: { concurrencyLimit: 3, name: "openstates" },
+  senate: { concurrencyLimit: 4, name: "senate" }
 } as const satisfies Record<SynchronizationProvider, SynchronizationQueue>
 
 const openStatesTaskIdentifiers = {
@@ -130,6 +139,13 @@ export function createGovInfoSynchronizationIdentity(congress: number): GovInfoS
   return { domain: "bill-status", provider: "govinfo", scope: congress }
 }
 
+export function createSenateSynchronizationIdentity(congress: number): SenateSynchronizationIdentity {
+  if (!Number.isSafeInteger(congress) || congress < 1) {
+    throw new SynchronizationIdentityError("Senate synchronization scope must be a positive integer")
+  }
+  return { domain: "votes", provider: "senate", scope: congress }
+}
+
 export function parseSynchronizationIdentity(value: unknown): SynchronizationIdentity {
   if (typeof value !== "string") {
     throw new SynchronizationIdentityError("Synchronization identity must be a string")
@@ -161,8 +177,17 @@ export function parseSynchronizationIdentity(value: unknown): SynchronizationIde
     return createGovInfoSynchronizationIdentity(Number(scope))
   }
 
+  if (provider === "senate") {
+    if (!senateSynchronizationDomainSchema.safeParse(domain).success || !/^[1-9]\d*$/.test(scope)) {
+      throw new SynchronizationIdentityError("Senate identity must use votes and a positive Congress")
+    }
+    return createSenateSynchronizationIdentity(Number(scope))
+  }
+
   if (provider !== "congress") {
-    throw new SynchronizationIdentityError("Synchronization identity provider must be openstates, congress, or govinfo")
+    throw new SynchronizationIdentityError(
+      "Synchronization identity provider must be openstates, congress, govinfo, or senate"
+    )
   }
 
   const parsedDomain = congressSynchronizationDomainSchema.safeParse(domain)
@@ -207,6 +232,9 @@ export function synchronizationTaskIdentifierFor(identity: SynchronizationIdenti
   }
   if (identity.provider === "govinfo") {
     return "govinfo-bill-status-sync"
+  }
+  if (identity.provider === "senate") {
+    return "senate-votes-sync"
   }
   return "congress-wave-coordinator"
 }

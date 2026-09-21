@@ -1,13 +1,12 @@
-# Development representative lookup
+# Representative lookup
 
-`/dev/representatives` is a development-only diagnostic, not the public representative-lookup API.
-Both the page and `POST /api/dev/representatives` require `NODE_ENV=development`.
-The existing public `/api/representative-lookups` contract remains unavailable.
+`/representatives` is the public representative lookup page. It calls the same-origin
+`POST /api/representatives` endpoint without requiring authentication.
 
 ## Setup and use
 
-Set `GEOCODIO_API_KEY` and `GEOCODIO_BASE_URL=https://api.geocod.io/v2` in W's ignored `.env`,
-alongside its existing `DATABASE_URL`. Restart the Next development server after changing credentials.
+Set `GEOCODIO_API_KEY` and `GEOCODIO_BASE_URL=https://api.geocod.io/v2` in the web runtime environment,
+alongside its existing `DATABASE_URL`. Restart the Next server after changing credentials.
 Neither Geocodio variable may use the `NEXT_PUBLIC_` prefix.
 
 Open the page and choose **Use my location**. Location is requested only after that action. Browsers
@@ -49,13 +48,13 @@ Database failures are errors, not successful provider-only results.
 Coordinates and addresses are transient. They are not persisted, included in request URLs, echoed in
 responses, or retained in application error causes. The API key stays server-side. Geocodio receives
 the submitted location; its retention policy is separate from Rostra's no-storage behavior.
-Responses use `private, no-store`. The dev endpoint permits one in-flight lookup and 30 requests per
-minute per process; it is not a production/distributed abuse-control mechanism.
+Responses use `private, no-store`. The endpoint permits one in-flight lookup and 30 requests per
+minute per process. This bound limits accidental provider spend but is not a distributed abuse-control mechanism.
 
 Provider responses are bounded to 1 MiB and a ten-second request deadline. A dedicated one-connection
 read pool follows the existing snapshot-persistence pattern, with a five-second read-only transaction
 deadline compatible with transaction poolers. There are no database writes or new ingestion sources.
 
-Production rollout, saved addresses, historical district resolution, and MCP location tools are not
-part of this diagnostic. The [identity roadmap](../../../../packages/legislation-core/docs/engineering/identity.md)
-retains those separate acceptance gates.
+Saved addresses, historical district resolution, and MCP location tools are not part of this lookup. The
+[identity roadmap](../../../../packages/legislation-core/docs/engineering/identity.md) retains those separate
+acceptance gates.

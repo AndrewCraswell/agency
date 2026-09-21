@@ -14,15 +14,14 @@ type Coverage = Readonly<{
 }>
 
 const coverage = {
-  development: {
+  representatives: {
     owner: "web",
-    privacy: "operational",
-    events: ["page.ready", "api.request_finished"],
-    metrics: ["rostra.route.ready", "rostra.api.duration"],
-    query: { event: "api.request_finished", aggregate: "count", groupBy: ["status_class"] },
+    privacy: "optional_usage",
+    events: ["page.viewed", "page.ready"],
+    metrics: ["rostra.page.view", "rostra.route.ready"],
+    query: { event: "page.viewed", aggregate: "count", groupBy: ["navigation"] },
     acceptance: "pending",
-    implementationIssue: "LEG-40",
-    exception: "excluded_from_product_usage"
+    implementationIssue: "LEG-43"
   },
   home: {
     owner: "web",

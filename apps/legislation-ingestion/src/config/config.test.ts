@@ -12,7 +12,13 @@ describe("ingestion configuration", () => {
       },
       database: { connectionTimeoutMs: 10_000, idleTimeoutMs: 30_000, maxConnections: 10 },
       environment: "development",
-      ingestion: { concurrency: 4, federalEndCongress: 119, federalStartCongress: 113, requestTimeoutMs: 30_000 },
+      ingestion: {
+        concurrency: 4,
+        federalEndCongress: 119,
+        federalStartCongress: 113,
+        requestTimeoutMs: 30_000,
+        senateVoteBaseUrl: "https://www.senate.gov/"
+      },
       logging: { level: "info" },
       model: { baseUrl: "https://openrouter.ai/api/v1" },
       ocr: { maximumAttempts: 5 }
@@ -36,12 +42,14 @@ describe("ingestion configuration", () => {
       DATABASE_URL: "postgresql://user:password@database.example/policy",
       GOVINFO_API_KEY: "govinfo-key",
       GOVINFO_API_URL: "https://govinfo.example/api/",
-      OPENSTATES_API_KEY: "openstates-key"
+      OPENSTATES_API_KEY: "openstates-key",
+      SENATE_VOTE_BASE_URL: "https://senate.example/"
     })
     expect(config.ingestion).toMatchObject({
       govInfoApiKey: "govinfo-key",
       govInfoApiUrl: "https://govinfo.example/api/",
-      openStatesApiKey: "openstates-key"
+      openStatesApiKey: "openstates-key",
+      senateVoteBaseUrl: "https://senate.example/"
     })
     expect(config.database).toEqual({
       connectionTimeoutMs: 5000,

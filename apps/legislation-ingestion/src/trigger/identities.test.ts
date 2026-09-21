@@ -3,6 +3,7 @@ import {
   createCongressSynchronizationIdentity,
   createGovInfoSynchronizationIdentity,
   createOpenStatesSynchronizationIdentity,
+  createSenateSynchronizationIdentity,
   createSynchronizationDeduplicationKey,
   formatSynchronizationIdentity,
   parseSynchronizationEnvironment,
@@ -18,6 +19,7 @@ describe("synchronization identities", () => {
     const congressBills = createCongressSynchronizationIdentity("bills")
     const congressEvents = createCongressSynchronizationIdentity("events", 119)
     const govInfo = createGovInfoSynchronizationIdentity(119)
+    const senateVotes = createSenateSynchronizationIdentity(119)
 
     expect(formatSynchronizationIdentity(openStates)).toBe("openstates:bills:ca")
     expect(parseSynchronizationIdentity("openstates:bills:ca")).toEqual(openStates)
@@ -27,12 +29,15 @@ describe("synchronization identities", () => {
     expect(parseSynchronizationIdentity("congress:events:119")).toEqual(congressEvents)
     expect(formatSynchronizationIdentity(govInfo)).toBe("govinfo:bill-status:119")
     expect(parseSynchronizationIdentity("govinfo:bill-status:119")).toEqual(govInfo)
+    expect(formatSynchronizationIdentity(senateVotes)).toBe("senate:votes:119")
+    expect(parseSynchronizationIdentity("senate:votes:119")).toEqual(senateVotes)
   })
 
   it("derives stable provider queues, workers, and environment deduplication keys", () => {
     const openStates = createOpenStatesSynchronizationIdentity("entities", "tx")
     const congress = createCongressSynchronizationIdentity("house-votes", 119)
     const govInfo = createGovInfoSynchronizationIdentity(119)
+    const senate = createSenateSynchronizationIdentity(119)
 
     expect(synchronizationQueueFor(openStates)).toEqual({ concurrencyLimit: 3, name: "openstates" })
     expect(synchronizationTaskIdentifierFor(openStates)).toBe("openstates-entities-sync")
@@ -41,6 +46,8 @@ describe("synchronization identities", () => {
     expect(createSynchronizationDeduplicationKey("staging", openStates)).toBe("staging:openstates:entities:tx")
     expect(synchronizationQueueFor(govInfo)).toEqual({ concurrencyLimit: 1, name: "govinfo" })
     expect(synchronizationTaskIdentifierFor(govInfo)).toBe("govinfo-bill-status-sync")
+    expect(synchronizationQueueFor(senate)).toEqual({ concurrencyLimit: 4, name: "senate" })
+    expect(synchronizationTaskIdentifierFor(senate)).toBe("senate-votes-sync")
   })
 
   it("rejects malformed, unknown, multi-jurisdiction, and mismatched scopes", () => {
@@ -56,6 +63,8 @@ describe("synchronization identities", () => {
       "congress:events:0",
       "govinfo:bills:119",
       "govinfo:bill-status:current",
+      "senate:events:119",
+      "senate:votes:current",
       "legiscan:bills:ca"
     ]) {
       expect(() => parseSynchronizationIdentity(identity)).toThrow(SynchronizationIdentityError)

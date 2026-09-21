@@ -17,7 +17,7 @@ votes, sponsors or actions. Current status below comes from the workspace assess
 
 | Data | Rostra status | Source to use | Vaquill equivalent? |
 | --- | --- | --- | --- |
-| Federal legislative activity | Existing implementation | Congress.gov + GovInfo | Not established |
+| Federal legislative activity | Existing implementation | Congress.gov + Senate.gov + GovInfo | Not established |
 | State legislative activity | Existing work / rollout | Open States | Not established |
 | U.S. Code and historical enacted law | Future | GovInfo; validate collection editions | Advertised |
 | Federal published rules and regulatory code | Local implementation/pilots; production gates open | GovInfo + FederalRegister.gov; eCFR | Advertised; scope differs |

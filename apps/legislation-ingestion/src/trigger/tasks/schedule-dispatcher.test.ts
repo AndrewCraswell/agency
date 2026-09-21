@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createCongressSynchronizationIdentity } from "../identities.js"
+import { createCongressSynchronizationIdentity, createSenateSynchronizationIdentity } from "../identities.js"
 import { scheduledTaskIdentifierFor } from "./schedule-dispatcher.js"
 
 describe("scheduled Congress routing", () => {
@@ -10,5 +10,9 @@ describe("scheduled Congress routing", () => {
       )
     }
     expect(scheduledTaskIdentifierFor(createCongressSynchronizationIdentity("bills"))).toBe("congress-wave-coordinator")
+  })
+
+  it("schedules Senate votes on their isolated worker", () => {
+    expect(scheduledTaskIdentifierFor(createSenateSynchronizationIdentity(119))).toBe("senate-votes-sync")
   })
 })

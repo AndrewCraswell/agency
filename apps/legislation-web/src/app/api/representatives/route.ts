@@ -1,12 +1,11 @@
-import { createRepresentativeRequestHandler } from "../../../../modules/representatives/representativeRequest"
+import { createRepresentativeRequestHandler } from "../../../modules/representatives/representativeRequest"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export const POST = createRepresentativeRequestHandler({
-  environment: () => process.env.NODE_ENV,
   getLookup: async () => {
-    const { getRepresentativeLookup } = await import("../../../../modules/representatives/representativeLookup.server")
+    const { getRepresentativeLookup } = await import("../../../modules/representatives/representativeLookup.server")
     return getRepresentativeLookup()
   }
 })

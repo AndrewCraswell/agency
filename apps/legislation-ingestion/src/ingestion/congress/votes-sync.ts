@@ -2,7 +2,7 @@ import { mapConcurrent } from "@repo/legislation-core/concurrency/map-concurrent
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { syncCheckpoints, votes } from "@repo/legislation-core/database/schema/schema"
 import { and, eq } from "drizzle-orm"
-import { upsertCongressHouseVoteSnapshot } from "../../persistence/votes.js"
+import { upsertFederalVoteSnapshot } from "../../persistence/votes.js"
 import { ProviderHttpError } from "../http-client.js"
 import { createJobCounts } from "../job-result.js"
 import type { JobCounts } from "../job.js"
@@ -69,7 +69,7 @@ export async function synchronizeCongressHouseVotes(
           .where(eq(votes.id, snapshot.vote.id))
           .limit(1)
         counts.read += 1
-        await upsertCongressHouseVoteSnapshot(database, snapshot)
+        await upsertFederalVoteSnapshot(database, snapshot)
         if (existing[0] === undefined) {
           counts.inserted += 1
         } else {

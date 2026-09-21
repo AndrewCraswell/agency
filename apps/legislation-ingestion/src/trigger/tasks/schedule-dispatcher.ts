@@ -8,6 +8,7 @@ import { createSynchronizationScheduleManifest, parseManagedSynchronizationIdent
 import type { congressWaveCoordinator } from "./congress-wave-coordinator.js"
 import type { govInfoBillStatusSync } from "./govinfo-workers.js"
 import type { openStatesBillsSync, openStatesEntitiesSync, openStatesEventsSync } from "./openstates-workers.js"
+import type { senateVotesSync } from "./senate-workers.js"
 import type { SynchronizationWorkerTaskPayload } from "./worker-contract.js"
 
 type SynchronizationWorkerTask =
@@ -15,6 +16,7 @@ type SynchronizationWorkerTask =
   | typeof openStatesBillsSync
   | typeof openStatesEntitiesSync
   | typeof openStatesEventsSync
+  | typeof senateVotesSync
   | typeof congressWaveCoordinator
 
 export const scheduleDispatcher = schedules.task({

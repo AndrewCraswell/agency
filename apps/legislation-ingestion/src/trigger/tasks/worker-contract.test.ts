@@ -81,6 +81,33 @@ describe("synchronization worker contract", () => {
     })
   })
 
+  it("routes Senate votes to the isolated Senate worker and queue", () => {
+    const intent = createSynchronizationWorkerDispatchIntent("senate-votes-sync", {
+      identity: "senate:votes:119",
+      occurrenceKey: "senate-hourly:2026-08-18T12:40:00Z"
+    })
+
+    expect(intent).toMatchObject({
+      identityKey: "senate:votes:119",
+      operation: "votes-sync",
+      queue: { concurrencyLimit: 4, name: "senate" },
+      taskIdentifier: "senate-votes-sync"
+    })
+  })
+
+  it("allows historical Senate identities that are not recurring schedules", () => {
+    const intent = createSynchronizationWorkerDispatchIntent("senate-votes-sync", {
+      identity: "senate:votes:115",
+      occurrenceKey: "historical-backfill"
+    })
+
+    expect(intent).toMatchObject({
+      identity: { domain: "votes", provider: "senate", scope: 115 },
+      identityKey: "senate:votes:115",
+      taskIdentifier: "senate-votes-sync"
+    })
+  })
+
   it("passes the parsed intent to the executor", async () => {
     let executions = 0
 

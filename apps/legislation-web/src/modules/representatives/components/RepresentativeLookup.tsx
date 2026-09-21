@@ -2,7 +2,6 @@
 
 import { LocateFixed } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
-import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { Skeleton } from "../../../components/ui/skeleton"
 import { representativeLookupResponseSchema, type RepresentativeLookupResult } from "../contracts"
@@ -133,7 +132,7 @@ export function RepresentativeLookup() {
       )
 
       try {
-        const response = await fetch("/api/dev/representatives", {
+        const response = await fetch("/api/representatives", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -148,7 +147,7 @@ export function RepresentativeLookup() {
         }
         if (!response.ok) {
           if (response.status === 503) {
-            fail("Representative lookup is unavailable. Check the development server configuration and try again.")
+            fail("Representative lookup is unavailable. Try again later.")
           } else if (response.status === 429) {
             fail("Too many lookup attempts. Wait a moment and try again.")
           } else {
@@ -214,9 +213,6 @@ export function RepresentativeLookup() {
   return (
     <main className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 wrap-anywhere sm:px-6 sm:py-10">
       <header className="max-w-2xl space-y-3">
-        <Badge variant="outline" className="rounded-md">
-          Development only
-        </Badge>
         <h1 className="text-3xl font-semibold tracking-tight">Find your representatives</h1>
         <p className="text-muted-foreground">Find representatives in the Rostra database for your location.</p>
       </header>

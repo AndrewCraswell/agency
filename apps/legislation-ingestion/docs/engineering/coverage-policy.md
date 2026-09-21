@@ -21,6 +21,9 @@ not satisfy either gate.
 - Congress.gov API v3 is the federal incremental source for records other than standalone committee organization and
   membership materialization. It may retain bill, event, hearing, and supporting-material relationship metadata, but
   does not materialize or update canonical federal committee organizations.
+- Senate.gov Legislative Information System XML is the federal Senate roll-call source. Its session menus and vote
+  records provide official vote metadata and individual positions; the current Senate member directory maps LIS member
+  IDs to canonical Bioguide identities without name-based merging.
 
 Every source-backed committee appointment or reappointment is a distinct membership tenure. Consecutive complete
 snapshots of an uninterrupted appointment retain one tenure; an absence in a complete snapshot followed by a later

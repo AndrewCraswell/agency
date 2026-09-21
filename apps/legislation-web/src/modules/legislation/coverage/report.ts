@@ -91,6 +91,7 @@ export interface CoverageReport {
   }
   version: 1
   voteCoverage: Array<{
+    chamber: string | null
     jurisdictionId: string
     positions: number
     sessionId: string
@@ -372,6 +373,7 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       order by jurisdiction_id, classification
     `),
     database.execute<{
+      chamber: string | null
       jurisdiction_id: string
       positions: number
       session_id: string
@@ -380,17 +382,20 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       votes_with_source_url: number
     }>(sql`
       select
-        bills.jurisdiction_id,
-        bills.session_id,
+        votes.chamber,
+        coalesce(bills.jurisdiction_id, sessions.jurisdiction_id) as jurisdiction_id,
+        votes.session_id,
         count(distinct votes.id)::int as votes,
         count(positions.vote_id)::int as positions,
         count(distinct votes.id) filter (where positions.vote_id is not null)::int as votes_with_positions,
         count(distinct votes.id) filter (where votes.source_url is not null)::int as votes_with_source_url
       from legislation.votes votes
-      join legislation.bills bills on bills.id = votes.bill_id
+      left join legislation.bills bills on bills.id = votes.bill_id
+      left join legislation.legislative_sessions sessions on sessions.id = votes.session_id
       left join legislation.vote_positions positions on positions.vote_id = votes.id
-      group by bills.jurisdiction_id, bills.session_id
-      order by bills.jurisdiction_id, bills.session_id
+      where coalesce(bills.jurisdiction_id, sessions.jurisdiction_id) is not null
+      group by votes.chamber, coalesce(bills.jurisdiction_id, sessions.jurisdiction_id), votes.session_id
+      order by jurisdiction_id, votes.session_id, votes.chamber
     `),
     database.execute<{
       empty_text: number
@@ -517,6 +522,7 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
     totals,
     version: 1,
     voteCoverage: voteCoverage.rows.map((row) => ({
+      chamber: row.chamber,
       jurisdictionId: row.jurisdiction_id,
       positions: row.positions,
       sessionId: row.session_id,

@@ -56,13 +56,12 @@ startup applies them. Separate runtime ownership is not evidence of a completed 
 
 ## Deferred capabilities
 
-Standalone calendar, meeting-outcome and representative-lookup API operations were removed from the public contract.
-Address-lookup mockups do not imply an available API or activated provider. See the
+Standalone calendar and meeting-outcome API operations remain outside the public contract. See the
 [product backlog](docs/product/product-spec.md) and [current API acceptance](docs/engineering/api/search-and-diffs.md).
 
-A separate [development representative diagnostic](docs/operations/representative-lookup.md) is available at
-`/dev/representatives` with Geocodio credentials. It uses browser location with permission and matches returned
-officials to stored profiles. It does not restore the removed public API or enable production address lookup.
+The public [representative lookup](docs/operations/representative-lookup.md) is available at `/representatives` when
+Geocodio credentials are configured. It uses browser location with permission and matches returned officials to stored
+profiles.
 
 The Bicep tree stays with W as a historical combined-runtime infrastructure reference. Its database/model credentials
 are not the target M deployment contract; storage/OCR references concern I. See

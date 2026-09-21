@@ -39,5 +39,5 @@ export default defineConfig({
     },
     enabledInDev: false
   },
-  runtime: "node-22"
+  runtime: "node-24"
 })

@@ -3,6 +3,7 @@ import {
   createCongressSynchronizationIdentity,
   createGovInfoSynchronizationIdentity,
   createOpenStatesSynchronizationIdentity,
+  createSenateSynchronizationIdentity,
   createSynchronizationDeduplicationKey,
   formatSynchronizationIdentity,
   parseSynchronizationEnvironment,
@@ -187,6 +188,14 @@ function buildSynchronizationScheduleManifest(
       "10 3 * * *",
       options.environment,
       false
+    )
+  )
+  schedules.push(
+    createSchedule(
+      createSenateSynchronizationIdentity(options.currentCongress),
+      "40 * * * *",
+      options.environment,
+      options.active
     )
   )
 

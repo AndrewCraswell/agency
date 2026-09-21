@@ -10,12 +10,16 @@ import {
 } from "@repo/legislation-core/database/schema/schema"
 import { isPersonCivicFoundationComplete } from "@repo/legislation-core/domain/civic-foundation"
 import { eq, inArray, sql } from "drizzle-orm"
-import type { CongressHouseVoteSnapshot } from "../ingestion/congress/votes.js"
 import { observeCanonicalRecord } from "./changes.js"
 
-export async function upsertCongressHouseVoteSnapshot(
+type FederalVoteSnapshot = Readonly<{
+  positions: Array<typeof votePositions.$inferInsert>
+  vote: typeof votes.$inferInsert
+}>
+
+export async function upsertFederalVoteSnapshot(
   database: LegislationDatabase,
-  snapshot: CongressHouseVoteSnapshot
+  snapshot: FederalVoteSnapshot
 ): Promise<void> {
   const amendmentId = snapshot.vote.amendmentId ?? undefined
   const billId = snapshot.vote.billId ?? undefined
@@ -80,6 +84,7 @@ export async function upsertCongressHouseVoteSnapshot(
           chamber: sql`excluded.chamber`,
           classification: sql`excluded.classification`,
           heldAt: sql`excluded.held_at`,
+          heldDate: sql`excluded.held_date`,
           motion: sql`excluded.motion`,
           noCount: sql`excluded.no_count`,
           absentCount: sql`excluded.absent_count`,
@@ -91,6 +96,7 @@ export async function upsertCongressHouseVoteSnapshot(
           presentCount: sql`excluded.present_count`,
           proxyCount: sql`excluded.proxy_count`,
           question: sql`excluded.question`,
+          requirement: sql`excluded.requirement`,
           result: sql`excluded.result`,
           rollCallNumber: sql`excluded.roll_call_number`,
           sessionId: sql`excluded.session_id`,

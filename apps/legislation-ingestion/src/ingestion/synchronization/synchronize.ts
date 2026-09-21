@@ -10,6 +10,7 @@ import {
   type CongressScopedSynchronizationIdentity,
   type GovInfoSynchronizationIdentity,
   type OpenStatesSynchronizationIdentity,
+  type SenateSynchronizationIdentity,
   type SynchronizationIdentity
 } from "../../trigger/identities.js"
 import { synchronizeCongressAmendments } from "../congress/amendments-sync.js"
@@ -33,9 +34,14 @@ import {
 } from "../openstates/entities.js"
 import { normalizeOpenStatesEvent } from "../openstates/events.js"
 import { importOpenStatesRecords } from "../openstates/import.js"
+import { SenateClient } from "../senate/client.js"
+import { synchronizeSenateVotes } from "../senate/votes-sync.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../source-store.js"
 
 const DAY_IN_MILLISECONDS = 86_400_000
+const SENATE_VOTE_BATCH_SIZE = 100
+/** Leaves headroom inside the 3600s task ceiling so a long Congress checkpoints instead of being killed. */
+const SENATE_VOTE_ROUTE_BUDGET_MS = 45 * 60 * 1000
 const OPENSTATES_BILL_OVERLAP_MILLISECONDS = 3_600_000
 
 type OpenStatesSynchronizationClient = Pick<OpenStatesClient, "bills" | "committees" | "events" | "people">
@@ -67,6 +73,7 @@ type SynchronizationRouteName =
   | "congress-entities"
   | "congress-events"
   | "congress-house-votes"
+  | "senate-votes"
   | "openstates-bills"
   | "openstates-entities"
   | "openstates-events"
@@ -82,6 +89,7 @@ type SynchronizationRouteContext = Readonly<{
   openStatesClient?: OpenStatesSynchronizationClient
   openStatesBillsFrom?: Date
   replaceEntitySnapshot?: typeof replaceEntitySnapshot
+  senateClient?: Pick<SenateClient, "getMemberIdentifiers" | "getVote" | "listVotes">
   sourceStore?: SourceStore
 }>
 
@@ -104,6 +112,7 @@ export type SynchronizationExecutionDependencies = Readonly<{
   openStatesClient?: OpenStatesSynchronizationClient
   openStatesBillsFrom?: Date
   replaceEntitySnapshot?: typeof replaceEntitySnapshot
+  senateClient?: Pick<SenateClient, "getMemberIdentifiers" | "getVote" | "listVotes">
   routes?: Partial<Record<SynchronizationRouteName, SynchronizationRoute>>
   runIngestionJob?: typeof runIngestionJob
   sourceStore?: SourceStore
@@ -140,6 +149,7 @@ export async function executeSynchronization(
       openStatesClient: dependencies.openStatesClient,
       openStatesBillsFrom,
       replaceEntitySnapshot: dependencies.replaceEntitySnapshot,
+      senateClient: dependencies.senateClient,
       sourceStore: dependencies.sourceStore
     })
   )
@@ -152,6 +162,7 @@ const defaultSynchronizationRoutes: Record<SynchronizationRouteName, Synchroniza
   "congress-entities": synchronizeCongressEntitiesForScope,
   "congress-events": synchronizeCongressEventsForScope,
   "congress-house-votes": synchronizeCongressHouseVotesForScope,
+  "senate-votes": synchronizeSenateVotesForScope,
   "openstates-bills": synchronizeOpenStatesBillsForScope,
   "openstates-entities": synchronizeOpenStatesEntitiesForScope,
   "openstates-events": synchronizeOpenStatesEventsForScope
@@ -416,6 +427,37 @@ async function synchronizeCongressCommitteeReportsForScope(
   })
 }
 
+async function synchronizeSenateVotesForScope(
+  context: SynchronizationRouteContext
+): Promise<SynchronizationOperationResult> {
+  const identity = senateIdentityFor(context.identity)
+  const client = context.senateClient ?? createSenateClient(context.config, context.onProgress)
+  const counts = createJobCounts()
+  const failures: SynchronizationFailure[] = []
+  const sourceStore = sourceStoreFor(context)
+  let checkpoint: Readonly<Record<string, unknown>> | undefined
+
+  const deadline = Date.now() + SENATE_VOTE_ROUTE_BUDGET_MS
+  for (const session of [1, 2]) {
+    let continueSession = true
+    while (continueSession) {
+      const synchronized = await synchronizeSenateVotes(context.database, client, identity.scope, session, {
+        limit: SENATE_VOTE_BATCH_SIZE,
+        sourceStore
+      })
+      addJobCounts(counts, synchronized.counts)
+      failures.push(...synchronized.failures)
+      checkpoint = { congress: identity.scope, session, ...synchronized.checkpoint }
+      continueSession =
+        synchronized.counts.discovered >= SENATE_VOTE_BATCH_SIZE &&
+        synchronized.counts.failed === 0 &&
+        Date.now() < deadline
+    }
+  }
+
+  return checkpoint === undefined ? { counts, failures } : { checkpoint, counts, failures }
+}
+
 function createSynchronizationJobInput(
   input: SynchronizationExecutionInput,
   identity: SynchronizationIdentity,
@@ -516,6 +558,9 @@ function synchronizationOperation(identity: SynchronizationIdentity): string {
 }
 
 function synchronizationRouteName(identity: SynchronizationIdentity): SynchronizationRouteName {
+  if (identity.provider === "senate") {
+    return "senate-votes"
+  }
   if (identity.provider === "openstates") {
     if (identity.domain === "bills") {
       return "openstates-bills"
@@ -602,6 +647,21 @@ function createCongressClient(
   })
 }
 
+function createSenateClient(
+  config: LegislationConfig,
+  onProgress: SynchronizationRouteContext["onProgress"]
+): SenateClient {
+  return new SenateClient({
+    baseUrl: new URL(config.ingestion.senateVoteBaseUrl),
+    http: new RetryingHttpClient({
+      maxAttempts: config.ingestion.maxAttempts,
+      minimumIntervalMs: 750,
+      onAttemptComplete: (telemetry) => onProgress?.({ provider: "senate", type: "provider-http", ...telemetry }),
+      requestTimeoutMs: config.ingestion.requestTimeoutMs
+    })
+  })
+}
+
 function congressRequestTelemetry(telemetry: HttpRequestTelemetry): Readonly<Record<string, unknown>> {
   return { provider: "congress", type: "provider-http", ...telemetry }
 }
@@ -652,6 +712,13 @@ function congressIdentityFor(
     return identity
   }
   throw new Error(`Expected a Congress ${domain} synchronization identity`)
+}
+
+function senateIdentityFor(identity: SynchronizationIdentity): SenateSynchronizationIdentity {
+  if (identity.provider === "senate" && identity.domain === "votes") {
+    return identity
+  }
+  throw new Error("Expected a Senate votes synchronization identity")
 }
 
 function addJobCounts(target: JobCounts, source: JobCounts): void {

@@ -21,7 +21,7 @@ runtime requires its Railway database URL, provider credentials, Azure Blob cred
 Langfuse settings in the Trigger.dev environment. Secrets are never included in task payloads or schedule definitions.
 
 The schedule reconciler is read-only unless `--apply` is present. `--activate` requires `--apply` and activates the
-Congress.gov and GovInfo schedules. The 156 Open States API schedules are transitional inventory and remain inactive.
+Congress.gov, Senate.gov, and GovInfo schedules. The 156 Open States API schedules are transitional inventory and remain inactive.
 The production state-freshness lane will use self-hosted jurisdiction scrapers because the 250-request daily API quota
 cannot support the configured cadence. A missing, blank, or `false` Open States gate continues to fail closed while the
 transitional definitions are removed or replaced.
@@ -46,7 +46,7 @@ backfill ranges.
 
 ## Task topology
 
-All recurring schedules target `schedule-dispatcher`. Open States and GovInfo dispatch one domain worker with the
+All recurring schedules target `schedule-dispatcher`. Open States, Senate.gov, and GovInfo dispatch one domain worker with the
 canonical deduplication key. The hourly Congress bills entry is the only active Congress ingress and dispatches one
 `congress-wave-coordinator` run. The other five managed Congress entries are retained inactive so reconciliation can
 deactivate them without deleting remote schedules. The dispatcher never dispatches an independent Congress domain worker.
@@ -55,6 +55,7 @@ deactivate them without deleting remote schedules. The dispatcher never dispatch
 | --- | --- | ---: |
 | Open States | `openstates-bills-sync`, `openstates-entities-sync`, `openstates-events-sync` | 3 |
 | Congress.gov | `congress-wave-coordinator`, `congress-wave-child` | 1 coordinator, 15 children |
+| Senate.gov | `senate-votes-sync` | 4 |
 | GovInfo | `govinfo-bill-status-sync` | 1 |
 | Backfill | `legislation-backfill` | 1 |
 | Derived documents | `backfill-derived-shard-controller`, `backfill-derived-corpus` | 64 controllers, 64 workers |
@@ -130,6 +131,8 @@ checkpoint only after the full bounded unit succeeds.
 - Congress bills use the update-date feed with overlap.
 - Other Congress domains use independent offset checkpoints scoped to the configured Congress and, for House votes,
   session.
+- Senate votes use a monotonically increasing vote-number checkpoint per Congress and session. Once current, each run
+  refreshes a bounded recent window so publisher corrections are reapplied.
 - GovInfo uses a bounded `lastModified` observation window with replay and opaque pagination.
 
 ## Retry behavior

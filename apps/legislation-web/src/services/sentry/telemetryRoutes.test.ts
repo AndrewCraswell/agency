@@ -9,8 +9,8 @@ it.each([
   ["/conversations/private-thread?secret=hidden", "/conversations/[conversationId]", "conversation"],
   ["/records/person/private-id", "/records/[kind]/[recordId]", "record"],
   ["/chat", "/chat", "conversation"],
-  ["/dev/representatives?address=PRIVATE", "/dev/representatives", "development"],
-  ["/api/dev/representatives?address=PRIVATE", "/api/dev/representatives", "development"],
+  ["/representatives?address=PRIVATE", "/representatives", "representatives"],
+  ["/api/representatives?address=PRIVATE", "/api/representatives", "api"],
   ["/api/bills/batch/", "/api/bills/batch", "api"],
   ["/api/bills/private-bill", "/api/bills/[billId]", "api"],
   ["/api/legal/provisions/resolve", "/api/legal/provisions/resolve", "api"],
@@ -43,14 +43,14 @@ it("resolves every shipped Next route/page through the executable registry", () 
   }
 })
 
-it("keeps operational, gated and demo routing populations distinct", () => {
-  expect(telemetryCoverageForRoute("/dev/representatives")).toMatchObject({
-    group: "development",
-    exception: "excluded_from_product_usage"
+it("keeps product, operational, gated and demo routing populations distinct", () => {
+  expect(telemetryCoverageForRoute("/representatives")).toMatchObject({
+    group: "representatives",
+    privacy: "optional_usage"
   })
-  expect(telemetryCoverageForRoute("/api/dev/representatives")).toMatchObject({
-    group: "development",
-    exception: "excluded_from_product_usage"
+  expect(telemetryCoverageForRoute("/api/representatives")).toMatchObject({
+    group: "api",
+    privacy: "operational"
   })
   expect(telemetryCoverageForRoute("/")).toMatchObject({ owner: "web", exception: "demo_separate" })
   expect(telemetryCoverageForRoute("/health")).toMatchObject({

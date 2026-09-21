@@ -68,6 +68,7 @@ const derivedShardControllerQueue = queue({
   name: "legislation-derived-shard-controller"
 })
 const materialPhaseGatePollIntervalMs = 15 * 60_000
+const SENATE_ROLL_CALL_START_CONGRESS = 101
 
 export interface MaterialPhaseGateState extends Record<string, unknown> {
   ocrRequiredDocuments: number
@@ -966,16 +967,41 @@ async function runBackfillPhase(
         { idempotencyKey: await globalIdempotencyKey(payload.rebuildId, phase) }
       )
       .unwrap()
+    // Senate roll-call XML begins with the 101st Congress; the current Congress is handled by current catch-up.
+    const senateItems = []
+    for (
+      let congress = Math.max(payload.startCongress, SENATE_ROLL_CALL_START_CONGRESS);
+      congress < payload.endCongress;
+      congress += 1
+    ) {
+      const identity = `senate:votes:${congress}`
+      senateItems.push({
+        options: {
+          concurrencyKey: "senate",
+          idempotencyKey: await globalIdempotencyKey(payload.rebuildId, `${phase}:${identity}`)
+        },
+        payload: { correlationId, identity, rebuildId: payload.rebuildId }
+      })
+    }
+    if (senateItems.length > 0) {
+      assertBatchSucceeded(await currentCatchupBackfill.batchTriggerAndWait(senateItems), `${phase}:senate`)
+    }
     return
   }
   if (phase === "current-catchup") {
-    const identities = payload.jurisdictions.flatMap((jurisdiction) =>
-      (["bills", "entities", "events"] as const).map((domain) => `openstates:${domain}:${jurisdiction}`)
-    )
+    const identities = [
+      ...payload.jurisdictions.flatMap((jurisdiction) =>
+        (["bills", "entities", "events"] as const).map((domain) => `openstates:${domain}:${jurisdiction}`)
+      ),
+      `senate:votes:${payload.endCongress}`
+    ]
     const items = []
     for (const identity of identities) {
       items.push({
-        options: { idempotencyKey: await globalIdempotencyKey(payload.rebuildId, `${phase}:${identity}`) },
+        options: {
+          ...(identity.startsWith("senate:") ? { concurrencyKey: "senate" } : {}),
+          idempotencyKey: await globalIdempotencyKey(payload.rebuildId, `${phase}:${identity}`)
+        },
         payload: { correlationId, identity, rebuildId: payload.rebuildId }
       })
     }

@@ -11,9 +11,6 @@ declare global {
 }
 
 export function getRepresentativeLookup(): Lookup {
-  if (process.env.NODE_ENV !== "development") {
-    throw new LegislationError("not_found", "Not found")
-  }
   if (globalThis.__rostraRepresentativeLookup) {
     return globalThis.__rostraRepresentativeLookup
   }
