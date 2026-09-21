@@ -145,6 +145,37 @@ it("projects page text and truncation into attributable web evidence", async () 
   })
 })
 
+it("retries an empty tag selection on the same public page without discarding available text", async () => {
+  const fetchMock = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json({ success: true, data: { markdown: "", metadata: { statusCode: 200 } } }))
+    .mockResolvedValueOnce(
+      Response.json({ success: true, data: { markdown: "Official bill text", metadata: { statusCode: 200 } } })
+    )
+  vi.stubGlobal("fetch", fetchMock)
+  const result = await callWebTool("read_web_page", { url: "https://example.org/bill", includeTags: ["main"] })
+  expect(result).toMatchObject({
+    evidence: [{ content: { state: "available", quote: "Official bill text" } }],
+    data: { sourceLocator: null, truncated: false }
+  })
+  const first = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+  const second = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))
+  expect(first).toMatchObject({ url: "https://example.org/bill", includeTags: ["main"] })
+  expect(second).toMatchObject({ url: "https://example.org/bill", skipTlsVerification: false })
+  expect(second).not.toHaveProperty("includeTags")
+})
+
+it("does not turn a genuinely empty page into evidence or retry it indefinitely", async () => {
+  const fetchMock = vi.fn<typeof fetch>(async () =>
+    Response.json({ success: true, data: { markdown: "  ", metadata: {} } })
+  )
+  vi.stubGlobal("fetch", fetchMock)
+  await expect(
+    callWebTool("read_web_page", { url: "https://example.org/bill", includeTags: ["main"] })
+  ).rejects.toMatchObject({ code: "invalid_response" })
+  expect(fetchMock).toHaveBeenCalledTimes(2)
+})
+
 it("marks a page-capped PDF excerpt incomplete even when its text is short", async () => {
   vi.stubGlobal(
     "fetch",
@@ -999,10 +1030,10 @@ it("uses canonical schema defaults when validating continuation filters", async 
   ).rejects.toMatchObject({ code: "invalid_cursor", recovery: { action: "restart" } })
   await expect(
     callWebTool("search_bill_text", { ...searchInput, sessionIds: ["session:us:118"], cursor }, fixture.tools)
-  ).rejects.toMatchObject({ code: "invalid_cursor", recovery: { action: "answer" } })
+  ).rejects.toMatchObject({ code: "invalid_cursor", recovery: { action: "restart" } })
   await expect(
     callWebTool("search_bill_text", { ...searchInput, jurisdictionIds: ["jurisdiction:ca"], cursor }, fixture.tools)
-  ).rejects.toMatchObject({ code: "invalid_cursor", recovery: { action: "answer" } })
+  ).rejects.toMatchObject({ code: "invalid_cursor", recovery: { action: "restart" } })
   expect(searchBillText).toHaveBeenCalledTimes(2)
 })
 

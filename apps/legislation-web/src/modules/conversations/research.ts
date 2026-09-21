@@ -90,7 +90,7 @@ const webSearchResponse = z.object({
 const webReadResponse = z.object({
   success: z.literal(true),
   data: z.object({
-    markdown: z.string().trim().min(1),
+    markdown: z.string(),
     metadata: z.object({
       title: z.union([z.string(), z.array(z.string())]).optional(),
       url: z.string().optional(),
@@ -306,23 +306,36 @@ function createWebResearchTools(environment: NodeJS.ProcessEnv, signal: AbortSig
         const { url, includeTags, maxPdfPages = 10 } = webReadInput.parse(input)
         const deadline = operationDeadline("scrape")
         await checkPublicWebDestination(url, deadline.signal)
-        const result = await request(
+        const scrapeInput = {
+          url,
+          formats: ["markdown"],
+          onlyMainContent: true,
+          skipTlsVerification: false,
+          maxAge: 0,
+          parsers: [{ type: "pdf", maxPages: maxPdfPages }]
+        }
+        let selectedTags = includeTags
+        let result = await request(
           "scrape",
-          {
-            url,
-            formats: ["markdown"],
-            onlyMainContent: true,
-            ...(includeTags ? { includeTags } : {}),
-            skipTlsVerification: false,
-            maxAge: 0,
-            parsers: [{ type: "pdf", maxPages: maxPdfPages }]
-          },
+          { ...scrapeInput, ...(selectedTags ? { includeTags: selectedTags } : {}) },
           webReadResponse,
           deadline
         )
+        if (
+          !result.data.markdown.trim() &&
+          selectedTags &&
+          !result.data.metadata.error &&
+          (result.data.metadata.statusCode ?? 200) < 400
+        ) {
+          selectedTags = undefined
+          result = await request("scrape", scrapeInput, webReadResponse, deadline)
+        }
         const { markdown, metadata } = result.data
         if ((metadata.statusCode !== undefined && metadata.statusCode >= 400) || metadata.error) {
           throw new ResearchFailure("dependency_unavailable", crypto.randomUUID())
+        }
+        if (!markdown.trim()) {
+          throw new ResearchFailure("invalid_response", crypto.randomUUID())
         }
         const sourceUrl = await checkPublicWebDestination(metadata.url ?? metadata.sourceURL ?? url, deadline.signal)
         const title = Array.isArray(metadata.title) ? metadata.title.join(" ") : metadata.title
@@ -334,8 +347,8 @@ function createWebResearchTools(environment: NodeJS.ProcessEnv, signal: AbortSig
         let sourceLocator: string | null = null
         if (isPdfTruncated) {
           sourceLocator = `First ${metadata.numPages ?? maxPdfPages} of ${metadata.totalPages} PDF pages`
-        } else if (includeTags) {
-          sourceLocator = `Selected HTML tags: ${includeTags.join(", ")}`
+        } else if (selectedTags) {
+          sourceLocator = `Selected HTML tags: ${selectedTags.join(", ")}`
         } else if (isPdfPageSelection) {
           sourceLocator = `Requested first ${maxPdfPages} PDF pages`
         }
@@ -348,7 +361,7 @@ function createWebResearchTools(environment: NodeJS.ProcessEnv, signal: AbortSig
               text: markdown.slice(0, 20000),
               totalCharacters: markdown.length,
               sourceLocator,
-              truncated: markdown.length > 20000 || isPdfTruncated || !!includeTags || isPdfPageSelection,
+              truncated: markdown.length > 20000 || isPdfTruncated || !!selectedTags || isPdfPageSelection,
               retrievedAt: new Date().toISOString()
             }
           }
