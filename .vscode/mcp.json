@@ -46,6 +46,10 @@
       "type": "http",
       "url": "https://legislation-mcp-production.up.railway.app/mcp"
     },
+    "legislation-staging": {
+      "type": "http",
+      "url": "https://legislation-mcp-staging.up.railway.app/mcp"
+    },
     "trigger": {
       "command": "npx",
       "args": ["trigger.dev@latest", "mcp"]
