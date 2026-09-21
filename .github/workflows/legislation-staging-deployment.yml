@@ -90,12 +90,42 @@ jobs:
           DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway up \
-            --project "$RAILWAY_PROJECT_ID" \
-            --environment "$RAILWAY_ENVIRONMENT_ID" \
-            --service "$LEGISLATION_WEB_SERVICE_ID" \
-            --ci \
-            --message "Deploy staging W ${DEPLOY_SHA}"
+          DEPLOYMENT_ID="$(
+            railway api \
+              'mutation Deploy($environmentId: String!, $serviceId: String!, $commitSha: String!) {
+                serviceInstanceDeployV2(
+                  environmentId: $environmentId
+                  serviceId: $serviceId
+                  commitSha: $commitSha
+                )
+              }' \
+              --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" \
+              --raw-var serviceId="$LEGISLATION_WEB_SERVICE_ID" \
+              --raw-var commitSha="$DEPLOY_SHA" |
+              jq --exit-status --raw-output '.data.serviceInstanceDeployV2'
+          )"
+          for attempt in {1..90}; do
+            STATUS="$(
+              railway deployment list \
+                --project "$RAILWAY_PROJECT_ID" \
+                --environment "$RAILWAY_ENVIRONMENT_ID" \
+                --service "$LEGISLATION_WEB_SERVICE_ID" \
+                --json |
+                jq --exit-status --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+            )"
+            case "$STATUS" in
+              SUCCESS)
+                exit 0
+                ;;
+              FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING)
+                echo "::error::Staging W deployment ${DEPLOYMENT_ID} reached ${STATUS}."
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Timed out waiting for staging W deployment ${DEPLOYMENT_ID}."
+          exit 1
 
       - name: Verify staging legislation-web
         if: steps.changes.outputs.web == 'true'
@@ -131,12 +161,42 @@ jobs:
           DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway up \
-            --project "$RAILWAY_PROJECT_ID" \
-            --environment "$RAILWAY_ENVIRONMENT_ID" \
-            --service "$LEGISLATION_MCP_SERVICE_ID" \
-            --ci \
-            --message "Deploy staging M ${DEPLOY_SHA}"
+          DEPLOYMENT_ID="$(
+            railway api \
+              'mutation Deploy($environmentId: String!, $serviceId: String!, $commitSha: String!) {
+                serviceInstanceDeployV2(
+                  environmentId: $environmentId
+                  serviceId: $serviceId
+                  commitSha: $commitSha
+                )
+              }' \
+              --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" \
+              --raw-var serviceId="$LEGISLATION_MCP_SERVICE_ID" \
+              --raw-var commitSha="$DEPLOY_SHA" |
+              jq --exit-status --raw-output '.data.serviceInstanceDeployV2'
+          )"
+          for attempt in {1..90}; do
+            STATUS="$(
+              railway deployment list \
+                --project "$RAILWAY_PROJECT_ID" \
+                --environment "$RAILWAY_ENVIRONMENT_ID" \
+                --service "$LEGISLATION_MCP_SERVICE_ID" \
+                --json |
+                jq --exit-status --raw-output --arg id "$DEPLOYMENT_ID" '.[] | select(.id == $id) | .status'
+            )"
+            case "$STATUS" in
+              SUCCESS)
+                exit 0
+                ;;
+              FAILED | CRASHED | NEEDS_APPROVAL | SLEEPING | SKIPPED | REMOVED | REMOVING)
+                echo "::error::Staging M deployment ${DEPLOYMENT_ID} reached ${STATUS}."
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Timed out waiting for staging M deployment ${DEPLOYMENT_ID}."
+          exit 1
 
       - name: Verify staging legislation-mcp
         if: steps.changes.outputs.mcp == 'true' && vars.LEGISLATION_STAGING_MCP_ENABLED == 'true'
