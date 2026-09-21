@@ -58,7 +58,7 @@ import {
   executeGovInfoCommitteeSynchronization,
   resetGovInfoCommitteeMembershipHistory
 } from "../ingestion/govinfo/committee-directory-sync.js"
-import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
+import { importGovInfoPackages, partitionGovInfoPackages } from "../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../ingestion/http-client.js"
 import { createJobCounts } from "../ingestion/job-result.js"
 import {
@@ -189,6 +189,8 @@ program
   .option("--end-congress <number>")
   .option("--force", "restart the configured range")
   .option("--rematerialize", "update existing records while resuming the configured range checkpoint")
+  .option("--shard-count <number>", "deterministic package shard count", "1")
+  .option("--shard-index <number>", "zero-based deterministic package shard index", "0")
   .option("--start-congress <number>")
   .action(importGovInfo)
 
@@ -825,24 +827,38 @@ async function importGovInfo(options: {
   endCongress?: string
   force?: boolean
   rematerialize?: boolean
+  shardCount: string
+  shardIndex: string
   startCongress?: string
 }) {
   const config = loadConfig()
   const { billTypes, congresses, end, start } = parseGovInfoScope(options, config)
+  const shardCount = parseInteger(options.shardCount, "shard count")
+  const shardIndex = Number(options.shardIndex)
+  if (!Number.isSafeInteger(shardIndex) || shardIndex < 0 || shardIndex >= shardCount) {
+    throw new InvalidJobInput("shard index must be a zero-based integer smaller than shard count")
+  }
   const providerHttp = httpClient(config)
   const client = new GovInfoClient(providerHttp)
-  const packages =
+  const discoveredPackages =
     options.apiDiscovery === true
       ? await discoverGovInfoHistoryWithApi(config, providerHttp, congresses, billTypes)
       : await client.discover(congresses, billTypes)
+  const packages = partitionGovInfoPackages(discoveredPackages, shardCount, shardIndex)
+  const stream = `${start}-${end}-${billTypes.join("-")}${
+    shardCount === 1 ? "" : `-shard-${shardIndex}-of-${shardCount}`
+  }`
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
       database,
       {
         ...jobExecutionContext(),
         operation: "historical-import",
-        scope: { billTypes, end, start },
-        scopeKey: `congress:${start}-${end}`,
+        scope: { billTypes, end, shardCount, shardIndex, start },
+        scopeKey:
+          shardCount === 1
+            ? `congress:${start}-${end}`
+            : `congress-${start}-${end}-shard-${shardIndex}-of-${shardCount}`,
         source: "govinfo"
       },
       async () =>
@@ -851,7 +867,7 @@ async function importGovInfo(options: {
           force: options.force === true || options.rematerialize === true,
           restart: options.force,
           sourceStore: createSourceStore(config, "federal"),
-          stream: `${start}-${end}-${billTypes.join("-")}`
+          stream
         })
     )
     printJobResult(result)

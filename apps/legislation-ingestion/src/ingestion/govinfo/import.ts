@@ -28,6 +28,23 @@ type PersistResult =
   | SkippedPackage
   | { source: GovInfoBillStatusPackage; status: "inserted" | "prepared" | "updated" }
 
+export function partitionGovInfoPackages(
+  packages: readonly GovInfoBillStatusPackage[],
+  shardCount: number,
+  shardIndex: number
+): GovInfoBillStatusPackage[] {
+  if (
+    !Number.isSafeInteger(shardCount) ||
+    shardCount < 1 ||
+    !Number.isSafeInteger(shardIndex) ||
+    shardIndex < 0 ||
+    shardIndex >= shardCount
+  ) {
+    throw new Error("GovInfo shard index must be a zero-based integer smaller than shard count")
+  }
+  return packages.filter((_source, index) => index % shardCount === shardIndex)
+}
+
 function packageBillId(source: GovInfoBillStatusPackage): string | undefined {
   const match = /^BILLSTATUS-(\d+)([a-z]+)(\d+)$/i.exec(source.packageId)
   if (match?.[1] === undefined || match[2] === undefined || match[3] === undefined) {
