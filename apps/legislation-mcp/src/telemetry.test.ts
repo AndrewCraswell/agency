@@ -1,7 +1,7 @@
 import { runWithRequestContext } from "@repo/legislation-core/auth/request-context"
 import * as Sentry from "@sentry/node"
 import { afterEach, expect, it } from "vitest"
-import { createMcpTelemetry, mcpSentryOptions } from "./telemetry.js"
+import { createMcpTelemetry, emitStagingCanary, mcpSentryOptions } from "./telemetry.js"
 
 afterEach(async () => {
   await Sentry.close(1000)
@@ -67,4 +67,40 @@ it("exports MCP errors with correlation and cause metadata but no credentials or
   expect(output).toContain('"canary":"legislation-staging-123-1"')
   expect(output).toContain("stacktrace")
   expect(output).not.toContain("private")
+})
+
+it("emits a bounded staging canary with deployment context", async () => {
+  const envelopes: string[] = []
+  Sentry.init({
+    ...mcpSentryOptions({ SENTRY_DSN: "https://public@example.org/1", SENTRY_ENVIRONMENT: "staging" }),
+    defaultIntegrations: false,
+    transport: () => ({
+      send: async (envelope) => {
+        envelopes.push(JSON.stringify(envelope))
+        return { statusCode: 200 }
+      },
+      flush: async () => true
+    })
+  })
+
+  await emitStagingCanary("legislation-staging-456-2", {
+    SENTRY_ENVIRONMENT: "staging",
+    RAILWAY_PROJECT_ID: "project",
+    RAILWAY_ENVIRONMENT_ID: "environment",
+    RAILWAY_SERVICE_ID: "service",
+    RAILWAY_DEPLOYMENT_ID: "deployment",
+    RAILWAY_GIT_COMMIT_SHA: "b".repeat(40)
+  })
+
+  const output = envelopes.join("\n")
+  expect(output).toContain('"canary":"legislation-staging-456-2"')
+  expect(output).toContain("controlled_canary")
+  expect(output).toContain("project")
+  expect(output).toContain("environment")
+  expect(output).toContain("service")
+  expect(output).toContain("deployment")
+  expect(output).toContain("b".repeat(40))
+  await expect(emitStagingCanary("invalid", { SENTRY_ENVIRONMENT: "staging" })).rejects.toThrow(
+    "Invalid staging telemetry canary"
+  )
 })

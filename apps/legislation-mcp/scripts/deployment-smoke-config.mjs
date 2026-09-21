@@ -139,15 +139,12 @@ export async function requestMachineAccessToken(configuration, issuer, fetch_ = 
   return value.access_token
 }
 
-export function sentryCanaryArguments(configuration) {
+export function sentryCanaryHeaders(configuration) {
   if (!configuration.sentryCanary || !configuration.railway) {
     throw new Error("Sentry canary context is not configured")
   }
   return {
-    id: "invalid",
-    canaryMarker: configuration.sentryCanaryMarker,
-    deploymentCommitSha: configuration.expectedCommitSha,
-    railway: configuration.railway,
-    authorization: sentryCanaryRedactionValue
+    "x-legislation-sentry-canary": configuration.sentryCanaryMarker,
+    "x-legislation-sentry-redaction-check": sentryCanaryRedactionValue
   }
 }

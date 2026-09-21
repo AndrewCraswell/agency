@@ -12,7 +12,7 @@ import { correlationId, jsonResponse } from "./http.js"
 import { createMcpHttpQueryAdapter } from "./mcp/http-query-adapter.js"
 import { createLegislationMcpHandler } from "./mcp/tools.js"
 import { requestSignals } from "./request-signal.js"
-import { createMcpTelemetry } from "./telemetry.js"
+import { createMcpTelemetry, emitStagingCanary } from "./telemetry.js"
 
 const httpsUrl = z.url({ protocol: /^https$/ }).refine((value) => {
   const url = URL.parse(value)
@@ -50,7 +50,11 @@ const settingsSchema = z
 /** Independent HTTP-only composition: no database or incoming-bearer dependency. */
 export function createMcpApplication(
   environment: NodeJS.ProcessEnv,
-  dependencies: { keys?: WorkosAuthenticatorKeys; fetch?: typeof fetch } = {}
+  dependencies: {
+    keys?: WorkosAuthenticatorKeys
+    fetch?: typeof fetch
+    emitCanary?: (marker: string) => Promise<void>
+  } = {}
 ) {
   const parsed = settingsSchema.safeParse(environment)
   if (!parsed.success) {
@@ -174,6 +178,19 @@ export function createMcpApplication(
       }
       try {
         const identity = await authenticate(request.headers.get("authorization") ?? undefined)
+        const canaryMarker = request.headers.get("x-legislation-sentry-canary")
+        if (canaryMarker !== null) {
+          if (
+            environment.SENTRY_ENVIRONMENT !== "staging" ||
+            config.WORKOS_MCP_M2M_CLIENT_ID === undefined ||
+            identity.userId !== config.WORKOS_MCP_M2M_CLIENT_ID ||
+            !/^legislation-staging-[0-9]+-[0-9]+$/u.test(canaryMarker)
+          ) {
+            return jsonResponse(request, 403, { error: "forbidden_canary" })
+          }
+          await (dependencies.emitCanary ?? ((marker) => emitStagingCanary(marker, environment)))(canaryMarker)
+          return jsonResponse(request, 500, { error: "controlled_telemetry_canary" })
+        }
         const body = await boundedBody(request, shutdown.signal)
         const id = correlationId(request)
         const signal = AbortSignal.any([request.signal, shutdown.signal, AbortSignal.timeout(30_000)])

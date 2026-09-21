@@ -71,6 +71,33 @@ export function initializeMcpTelemetry(environment: NodeJS.ProcessEnv) {
   Sentry.init(mcpSentryOptions(environment))
 }
 
+export async function emitStagingCanary(marker: string, environment: NodeJS.ProcessEnv) {
+  if (environment.SENTRY_ENVIRONMENT !== "staging" || !/^legislation-staging-[0-9]+-[0-9]+$/u.test(marker)) {
+    throw new Error("Invalid staging telemetry canary")
+  }
+  Sentry.withScope((scope) => {
+    scope.setTag("service", "legislation-mcp")
+    scope.setTag("tool", "mcp.canary")
+    scope.setTag("category", "controlled_canary")
+    scope.setTag("stage", "canary")
+    scope.setTag("canary", marker)
+    scope.setContext(
+      "deployment",
+      safeRecord({
+        projectId: environment.RAILWAY_PROJECT_ID,
+        environmentId: environment.RAILWAY_ENVIRONMENT_ID,
+        serviceId: environment.RAILWAY_SERVICE_ID,
+        deploymentId: environment.RAILWAY_DEPLOYMENT_ID,
+        commitSha: environment.RAILWAY_GIT_COMMIT_SHA
+      })
+    )
+    Sentry.captureException(new Error("Controlled staging telemetry canary"))
+  })
+  if (!(await Sentry.flush(5000))) {
+    throw new Error("Staging telemetry canary did not flush")
+  }
+}
+
 export function createMcpTelemetry(): Telemetry {
   return {
     observe: async (name, metadata, operation) =>

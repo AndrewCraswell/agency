@@ -2,7 +2,7 @@ import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/cli
 import {
   deploymentSmokeConfig,
   requestMachineAccessToken,
-  sentryCanaryArguments,
+  sentryCanaryHeaders,
   sentryCanaryRedactionValue
 } from "./deployment-smoke-config.mjs"
 
@@ -88,9 +88,20 @@ try {
   await call("search_events", { jurisdictionId: jurisdictionId ?? "jurisdiction:us", limit: 1 })
 
   if (sentryCanary) {
-    const result = await client.callTool({ name: "get_bill", arguments: sentryCanaryArguments(configuration) })
+    const response = await boundedFetch(resource, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + token,
+        "content-type": "application/json",
+        ...sentryCanaryHeaders(configuration)
+      },
+      body: "{}"
+    })
+    const result = await response.json()
     const serialized = JSON.stringify(result)
-    if (!result.isError) throw new Error("The controlled staging Sentry canary did not produce an expected failure")
+    if (response.status !== 500 || result.error !== "controlled_telemetry_canary") {
+      throw new Error("The controlled staging Sentry canary did not produce the expected response")
+    }
     if (serialized.includes(sentryCanaryRedactionValue)) {
       throw new Error("The controlled staging Sentry canary echoed its redaction sentinel")
     }
