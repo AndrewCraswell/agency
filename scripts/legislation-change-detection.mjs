@@ -7,22 +7,44 @@ const emptyTreeSha = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 const rootNodeFiles = new Set(["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "turbo.json"])
 const sharedRuntimePrefixes = ["packages/oxlint-config/", "packages/typescript-config/"]
+const databaseRoot = "packages/legislation-core/src/database/"
+const migrationToolingPaths = new Set([
+  "apps/legislation-web/scripts/migrate.ts",
+  "packages/legislation-core/drizzle.config.ts",
+  "packages/legislation-core/scripts/database.ts",
+  `${databaseRoot}migrate.ts`
+])
 
 function hasPrefix(path, prefixes) {
   return prefixes.some((prefix) => path.startsWith(prefix))
+}
+
+function normalizePath(rawPath) {
+  return rawPath.replaceAll("\\", "/").replace(/^\.?\//, "")
+}
+
+export function isLegislationDatabaseChange(rawPath) {
+  const path = normalizePath(rawPath)
+  const migrationArtifact =
+    /^packages\/legislation-core\/src\/database\/migrations\/\d{4}_[a-z0-9_]+\.sql$/.test(path) ||
+    path === `${databaseRoot}migrations/meta/_journal.json` ||
+    /^packages\/legislation-core\/src\/database\/migrations\/meta\/\d{4}_snapshot\.json$/.test(path)
+  const schemaDefinition =
+    path.startsWith(`${databaseRoot}schema/`) &&
+    /\.(?:sql|ts)$/.test(path) &&
+    !/\.(?:integration\.)?(?:spec|test)\.ts$/.test(path)
+
+  return migrationArtifact || schemaDefinition || migrationToolingPaths.has(path)
 }
 
 export function classifyLegislationChanges(changedPaths) {
   const result = Object.fromEntries(outputNames.map((name) => [name, false]))
 
   for (const rawPath of changedPaths) {
-    const path = rawPath.replaceAll("\\", "/").replace(/^\.?\//, "")
+    const path = normalizePath(rawPath)
     const rootNodeChange = rootNodeFiles.has(path)
     const coreChange = path.startsWith("packages/legislation-core/")
-    const databaseChange =
-      path.startsWith("packages/legislation-core/src/database/migrations/") ||
-      path.startsWith("packages/legislation-core/src/database/schema/") ||
-      path === "packages/legislation-core/drizzle.config.ts"
+    const databaseChange = isLegislationDatabaseChange(path)
     const sharedRuntimeChange = hasPrefix(path, sharedRuntimePrefixes)
 
     result.core ||= coreChange

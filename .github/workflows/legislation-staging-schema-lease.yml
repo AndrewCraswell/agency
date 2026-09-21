@@ -1,0 +1,91 @@
+name: Legislation staging schema lease
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+    paths:
+      - apps/legislation-web/scripts/migrate.ts
+      - packages/legislation-core/drizzle.config.ts
+      - packages/legislation-core/scripts/database.ts
+      - packages/legislation-core/src/database/migrate.ts
+      - packages/legislation-core/src/database/migrations/[0-9][0-9][0-9][0-9]_*.sql
+      - packages/legislation-core/src/database/migrations/meta/_journal.json
+      - packages/legislation-core/src/database/migrations/meta/[0-9][0-9][0-9][0-9]_snapshot.json
+      - packages/legislation-core/src/database/schema/**/*.sql
+      - packages/legislation-core/src/database/schema/**/*.ts
+      - "!packages/legislation-core/src/database/schema/**/*.spec.ts"
+      - "!packages/legislation-core/src/database/schema/**/*.test.ts"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  lease:
+    name: Own staging schema
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency:
+      group: legislation-staging-database-mutation
+      cancel-in-progress: false
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      STAGING_SCHEMA_LEASE_ISSUE: ${{ vars.LEGISLATION_STAGING_SCHEMA_LEASE_ISSUE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # pull_request_target keeps the executable helper on the trusted base branch.
+          fetch-depth: 1
+
+      - name: Fetch pull request commit
+        if: github.event.action != 'closed'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --depth=1 origin "$HEAD_SHA"
+
+      - name: Resolve canonical migration identifier
+        if: github.event.action != 'closed'
+        id: migration
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/legislation-staging-schema-lease.mjs --command migration-id --git-ref "$HEAD_SHA"
+
+      - name: Acquire staging schema lease
+        if: github.event.action != 'closed'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MIGRATION_IDENTIFIER: ${{ steps.migration.outputs.migration_identifier }}
+          OWNER: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          node scripts/legislation-staging-schema-lease.mjs \
+            --command acquire \
+            --pr "$PR_NUMBER" \
+            --head-sha "$HEAD_SHA" \
+            --owner "$OWNER" \
+            --duration-minutes 10080 \
+            --migration-id "$MIGRATION_IDENTIFIER"
+
+      - name: Read persisted staging schema lease
+        if: github.event.action != 'closed'
+        run: node scripts/legislation-staging-schema-lease.mjs --command read
+
+      - name: Release abandoned staging schema lease
+        if: github.event.action == 'closed' && !github.event.pull_request.merged
+        env:
+          OWNER: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          node scripts/legislation-staging-schema-lease.mjs \
+            --command release \
+            --pr "$PR_NUMBER" \
+            --owner "$OWNER"
+
+      - name: Retain merged staging schema lease
+        if: github.event.action == 'closed' && github.event.pull_request.merged
+        run: |
+          echo "::notice::The merged PR keeps its staging schema lease until production migration and staging refresh complete."

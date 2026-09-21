@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { classifyLegislationChanges } from "./legislation-change-detection.mjs"
+import { classifyLegislationChanges, isLegislationDatabaseChange } from "./legislation-change-detection.mjs"
 
 const none = { web: false, mcp: false, core: false, database: false, ingestion: false }
 
@@ -39,14 +39,40 @@ test("routes shared package changes to every consuming runtime", () => {
   })
 })
 
-test("identifies canonical database schema changes", () => {
-  assert.deepEqual(classifyLegislationChanges(["packages/legislation-core/src/database/migrations/0002_example.sql"]), {
-    web: true,
-    mcp: true,
-    core: true,
-    database: true,
-    ingestion: true
-  })
+test("identifies canonical database artifacts and migration tooling", () => {
+  const databasePaths = [
+    "packages/legislation-core/src/database/migrations/0002_example.sql",
+    "packages/legislation-core/src/database/migrations/meta/_journal.json",
+    "packages/legislation-core/src/database/migrations/meta/0002_snapshot.json",
+    "packages/legislation-core/src/database/schema/schema.ts",
+    "packages/legislation-core/drizzle.config.ts",
+    "packages/legislation-core/src/database/migrate.ts",
+    "packages/legislation-core/scripts/database.ts",
+    "apps/legislation-web/scripts/migrate.ts"
+  ]
+
+  for (const path of databasePaths) {
+    assert.equal(isLegislationDatabaseChange(path), true, path)
+    assert.equal(classifyLegislationChanges([path]).database, true, path)
+  }
+})
+
+test("does not classify database tests, runtime access, or lookalike artifacts as migrations", () => {
+  const nonDatabasePaths = [
+    "packages/legislation-core/src/database/migrations/README.md",
+    "packages/legislation-core/src/database/migrations/meta/notes.json",
+    "packages/legislation-core/src/database/migrations/meta/manual_snapshot.json",
+    "packages/legislation-core/src/database/migrations/manual.sql",
+    "packages/legislation-core/src/database/migrations/0002_example.sql.bak",
+    "packages/legislation-core/src/database/schema/schema.integration.test.ts",
+    "packages/legislation-core/src/database/database.ts",
+    "apps/legislation-web/src/modules/legislation/query-service.ts"
+  ]
+
+  for (const path of nonDatabasePaths) {
+    assert.equal(isLegislationDatabaseChange(path), false, path)
+    assert.equal(classifyLegislationChanges([path]).database, false, path)
+  }
 })
 
 test("routes root dependency changes to every Node runtime", () => {
