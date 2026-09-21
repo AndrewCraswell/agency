@@ -30,6 +30,9 @@ The `federal-schedule-activation` task provides the same idempotent federal reco
 worker when an operator does not have a project API secret locally. Its confirmation payload is
 `activate-production-federal-schedules`, and it refuses to run outside production.
 
+The `senate-corpus-validation` task performs a bounded post-backfill check over an explicit Congress range. It verifies
+the expected total, contiguous roll-call sequences, official source links, and member-position coverage.
+
 ```powershell
 pnpm --filter legislation-ingestion tool trigger/reconcile-trigger-schedules --environment development
 pnpm --filter legislation-ingestion tool trigger/reconcile-trigger-schedules --environment development --apply
