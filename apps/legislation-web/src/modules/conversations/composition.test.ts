@@ -106,6 +106,21 @@ describe("composition contracts", () => {
     )
   })
 
+  it("requires version reconciliation before ranking without equating latest text with enacted law", () => {
+    const instructions = composeResearchInstructions("Pinned research instructions.", "Trusted date context.")
+    for (const rule of [
+      "Before the first substantive comparison or ranking",
+      "applicable to the user's as-of cutoff",
+      "latest bill text is not current law",
+      "its provisions must not supply the current version's ranking",
+      "not independent verification of codified law or its effective date",
+      "leave that comparison unresolved instead of ranking stale provisions",
+      "an unrelated later read has its own recovery path"
+    ]) {
+      expect(instructions).toContain(rule)
+    }
+  })
+
   it("uses friendly session names in bill snapshots without changing source IDs", () => {
     const id = "session:ca:20232024"
     const input = {
