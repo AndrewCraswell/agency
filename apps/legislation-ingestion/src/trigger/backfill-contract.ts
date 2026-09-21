@@ -43,6 +43,7 @@ export const backfillControllerPayloadSchema = z
       .min(1)
       .default([...defaultGovInfoBillTypes]),
     endCongress: positiveInteger,
+    forceGovInfo: z.boolean().default(false),
     jurisdictions: z
       .array(z.enum(supportedOpenStatesJurisdictions))
       .min(1)
@@ -117,6 +118,7 @@ export function createBackfillUnits(payload: ParsedBackfillControllerPayload): B
       payload: {
         billTypes: payload.billTypes,
         endCongress: payload.endCongress,
+        force: payload.forceGovInfo,
         startCongress: payload.startCongress
       },
       phase: "govinfo-history"

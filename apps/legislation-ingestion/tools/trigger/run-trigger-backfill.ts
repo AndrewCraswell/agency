@@ -17,6 +17,7 @@ const program = new Command()
   .requiredOption("--start-congress <number>")
   .option("--apply", "trigger the backfill; without this flag the command only prints a local plan")
   .option("--bill-types <types>", "comma-separated GovInfo bill types")
+  .option("--force-govinfo", "restart GovInfo streams so existing records are rematerialized")
   .option("--jurisdictions <codes>", "comma-separated OpenStates jurisdiction codes")
   .option("--phases <phases>", `comma-separated phases: ${backfillPhases.join(", ")}`)
   .action(run)
@@ -33,6 +34,7 @@ async function run(options: {
   apply?: boolean
   billTypes?: string
   endCongress: string
+  forceGovinfo?: boolean
   jurisdictions?: string
   manifestBlob: string
   phases?: string
@@ -42,6 +44,7 @@ async function run(options: {
   const payload = backfillControllerPayloadSchema.parse({
     ...(options.billTypes === undefined ? {} : { billTypes: commaSeparated(options.billTypes) }),
     endCongress: positiveInteger(options.endCongress, "end Congress"),
+    forceGovInfo: options.forceGovinfo === true,
     ...(options.jurisdictions === undefined ? {} : { jurisdictions: commaSeparated(options.jurisdictions) }),
     openStatesManifestBlob: options.manifestBlob,
     ...(options.phases === undefined ? {} : { phases: commaSeparated(options.phases) }),

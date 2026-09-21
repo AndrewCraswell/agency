@@ -167,6 +167,8 @@ pnpm --filter legislation-ingestion tool trigger/run-trigger-backfill --start-co
 
 Large rebuilds must be split into deterministic ranges and can be resumed from their stored checkpoint. Deleting or
 resetting canonical data is a separate operator decision and is never performed by a Trigger.dev task.
+Use `--force-govinfo` only when corrected normalization must rematerialize an existing GovInfo stream from its first
+package; ordinary resumable backfills retain their checkpoint.
 
 ### Milestone: expand federal history beyond Congresses 113-119
 

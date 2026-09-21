@@ -126,6 +126,7 @@ const govInfoHistoryPayloadSchema = baseWorkerSchema
   .extend({
     billTypes: z.array(z.string().trim().min(1).max(20)).min(1),
     endCongress: z.number().int().positive(),
+    force: z.boolean().default(false),
     startCongress: z.number().int().positive()
   })
   .strict()
@@ -349,6 +350,7 @@ export const govInfoHistoryBackfill = task({
             correlationId: payload.correlationId,
             database,
             endCongress: payload.endCongress,
+            force: payload.force,
             startCongress: payload.startCongress,
             workflowExecutionId: ctx.run.id
           },
@@ -946,6 +948,7 @@ async function runBackfillPhase(
           billTypes: payload.billTypes,
           correlationId,
           endCongress: payload.endCongress,
+          force: payload.forceGovInfo,
           rebuildId: payload.rebuildId,
           startCongress: payload.startCongress
         },

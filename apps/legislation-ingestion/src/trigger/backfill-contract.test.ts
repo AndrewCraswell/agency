@@ -13,6 +13,7 @@ describe("backfill contract", () => {
   it("creates deterministic resumable units for selected phases", () => {
     const payload = backfillControllerPayloadSchema.parse({
       endCongress: 119,
+      forceGovInfo: true,
       jurisdictions: ["ca", "tx"],
       openStatesManifestBlob: "manifests/openstates.json",
       phases: ["openstates-history", "govinfo-history", "congress-history", "materials"],
@@ -24,6 +25,7 @@ describe("backfill contract", () => {
     expect(units).toHaveLength(5)
     expect(units[0]?.key).toBe("openstates-history:ca")
     expect(units[2]?.key).toBe(`govinfo-history:118-119:${defaultGovInfoBillTypes.join("-")}`)
+    expect(units[2]?.payload).toMatchObject({ force: true })
     expect(units.at(-1)?.key).toBe("materials")
     expect(backfillIdempotencyKey(payload.rebuildId, units[0]!.key)).toBe(
       "backfill:initial-production:openstates-history:ca"
