@@ -10,7 +10,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../co
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip"
 import { clarificationRequestSchema } from "../clarification"
 import { presentationCitation, presentationEvidence } from "../composition"
-import { entityPageSchema } from "../entityResults"
 import {
   evidenceSnapshotSchema,
   evidenceSourceUrl,
@@ -30,7 +29,6 @@ import { ResearchActivity } from "./ResearchActivity"
 import * as styles from "./ConversationResponse.css"
 
 const evidenceOutputSchema = z.object({ evidence: z.array(evidenceSnapshotSchema).max(40) })
-const resultWarningsSchema = z.object({ resultSet: entityPageSchema.pick({ warnings: true }) })
 type CitationContext = Readonly<{
   presentation: ReturnType<typeof createCitationPresentation>
   recordMentions: ReturnType<typeof responseRecordMentions>
@@ -227,17 +225,6 @@ export function ConversationResponse({
   const { text, presentation, referenceDefinitions, recordMentions } = answer
   const number = new Intl.NumberFormat()
   const answerParts = orderedAnswerParts(message.parts)
-  const resultWarnings = [
-    ...new Set(
-      message.parts.flatMap((part) => {
-        if (part.type !== "dynamic-tool" || part.state !== "output-available") {
-          return []
-        }
-        const parsed = resultWarningsSchema.safeParse(part.output)
-        return parsed.success ? parsed.data.resultSet.warnings.map((warning) => warning.trim()).filter(Boolean) : []
-      })
-    )
-  ]
 
   return (
     <article
@@ -346,11 +333,6 @@ export function ConversationResponse({
               Researching...
             </output>
           )}
-          {resultWarnings.map((warning) => (
-            <p key={warning} className="break-words text-xs text-muted-foreground">
-              {warning}
-            </p>
-          ))}
           {presentation.references.length > 0 && (
             <section aria-label="Sources" className="space-y-2">
               <Collapsible open={areSourcesExpanded} onOpenChange={setAreSourcesExpanded}>

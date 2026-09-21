@@ -1983,7 +1983,7 @@ describe("ConversationResponse inline composition", () => {
     expect(screen.queryByRole("region", { name: "Sources" })).toBeNull()
   })
 
-  it("retains distinct coverage warnings even without cards or valid result items", () => {
+  it("does not render internal retrieval warnings", () => {
     const firstResult = resultPart(["Publisher coverage is incomplete.", "Related records were truncated."])
     const secondResult = resultPart(
       [" Publisher coverage is incomplete. ", "A source was unavailable."],
@@ -2000,9 +2000,10 @@ describe("ConversationResponse inline composition", () => {
       ]),
       { wrapper: InlineProviders }
     )
-    expect(screen.getAllByText("Publisher coverage is incomplete.")).toHaveLength(1)
-    expect(screen.getByText("Related records were truncated.")).toBeDefined()
-    expect(screen.getByText("A source was unavailable.")).toBeDefined()
+    expect(screen.queryByText("Publisher coverage is incomplete.")).toBeNull()
+    expect(screen.queryByText("Related records were truncated.")).toBeNull()
+    expect(screen.queryByText("A source was unavailable.")).toBeNull()
+    expect(screen.getByText("A prose-only answer.")).toBeDefined()
     expect(screen.queryByText(selectedRecord.title)).toBeNull()
     expect(screen.queryByText("Unselected search record")).toBeNull()
     expect(screen.getByRole("button", { name: /Research activity/ })).toBeDefined()

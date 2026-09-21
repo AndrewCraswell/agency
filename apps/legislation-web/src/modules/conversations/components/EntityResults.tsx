@@ -972,11 +972,6 @@ export function EntityResults({ initialPage, answerId }: Readonly<{ initialPage:
         {records}
         {page.items.length === 0 && <p className="text-sm text-muted-foreground">No records returned.</p>}
       </div>
-      {page.warnings.map((warning) => (
-        <p key={warning} className="break-words text-xs text-muted-foreground">
-          {warning}
-        </p>
-      ))}
       {isLoading && (
         <output className={styles.retrievalStatus} aria-live="polite">
           Loading results. Previously loaded records are still shown.
