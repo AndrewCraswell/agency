@@ -61,7 +61,7 @@ async function send(text, body) {
   await fetch('/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body || {messages:[{role:'user',content:text}]})});
   if (${stall}) { document.querySelector('#stop').hidden=false; return; }
   if (turn===1) {
-    log.insertAdjacentHTML('beforeend','<form aria-label="Clarification"><fieldset><legend>Which states?</legend><label for="answer">Your answer</label><input id="answer" aria-label="Your answer"><button type="submit">Continue</button></fieldset></form>');
+    log.insertAdjacentHTML('beforeend','<form aria-label="Clarification"><fieldset><legend>Which states?</legend><label for="answer">Your answer</label><input type="text" id="answer"><button type="submit">Continue</button></fieldset></form>');
     document.querySelector('form').onsubmit=async event=>{ event.preventDefault(); const value=document.querySelector('#answer').value; await fetch('/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'answer-clarification',response:{requestId:'11111111-1111-4111-8111-111111111111'}})}); document.querySelector('form').remove(); await send(value,{messages:[],clarificationId:'11111111-1111-4111-8111-111111111111'}); };
     answer('Which states?', 'clarification');
   } else if (turn===2) { answer('California proposal Alpha is selected. New York evidence is unavailable.', 'completed'); }

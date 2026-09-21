@@ -121,8 +121,14 @@ export async function scenarioBrowser(
             question: clarificationForm.querySelector("legend")?.textContent?.trim() ?? "",
             optionLabels,
             multiple,
-            allowsText:
-              clarificationForm.querySelector('[aria-label="Your answer"],input:not([type]),textarea') !== null
+            allowsText: [
+              ...clarificationForm.querySelectorAll('input:not([type]),input[type="text"],textarea,[role="textbox"]')
+            ].some(
+              (element) =>
+                element instanceof HTMLElement &&
+                element.checkVisibility() &&
+                !element.matches(':disabled,[readonly],[aria-disabled="true"]')
+            )
           }
         }
         const busy =
