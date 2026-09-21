@@ -69,3 +69,10 @@ to make a misconfigured flow pass. M's authenticated smoke and W's provisioned A
 - Any need to create a lasting OAuth/M2M client just for the canary: escalate the identity-lifecycle decision.
 
 Retain only sanitized deployment status, tool name and correlation evidence from future canaries.
+
+## Railway deployment routing
+
+M's Railway service watches `apps/legislation-mcp/**`, runtime dependencies under `packages/legislation-core/**`,
+shared TypeScript configuration, the required vendored AI package and root package-manager metadata. Changes limited to
+unrelated applications must be skipped. Validate both sides of this rule in Railway deployment history after changing
+the watch list: an M-owned change must deploy M, while an unrelated application-only change must produce `SKIPPED`.
