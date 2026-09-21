@@ -169,6 +169,8 @@ Large rebuilds must be split into deterministic ranges and can be resumed from t
 resetting canonical data is a separate operator decision and is never performed by a Trigger.dev task.
 Use `--force-govinfo` only when corrected normalization must rematerialize an existing GovInfo stream from its first
 package; ordinary resumable backfills retain their checkpoint.
+For operator-driven rematerialization, `govinfo:import --api-discovery --force` uses the bounded GovInfo collection API
+to enumerate package IDs while retaining the official bulk XML as the imported source.
 
 ### Milestone: expand federal history beyond Congresses 113-119
 
