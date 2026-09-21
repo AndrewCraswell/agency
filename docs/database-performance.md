@@ -84,6 +84,12 @@ railway run --service pgvector pnpm --filter legislation-web db:query-plan --que
 `--allow-production` is required when Railway reports the environment as production. It authorizes only the registered,
 bounded, read-only diagnostic; it does not enable arbitrary SQL or schema changes.
 
+The `bill.search.lexical` query also accepts the `career-technical-california` fixture: the public phrase
+`work-based learning`, California, introductions from January 1, 2025 through September 18, 2026. It exercises
+the exact bounded bill-candidate builder without embedding or reranking calls. Use the same `db:query-plan`
+command with those query and fixture names. A successful warm-cache plan does not disprove a timeout through
+the application path; compare connection wait, database settings, and cold-cache behavior separately.
+
 ### Supporting-material title-search baseline
 
 The `student-data` fixture exposed a parallel sequential scan over supporting-material titles. Its baseline plan took

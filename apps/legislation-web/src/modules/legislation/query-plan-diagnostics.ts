@@ -1,15 +1,21 @@
 import { createHash } from "node:crypto"
 import { PgDialect } from "drizzle-orm/pg-core"
 import { z } from "zod"
+import { buildLexicalBillSearchQuery } from "../search/search"
 import { buildLexicalSupportingMaterialCandidateQuery } from "./query-service"
 
-const diagnosticQueryNameSchema = z.enum(["supporting_material.search.lexical"])
-const diagnosticFixtureNameSchema = z.enum(["student-data"])
-const diagnosticInputSchema = z.object({
-  fixture: diagnosticFixtureNameSchema,
-  query: diagnosticQueryNameSchema,
-  timeoutMs: z.number().int().min(1_000).max(30_000)
-})
+const diagnosticQueryNameSchema = z.enum(["supporting_material.search.lexical", "bill.search.lexical"])
+const diagnosticFixtureNameSchema = z.enum(["student-data", "career-technical-california"])
+const diagnosticInputSchema = z
+  .object({
+    fixture: diagnosticFixtureNameSchema,
+    query: diagnosticQueryNameSchema,
+    timeoutMs: z.number().int().min(1_000).max(30_000)
+  })
+  .refine(
+    (input) => (input.query === "bill.search.lexical") === (input.fixture === "career-technical-california"),
+    "Fixture does not belong to the selected query"
+  )
 const planEnvelopeSchema = z
   .array(
     z
@@ -130,35 +136,48 @@ export interface QueryPlanDiagnosticClient {
   query(text: string, values?: unknown[]): Promise<Readonly<{ rows: Record<string, unknown>[] }>>
 }
 
-const definitions = {
+const definitions: Record<
+  z.infer<typeof diagnosticQueryNameSchema>,
+  {
+    database: "canonical"
+    build: () => ReturnType<typeof buildLexicalBillSearchQuery>
+    observedQueryIds: readonly string[]
+    revision: number
+    source: string
+  }
+> = {
+  "bill.search.lexical": {
+    database: "canonical",
+    build: () =>
+      buildLexicalBillSearchQuery(
+        {
+          query: "work-based learning",
+          jurisdictionIds: ["jurisdiction:ca"],
+          introducedFrom: "2025-01-01",
+          introducedTo: "2026-09-18"
+        },
+        "work-based learning",
+        100,
+        0
+      ),
+    observedQueryIds: [],
+    revision: 1,
+    source: "apps/legislation-web/src/modules/search/search.ts#buildLexicalBillSearchQuery"
+  },
   "supporting_material.search.lexical": {
     database: "canonical" as const,
-    fixtures: {
-      "student-data": () =>
-        buildLexicalSupportingMaterialCandidateQuery(
-          { limit: 5, mode: "lexical", query: "student data education technology vendor privacy" },
-          "student data education technology vendor privacy",
-          5,
-          0
-        )
-    },
+    build: () =>
+      buildLexicalSupportingMaterialCandidateQuery(
+        { limit: 5, mode: "lexical", query: "student data education technology vendor privacy" },
+        "student data education technology vendor privacy",
+        5,
+        0
+      ),
     observedQueryIds: ["1328274108816803535"],
     revision: 1,
     source: "apps/legislation-web/src/modules/legislation/query-service.ts#buildLexicalSupportingMaterialCandidateQuery"
   }
-} satisfies Record<
-  z.infer<typeof diagnosticQueryNameSchema>,
-  Readonly<{
-    database: "canonical"
-    fixtures: Record<
-      z.infer<typeof diagnosticFixtureNameSchema>,
-      () => ReturnType<typeof buildLexicalSupportingMaterialCandidateQuery>
-    >
-    observedQueryIds: readonly string[]
-    revision: number
-    source: string
-  }>
->
+}
 
 export function parseQueryPlanDiagnosticInput(input: unknown): QueryPlanDiagnosticInput {
   return diagnosticInputSchema.parse(input)
@@ -170,7 +189,7 @@ export async function runQueryPlanDiagnostic(
 ): Promise<QueryPlanDiagnosticReport> {
   const input = diagnosticInputSchema.parse(rawInput)
   const definition = definitions[input.query]
-  const statement = new PgDialect().sqlToQuery(definition.fixtures[input.fixture]())
+  const statement = new PgDialect().sqlToQuery(definition.build())
   assertReadOnlyStatement(statement.sql)
 
   let hasTransaction = false

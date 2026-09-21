@@ -6,20 +6,30 @@ import {
 } from "./query-plan-diagnostics"
 
 it("rejects unknown query names, fixtures, and unsafe timeouts", () => {
+  expect(
+    parseQueryPlanDiagnosticInput({
+      query: "bill.search.lexical",
+      fixture: "career-technical-california",
+      timeoutMs: 20000
+    })
+  ).toMatchObject({ query: "bill.search.lexical" })
+  expect(() =>
+    parseQueryPlanDiagnosticInput({ query: "bill.search.lexical", fixture: "student-data", timeoutMs: 20000 })
+  ).toThrow("Fixture does not belong")
   expect(() =>
     parseQueryPlanDiagnosticInput({
       fixture: "student-data",
       query: "arbitrary.sql",
       timeoutMs: 10_000
     })
-  ).toThrow(/Invalid input/u)
+  ).toThrow(/Invalid/u)
   expect(() =>
     parseQueryPlanDiagnosticInput({
       fixture: "customer-input",
       query: "supporting_material.search.lexical",
       timeoutMs: 10_000
     })
-  ).toThrow(/Invalid input/u)
+  ).toThrow(/Invalid/u)
   expect(() =>
     parseQueryPlanDiagnosticInput({
       fixture: "student-data",
