@@ -9,6 +9,13 @@ it("rejects unknown query names, fixtures, and unsafe timeouts", () => {
   expect(
     parseQueryPlanDiagnosticInput({
       query: "bill.search.lexical",
+      fixture: "school-vouchers-federal",
+      timeoutMs: 20000
+    })
+  ).toMatchObject({ fixture: "school-vouchers-federal" })
+  expect(
+    parseQueryPlanDiagnosticInput({
+      query: "bill.search.lexical",
       fixture: "career-technical-california",
       timeoutMs: 20000
     })

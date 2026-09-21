@@ -3,6 +3,7 @@ import { PgDialect } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
 import {
   buildLexicalBillSearchQuery,
+  buildLexicalBillVersionSnippetQuery,
   decodeSearchCursor,
   embeddingLiteral,
   encodeSearchCursor,
@@ -175,6 +176,19 @@ describe("hybrid search ranking", () => {
 })
 
 describe("lexical bill candidate query", () => {
+  it("generates a headline only after selecting one relevant section per bill", () => {
+    const result = dialect.sqlToQuery(
+      buildLexicalBillVersionSnippetQuery(["bill:us:119:hr:1"], "education savings account")
+    )
+    expect(result.sql).toContain("cross join lateral")
+    expect(result.sql).toContain("limit 1")
+    expect(result.sql).toContain("ts_headline('english', selected.text")
+    expect(result.sql).not.toContain("min(ts_headline")
+    expect(result.sql).toContain('"bill_documents"."bill_id" = requested.bill_id')
+    expect(result.sql).toContain("order by ts_rank_cd(")
+    expect(result.params).toContain("bill:us:119:hr:1")
+    expect(result.sql).toContain("unnest(array[")
+  })
   function renderBillSearch(input: Parameters<typeof buildLexicalBillSearchQuery>[0]) {
     return dialect.sqlToQuery(buildLexicalBillSearchQuery(input, input.query, 25, 0))
   }
@@ -207,7 +221,8 @@ describe("lexical bill candidate query", () => {
     expect(generated).toContain("else 0 end")
     expect(generated).toContain('"legislation"."document_sections"."id" as section_id')
     expect(generated).not.toContain('order by "legislation"."document_sections"."id" asc')
-    expect(generated).toContain('order by ts_rank_cd("legislation"."document_sections"."search_vector"')
+    expect(generated).toContain("version_section_candidates.search_vector")
+    expect(generated).not.toContain('"document_sections"."id" = version_section_candidates.section_id')
     expect(generated).toContain("version_section_matches.search_vector")
     expect(generated).toContain('version_section_coverage.capped as "versionCoverageCapped"')
     expect(generated).toContain("cross join version_section_coverage")

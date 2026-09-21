@@ -90,6 +90,13 @@ the exact bounded bill-candidate builder without embedding or reranking calls. U
 command with those query and fixture names. A successful warm-cache plan does not disprove a timeout through
 the application path; compare connection wait, database settings, and cold-cache behavior separately.
 
+The `school-vouchers-federal` fixture uses `education savings account`, Congress 119, and an introduction
+cutoff of September 18, 2026. Lexical candidate selection retains section vectors instead of rereading them
+for ranking. Result hydration selects one highest-ranked matching section per bill before generating its
+headline, rather than generating headlines for every match and retaining the lexicographically smallest.
+Candidate IDs and ranking are unchanged; preview snippets may differ. Neither change increases query deadlines
+or removes scope filters. Compare the candidate digest separately from snippet content and end-to-end latency.
+
 ### Supporting-material title-search baseline
 
 The `student-data` fixture exposed a parallel sequential scan over supporting-material titles. Its baseline plan took

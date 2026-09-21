@@ -5,7 +5,7 @@ import { buildLexicalBillSearchQuery } from "../search/search"
 import { buildLexicalSupportingMaterialCandidateQuery } from "./query-service"
 
 const diagnosticQueryNameSchema = z.enum(["supporting_material.search.lexical", "bill.search.lexical"])
-const diagnosticFixtureNameSchema = z.enum(["student-data", "career-technical-california"])
+const diagnosticFixtureNameSchema = z.enum(["student-data", "career-technical-california", "school-vouchers-federal"])
 const diagnosticInputSchema = z
   .object({
     fixture: diagnosticFixtureNameSchema,
@@ -13,7 +13,7 @@ const diagnosticInputSchema = z
     timeoutMs: z.number().int().min(1_000).max(30_000)
   })
   .refine(
-    (input) => (input.query === "bill.search.lexical") === (input.fixture === "career-technical-california"),
+    (input) => (input.query === "bill.search.lexical") === (input.fixture !== "student-data"),
     "Fixture does not belong to the selected query"
   )
 const planEnvelopeSchema = z
@@ -140,7 +140,7 @@ const definitions: Record<
   z.infer<typeof diagnosticQueryNameSchema>,
   {
     database: "canonical"
-    build: () => ReturnType<typeof buildLexicalBillSearchQuery>
+    build: (fixture: z.infer<typeof diagnosticFixtureNameSchema>) => ReturnType<typeof buildLexicalBillSearchQuery>
     observedQueryIds: readonly string[]
     revision: number
     source: string
@@ -148,8 +148,21 @@ const definitions: Record<
 > = {
   "bill.search.lexical": {
     database: "canonical",
-    build: () =>
-      buildLexicalBillSearchQuery(
+    build: (fixture) => {
+      if (fixture === "school-vouchers-federal") {
+        return buildLexicalBillSearchQuery(
+          {
+            query: "education savings account",
+            jurisdictionIds: ["jurisdiction:us"],
+            sessionIds: ["session:us:119"],
+            introducedTo: "2026-09-18"
+          },
+          "education savings account",
+          25,
+          0
+        )
+      }
+      return buildLexicalBillSearchQuery(
         {
           query: "work-based learning",
           jurisdictionIds: ["jurisdiction:ca"],
@@ -159,7 +172,8 @@ const definitions: Record<
         "work-based learning",
         100,
         0
-      ),
+      )
+    },
     observedQueryIds: [],
     revision: 1,
     source: "apps/legislation-web/src/modules/search/search.ts#buildLexicalBillSearchQuery"
@@ -189,7 +203,7 @@ export async function runQueryPlanDiagnostic(
 ): Promise<QueryPlanDiagnosticReport> {
   const input = diagnosticInputSchema.parse(rawInput)
   const definition = definitions[input.query]
-  const statement = new PgDialect().sqlToQuery(definition.build())
+  const statement = new PgDialect().sqlToQuery(definition.build(input.fixture))
   assertReadOnlyStatement(statement.sql)
 
   let hasTransaction = false

@@ -413,7 +413,8 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
       cross join lateral (
         select
           ${documentSections.id} as section_id,
-          ${billDocuments.billId} as bill_id
+          ${billDocuments.billId} as bill_id,
+          ${documentSections.searchVector} as search_vector
         from ${documentSections}
         inner join ${billDocuments} on ${documentSections.documentId} = ${billDocuments.id}
         where
@@ -432,7 +433,7 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
       from version_section_lookahead
     ),
     version_section_candidates as materialized (
-      select bill_id, section_id
+      select bill_id, section_id, search_vector
       from version_section_lookahead
       order by section_id asc
       limit ${LEXICAL_BILL_VERSION_CANDIDATE_LIMIT}
@@ -440,10 +441,8 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
     version_section_matches as materialized (
       select
         version_section_candidates.bill_id,
-        ${documentSections.searchVector} as search_vector
+        version_section_candidates.search_vector
       from version_section_candidates
-      inner join ${documentSections} on ${documentSections.id} = version_section_candidates.section_id
-      order by ts_rank_cd(${documentSections.searchVector}, ${searchQuery}) desc, version_section_candidates.section_id asc
     ),
     version_matches as materialized (
       select version_fallback.*
@@ -568,6 +567,29 @@ function isLexicalBillSearchCandidateRow(row: LexicalBillSearchRow): row is Lexi
   return !row.coverageOnly
 }
 
+export function buildLexicalBillVersionSnippetQuery(billIds: string[], query: string) {
+  const searchQuery = sql`websearch_to_tsquery('english', ${query})`
+  return sql`
+    select selected.bill_id as "billId",
+      ts_headline('english', selected.text, ${searchQuery}, 'MaxFragments=2, MaxWords=35, MinWords=10') as snippet
+    from unnest(array[${sql.join(
+      billIds.map((id) => sql`${id}`),
+      sql`, `
+    )}]::text[]) as requested(bill_id)
+    cross join lateral (
+      select ${billDocuments.billId} as bill_id, ${documentSections.text} as text
+      from ${billDocuments}
+      inner join ${documentSections} on ${documentSections.documentId} = ${billDocuments.id}
+      where ${billDocuments.billId} = requested.bill_id
+        and ${billDocuments.classification} = 'version'
+        and ${billDocuments.processingStatus} = 'processed'
+        and ${documentSections.searchVector} @@ ${searchQuery}
+      order by ts_rank_cd(${documentSections.searchVector}, ${searchQuery}) desc, ${documentSections.id} asc
+      limit 1
+    ) selected
+  `
+}
+
 export function hasCappedLexicalBillVersionCoverage(rows: readonly { versionCoverageCapped: boolean }[]): boolean {
   return rows.some((row) => row.versionCoverageCapped)
 }
@@ -630,27 +652,11 @@ async function hydrateLexicalBillCandidates(
   const versionSnippetRows =
     versionCandidateIds.length === 0
       ? []
-      : await database
-          .select({
-            billId: billDocuments.billId,
-            snippet: sql<string | null>`min(ts_headline(
-              'english',
-              ${documentSections.text},
-              ${searchQuery},
-              'MaxFragments=2, MaxWords=35, MinWords=10'
-            ))`
-          })
-          .from(documentSections)
-          .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
-          .where(
-            and(
-              inArray(billDocuments.billId, versionCandidateIds),
-              eq(billDocuments.classification, "version"),
-              eq(billDocuments.processingStatus, "processed"),
-              sql`${documentSections.searchVector} @@ ${searchQuery}`
-            )
+      : (
+          await database.execute<{ billId: string; snippet: string | null }>(
+            buildLexicalBillVersionSnippetQuery(versionCandidateIds, query)
           )
-          .groupBy(billDocuments.billId)
+        ).rows
   const billsById = new Map(billRows.map((row) => [row.bill.id, row]))
   const latestActionsByBillId = new Map(latestActionRows.map((row) => [row.billId, row.latestActionAt]))
   const sponsorSnippetsByBillId = new Map(sponsorSnippetRows.map((row) => [row.billId, row.snippet]))
