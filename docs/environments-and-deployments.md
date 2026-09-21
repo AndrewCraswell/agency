@@ -16,8 +16,9 @@ by the shared CI gate, but it is not converted into a Railway service by this de
 This is the target operating model. Production and staging W and M are live. Staging has an initialized primary
 database, passage-search database and PgBouncer with one deterministic synthetic acceptance fixture. No production
 records have been copied and production data refresh remains disabled. Staging W deploys only after the exact `main`
-commit passes CI. Staging M has its dedicated outbound WorkOS credential, but automated M deployment remains gated until
-an authenticated MCP smoke token is configured. Railway CDN caching is enabled for W in both environments.
+commit passes CI. Staging M has dedicated inbound smoke and outbound W WorkOS credentials. Its authenticated tool smoke
+and controlled Sentry canary passed protected acceptance, so automatic deployment is enabled after successful CI.
+Railway CDN caching is enabled for W in both environments.
 
 ## Decisions
 
@@ -166,9 +167,10 @@ Active work is never cancelled by a newer run. The credential check may be disab
 The staging deployment workflow runs only after the required CI workflow succeeds for the exact commit. It uses the
 protected `staging` GitHub environment and the non-cancelling `legislation-staging-deployment` lock. Database-contract
 changes fail closed until the protected staging migration workflow is implemented. Staging M changes are reported but
-not automatically deployed until `LEGISLATION_STAGING_MCP_ENABLED` is explicitly enabled after its authenticated MCP
-smoke token and fixture are configured. The live staging M service already has a dedicated outbound WorkOS credential;
-the remaining gate protects incoming MCP-resource acceptance rather than outbound W authentication.
+deploy automatically only when `LEGISLATION_STAGING_MCP_ENABLED=true`. That gate is enabled after protected run
+`35599431733` deployed commit `cbfda3ecc4f022d03c82492ee9058f28dbc6f615` and passed readiness, authenticated MCP
+tool smoke and exact-tag Sentry canary verification. The live staging M service uses separate dedicated credentials for
+incoming smoke and outbound W authentication.
 
 The complete target release sequence is:
 
