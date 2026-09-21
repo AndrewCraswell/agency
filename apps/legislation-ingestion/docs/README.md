@@ -13,6 +13,7 @@ not sibling apps. W lives at `apps/legislation-web`; ignored local state remains
 | State activation and retained evidence | [Rollout checklist](operations/openstates-rollout-checklist.md), [onboarding](operations/openstates-jurisdiction-onboarding.md) |
 | Washington onboarding and acceptance | [Washington requirements and source audit](operations/washington-onboarding.md) |
 | Worker dispatch and budgets | [Trigger design](engineering/trigger-orchestration-design.md), [worker capacity](operations/worker-capacity.md) |
+| Approved-source network relay | [Document fetch relay](operations/document-relay.md) |
 | State archive content draining | [Content continuation](operations/openstates-content-continuation.md) |
 | Retrieval/index work | [Embedding rollout and rebuild hold](engineering/embedding-rollout-plan.md), [search maintenance](operations/search-maintenance.md) |
 | Regulatory source program | [Regulations index](regulations/README.md), [implementation contract](regulations/implementation.md) |

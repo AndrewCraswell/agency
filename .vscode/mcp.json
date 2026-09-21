@@ -44,7 +44,7 @@
     },
     "legislation": {
       "type": "http",
-      "url": "https://leg-dev-mcp.orangemushroom-4d0319a3.westus2.azurecontainerapps.io/mcp"
+      "url": "https://legislation-mcp-production.up.railway.app/mcp"
     },
     "trigger": {
       "command": "npx",
