@@ -18,6 +18,7 @@ backlogs, completed-task ledgers, or dated deployment journals here.
 | Telemetry and diagnostics | [Telemetry specification](engineering/telemetry-spec.md), [debugging](operations/telemetry-debugging.md) |
 | Regulatory APIs and search | [HTTP and MCP contract](regulations/api-mcp-contract.md), [search serving](regulations/legal-search-serving.md), [text serving](regulations/legal-text-serving.md) |
 | Agent evaluation operations | [Agent evaluations](operations/agent-evaluations.md) |
+| Goal-driven browser scenarios and resumption | [Scenario harness](operations/scenario-harness.md) |
 
 From the repository root:
 
