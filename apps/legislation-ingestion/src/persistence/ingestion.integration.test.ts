@@ -5,7 +5,7 @@ import * as schema from "@repo/legislation-core/database/schema/schema"
 import { organizationId } from "@repo/legislation-core/domain/identifiers"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
-import { asc, eq, inArray } from "drizzle-orm"
+import { and, asc, eq, inArray } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
@@ -2504,6 +2504,28 @@ describePostgres.sequential("legislation PostgreSQL ingestion", () => {
         .toSorted((left, right) => (left.documentDate ?? "").localeCompare(right.documentDate ?? ""))
         .map((version) => version.versionCode)
     ).toEqual(["ih", "enr"])
+
+    await database
+      .update(schema.syncCheckpoints)
+      .set({ cursor: { complete: false, index: 1 } })
+      .where(
+        and(eq(schema.syncCheckpoints.source, "govinfo"), eq(schema.syncCheckpoints.stream, "govinfo-restart-test"))
+      )
+    currentXml = xml.replace("Legislative Data Access Act", "Legislative Data Access Act, resumed")
+    const resumedRematerialization = await importGovInfoPackages(database, client, packages, {
+      force: true,
+      restart: false,
+      stream: "govinfo-restart-test"
+    })
+    expect(resumedRematerialization).toMatchObject({
+      checkpoint: { complete: true, index: 2 },
+      counts: { failed: 0, skipped: 1, updated: 1 }
+    })
+    await expect(
+      database.query.bills.findFirst({ where: eq(schema.bills.id, "bill:us:119:hr:1234") })
+    ).resolves.toMatchObject({
+      title: "Legislative Data Access Act, resumed"
+    })
   })
 
   it("does not advance a GovInfo checkpoint past a retained package that fails normalization", async () => {

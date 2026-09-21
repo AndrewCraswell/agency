@@ -188,6 +188,7 @@ program
   .option("--bill-types <types>", "comma-separated bill types", "hr,s,hjres,sjres,hconres,sconres,hres,sres")
   .option("--end-congress <number>")
   .option("--force", "restart the configured range")
+  .option("--rematerialize", "update existing records while resuming the configured range checkpoint")
   .option("--start-congress <number>")
   .action(importGovInfo)
 
@@ -823,6 +824,7 @@ async function importGovInfo(options: {
   billTypes: string
   endCongress?: string
   force?: boolean
+  rematerialize?: boolean
   startCongress?: string
 }) {
   const config = loadConfig()
@@ -846,7 +848,8 @@ async function importGovInfo(options: {
       async () =>
         importGovInfoPackages(database, client, packages, {
           concurrency: config.ingestion.concurrency,
-          force: options.force,
+          force: options.force === true || options.rematerialize === true,
+          restart: options.force,
           sourceStore: createSourceStore(config, "federal"),
           stream: `${start}-${end}-${billTypes.join("-")}`
         })

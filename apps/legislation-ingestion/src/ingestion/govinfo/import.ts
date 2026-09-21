@@ -44,6 +44,7 @@ export async function importGovInfoPackages(
     concurrency?: number
     force?: boolean
     persistCheckpoint?: boolean
+    restart?: boolean
     sourceStore?: SourceStore
     stream: string
   }>
@@ -54,7 +55,7 @@ export async function importGovInfoPackages(
     where: and(eq(syncCheckpoints.source, "govinfo"), eq(syncCheckpoints.stream, options.stream))
   })
   const startIndex =
-    options.force === true || typeof checkpoint?.cursor.index !== "number"
+    (options.restart ?? options.force) === true || typeof checkpoint?.cursor.index !== "number"
       ? 0
       : Math.min(checkpoint.cursor.index, packages.length)
   counts.skipped = startIndex
