@@ -174,6 +174,57 @@ it("streams an explicit incomplete answer and persists its interruption without 
   expect([...stored.values()]).toContainEqual(expect.objectContaining({ kind: "research-turn", interrupted: true }))
 })
 
+it("records unavailable execution timing for a tool call rejected before execution", async () => {
+  vi.stubEnv("NODE_ENV", "development")
+  vi.stubEnv("OPENROUTER_API_KEY", "fixture")
+  model = new MockLanguageModelV4({
+    doStream: async ({ prompt }) => ({
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "stream-start", warnings: [] })
+          if (prompt.some((message) => message.role === "tool")) {
+            controller.enqueue({ type: "text-start", id: "answer" })
+            controller.enqueue({ type: "text-delta", id: "answer", delta: "The requested text could not be read." })
+            controller.enqueue({ type: "text-end", id: "answer" })
+          } else {
+            controller.enqueue({
+              type: "tool-call",
+              toolCallId: "invalid-read",
+              toolName: "get_bill_text",
+              input: JSON.stringify({ id: 123 })
+            })
+          }
+          controller.enqueue({
+            type: "finish",
+            finishReason: { unified: "stop", raw: "stop" },
+            usage: {
+              inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+              outputTokens: { total: 1, text: 1, reasoning: 0 }
+            }
+          })
+          controller.close()
+        }
+      })
+    })
+  })
+  const response = await POST(
+    new Request("http://localhost:3000/chat", {
+      method: "POST",
+      headers: { origin: "http://localhost:3000", "content-type": "application/json" },
+      body: JSON.stringify({
+        sessionKey: "11111111-1111-4111-8111-111111111111",
+        sessionId: "invalid-tool",
+        messages: [{ id: "question", role: "user", parts: [{ type: "text", text: "Read the bill." }] }]
+      })
+    })
+  )
+  const stream = await response.text()
+  expect(stream).toContain('"unavailableReason":"execution_not_observed"')
+  expect(stream).toContain('"durationMs":null')
+  expect(stream).toContain('"failureCode":"invalid_request"')
+  expect(getBillText).not.toHaveBeenCalled()
+})
+
 it("persists a turn and restores it through POST into the next model request and citation stream", async () => {
   vi.stubEnv("NODE_ENV", "development")
   vi.stubEnv("OPENROUTER_API_KEY", "fixture")

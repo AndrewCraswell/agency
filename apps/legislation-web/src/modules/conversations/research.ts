@@ -836,7 +836,7 @@ export async function createResearchTools(
               toolCallId,
               toolName: name,
               error: failure,
-              durationMs: failedMeasurement.durationMs,
+              durationMs: failedMeasurement.durationMs ?? undefined,
               resultBytes,
               measurement: failedMeasurement,
               telemetryId: reference,

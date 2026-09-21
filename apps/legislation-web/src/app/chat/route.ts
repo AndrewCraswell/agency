@@ -40,7 +40,7 @@ import {
 import { searchReferences } from "../../modules/conversations/referenceSearch"
 import { createResearchTools } from "../../modules/conversations/research"
 import { ResearchFailure } from "../../modules/conversations/researchFailure"
-import type { ResearchToolMeasurement } from "../../modules/conversations/researchMeasurement"
+import { unobservedToolFailure, type ResearchToolMeasurement } from "../../modules/conversations/researchMeasurement"
 import { createResearchTurn, restoreResearchMemory } from "../../modules/conversations/researchMemory"
 import { resultStore } from "../../modules/conversations/resultStore"
 import { researchSnapshotPersistence } from "../../modules/conversations/snapshotPersistence.server"
@@ -341,6 +341,18 @@ async function handleChatRequest(request: Request) {
           messages,
           onChunk: ({ chunk }) => {
             if (chunk.type === "tool-error" || (chunk.type === "tool-call" && chunk.invalid)) {
+              if (!toolMeasurements.has(chunk.toolCallId)) {
+                let failureCode: ResearchToolMeasurement["failureCode"] = null
+                if (chunk.error instanceof ResearchFailure) {
+                  failureCode = chunk.error.code
+                } else if (chunk.type === "tool-call" && chunk.invalid) {
+                  failureCode = "invalid_request"
+                }
+                toolMeasurements.set(
+                  chunk.toolCallId,
+                  unobservedToolFailure(runId, chunk.toolCallId, chunk.toolName, failureCode)
+                )
+              }
               reportToolFailure({ toolCallId: chunk.toolCallId, toolName: chunk.toolName, error: chunk.error })
             }
           },
