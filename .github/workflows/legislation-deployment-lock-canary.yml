@@ -1,0 +1,48 @@
+name: Legislation deployment lock canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Protected operation to simulate
+        required: true
+        type: choice
+        options:
+          - staging-database-mutation
+          - staging-deployment
+          - production-migration
+          - production-deployment
+      hold_seconds:
+        description: Seconds to hold the lock
+        required: true
+        default: 30
+        type: number
+      verify_credential:
+        description: Verify that the selected environment has a Railway credential
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  hold-lock:
+    name: Hold ${{ inputs.operation }} lock
+    runs-on: ubuntu-latest
+    environment: ${{ startsWith(inputs.operation, 'production-') && 'production' || 'staging' }}
+    concurrency:
+      group: legislation-${{ inputs.operation }}
+      cancel-in-progress: false
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - name: Verify environment-scoped Railway credential
+        if: inputs.verify_credential
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "::error::The selected GitHub environment has no RAILWAY_TOKEN."
+            exit 1
+          fi
+      - name: Hold deployment lock
+        run: sleep "${{ inputs.hold_seconds }}"

@@ -21,6 +21,30 @@ env:
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
 jobs:
+  changes:
+    name: Detect legislation changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.detect.outputs.web }}
+      mcp: ${{ steps.detect.outputs.mcp }}
+      core: ${{ steps.detect.outputs.core }}
+      database: ${{ steps.detect.outputs.database }}
+      ingestion: ${{ steps.detect.outputs.ingestion }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Detect affected legislation surfaces
+        id: detect
+        env:
+          BASE_SHA:
+            ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/legislation-change-detection.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
+
   verify:
     name: Required verification
     runs-on: ubuntu-latest

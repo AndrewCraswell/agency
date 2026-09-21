@@ -13,9 +13,9 @@ This page defines the target CI/CD and environment contract for the legislation 
 Shopify deployment is outside this contract. Legislation ingestion remains deployed through Trigger.dev and is verified
 by the shared CI gate, but it is not converted into a Railway service by this design.
 
-This is the target operating model. The current Railway project has only a `production` environment, its application
-services are not connected to GitHub, web CDN caching is disabled and deployments are manual. Do not treat the target
-workflow below as active until its acceptance checklist has passed.
+This is the target operating model. The Railway project has a production environment and an empty staging environment;
+its application services are not connected to GitHub, web CDN caching is disabled and deployments are manual. Do not
+treat the target workflow below as active until its acceptance checklist has passed.
 
 ## Decisions
 
@@ -101,6 +101,9 @@ determine whether a commit creates a deployment.
 
 The service watch paths in each `railway.json` are the deployment source of truth. GitHub path detection is an
 optimization and must not contradict those paths. A shared-package change must trigger every runtime that imports it.
+The CI `changes` job compares a pull request with its base commit and a `main` push with its preceding commit. It emits
+`web`, `mcp`, `core`, `database` and `ingestion` outputs through
+`scripts/legislation-change-detection.mjs`. Its routing contract is covered by representative path tests.
 
 ## CI and release orchestration
 
@@ -131,6 +134,26 @@ developer configuration remains unchanged. Railway Docker builds use the public 
 repository `.npmrc` from their build context.
 GitHub also caps Vitest at two workers so interaction-heavy browser tests do not compete for the hosted runner's limited
 CPU; local development retains the repository default.
+
+### Deployment controls
+
+GitHub environments named `staging` and `production` own separate Railway project tokens scoped to their matching
+Railway environments. Both accept deployments only from `main`; forked pull requests therefore cannot enter either
+environment or read their secrets. Production additionally requires reviewer approval before its jobs start. The
+repository is public so these protection rules are available on the current GitHub plan.
+
+Environment mutations and deployments use these repository-wide, non-cancelling concurrency groups:
+
+| Operation | Concurrency group |
+| --- | --- |
+| Staging database refresh or migration | `legislation-staging-database-mutation` |
+| Staging application deployment | `legislation-staging-deployment` |
+| Production database migration | `legislation-production-migration` |
+| Production application deployment | `legislation-production-deployment` |
+
+The manually dispatched `Legislation deployment lock canary` workflow exercises the same environment names, credentials
+and lock names. Dispatching the same operation twice must leave the second run queued until the first releases its lock.
+Active work is never cancelled by a newer run. The credential check may be disabled only for a lock-only canary.
 
 ### Merge to `main`
 
