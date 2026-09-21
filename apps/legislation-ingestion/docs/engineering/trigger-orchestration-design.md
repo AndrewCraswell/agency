@@ -26,6 +26,10 @@ The production state-freshness lane will use self-hosted jurisdiction scrapers b
 cannot support the configured cadence. A missing, blank, or `false` Open States gate continues to fail closed while the
 transitional definitions are removed or replaced.
 
+The `federal-schedule-activation` task provides the same idempotent federal reconciliation from inside the production
+worker when an operator does not have a project API secret locally. Its confirmation payload is
+`activate-production-federal-schedules`, and it refuses to run outside production.
+
 ```powershell
 pnpm --filter legislation-ingestion tool trigger/reconcile-trigger-schedules --environment development
 pnpm --filter legislation-ingestion tool trigger/reconcile-trigger-schedules --environment development --apply
@@ -55,7 +59,7 @@ deactivate them without deleting remote schedules. The dispatcher never dispatch
 | --- | --- | ---: |
 | Open States | `openstates-bills-sync`, `openstates-entities-sync`, `openstates-events-sync` | 3 |
 | Congress.gov | `congress-wave-coordinator`, `congress-wave-child` | 1 coordinator, 15 children |
-| Senate.gov | `senate-votes-sync` | 4 |
+| Senate.gov | `senate-votes-sync` | 1 |
 | GovInfo | `govinfo-bill-status-sync` | 1 |
 | Backfill | `legislation-backfill` | 1 |
 | Derived documents | `backfill-derived-shard-controller`, `backfill-derived-corpus` | 64 controllers, 64 workers |

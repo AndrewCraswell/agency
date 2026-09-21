@@ -90,7 +90,7 @@ describe("synchronization worker contract", () => {
     expect(intent).toMatchObject({
       identityKey: "senate:votes:119",
       operation: "votes-sync",
-      queue: { concurrencyLimit: 4, name: "senate" },
+      queue: { concurrencyLimit: 1, name: "senate" },
       taskIdentifier: "senate-votes-sync"
     })
   })

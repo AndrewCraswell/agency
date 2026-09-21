@@ -46,7 +46,7 @@ describe("synchronization identities", () => {
     expect(createSynchronizationDeduplicationKey("staging", openStates)).toBe("staging:openstates:entities:tx")
     expect(synchronizationQueueFor(govInfo)).toEqual({ concurrencyLimit: 1, name: "govinfo" })
     expect(synchronizationTaskIdentifierFor(govInfo)).toBe("govinfo-bill-status-sync")
-    expect(synchronizationQueueFor(senate)).toEqual({ concurrencyLimit: 4, name: "senate" })
+    expect(synchronizationQueueFor(senate)).toEqual({ concurrencyLimit: 1, name: "senate" })
     expect(synchronizationTaskIdentifierFor(senate)).toBe("senate-votes-sync")
   })
 

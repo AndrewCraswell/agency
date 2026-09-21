@@ -83,7 +83,7 @@ export const synchronizationQueues = {
   congress: { concurrencyLimit: 4, name: "congress" },
   govinfo: { concurrencyLimit: 1, name: "govinfo" },
   openstates: { concurrencyLimit: 3, name: "openstates" },
-  senate: { concurrencyLimit: 4, name: "senate" }
+  senate: { concurrencyLimit: 1, name: "senate" }
 } as const satisfies Record<SynchronizationProvider, SynchronizationQueue>
 
 const openStatesTaskIdentifiers = {
