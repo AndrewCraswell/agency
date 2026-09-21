@@ -13,10 +13,11 @@ This page defines the target CI/CD and environment contract for the legislation 
 Shopify deployment is outside this contract. Legislation ingestion remains deployed through Trigger.dev and is verified
 by the shared CI gate, but it is not converted into a Railway service by this design.
 
-This is the target operating model. Production W and M are live. Staging has a deployed W service, an empty schema-only
-primary database, an empty passage-search database, PgBouncer and a reserved M service. Production data refresh remains
-disabled. Staging W deploys only after the exact `main` commit passes CI, while staging M remains gated until its
-dedicated outbound WorkOS credential is configured. Railway CDN caching is enabled for W in both environments.
+This is the target operating model. Production and staging W and M are live. Staging has an empty schema-only primary
+database, an initialized but empty passage-search database and PgBouncer. Production data refresh remains disabled.
+Staging W deploys only after the exact `main` commit passes CI. Staging M has its dedicated outbound WorkOS credential,
+but automated M deployment remains gated until an authenticated MCP smoke token and fixture are configured. Railway CDN
+caching is enabled for W in both environments.
 
 ## Decisions
 
@@ -167,7 +168,9 @@ Active work is never cancelled by a newer run. The credential check may be disab
 The staging deployment workflow runs only after the required CI workflow succeeds for the exact commit. It uses the
 protected `staging` GitHub environment and the non-cancelling `legislation-staging-deployment` lock. Database-contract
 changes fail closed until the protected staging migration workflow is implemented. Staging M changes are reported but
-not deployed until `LEGISLATION_STAGING_MCP_ENABLED` is explicitly enabled after its dedicated credential is configured.
+not automatically deployed until `LEGISLATION_STAGING_MCP_ENABLED` is explicitly enabled after its authenticated MCP
+smoke token and fixture are configured. The live staging M service already has a dedicated outbound WorkOS credential;
+the remaining gate protects incoming MCP-resource acceptance rather than outbound W authentication.
 
 The complete target release sequence is:
 
@@ -357,6 +360,10 @@ M remains a standalone stateless Railway service:
 - Its outbound API credential is distinct from incoming MCP credentials.
 - `/health`, `/ready` and OAuth protected-resource metadata remain public.
 - `/mcp` remains authenticated and `no-store`.
+
+Staging M is deployed from the same repository-owned Docker contract as production. Its health, readiness,
+protected-resource discovery, anonymous rejection and dedicated outbound WorkOS client-credentials path have passed.
+The user-consent MCP tool canary remains separate and requires an approved staging fixture.
 
 Production M deploys after production W is ready. A preview M calls its corresponding preview W when the PR changed W;
 otherwise it calls persistent staging W. Contract changes affecting both services deploy and pass smoke tests together.
