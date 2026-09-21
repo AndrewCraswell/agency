@@ -9,7 +9,7 @@ export type ResearchSnapshotPersistence = {
 
 let connection: ReturnType<typeof createDatabase> | undefined
 function pool() {
-  connection ??= createDatabase({ ...loadConfig().database, maxConnections: 1 })
+  connection ??= createDatabase(loadConfig().database, { waitForConnection: true })
   return connection.pool
 }
 
