@@ -120,7 +120,7 @@ export function createMcpTelemetry(): Telemetry {
       const context = getRequestContext()
       const canary = z
         .object({ canaryMarker: z.string().regex(/^legislation-staging-[0-9]+-[0-9]+$/u) })
-        .safeParse(metadata.input)
+        .safeParse(metadata)
       const canaryMarker = canary.success ? canary.data.canaryMarker : undefined
       Sentry.withScope((scope) => {
         scope.setTag("service", "legislation-mcp")
