@@ -118,8 +118,10 @@ The pull-request flow is:
 7. M acceptance runs against its preview URL and the selected preview or staging W API.
 8. The PR reports deployment, migration and smoke-test status independently.
 
-The existing root `pnpm verify` remains the required code-quality gate. Package publication is a separate concern and
-must not accidentally grant or block production deployment unless it is intentionally made a release prerequisite.
+The existing root `pnpm verify` remains the required code-quality gate. Package publication is a manually dispatched
+workflow, so it cannot grant or block application deployment. If publication intentionally becomes a release
+prerequisite later, the deployment workflow must declare that dependency explicitly rather than relying on another
+push-triggered check suite.
 The repository `.npmrc` intentionally routes developer installs through the Azure Artifacts proxy because the public
 npm registry is unavailable on the work VPN. The proxy contains no repository-only packages. GitHub-hosted workflows
 therefore install the pinned pnpm version with npm's explicit public-registry command-line option, then set pnpm's

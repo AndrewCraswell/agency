@@ -1,8 +1,7 @@
 name: Package publication
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 # Never run two publishes at once; don't cancel an in-flight release.
 concurrency:

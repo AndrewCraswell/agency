@@ -25,17 +25,15 @@ sanitized status and correlation IDs.
 
 ### Retained deployment evidence
 
-The positive consent canary remains pending. Standalone Railway deployment
-`08e94031-e73e-4460-9ed2-ee0b91d9f67c` from clean commit `2ab6a85` reached `SUCCESS` at
-`https://legislation-mcp-production.up.railway.app`. Health, readiness and protected-resource metadata return 200 and
-advertise the exact standalone `/mcp` resource. Anonymous requests and a valid API-audience machine token both return
-the expected 401 resource-metadata challenge. A device-authorization request accepted the exact resource indicator,
-but its one-time operator consent window expired before token issuance, so no positive tool call or revocation is
-claimed. No bearer token was printed, persisted or installed as a service variable.
+The positive consent canary completed on 2026-09-20 against
+`https://legislation-mcp-production.up.railway.app/mcp`. VS Code completed WorkOS authorization and an authenticated
+`list_jurisdictions` call returned live records through W. Health, readiness and protected-resource metadata returned
+200 and advertised the exact standalone `/mcp` resource. No bearer token was printed, persisted or installed as a
+service variable.
 
-The historical `legislation-web` deployment `60895192-ae34-42ab-9b96-2142750aa73c` exposed the former combined-app
-resource at `https://legislation-web-production-b024.up.railway.app/mcp`. It is stale acceptance evidence after the
-monorepo split, not a rollback target. The former `legislation-api` service is deleted.
+The former combined Azure Container App `leg-dev-mcp` and its app-specific identity and alerts were deleted after the
+Railway MCP and ingestion-owned document relay passed production acceptance. The retired Azure endpoint is not a
+rollback target. Azure Blob Storage, Document Intelligence and the OpenStates jobs have separate lifecycles.
 
 Confirm the actual M service, public URL and WorkOS registration before cutover. Preserve the existing resource URL
 when possible; a change requires coordinated metadata, registration and client updates, not fallback audiences or
@@ -70,4 +68,4 @@ to make a misconfigured flow pass. M's authenticated smoke and W's provisioned A
 - Any need to reveal tokens, WorkOS API keys, client secrets or browser sessions to an agent.
 - Any need to create a lasting OAuth/M2M client just for the canary: escalate the identity-lifecycle decision.
 
-No new consent, deployed tool, revocation or infrastructure acceptance was performed for the docs move.
+Retain only sanitized deployment status, tool name and correlation evidence from future canaries.
