@@ -11,6 +11,7 @@ import { EvidencePanel } from "../components/EvidencePanel"
 import { recordMentionHref, type PresentationBlock } from "../composition"
 import type { EvidenceSnapshot } from "../evidence"
 import { activityPart, reviewData, toolCaptures } from "./reviewFixtures"
+import * as responseStyles from "../components/ConversationResponse.css"
 
 const read = toolCaptures.find((capture) => capture.toolName === "get_bill")
 const search = toolCaptures.find((capture) => capture.toolName === "search_bills")
@@ -98,6 +99,49 @@ const meta: Meta<typeof ConversationResponse> = {
 }
 export default meta
 type Story = StoryObj<typeof meta>
+
+export const CompactReasoningSummaries: Story = {
+  args: {
+    isRunning: true,
+    message: {
+      id: "reasoning-spacing",
+      role: "assistant",
+      parts: [
+        {
+          type: "reasoning",
+          text: "**Checking recorded status**\n\nReview the recorded actions before comparing milestone dates.",
+          state: "done"
+        },
+        activityPart(search, "Complete").part,
+        {
+          type: "reasoning",
+          text: "**Comparing the actions**\n\nKeep missing dates separate from stages that have not been recorded.",
+          state: "done"
+        }
+      ]
+    }
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
+    const trigger = canvas.getByRole("button", { name: "Research activity 3 steps" })
+    if (trigger.getAttribute("aria-expanded") !== "true") {
+      await userEvent.click(trigger)
+    }
+    const activityLabel = canvasElement.querySelector(`.${responseStyles.activityLabel}`)
+    invariant(activityLabel)
+    const labelStyle = getComputedStyle(activityLabel)
+    for (const note of canvas.getAllByRole("note", { name: "Reasoning summary" })) {
+      const heading = note.querySelector(`.${responseStyles.activityHeading}`)
+      const body = note.querySelector("p")
+      invariant(heading && body)
+      const bodyStyle = getComputedStyle(body)
+      await expect(bodyStyle.fontFamily).toBe(labelStyle.fontFamily)
+      await expect(bodyStyle.fontSize).toBe(labelStyle.fontSize)
+      await expect(bodyStyle.lineHeight).toBe(labelStyle.lineHeight)
+      await expect(body.getBoundingClientRect().top - heading.getBoundingClientRect().bottom).toBeCloseTo(6, 0)
+    }
+  }
+}
 
 function BillVersionCitationExamples() {
   const [selection, setSelection] = useState<CitationSelection>()

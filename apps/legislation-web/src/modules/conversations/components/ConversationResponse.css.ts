@@ -110,27 +110,37 @@ export const activityDetails = style({
   paddingLeft: 24,
   color: "var(--subtle)"
 })
-export const reasoningSummary = style({
-  display: "grid",
-  gridTemplateColumns: "16px minmax(0, 1fr)",
-  gap: 8,
-  alignItems: "start",
-  padding: "10px 0",
-  color: "var(--muted-foreground)",
-  fontSize: 13,
-  lineHeight: 1.55,
-  whiteSpace: "pre-wrap",
-  overflowWrap: "anywhere"
-})
 export const reasoningSummaryIcon = style({
   width: 16,
   height: 16,
-  marginTop: 2,
+  flexShrink: 0,
+  marginTop: 0,
   color: "var(--primary)"
 })
-export const reasoningSummaryText = style({ minWidth: 0 })
-globalStyle(`${reasoningSummaryText} p`, { margin: "0 0 8px" })
-globalStyle(`${reasoningSummaryText} p:last-child`, { marginBottom: 0 })
+export const reasoningSummaryText = style({
+  ...activityCaption,
+  minWidth: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+  fontFamily: "inherit",
+  fontWeight: 400,
+  whiteSpace: "normal",
+  overflowWrap: "anywhere"
+})
+globalStyle(`${reasoningSummaryText} > *`, {
+  margin: 0,
+  fontSize: "inherit",
+  lineHeight: "inherit",
+  fontFamily: "inherit"
+})
+globalStyle(`${reasoningSummaryText} :is(h1, h2, h3, h4, h5, h6, strong)`, {
+  fontSize: "inherit",
+  lineHeight: "inherit",
+  fontFamily: "inherit",
+  fontWeight: 500,
+  color: "var(--foreground)"
+})
 export const activityPending = style({ color: "var(--subtle)" })
 export const activityComplete = style({ color: "var(--state-success)" })
 export const activityFailed = style({ color: "var(--state-danger)" })

@@ -13,7 +13,7 @@ import type { MeetingDetails, VoteDetails } from "../recordDetails"
 import { ChatProviders } from "./ChatProviders"
 import { billVersionCitationFixtures, malformedCitationFixtures } from "./citationEvidenceFixtures"
 import { createCitationPresentation, type CitationSelection } from "./citationPresentation"
-import { ConversationResponse } from "./ConversationResponse"
+import { ConversationResponse, researchActivityItems } from "./ConversationResponse"
 import { CompactRecordCard, RecordCard } from "./EntityResults"
 import { EvidencePanel } from "./EvidencePanel"
 import { RecordGroup } from "./RecordGroup"
@@ -739,7 +739,24 @@ describe("response presentation snapshots", () => {
 })
 
 describe("ResearchActivity details", () => {
-  it("shows provider reasoning summaries in research order without counting them as tool steps", async () => {
+  it("counts rendered thinking sections rather than streamed chunks or blank summaries", () => {
+    const items = researchActivityItems([
+      { type: "reasoning", id: "first", text: "**Checking records**\n\nCheck", state: "streaming" },
+      {
+        type: "reasoning",
+        id: "continuation",
+        text: " the dates.\n\n**Comparing versions**\n\nCompare the text.",
+        state: "done"
+      },
+      resultPart([], "search"),
+      { type: "reasoning", id: "blank", text: " \n ", state: "done" }
+    ])
+    expect(items.map((item) => item.type)).toEqual(["reasoning", "reasoning", "tool"])
+    expect(items[0]).toMatchObject({ text: "**Checking records**\n\nCheck the dates." })
+    expect(researchActivityItems([{ type: "reasoning", text: "Thinking summary", state: "done" }])).toHaveLength(1)
+  })
+
+  it("counts every displayed reasoning section and tool call in research order", async () => {
     render(
       inlineResponse([
         {
@@ -761,7 +778,7 @@ describe("ResearchActivity details", () => {
       { wrapper: InlineProviders }
     )
     expect(screen.queryByRole("note", { name: "Reasoning summary" })).toBeNull()
-    await userEvent.click(screen.getByRole("button", { name: "Research activity 1 step" }))
+    await userEvent.click(screen.getByRole("button", { name: "Research activity 3 steps" }))
     const summaries = screen.getAllByRole("note", { name: "Reasoning summary" })
     expect(summaries).toHaveLength(2)
     expect(summaries[0]?.textContent).toContain("Identifying the session")

@@ -1,5 +1,5 @@
+import { normalizeFederalAction } from "@repo/legislation-core/domain/bill-action"
 import { describe, expect, it } from "vitest"
-import { normalizeFederalAction } from "./federal-action.js"
 
 describe("federal action normalization", () => {
   it.each([

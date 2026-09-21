@@ -1,23 +1,7 @@
+import { hasTerminalBillStatus, normalizeBillAction } from "@repo/legislation-core/domain/bill-action"
 import { z } from "zod"
 import { entityCardSchema, type EntityPage } from "./entityResults"
 import { sourceUrlSchema } from "./evidence"
-
-// Some source actions have descriptions but no classification. Recognize only explicit introduction/referral.
-const INTRODUCED_PATTERN = /^introduced in (the )?(house|senate)\b/i
-const REFERRED_TO_COMMITTEE_PATTERN = /^referred to\b.*committee/i
-
-function inferClassificationFromDescription(description: string | null | undefined): string[] {
-  if (!description) {
-    return []
-  }
-  if (INTRODUCED_PATTERN.test(description)) {
-    return ["introduction"]
-  }
-  if (REFERRED_TO_COMMITTEE_PATTERN.test(description)) {
-    return ["referral-committee"]
-  }
-  return []
-}
 
 export const billProgressSchema = z.strictObject({
   id: z.uuid(),
@@ -49,6 +33,7 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
       bill: z.object({
         id: z.literal(record.id),
         chamber: z.string().nullish(),
+        status: z.string().nullish(),
         jurisdictionId: z.string().optional()
       }),
       progressActions: z.array(
@@ -70,7 +55,8 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
   if (!parsed.success) {
     return undefined
   }
-  const { bill, progressActions, progressTruncated } = parsed.data
+  const { bill, progressTruncated } = parsed.data
+  const progressActions = parsed.data.progressActions.map((action) => normalizeBillAction(action, bill.jurisdictionId))
   const chambers: Record<string, string> = { lower: "House floor", upper: "Senate", unicameral: "Legislature" }
   const stages: z.infer<typeof billProgressSchema>["stages"] = [
     { id: "introduced", label: "Introduced", state: "unknown" },
@@ -94,8 +80,7 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
   })
   let current: string | undefined
   for (const action of progressActions) {
-    const classification =
-      action.classification.length > 0 ? action.classification : inferClassificationFromDescription(action.description)
+    const classification = action.classification
     let stageId: string | undefined
     if (classification.includes("introduction")) {
       stageId = "introduced"
@@ -133,15 +118,11 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
     }
   }
   const latest = stages.find((stage) => stage.id === current)
-  const latestAction = progressActions.findLast((action) => {
-    const classification =
-      action.classification.length > 0 ? action.classification : inferClassificationFromDescription(action.description)
-    return classification.length > 0
-  })
   const hasTerminalOutcome =
-    latestAction?.classification.some((value) =>
-      ["executive-signature", "executive-veto", "became-law"].includes(value)
-    ) === true
+    hasTerminalBillStatus(bill.status) ||
+    progressActions.some((action) =>
+      action.classification.some((value) => ["executive-signature", "executive-veto", "became-law"].includes(value))
+    )
   if (
     latest &&
     !hasTerminalOutcome &&

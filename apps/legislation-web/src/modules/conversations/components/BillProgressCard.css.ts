@@ -20,7 +20,7 @@ export const track = style({
   display: "grid",
   placeItems: "center",
   position: "relative",
-  "::before": { content: "", position: "absolute", left: 0, right: 0, height: 1, background: "var(--border)" }
+  "::before": { content: "", position: "absolute", left: "50%", width: "100%", height: 1, background: "var(--border)" }
 })
 export const dot = style({
   zIndex: 1,
@@ -45,8 +45,7 @@ export const date = style({
   color: "var(--muted-foreground)"
 })
 export const notice = style({ margin: 0, padding: "0 16px 14px", fontSize: 11, color: "var(--muted-foreground)" })
-globalStyle(`${stage}:first-child ${track}::before`, { left: "50%" })
-globalStyle(`${stage}:last-child ${track}::before`, { right: "50%" })
+globalStyle(`${stage}:last-child ${track}::before`, { display: "none" })
 globalStyle(`${stage}[data-state="recorded"] ${dot}, ${stage}[data-state="current"] ${dot}`, {
   background: "var(--primary)",
   borderColor: "var(--primary)"
@@ -54,6 +53,6 @@ globalStyle(`${stage}[data-state="recorded"] ${dot}, ${stage}[data-state="curren
 globalStyle(`${stage}[data-state="current"] ${dot}`, { width: 12, height: 12, boxShadow: "0 0 0 4px var(--accent)" })
 globalStyle(`${stage}[data-state="current"] ${label}`, { fontWeight: 600, color: "var(--foreground)" })
 globalStyle(`${stage}[data-state="recorded"] ${label}`, { color: "var(--foreground)" })
-globalStyle(`${stage}[data-state="recorded"] + ${stage}:not([data-state="unknown"]) ${track}::before`, {
-  background: "linear-gradient(to right, var(--primary) 50%, var(--border) 50%)"
+globalStyle(`${stage}[data-connected="true"] ${track}::before`, {
+  background: "var(--primary)"
 })

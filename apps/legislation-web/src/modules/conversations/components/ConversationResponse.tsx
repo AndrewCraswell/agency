@@ -163,12 +163,27 @@ function OmittedImage() {
 const markdownComponents = { a: CitationLink, img: OmittedImage }
 
 function ReasoningSummary({ text }: Readonly<{ text: string }>) {
+  const heading = /^\*\*([^*\n]{1,120})\*\*\s*(?:\r?\n|$)/.exec(text)
+  const body = heading ? text.slice(heading[0].length).trim() : text
   return (
-    <div className={styles.reasoningSummary} role="note" aria-label="Reasoning summary">
-      <Brain className={styles.reasoningSummaryIcon} aria-hidden="true" />
-      <MessageResponse className={styles.reasoningSummaryText} mode="static" controls={false} skipHtml>
-        {text}
-      </MessageResponse>
+    <div className={styles.activityStep} role="note" aria-label="Reasoning summary">
+      <div className={styles.activityHeading}>
+        <Brain className={styles.reasoningSummaryIcon} aria-hidden="true" />
+        {heading ? (
+          <span className={styles.activityLabel}>{heading[1]}</span>
+        ) : (
+          <MessageResponse className={styles.reasoningSummaryText} mode="static" controls={false} skipHtml>
+            {body}
+          </MessageResponse>
+        )}
+      </div>
+      {heading && body && (
+        <div className={styles.activityDetails}>
+          <MessageResponse className={styles.reasoningSummaryText} mode="static" controls={false} skipHtml>
+            {body}
+          </MessageResponse>
+        </div>
+      )}
     </div>
   )
 }
@@ -199,7 +214,15 @@ export function researchActivityItems(parts: UIMessage["parts"]) {
       activities.push({ type: "tool", part })
     }
   }
-  return activities
+  return activities.flatMap<ResearchActivityItem>((activity) =>
+    activity.type === "reasoning"
+      ? reasoningSummarySections(activity.text).map((text, section) => ({
+          ...activity,
+          key: `${activity.key}:${section}`,
+          text
+        }))
+      : [activity]
+  )
 }
 
 function responsePresentation(
@@ -253,11 +276,6 @@ export function ConversationResponse({
   const { answerClarification, clarificationAnswers } = useConversationSession()
   const clarification = responseClarification(message)
   const acceptedResponse = clarification && clarificationAnswers[clarification.id]
-  const steps = message.parts
-    .filter((part) => part.type === "dynamic-tool")
-    .filter(
-      (part) => part.toolName !== "ask_clarification" || part.state === "output-error" || part.state === "output-denied"
-    )
   const activities = researchActivityItems(message.parts)
   const [answer, setAnswer] = useState(() => responsePresentation(message, suppliedEvidence))
   if (answer.message !== message || answer.suppliedEvidence !== suppliedEvidence) {
@@ -294,15 +312,13 @@ export function ConversationResponse({
             />
             <span className="min-w-0 flex-1">Research activity</span>
             <span className={styles.activityCount}>
-              {number.format(steps.length)} {steps.length === 1 ? "step" : "steps"}
+              {number.format(activities.length)} {activities.length === 1 ? "step" : "steps"}
             </span>
           </CollapsibleTrigger>
           <CollapsibleContent className={styles.activityItems}>
             {activities.map((activity) =>
               activity.type === "reasoning" ? (
-                reasoningSummarySections(activity.text).map((text, section) => (
-                  <ReasoningSummary key={`${activity.key}:${section}`} text={text} />
-                ))
+                <ReasoningSummary key={activity.key} text={activity.text} />
               ) : (
                 <ResearchActivity
                   key={activity.part.toolCallId}

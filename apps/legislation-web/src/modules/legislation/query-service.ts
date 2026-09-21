@@ -33,6 +33,7 @@ import {
   votePositions,
   votes
 } from "@repo/legislation-core/database/schema/schema"
+import { billProgressClassifications, normalizeBillAction } from "@repo/legislation-core/domain/bill-action"
 import { billActionOrder, billActionTimestamp } from "@repo/legislation-core/domain/bill-action-timestamp"
 import { LegislationError, postgresErrorCode } from "@repo/legislation-core/domain/errors"
 import {
@@ -63,25 +64,11 @@ import {
   inArray,
   isNotNull,
   lte,
-  or,
   sql,
   type SQL,
   type SQLWrapper
 } from "drizzle-orm"
 import { alias, unionAll } from "drizzle-orm/pg-core"
-
-const billProgressClassifications = [
-  "introduction",
-  "referral-committee",
-  "committee-passage",
-  "committee-passage-favorable",
-  "committee-passage-unfavorable",
-  "passage",
-  "executive-receipt",
-  "executive-signature",
-  "executive-veto",
-  "became-law"
-]
 import type { RetrievalModelClient } from "../../services/openrouter/openrouter-retrieval"
 import {
   observeDatabaseQueryWithoutTelemetry,
@@ -3394,16 +3381,7 @@ export class LegislationQueryService {
           description: billActions.description
         })
         .from(billActions)
-        .where(
-          and(
-            eq(billActions.billId, lookup.id),
-            or(
-              arrayOverlaps(billActions.classification, billProgressClassifications),
-              sql`${billActions.description} ~* '^introduced in (the )?(house|senate)'`,
-              sql`${billActions.description} ~* '^referred to.*committee'`
-            )
-          )
-        )
+        .where(eq(billActions.billId, lookup.id))
         .orderBy(...billActionOrder(bill[0].upstreamIds, "asc"))
     ])
     const billAmendments = [
@@ -3420,7 +3398,9 @@ export class LegislationQueryService {
       amendments: billAmendments.slice(0, childLimit),
       bill: { ...bill[0], status: bill[0].status ?? openStatesBillStatus(statusActions) ?? null },
       latestAction: latestActions[0] ?? null,
-      progressActions,
+      progressActions: progressActions
+        .map((action) => normalizeBillAction(action, bill[0].jurisdictionId))
+        .filter((action) => action.classification.some((value) => billProgressClassifications.includes(value))),
       progressTruncated: false,
       documents: documents.slice(0, childLimit),
       nextChildCursor: truncated ? encodeOffset(childOffset + childLimit) : undefined,

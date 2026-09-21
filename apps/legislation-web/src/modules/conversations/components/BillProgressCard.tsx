@@ -25,11 +25,14 @@ export function BillProgressCard({
         tabIndex={stages.length > 0 ? 0 : undefined}
       >
         <ol className={styles.path}>
-          {stages.map((stage) => (
+          {stages.map((stage, index) => (
             <li
               key={stage.id}
               className={styles.stage}
               data-state={stage.state}
+              data-connected={
+                stage.state !== "unknown" && stages[index + 1] !== undefined && stages[index + 1]?.state !== "unknown"
+              }
               aria-current={stage.state === "current" ? "step" : undefined}
             >
               <span className={styles.track} aria-hidden="true">

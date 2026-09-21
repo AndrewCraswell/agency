@@ -1,3 +1,4 @@
+import { normalizeFederalAction } from "@repo/legislation-core/domain/bill-action"
 import {
   childId,
   federalBillId,
@@ -8,7 +9,6 @@ import {
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { XMLParser } from "fast-xml-parser"
 import { z } from "zod"
-import { normalizeFederalAction } from "../federal-action.js"
 import { outgoingRelationProvenance } from "../relation-provenance.js"
 
 const collection = <T extends z.ZodType>(item: T) =>

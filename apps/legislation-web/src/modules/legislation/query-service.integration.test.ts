@@ -152,6 +152,46 @@ describe.skipIf(!pool)("legislation PostgreSQL queries", () => {
     }
   })
 
+  it("returns unclassified federal enactment milestones independently of the action preview", async () => {
+    if (!pool) {
+      throw new Error("Missing isolated test database")
+    }
+    const client = await pool.connect()
+    try {
+      await client.query("begin")
+      await client.query(`
+        insert into legislation.jurisdictions (id, name, classification, country_code) values ('jurisdiction:us', 'United States', 'country', 'US');
+        insert into legislation.legislative_sessions (id, jurisdiction_id, identifier, name) values ('session:us:114', 'jurisdiction:us', '114', '114th Congress');
+        insert into legislation.bills (id, jurisdiction_id, session_id, identifier, title, status, chamber, upstream_ids)
+          values ('bill:us:114:hr:636', 'jurisdiction:us', 'session:us:114', 'HR 636', 'FAA Extension, Safety, and Security Act of 2016', 'Became Public Law No: 114-190.', 'lower', '{"congress":"636"}');
+        insert into legislation.bill_actions (id, bill_id, ordinal, description, action_date) values
+          ('action:intro', 'bill:us:114:hr:636', 5, 'Introduced in House', '2015-02-02'),
+          ('action:referral', 'bill:us:114:hr:636', 4, 'Referred to the Committee on Ways and Means.', '2015-02-02'),
+          ('action:rule', 'bill:us:114:hr:636', 3, 'Rule H. Res. 101 passed House.', '2015-02-12'),
+          ('action:house', 'bill:us:114:hr:636', 2, 'Passed/agreed to in House: On passage Passed by recorded vote.', '2015-02-13'),
+          ('action:senate', 'bill:us:114:hr:636', 1, 'Passed Senate with an amendment.', '2016-04-19'),
+          ('action:law', 'bill:us:114:hr:636', 0, 'Became Public Law No: 114-190.', '2016-07-15');
+      `)
+      const service = new LegislationQueryService(drizzle(client, { schema }))
+      const result = await service.getBill({ id: "bill:us:114:hr:636", childLimit: 1 })
+      expect(result.actions).toHaveLength(1)
+      expect(result.progressActions.map((action) => action.id)).toEqual([
+        "action:intro",
+        "action:referral",
+        "action:house",
+        "action:senate",
+        "action:law"
+      ])
+      const page = createResultStore().create("enacted-regression", "get_bill", result, undefined, async () => result)!
+      const progress = projectBillProgress(result, page)
+      expect(progress?.stages.map((stage) => stage.state)).toEqual(Array(5).fill("recorded"))
+      expect(progress?.stages.at(-1)?.date).toBe("2016-07-15")
+    } finally {
+      await client.query("rollback")
+      client.release()
+    }
+  })
+
   it.each(["govinfo", "congress", "openstates"])(
     "selects dated actions independently of %s ordinals and child pages",
     async (provider) => {
@@ -210,7 +250,7 @@ describe.skipIf(!pool)("legislation PostgreSQL queries", () => {
         })
         expect(projectBillProgress(first, page)?.stages.slice(0, 2)).toMatchObject([
           { id: "introduced", state: "recorded", date: "2024-05-06" },
-          { id: "committee", state: "current", date: "2024-05-06" }
+          { id: "committee", state: "current", date: "2024-05-08" }
         ])
         const detail = await getBillDetailRead(database, { id }, "https://api.example.test")
         expect(detail.latestActionAt).toBe("2024-12-27T00:00:00.000Z")

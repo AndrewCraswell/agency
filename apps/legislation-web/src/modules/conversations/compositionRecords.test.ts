@@ -263,6 +263,58 @@ describe("run-owned presentation records", () => {
     expect(content.stages.at(-1)).toMatchObject({ id: "executive", state: "recorded", date: "2025-07-04" })
   })
 
+  it("projects the complete HR 636 lifecycle from recorded federal action descriptions", () => {
+    const store = createResultStore()
+    const bill = {
+      id: "bill:us:114:hr:636",
+      title: "FAA Extension, Safety, and Security Act of 2016",
+      chamber: "lower",
+      jurisdictionId: "jurisdiction:us",
+      status: "Became Public Law No: 114-190."
+    }
+    const data = {
+      bill,
+      progressTruncated: false,
+      progressActions: [
+        ["2015-02-02", "Introduced in House"],
+        ["2015-02-02", "Referred to the Committee on Ways and Means"],
+        ["2015-02-12", "Rule H. Res. 101 passed House."],
+        ["2015-02-13", "Passed/agreed to in House: On passage Passed by recorded vote: 272 - 142."],
+        ["2016-04-19", "Passed Senate with an amendment and an amendment to the Title by Yea-Nay Vote."],
+        ["2016-07-15", "Signed by President."],
+        ["2016-07-15", "Became Public Law No: 114-190."]
+      ].map(([actionDate, description], ordinal) => ({
+        id: `action-${ordinal}`,
+        billId: bill.id,
+        ordinal,
+        classification: [],
+        chamber: null,
+        actionDate,
+        description
+      }))
+    }
+    const page = store.create("owner", "get_bill", data, undefined, async () => data)
+    invariant(page)
+    const progress = projectPresentationContents("get_bill", data, [], page).find(
+      (content) => content.kind === "bill-progress"
+    )
+    invariant(progress?.kind === "bill-progress")
+    expect(progress.stages.map(({ state, date }) => ({ state, date }))).toEqual([
+      { state: "recorded", date: "2015-02-02" },
+      { state: "recorded", date: "2015-02-02" },
+      { state: "recorded", date: "2015-02-13" },
+      { state: "recorded", date: "2016-04-19" },
+      { state: "recorded", date: "2016-07-15" }
+    ])
+    const incomplete = { ...data, progressActions: data.progressActions.slice(0, 2) }
+    const partial = projectPresentationContents("get_bill", incomplete, [], page).find(
+      (content) => content.kind === "bill-progress"
+    )
+    invariant(partial?.kind === "bill-progress")
+    expect(partial.stages.some((stage) => stage.state === "current")).toBe(false)
+    expect(partial.stages.slice(2).every((stage) => stage.state === "unknown" && stage.date === undefined)).toBe(true)
+  })
+
   it("resolves only exact run-owned content and preserves source snapshots", () => {
     const contents = projectPresentationContents("get_bill_text", {}, [
       {

@@ -3,15 +3,18 @@ import { useRef, useState } from "react"
 import { expect, waitFor, within } from "storybook/test"
 import invariant from "tiny-invariant"
 import { StickToBottom } from "use-stick-to-bottom"
+import { projectBillProgress } from "../billProgress"
 import { markdownEvidenceFixture, qualifiedEvidenceFixture } from "../components/citationEvidenceFixtures"
 import type { CitationSelection } from "../components/citationPresentation"
 import { ComposedRecord } from "../components/ComposedRecord"
 import { ConversationResponse } from "../components/ConversationResponse"
 import { EvidencePanel } from "../components/EvidencePanel"
 import { presentationBlockSchema } from "../composition"
+import { projectEntityResult, type EntityPage } from "../entityResults"
 import { projectPresentationContents, type ContentComponent, type PresentationContent } from "../presentationContent"
 import { drawerEvidence } from "./drawerExamples"
 import { toolCaptures } from "./reviewFixtures"
+import * as billProgressStyles from "../components/BillProgressCard.css"
 
 const meta = {
   title: "Conversation/InlinePresentation",
@@ -177,6 +180,104 @@ export const Loading: Story = {
 }
 export const ResultList: Story = { render: () => display(captured("search_bills", "result-list"), "ResultList") }
 export const ProgressPath: Story = { render: () => display(captured("get_bill_timeline", "timeline"), "ProgressPath") }
+
+function billProgressExample(mode: "enacted" | "committee" | "gap") {
+  const bill = {
+    id: "bill:us:114:hr:636",
+    identifier: "HR 636",
+    title: "FAA Extension, Safety, and Security Act of 2016",
+    chamber: "lower",
+    jurisdictionId: "jurisdiction:us",
+    sessionName: "114th Congress",
+    status: mode === "committee" ? "Referred to committee" : "Became Public Law No: 114-190.",
+    sourceUrl: "https://www.congress.gov/bill/114th-congress/house-bill/636"
+  }
+  const descriptions = [
+    ["2015-02-02", "Introduced in House"],
+    ["2015-02-02", "Referred to the Committee on Ways and Means"],
+    ["2015-02-13", "Passed/agreed to in House: On passage Passed by recorded vote: 272 - 142."],
+    ["2016-04-19", "Passed Senate with an amendment by Yea-Nay Vote."],
+    ["2016-07-15", "Became Public Law No: 114-190."]
+  ]
+  const data = {
+    bill,
+    progressTruncated: false,
+    progressActions: descriptions.flatMap(([actionDate, description], ordinal) => {
+      if ((mode === "committee" && ordinal > 1) || (mode === "gap" && ordinal === 2)) {
+        return []
+      }
+      return [
+        {
+          id: `action-${ordinal}`,
+          billId: bill.id,
+          ordinal,
+          actionDate,
+          description,
+          classification: [],
+          chamber: null
+        }
+      ]
+    })
+  }
+  const projection = projectEntityResult("get_bill", data)
+  invariant(projection)
+  const page: EntityPage = {
+    ...projection,
+    id: "11111111-1111-4111-8111-111111111111",
+    page: 0,
+    start: 1,
+    end: 1,
+    hasNext: false,
+    hasPrevious: false
+  }
+  const progress = projectBillProgress(data, page)
+  invariant(progress)
+  return progress
+}
+
+export const EnactedBillProgress: Story = {
+  render: () => display(billProgressExample("enacted"), "BillProgressCard"),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole("region", { name: "Bill milestones" })).toBeVisible()
+    await expect(canvas.queryByText("Not recorded")).not.toBeInTheDocument()
+    await expect(canvasElement.querySelector('[aria-current="step"]')).not.toBeInTheDocument()
+    await expect(canvasElement.querySelector('time[datetime="2016-07-15"]')).toBeVisible()
+    const tracks = canvasElement.querySelectorAll(`.${billProgressStyles.track}`)
+    const primary = getComputedStyle(canvasElement.querySelector(`.${billProgressStyles.dot}`)!).backgroundColor
+    for (const track of [...tracks].slice(0, -1)) {
+      await expect(getComputedStyle(track, "::before").backgroundColor).toBe(primary)
+      await expect(parseFloat(getComputedStyle(track, "::before").width)).toBeCloseTo(
+        track.getBoundingClientRect().width,
+        0
+      )
+    }
+  }
+}
+export const CommitteeBillProgress: Story = {
+  render: () => display(billProgressExample("committee"), "BillProgressCard"),
+  play: async ({ canvasElement }) => {
+    const tracks = canvasElement.querySelectorAll(`.${billProgressStyles.track}`)
+    const first = tracks[0]
+    const second = tracks[1]
+    invariant(first && second)
+    const primary = getComputedStyle(canvasElement.querySelector(`.${billProgressStyles.dot}`)!).backgroundColor
+    await expect(getComputedStyle(first, "::before").backgroundColor).toBe(primary)
+    await expect(getComputedStyle(second, "::before").backgroundColor).not.toBe(primary)
+    await expect(canvasElement.querySelector('[aria-current="step"]')).toHaveTextContent("Committee")
+  }
+}
+export const GappedBillProgress: Story = {
+  render: () => display(billProgressExample("gap"), "BillProgressCard"),
+  play: async ({ canvasElement }) => {
+    const tracks = [...canvasElement.querySelectorAll(`.${billProgressStyles.track}`)]
+    const primary = getComputedStyle(canvasElement.querySelector(`.${billProgressStyles.dot}`)!).backgroundColor
+    for (const index of [1, 2]) {
+      invariant(tracks[index])
+      await expect(getComputedStyle(tracks[index], "::before").backgroundColor).not.toBe(primary)
+    }
+  }
+}
 export const RecordTimeline: Story = {
   render: () => display(captured("get_bill_timeline", "timeline"), "RecordTimeline")
 }

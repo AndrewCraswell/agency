@@ -7,6 +7,7 @@
   "exports": {
     "./concurrency/map-concurrent": "./src/concurrency/map-concurrent.ts",
     "./domain/bill-action-timestamp": "./src/domain/bill-action-timestamp.ts",
+    "./domain/bill-action": "./src/domain/bill-action.ts",
     "./database/bill-read": "./src/database/bill-read.ts",
     "./database/connection-queue": "./src/database/connection-queue.ts",
     "./api-client/client": "./src/api-client/client.ts",
