@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:acceptance": "pnpm build && node --test scripts/built-acceptance.test.mjs",
-    "smoke:deployment": "node scripts/smoke-deployment.mjs"
+    "smoke:deployment": "node scripts/smoke-deployment.mjs",
+    "verify:sentry-canary": "node scripts/verify-sentry-canary.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.0.0",

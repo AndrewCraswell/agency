@@ -1,32 +1,13 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
+import {
+  deploymentSmokeConfig,
+  requestMachineAccessToken,
+  sentryCanaryArguments,
+  sentryCanaryRedactionValue
+} from "./deployment-smoke-config.mjs"
 
-const base = URL.parse(process.env.LEGISLATION_MCP_SMOKE_BASE_URL ?? "")
-if (
-  !base ||
-  base.protocol !== "https:" ||
-  base.username ||
-  base.password ||
-  base.pathname !== "/" ||
-  base.search ||
-  base.hash
-) {
-  throw new Error("LEGISLATION_MCP_SMOKE_BASE_URL must be a credential-free HTTPS origin")
-}
-const token = process.env.LEGISLATION_MCP_SMOKE_TOKEN?.trim()
-const billId = process.env.LEGISLATION_SMOKE_BILL_ID?.trim()
-if (!token || !billId) throw new Error("LEGISLATION_MCP_SMOKE_TOKEN and LEGISLATION_SMOKE_BILL_ID are required")
-const expectedCommitSha = (
-  process.env.LEGISLATION_DEPLOYMENT_COMMIT_SHA?.trim() || process.env.GITHUB_SHA?.trim() || ""
-).toLowerCase()
-if (!/^[0-9a-f]{40}$/u.test(expectedCommitSha)) {
-  throw new Error("LEGISLATION_DEPLOYMENT_COMMIT_SHA or GITHUB_SHA must be a full Git commit SHA")
-}
-const fullStateAcceptance = process.env.LEGISLATION_MCP_SMOKE_FULL === "true"
-const jurisdictionId = process.env.LEGISLATION_SMOKE_JURISDICTION_ID?.trim()
-const sessionId = process.env.LEGISLATION_SMOKE_SESSION_ID?.trim()
-if (fullStateAcceptance && (!jurisdictionId || !sessionId)) {
-  throw new Error("LEGISLATION_SMOKE_JURISDICTION_ID and LEGISLATION_SMOKE_SESSION_ID are required for full acceptance")
-}
+const configuration = deploymentSmokeConfig(process.env)
+const { base, billId, expectedCommitSha, fullStateAcceptance, jurisdictionId, sentryCanary } = configuration
 const resource = new URL("/mcp", base)
 const boundedFetch = (input, init = {}) => {
   const target = new URL(input instanceof Request ? input.url : String(input))
@@ -47,7 +28,13 @@ for (const path of ["/health", "/ready"]) {
 }
 const metadata = await boundedFetch(new URL("/.well-known/oauth-protected-resource/mcp", base))
 const discovery = await metadata.json()
-if (!metadata.ok || discovery.resource !== resource.href || discovery.bearer_methods_supported?.[0] !== "header") {
+if (
+  !metadata.ok ||
+  discovery.resource !== resource.href ||
+  discovery.bearer_methods_supported?.[0] !== "header" ||
+  !Array.isArray(discovery.authorization_servers) ||
+  discovery.authorization_servers.length !== 1
+) {
   throw new Error("MCP protected-resource metadata does not match the configured resource")
 }
 const anonymous = await boundedFetch(resource, { method: "POST", body: "{}" })
@@ -55,6 +42,7 @@ if (anonymous.status !== 401 || !anonymous.headers.get("www-authenticate")?.incl
   throw new Error("MCP anonymous request did not receive the protected-resource challenge")
 }
 await anonymous.text()
+const token = await requestMachineAccessToken(configuration, discovery.authorization_servers[0])
 const transport = new StreamableHTTPClientTransport(resource, {
   requestInit: { headers: { authorization: `Bearer ${token}` } },
   fetch: boundedFetch
@@ -98,6 +86,15 @@ try {
   const bill = await call("get_bill", { id: billId })
   await call("get_bill_timeline", { id: billId, limit: 1 })
   await call("search_events", { jurisdictionId: jurisdictionId ?? "jurisdiction:us", limit: 1 })
+
+  if (sentryCanary) {
+    const result = await client.callTool({ name: "get_bill", arguments: sentryCanaryArguments(configuration) })
+    const serialized = JSON.stringify(result)
+    if (!result.isError) throw new Error("The controlled staging Sentry canary did not produce an expected failure")
+    if (serialized.includes(sentryCanaryRedactionValue)) {
+      throw new Error("The controlled staging Sentry canary echoed its redaction sentinel")
+    }
+  }
 
   if (fullStateAcceptance) {
     await call("describe_analytics", { datasets: ["bills"] })
@@ -176,7 +173,7 @@ try {
     if (uncalled.length > 0) throw new Error(`MCP tools were not exercised: ${uncalled.join(", ")}`)
   }
   process.stdout.write(
-    `${JSON.stringify({ calls: called.size, commitSha: expectedCommitSha, status: "ok", tools: names.size })}\n`
+    `${JSON.stringify({ calls: called.size, commitSha: expectedCommitSha, sentryCanary, status: "ok", tools: names.size })}\n`
   )
 } finally {
   await transport.close()

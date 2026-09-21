@@ -32,6 +32,7 @@
     "lint": "oxlint --max-warnings=0",
     "start": "node scripts/next.mjs start",
     "smoke:api": "tsx scripts/smoke-api.ts",
+    "smoke:browser": "node scripts/smoke-browser.mjs",
     "smoke:cdn": "node scripts/smoke-cdn.mjs",
     "smoke:deployment": "node scripts/smoke-deployment.mjs",
     "smoke:dependencies": "node scripts/smoke-dependencies.mjs",
