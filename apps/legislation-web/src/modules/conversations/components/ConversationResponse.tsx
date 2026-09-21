@@ -1,7 +1,7 @@
 "use client"
 
 import type { UIMessage } from "ai"
-import { ChevronDown, ChevronRight, ExternalLink, LoaderCircle } from "lucide-react"
+import { Brain, ChevronDown, ChevronRight, ExternalLink, LoaderCircle } from "lucide-react"
 import Image from "next/image"
 import { createContext, useContext, useState, type ComponentProps } from "react"
 import { z } from "zod"
@@ -44,6 +44,12 @@ type ConversationResponseProps = Readonly<{
   evidence?: EvidenceSnapshot[]
   onEvidence: (selection: CitationSelection) => void
 }>
+type ResearchActivityItem =
+  | Readonly<{ type: "reasoning"; key: string; text: string }>
+  | Readonly<{
+      type: "tool"
+      part: Extract<UIMessage["parts"][number], { type: "dynamic-tool" }>
+    }>
 
 export function responseClarification(message: UIMessage) {
   for (const part of message.parts) {
@@ -156,6 +162,46 @@ function OmittedImage() {
 
 const markdownComponents = { a: CitationLink, img: OmittedImage }
 
+function ReasoningSummary({ text }: Readonly<{ text: string }>) {
+  return (
+    <div className={styles.reasoningSummary} role="note" aria-label="Reasoning summary">
+      <Brain className={styles.reasoningSummaryIcon} aria-hidden="true" />
+      <MessageResponse className={styles.reasoningSummaryText} mode="static" controls={false} skipHtml>
+        {text}
+      </MessageResponse>
+    </div>
+  )
+}
+
+export function reasoningSummarySections(text: string) {
+  return text
+    .split(/(?=\*\*[^*\n]{1,120}\*\*\s*(?:\r?\n|$))/)
+    .map((section) => section.trim())
+    .filter(Boolean)
+}
+
+export function researchActivityItems(parts: UIMessage["parts"]) {
+  const activities: ResearchActivityItem[] = []
+  for (const [index, part] of parts.entries()) {
+    if (part.type === "reasoning" && part.text) {
+      const previous = activities.at(-1)
+      if (previous?.type === "reasoning") {
+        activities[activities.length - 1] = { ...previous, text: previous.text + part.text }
+      } else {
+        activities.push({ type: "reasoning", key: part.id ?? `reasoning:${index}`, text: part.text })
+      }
+      continue
+    }
+    if (
+      part.type === "dynamic-tool" &&
+      (part.toolName !== "ask_clarification" || part.state === "output-error" || part.state === "output-denied")
+    ) {
+      activities.push({ type: "tool", part })
+    }
+  }
+  return activities
+}
+
 function responsePresentation(
   message: UIMessage,
   suppliedEvidence: EvidenceSnapshot[] | undefined,
@@ -212,6 +258,7 @@ export function ConversationResponse({
     .filter(
       (part) => part.toolName !== "ask_clarification" || part.state === "output-error" || part.state === "output-denied"
     )
+  const activities = researchActivityItems(message.parts)
   const [answer, setAnswer] = useState(() => responsePresentation(message, suppliedEvidence))
   if (answer.message !== message || answer.suppliedEvidence !== suppliedEvidence) {
     setAnswer(
@@ -238,7 +285,7 @@ export function ConversationResponse({
         {acceptedResponse && <ClarificationReceiptStatus response={acceptedResponse} />}
         {isIncomplete && <span className="text-xs text-muted-foreground">Incomplete response</span>}
       </div>
-      {steps.length > 0 && (
+      {activities.length > 0 && (
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
           <CollapsibleTrigger className={styles.activityTrigger}>
             <ChevronRight
@@ -251,14 +298,20 @@ export function ConversationResponse({
             </span>
           </CollapsibleTrigger>
           <CollapsibleContent className={styles.activityItems}>
-            {steps.map((part) => (
-              <ResearchActivity
-                key={part.toolCallId}
-                part={part}
-                isRunning={isRunning}
-                previousParts={message.parts.slice(0, message.parts.indexOf(part))}
-              />
-            ))}
+            {activities.map((activity) =>
+              activity.type === "reasoning" ? (
+                reasoningSummarySections(activity.text).map((text, section) => (
+                  <ReasoningSummary key={`${activity.key}:${section}`} text={text} />
+                ))
+              ) : (
+                <ResearchActivity
+                  key={activity.part.toolCallId}
+                  part={activity.part}
+                  isRunning={isRunning}
+                  previousParts={message.parts.slice(0, message.parts.indexOf(activity.part))}
+                />
+              )
+            )}
           </CollapsibleContent>
         </Collapsible>
       )}

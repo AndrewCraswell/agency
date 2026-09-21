@@ -21,7 +21,7 @@ export function createResearchModel(
   config: ResearchModelConfig = {}
 ): LanguageModel {
   const reasoning: ChatModelOptions["reasoning"] =
-    config.reasoning === undefined ? { effort: researchReasoningEffort } : config.reasoning
+    config.reasoning === undefined ? { effort: researchReasoningEffort, exclude: false } : config.reasoning
   return createChatModel(apiKey, modelId, { ...config, reasoning })
 }
 

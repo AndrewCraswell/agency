@@ -30,6 +30,7 @@ import { createPresentationRecords } from "../../modules/conversations/compositi
 import { createCompositionStream, type ComposedAnswer } from "../../modules/conversations/compositionStream"
 import { entityPageRequestSchema, ResultExpiredError } from "../../modules/conversations/entityResults"
 import { getResearchPrompt, researchDateContext } from "../../modules/conversations/prompt"
+import { exposeReasoningSummaries } from "../../modules/conversations/reasoningSummary"
 import {
   projectMeetingDetails,
   projectProfileDetails,
@@ -385,8 +386,8 @@ async function handleChatRequest(request: Request) {
     })
     const userMessage = parsed.data.messages.at(-1)
     const responseStream = toUIMessageStream({
-      stream: await capture.stream,
-      sendReasoning: false,
+      stream: exposeReasoningSummaries(await capture.stream),
+      sendReasoning: true,
       messageMetadata: ({ part }) =>
         part.type === "start"
           ? {

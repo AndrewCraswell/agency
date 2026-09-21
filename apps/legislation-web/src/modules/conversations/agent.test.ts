@@ -98,7 +98,7 @@ describe("runResearchAgent", () => {
     createResearchModel(undefined)
     expect(createOpenRouter).toHaveBeenLastCalledWith({ apiKey: undefined })
     expect(chat).toHaveBeenLastCalledWith(researchModelId, {
-      reasoning: { effort: "high" },
+      reasoning: { effort: "high", exclude: false },
       provider: { allow_fallbacks: false, data_collection: "deny" }
     })
   })

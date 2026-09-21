@@ -739,6 +739,36 @@ describe("response presentation snapshots", () => {
 })
 
 describe("ResearchActivity details", () => {
+  it("shows provider reasoning summaries in research order without counting them as tool steps", async () => {
+    render(
+      inlineResponse([
+        {
+          type: "reasoning",
+          id: "reasoning-1",
+          text: "**Identifying the session**\n\nI’ll",
+          state: "done"
+        },
+        {
+          type: "reasoning",
+          id: "reasoning-2",
+          text:
+            " identify the current session before checking the member’s activity." +
+            "**Checking member activity**\n\nNext I’ll review the member’s sponsored bills.",
+          state: "done"
+        },
+        resultPart([], "search")
+      ]),
+      { wrapper: InlineProviders }
+    )
+    expect(screen.queryByRole("note", { name: "Reasoning summary" })).toBeNull()
+    await userEvent.click(screen.getByRole("button", { name: "Research activity 1 step" }))
+    const summaries = screen.getAllByRole("note", { name: "Reasoning summary" })
+    expect(summaries).toHaveLength(2)
+    expect(summaries[0]?.textContent).toContain("Identifying the session")
+    expect(summaries[1]?.textContent).toContain("Checking member activity")
+    expect(screen.getByLabelText("Search bills: Complete")).toBeDefined()
+  })
+
   it("counts failed calls and keeps them between successful calls in research order", async () => {
     render(
       inlineResponse([
