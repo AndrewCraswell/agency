@@ -171,6 +171,8 @@ Use `--force-govinfo` only when corrected normalization must rematerialize an ex
 package; ordinary resumable backfills retain their checkpoint.
 For operator-driven rematerialization, `govinfo:import --api-discovery --force` uses the bounded GovInfo collection API
 to enumerate package IDs while retaining the official bulk XML as the imported source.
+After the first pass establishes a checkpoint, use `--rematerialize` instead of `--force` to resume an interrupted
+stream while continuing to update existing records.
 
 ### Milestone: expand federal history beyond Congresses 113-119
 
