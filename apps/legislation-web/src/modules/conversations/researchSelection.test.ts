@@ -164,6 +164,24 @@ it("keeps nested child continuations bound to their producing tool and field", (
   expect(() => selections.validate("get_bill", { ...selection, cursor }, "wrong-field")).toThrow(
     expect.objectContaining({ code: "invalid_cursor" })
   )
+  expect(selections.recover("get_bill", { ...selection, cursor }, "invalid_cursor")).toMatchObject({
+    action: "select_returned",
+    continuation: { field: "childCursor", value: cursor }
+  })
+  expect(
+    selections.recover("get_bill", { ...selection, id: "bill:us:118:hr:9619", cursor }, "invalid_cursor")
+  ).toMatchObject({
+    action: "restart"
+  })
+})
+
+it("does not spend another tool's recovery opportunity on an earlier invalid selection", () => {
+  const selections = createResearchSelections()
+  selections.register(page(), "page")
+  selections.recover("get_person", { id: "person:one", cursor: "invalid" }, "invalid_cursor")
+  expect(selections.recover("get_bill_text", { ...input, cursor: "invalid" }, "invalid_cursor")).toMatchObject({
+    action: "select_returned"
+  })
 })
 
 it("does not guess a page when several returned continuations have the same bound filters", () => {

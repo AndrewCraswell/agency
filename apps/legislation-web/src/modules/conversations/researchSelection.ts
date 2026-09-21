@@ -55,7 +55,7 @@ function suppliedCursors(input: Input) {
 export function createResearchSelections() {
   const cursors = new Map<string, CursorField>()
   const documents = new Map<string, Document>()
-  let hasOfferedRecovery = false
+  const offeredRecoveries = new Set<string>()
 
   function register(data: unknown, reference: string, consumed?: { tool: string; input: Input }) {
     const nextCursors = new Map(cursors)
@@ -161,21 +161,33 @@ export function createResearchSelections() {
     if (code !== "invalid_cursor" && !isDocumentFailure) {
       return undefined
     }
-    if (hasOfferedRecovery) {
+    const recoveryKey = JSON.stringify([
+      name,
+      code,
+      Object.entries(input).sort(([left], [right]) => left.localeCompare(right))
+    ])
+    if (offeredRecoveries.has(recoveryKey)) {
       return {
         action: "answer",
         instruction:
-          "Selection recovery has already been offered in this response. Stop retrying selections and answer from verified evidence, explicitly identifying the failed read and incomplete coverage. Empty or heading-only text does not establish absent duties."
+          "Recovery for this exact failed selection has already been offered. Do not repeat this unchanged failed call. Use verified evidence or a different explicitly returned selection, and identify incomplete coverage. Empty or heading-only text does not establish absent duties."
       }
     }
-    hasOfferedRecovery = true
+    offeredRecoveries.add(recoveryKey)
     let recovery: ResearchRecovery
     if (code === "invalid_cursor") {
       const fields = suppliedCursors(input)
       const field = fields.length === 1 ? fields[0] : undefined
+      const selectionInput = Object.fromEntries(
+        Object.entries(input).filter(([key]) => key !== "cursor" && key !== "childCursor")
+      )
+      const supplied = field ? input[field] : undefined
+      const knownField = typeof supplied === "string" ? cursors.get(supplied) : undefined
       const candidates = [...cursors].filter(
         ([value, candidateField]) =>
-          field === candidateField && matchesContinuation(name, { ...input, [candidateField]: value })
+          fields.length === 1 &&
+          (knownField ? value === supplied : field === candidateField) &&
+          matchesContinuation(name, { ...selectionInput, [candidateField]: value })
       )
       const candidate = candidates.length === 1 ? candidates[0] : undefined
       recovery =
@@ -183,7 +195,7 @@ export function createResearchSelections() {
           ? {
               action: "select_returned",
               instruction:
-                "One returned continuation matches this tool and all unchanged inputs. Copy its value byte-for-byte into the indicated field only if it is the intended page. Do not change the source, version, filters or limit. Make at most one recovery call.",
+                "One returned continuation matches this tool and all unchanged non-cursor inputs. Remove cursor and childCursor, then copy this value byte-for-byte into only the indicated field if it is the intended page. Do not change the source, version, filters or limit. Do not repeat an unchanged failed call.",
               continuation: { field: candidate[1], value: candidate[0] }
             }
           : {
