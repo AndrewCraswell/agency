@@ -35,20 +35,21 @@ set W's `NEXT_PUBLIC_SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_ENVIRONMENT=staging`. G
 environment supplies `RAILWAY_TOKEN`, `WORKOS_API_SMOKE_CLIENT_ID`, `WORKOS_API_SMOKE_CLIENT_SECRET`,
 `WORKOS_MCP_SMOKE_CLIENT_ID`, `WORKOS_MCP_SMOKE_CLIENT_SECRET`, and `SENTRY_STAGING_AUTH_TOKEN`. Environment variables
 supply `WORKOS_API_SMOKE_ISSUER`, `LEGISLATION_SMOKE_BILL_ID`, `SENTRY_ORGANIZATION_SLUG`, and
-`SENTRY_MCP_PROJECT_SLUG`. The MCP WorkOS credentials belong to a dedicated staging-only machine client whose resource
-audience is
-`https://legislation-mcp-staging.up.railway.app/mcp`. Never reuse production or user credentials, tokens, or DSNs.
+`SENTRY_MCP_PROJECT_SLUG`. Staging M also sets `WORKOS_MCP_M2M_CLIENT_ID` to the same dedicated incoming client ID.
+WorkOS Connect M2M tokens use the environment API audience, so M accepts that audience only for this exact verified
+client subject. Never reuse the outbound M-to-W client, production or user credentials, tokens, or DSNs.
 
 Provision the machine client outside this repository in the staging WorkOS environment:
 
-1. Create a dedicated machine-to-machine OAuth client for the incoming staging MCP resource, not the existing
-   outbound M-to-W client and not a user application.
-2. Register `https://legislation-mcp-staging.up.railway.app/mcp` as an exact Resource Indicator and grant only the
-   permissions needed by the staging smoke fixture. The workflow supplies that URL as the token request's `resource`
-   parameter so the access token receives the incoming MCP audience.
+1. Create a dedicated Connect machine-to-machine OAuth client for incoming staging smoke, not the existing outbound
+   M-to-W client and not an AuthKit user application.
+2. Register `https://legislation-mcp-staging.up.railway.app/mcp` as the exact Resource Indicator for interactive MCP
+   clients. Connect M2M tokens retain the environment API audience; M additionally verifies the exact dedicated client
+   subject before accepting that audience.
 3. Confirm the staging MCP protected-resource metadata advertises the same WorkOS issuer used by that client.
-4. Store the issued client ID and secret as the protected GitHub `staging` environment secrets named above. Do not
-   store an access token; the workflow requests a bounded short-lived token for each run.
+4. Store the issued client ID and secret as the protected GitHub `staging` environment secrets named above, and set
+   staging M's `WORKOS_MCP_M2M_CLIENT_ID` to that client ID. Do not store an access token; the workflow requests a
+   bounded short-lived token for each run.
 5. Rotate the client secret in WorkOS and GitHub together, then rerun the staging workflow.
 
 W's API smoke likewise uses a dedicated staging WorkOS M2M client and obtains a short-lived token from

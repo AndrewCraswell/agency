@@ -25,6 +25,7 @@ const settingsSchema = z
     WORKOS_JWKS_URL: httpsUrl,
     WORKOS_API_AUDIENCE: z.string().trim().min(1),
     WORKOS_MCP_AUDIENCE: httpsUrl.refine((value) => URL.parse(value)?.pathname === "/mcp"),
+    WORKOS_MCP_M2M_CLIENT_ID: z.string().trim().min(1).optional(),
     MCP_API_BASE_URL: httpsUrl.refine((value) => URL.parse(value)?.pathname === "/"),
     WORKOS_API_M2M_CLIENT_ID: z.string().trim().min(1),
     WORKOS_API_M2M_CLIENT_SECRET: z.string().trim().min(1),
@@ -41,6 +42,10 @@ const settingsSchema = z
       .pipe(z.array(z.string().max(256)).max(1000))
   })
   .refine((value) => value.WORKOS_API_AUDIENCE !== value.WORKOS_MCP_AUDIENCE)
+  .refine(
+    (value) =>
+      value.WORKOS_MCP_M2M_CLIENT_ID === undefined || value.WORKOS_MCP_M2M_CLIENT_ID !== value.WORKOS_API_M2M_CLIENT_ID
+  )
 
 /** Independent HTTP-only composition: no database or incoming-bearer dependency. */
 export function createMcpApplication(
@@ -54,12 +59,43 @@ export function createMcpApplication(
   const config = parsed.data
   const telemetry = createMcpTelemetry()
   const resource = new URL(config.WORKOS_MCP_AUDIENCE)
-  const authenticate = createWorkosAuthenticator(
+  const authenticateResourceToken = createWorkosAuthenticator(
     {
       m2m: { audience: resource.href, issuer: config.WORKOS_ISSUER, jwksUrl: config.WORKOS_JWKS_URL }
     },
     dependencies.keys
   )
+  const authenticateSmokeClient =
+    config.WORKOS_MCP_M2M_CLIENT_ID === undefined
+      ? undefined
+      : createWorkosAuthenticator(
+          {
+            m2m: {
+              audience: config.WORKOS_API_AUDIENCE,
+              issuer: config.WORKOS_ISSUER,
+              jwksUrl: config.WORKOS_JWKS_URL
+            }
+          },
+          dependencies.keys
+        )
+  const authenticate = async (authorization: string | undefined) => {
+    try {
+      return await authenticateResourceToken(authorization)
+    } catch (error) {
+      if (
+        authenticateSmokeClient === undefined ||
+        !(error instanceof AuthenticationError) ||
+        error.category !== "invalid"
+      ) {
+        throw error
+      }
+      const identity = await authenticateSmokeClient(authorization)
+      if (identity.userId !== config.WORKOS_MCP_M2M_CLIENT_ID) {
+        throw new AuthenticationError("invalid")
+      }
+      return identity
+    }
+  }
   const provider = createApiAccessTokenProvider(
     {
       issuer: config.WORKOS_ISSUER,

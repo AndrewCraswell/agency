@@ -19,6 +19,7 @@
     "test": "vitest run --project ingestion --project parsing --project tools",
     "test:parsing": "vitest run --project parsing",
     "test:database": "vitest run --project database",
+    "test:refresh-database": "vitest run --project database src/search/refresh/refresh.integration.test.ts",
     "test:python": "python -m unittest discover -s python -p test_*.py",
     "test:coverage": "vitest run --coverage --project ingestion --project parsing --project tools",
     "test:all": "vitest run && pnpm test:python",
@@ -28,7 +29,8 @@
     "trigger:schedules": "node --env-file-if-exists=.env --import tsx tools/trigger/reconcile-trigger-schedules.ts",
     "trigger:scraper-schedules": "node --env-file-if-exists=.env --import tsx tools/trigger/reconcile-scraper-schedules.ts",
     "reconcile:vote-provenance": "node --env-file-if-exists=.env --import tsx tools/openstates/reconcile-vote-provenance.ts",
-    "relay": "tsx src/cli/document-relay.ts"
+    "relay": "tsx src/cli/document-relay.ts",
+    "refresh:staging": "tsx tools/search/refresh-staging.ts"
   },
   "dependencies": {
     "@azure/identity": "^4.13.1",

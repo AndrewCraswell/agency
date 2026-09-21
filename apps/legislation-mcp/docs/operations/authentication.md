@@ -1,9 +1,11 @@
 # MCP authentication and consent
 
-M is a standalone protected resource, using WorkOS staging AuthKit issuer/JWKS verification. It accepts only the exact
-configured MCP resource audience, never W's API audience or browser-session tokens. Health/readiness and discovery are
-public; `/mcp` is protected. [Runtime configuration](../../README.md) owns exact variables, host/origin checks, limits,
-independent HTTPS origins and the dedicated outbound API credential. The caller's token is never forwarded or exchanged.
+M is a standalone protected resource, using WorkOS staging AuthKit issuer/JWKS verification. Interactive clients must
+use the exact configured MCP resource audience. Staging may additionally allow one dedicated Connect M2M smoke client:
+its API-audience token is accepted only when the verified subject exactly matches `WORKOS_MCP_M2M_CLIENT_ID`. The
+outbound W client is explicitly forbidden from filling that role. Health/readiness and discovery are public; `/mcp` is
+protected. [Runtime configuration](../../README.md) owns exact variables, host/origin checks, limits, independent HTTPS
+origins and the dedicated outbound API credential. The caller's token is never forwarded or exchanged.
 C supplies Node auth/context primitives; W owns [API and session policy](../../../legislation-web/docs/operations/authentication.md).
 
 Register the exact resource URL and approved client redirect URIs in the staging application identified by
@@ -47,8 +49,10 @@ multi-user legal access. Protected legal calls fail closed unless outbound user 
 - Register the exact Connect Resource Indicator and appropriate client metadata/registration support in WorkOS.
 - Confirm healthy standalone M and W deployments at their independently configured HTTPS origins.
 
-WorkOS documents that `resource` selects the token's `aud`; manually created M2M apps do not use the default Resource
-Indicator. References: [MCP authentication](https://workos.com/docs/authkit/mcp),
+WorkOS resource tokens use the resource URL as `aud`. Connect M2M client-credentials tokens instead use the environment
+API audience, so protected staging automation requires both that audience and the exact dedicated client subject. This
+does not add a general fallback audience and does not change interactive consent. References:
+[MCP authentication](https://workos.com/docs/authkit/mcp),
 [device authorization](https://workos.com/docs/reference/workos-connect/cli-auth/authorize-device).
 
 ### Browser-consent procedure
@@ -59,14 +63,15 @@ Indicator. References: [MCP authentication](https://workos.com/docs/authkit/mcp)
 4. Invoke `search_bills` with a lexical query or `get_bill` with an approved fixture; retain status and correlation ID only.
 5. Disconnect and revoke authorization unless this is an intended long-lived client.
 
-Success requires an exact MCP-resource audience, not an environment-client-ID API audience. Never relax verification
-to make a misconfigured flow pass. M's authenticated smoke and W's provisioned API-session smoke remain independent.
+Interactive success requires the exact MCP-resource audience. Automated staging smoke requires the separately
+configured M2M client subject and never accepts the outbound W client. M's authenticated smoke and W's provisioned
+API-session smoke remain independent.
 
 ### Stop conditions
 
 - No user consent screen, a resource mismatch in scheme/host/path/slash/query/fragment, or a wrong returned audience.
 - Any need to reveal tokens, WorkOS API keys, client secrets or browser sessions to an agent.
-- Any need to create a lasting OAuth/M2M client just for the canary: escalate the identity-lifecycle decision.
+- Any need to reuse the outbound W M2M client or accept an unlisted M2M subject.
 
 Retain only sanitized deployment status, tool name and correlation evidence from future canaries.
 
