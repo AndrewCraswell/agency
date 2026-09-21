@@ -173,6 +173,8 @@ For operator-driven rematerialization, `govinfo:import --api-discovery --force` 
 to enumerate package IDs while retaining the official bulk XML as the imported source.
 After the first pass establishes a checkpoint, use `--rematerialize` instead of `--force` to resume an interrupted
 stream while continuing to update existing records.
+Large operator repairs may use `--shard-count` and `--shard-index`. Packages are assigned by their stable sorted index;
+each shard has an independent lease, source stream, and checkpoint so bounded shards can execute in parallel.
 
 ### Milestone: expand federal history beyond Congresses 113-119
 
