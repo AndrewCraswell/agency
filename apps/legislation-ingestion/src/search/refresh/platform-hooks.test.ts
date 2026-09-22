@@ -2,7 +2,7 @@ import { isAbsolute } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   railwayMaintenanceEnvironment,
-  railwayScaleMutationArguments,
+  railwayScaleArguments,
   railwayServiceScale,
   stagingSchemaLeaseScriptPath
 } from "./platform-hooks.js"
@@ -19,21 +19,25 @@ describe("refresh platform hooks", () => {
     expect(railwayServiceScale("us-west=2,eu-west=1")).toEqual(["us-west=2", "eu-west=1"])
   })
 
-  it("uses the Railway GraphQL API for maintenance scaling", () => {
-    const arguments_ = railwayScaleMutationArguments("environment-id", "service-id", ["us-west2=0", "europe-west4=2"])
+  it("uses explicit Railway scope for maintenance scaling", () => {
+    const arguments_ = railwayScaleArguments("project-id", "environment-id", "service-id", [
+      "us-west2=0",
+      "europe-west4=2"
+    ])
 
-    expect(arguments_[0]).toBe("api")
-    expect(arguments_).not.toContain("scale")
-    expect(JSON.parse(arguments_.at(-1) ?? "")).toEqual({
-      environmentId: "environment-id",
-      serviceId: "service-id",
-      input: {
-        multiRegionConfig: {
-          "europe-west4": { numReplicas: 2 },
-          "us-west2": { numReplicas: 0 }
-        }
-      }
-    })
+    expect(arguments_).toEqual([
+      "scale",
+      "--project",
+      "project-id",
+      "--environment",
+      "environment-id",
+      "--service",
+      "service-id",
+      "--json",
+      "--",
+      "us-west2=0",
+      "europe-west4=2"
+    ])
   })
 
   it("uses only the workspace API token for maintenance scaling", () => {
