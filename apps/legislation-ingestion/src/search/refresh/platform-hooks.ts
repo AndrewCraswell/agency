@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process"
 import { appendFile } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
 import pg from "pg"
 import { ingestionErrorSummary } from "../../ingestion/errors.js"
 import { replicatePassageDocuments } from "../passage-search-replication.js"
@@ -14,6 +15,10 @@ type RailwayMaintenanceConfig = {
     scale: readonly string[]
   }[]
 }
+
+export const stagingSchemaLeaseScriptPath = fileURLToPath(
+  new URL("../../../../../scripts/legislation-staging-schema-lease.mjs", import.meta.url)
+)
 
 async function run(
   command: string,
@@ -118,7 +123,7 @@ export function createPostgresLockHook(endpoint: string): RefreshHooks["acquireL
 }
 
 export async function assertSchemaLeaseAvailable() {
-  const output = await run("node", ["scripts/legislation-staging-schema-lease.mjs", "--command", "read"])
+  const output = await run("node", [stagingSchemaLeaseScriptPath, "--command", "read"])
   const lease = JSON.parse(output) as { expiresAt?: unknown } | null
   if (lease !== null) {
     if (typeof lease.expiresAt !== "string" || !Number.isFinite(Date.parse(lease.expiresAt))) {

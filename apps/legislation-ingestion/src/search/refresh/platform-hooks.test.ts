@@ -1,7 +1,15 @@
+import { isAbsolute } from "node:path"
 import { describe, expect, it } from "vitest"
-import { railwayServiceScale } from "./platform-hooks.js"
+import { railwayServiceScale, stagingSchemaLeaseScriptPath } from "./platform-hooks.js"
 
 describe("refresh platform hooks", () => {
+  it("resolves the schema lease helper independently of the package working directory", () => {
+    expect(isAbsolute(stagingSchemaLeaseScriptPath)).toBe(true)
+    expect(stagingSchemaLeaseScriptPath.replaceAll("\\", "/")).toMatch(
+      /\/scripts\/legislation-staging-schema-lease\.mjs$/
+    )
+  })
+
   it("accepts explicit Railway restore topology", () => {
     expect(railwayServiceScale("us-west=2,eu-west=1")).toEqual(["us-west=2", "eu-west=1"])
   })
