@@ -87,7 +87,7 @@ function postgresEnvironment(endpoint: string, applicationName: string): NodeJS.
     PGDATABASE: decodeURIComponent(url.pathname.slice(1)),
     PGUSER: decodeURIComponent(url.username),
     PGPASSWORD: decodeURIComponent(url.password),
-    PGOPTIONS: "-c statement_timeout=900000 -c lock_timeout=2000",
+    PGOPTIONS: "-c statement_timeout=3600000 -c lock_timeout=2000",
     PGSSLMODE: url.searchParams.get("sslmode") ?? undefined
   }
 }
