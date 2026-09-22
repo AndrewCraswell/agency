@@ -93,6 +93,12 @@ export function railwayScaleMutationArguments(environment: string, service: stri
   ]
 }
 
+export function railwayMaintenanceEnvironment(environment: NodeJS.ProcessEnv) {
+  const maintenanceEnvironment = { ...environment }
+  delete maintenanceEnvironment.RAILWAY_TOKEN
+  return maintenanceEnvironment
+}
+
 export function createRailwayMaintenanceController(config: RailwayMaintenanceConfig) {
   let unavailable = false
   const scale = async (available: boolean) => {
@@ -100,7 +106,11 @@ export function createRailwayMaintenanceController(config: RailwayMaintenanceCon
       const assignments = available
         ? service.scale
         : service.scale.map((entry) => `${entry.slice(0, entry.indexOf("="))}=0`)
-      await run("railway", railwayScaleMutationArguments(config.environment, service.id, assignments))
+      await run(
+        "railway",
+        railwayScaleMutationArguments(config.environment, service.id, assignments),
+        railwayMaintenanceEnvironment(process.env)
+      )
     }
     unavailable = !available
   }

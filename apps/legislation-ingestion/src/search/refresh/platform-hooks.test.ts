@@ -1,6 +1,11 @@
 import { isAbsolute } from "node:path"
 import { describe, expect, it } from "vitest"
-import { railwayScaleMutationArguments, railwayServiceScale, stagingSchemaLeaseScriptPath } from "./platform-hooks.js"
+import {
+  railwayMaintenanceEnvironment,
+  railwayScaleMutationArguments,
+  railwayServiceScale,
+  stagingSchemaLeaseScriptPath
+} from "./platform-hooks.js"
 
 describe("refresh platform hooks", () => {
   it("resolves the schema lease helper independently of the package working directory", () => {
@@ -14,7 +19,7 @@ describe("refresh platform hooks", () => {
     expect(railwayServiceScale("us-west=2,eu-west=1")).toEqual(["us-west=2", "eu-west=1"])
   })
 
-  it("uses the project-token-compatible Railway API for maintenance scaling", () => {
+  it("uses the Railway GraphQL API for maintenance scaling", () => {
     const arguments_ = railwayScaleMutationArguments("environment-id", "service-id", ["us-west2=0", "europe-west4=2"])
 
     expect(arguments_[0]).toBe("api")
@@ -28,6 +33,19 @@ describe("refresh platform hooks", () => {
           "us-west2": { numReplicas: 0 }
         }
       }
+    })
+  })
+
+  it("uses only the workspace API token for maintenance scaling", () => {
+    expect(
+      railwayMaintenanceEnvironment({
+        RAILWAY_API_TOKEN: "workspace-token",
+        RAILWAY_TOKEN: "project-token",
+        SAFE_VALUE: "preserved"
+      })
+    ).toEqual({
+      RAILWAY_API_TOKEN: "workspace-token",
+      SAFE_VALUE: "preserved"
     })
   })
 
