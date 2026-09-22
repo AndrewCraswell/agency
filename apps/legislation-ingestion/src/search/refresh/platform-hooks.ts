@@ -66,6 +66,33 @@ export function railwayServiceScale(value: string) {
   return parseScale(value)
 }
 
+const scaleMutation = `mutation Scale(
+  $environmentId: String!
+  $serviceId: String!
+  $input: ServiceInstanceUpdateInput!
+) {
+  serviceInstanceUpdate(environmentId: $environmentId, serviceId: $serviceId, input: $input)
+}`
+
+export function railwayScaleMutationArguments(environment: string, service: string, assignments: readonly string[]) {
+  const multiRegionConfig = Object.fromEntries(
+    assignments.map((assignment) => {
+      const separator = assignment.indexOf("=")
+      return [assignment.slice(0, separator), { numReplicas: Number(assignment.slice(separator + 1)) }]
+    })
+  )
+  return [
+    "api",
+    scaleMutation,
+    "--variables",
+    JSON.stringify({
+      environmentId: environment,
+      serviceId: service,
+      input: { multiRegionConfig }
+    })
+  ]
+}
+
 export function createRailwayMaintenanceController(config: RailwayMaintenanceConfig) {
   let unavailable = false
   const scale = async (available: boolean) => {
@@ -73,17 +100,7 @@ export function createRailwayMaintenanceController(config: RailwayMaintenanceCon
       const assignments = available
         ? service.scale
         : service.scale.map((entry) => `${entry.slice(0, entry.indexOf("="))}=0`)
-      await run("railway", [
-        "scale",
-        "--project",
-        config.project,
-        "--environment",
-        config.environment,
-        "--service",
-        service.id,
-        ...assignments,
-        "--json"
-      ])
+      await run("railway", railwayScaleMutationArguments(config.environment, service.id, assignments))
     }
     unavailable = !available
   }
