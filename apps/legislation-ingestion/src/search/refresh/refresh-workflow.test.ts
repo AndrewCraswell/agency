@@ -25,6 +25,8 @@ describe("protected staging refresh workflow", () => {
       "LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL",
       "LEGISLATION_STAGING_PRIMARY_DATABASE_URL",
       "LEGISLATION_STAGING_PASSAGE_SEARCH_DATABASE_URL",
+      "RAILWAY_API_TOKEN",
+      "RAILWAY_TOKEN",
       "WORKOS_MCP_SMOKE_CLIENT_ID",
       "WORKOS_MCP_SMOKE_CLIENT_SECRET"
     ]) {
@@ -32,6 +34,8 @@ describe("protected staging refresh workflow", () => {
     }
     expect(workflow).toContain("pnpm --filter legislation-ingestion refresh:staging \\")
     expect(workflow).not.toContain("pnpm --filter legislation-ingestion refresh:staging --")
+    expect(workflow).toContain("RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}")
+    expect(workflow).toContain("RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}")
     expect(workflow).toContain('--copy-engine "${{ inputs.copy_engine }}"')
     expect(workflow).toContain("--apply")
   })

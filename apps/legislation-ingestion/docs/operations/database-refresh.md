@@ -15,11 +15,13 @@ does not use PostgreSQL large objects; catalog validation must fail closed if th
 omit a large object.
 
 The workflow holds a target PostgreSQL advisory lock, reads the existing GitHub issue-backed schema lease, scales W and
-M to zero replicas and terminates stale target sessions before destructive work. It then verifies complete catalog policy, fingerprints
-excluded tables, clears managed tables, copies public data, audits all private and operational tables as empty, seeds
-the versioned deterministic staging fixture in one transaction and rebuilds ParadeDB from the copied primary. W and M
-are restored to their explicit prior topology only for final readiness and authenticated smoke validation. Staging is
-scaled back to zero on any failure. Migrations,
+M to zero replicas and terminates stale target sessions before destructive work. Railway service topology changes use
+a dedicated workspace API token from the protected `RAILWAY_API_TOKEN` secret because environment-scoped project tokens
+cannot update replica topology. Ordinary project operations continue to use the narrower `RAILWAY_TOKEN` secret. It
+then verifies complete catalog policy, fingerprints excluded tables, clears managed tables, copies public data, audits
+all private and operational tables as empty, seeds the versioned deterministic staging fixture in one transaction and
+rebuilds ParadeDB from the copied primary. W and M are restored to their explicit prior topology only for final readiness
+and authenticated smoke validation. Staging is scaled back to zero on any failure. Migrations,
 extensions, copy counts, foreign keys, private-data absence, passage index and representative search, W readiness and
 authenticated M smoke validations must all pass. A failure is redacted, emitted as a GitHub Actions error and appended
 to the step summary; the lock is released but maintenance is intentionally retained.
