@@ -32,3 +32,12 @@ describe("invoice item titles", () => {
     expect(markup).toContain('<div class="fc-item__title">Blade repair</div>')
   })
 })
+
+describe("invoice item images", () => {
+  it("prefers a variant image and falls back to the line-item image", () => {
+    const markup = engine.parseAndRenderSync(source, paidVariables)
+
+    expect(markup).toContain('src="//cdn.shopify.com/s/files/1/0848/2527/6713/files/Fencing_Club-05.png?width=100"')
+    expect(markup).not.toContain("standard-epee-body-cord.png")
+  })
+})

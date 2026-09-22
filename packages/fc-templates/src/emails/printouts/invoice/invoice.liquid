@@ -63,10 +63,17 @@
     }
   }
 
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
   .fc-invoice {
     --ink: #000000;
     --muted: #000000;
     --rule: #8c8c94;
+    --tint: #f4f4f2;
     --paid: #0f7a3d;
     --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
     --display: Archivo, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -270,6 +277,21 @@
 
   .fc-col-qty {
     width: 50px;
+  }
+
+  .fc-items__thumb {
+    width: 58px;
+  }
+
+  .fc-items__thumb img,
+  .fc-items__placeholder {
+    background: var(--tint);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    display: block;
+    height: 44px;
+    object-fit: contain;
+    width: 44px;
   }
 
   /* Two money columns: what one costs, then what the line comes to. The amount column is the one
@@ -625,7 +647,7 @@
                 <thead>
                   <tr>
                     <th class="fc-col-qty" scope="col">QTY</th>
-                    <th scope="col">DESCRIPTION</th>
+                    <th colspan="2" scope="col">DESCRIPTION</th>
                     <th class="fc-col-unit" scope="col">UNIT PRICE</th>
                     <th class="fc-col-price" scope="col">AMOUNT</th>
                   </tr>
@@ -634,6 +656,14 @@
                   {%- for line_item in order.line_items %}
                     <tr>
                       <td class="fc-col-qty">{{ line_item.quantity }}</td>
+                      <td class="fc-items__thumb">
+                        {%- assign item_image = line_item.variant.featured_image | default: line_item.image -%}
+                        {%- if item_image != blank -%}
+                          <img src="{{ item_image | img_url: '100x100' }}" alt="" />
+                        {%- else -%}
+                          <div class="fc-items__placeholder"></div>
+                        {%- endif -%}
+                      </td>
                       <td>
                         <div class="fc-item__title">{{ line_item.product.title | default: line_item.title }}</div>
                         {%- comment %}

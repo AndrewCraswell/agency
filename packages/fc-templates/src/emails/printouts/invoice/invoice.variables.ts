@@ -38,6 +38,12 @@ export const lineItems = [
   {
     title: "Standard Epee Body Cord - 2-prong / 1.5 m",
     quantity: 1,
+    image: "//cdn.shopify.com/s/files/1/0848/2527/6713/files/standard-epee-body-cord.png?v=1",
+    variant: {
+      featured_image: {
+        src: "//cdn.shopify.com/s/files/1/0848/2527/6713/files/Fencing_Club-05.png"
+      }
+    },
     product: { title: "Standard Epee Body Cord", has_only_default_variant: false },
     options_with_values: [
       { name: "Connector", value: "2-prong" },
@@ -53,6 +59,7 @@ export const lineItems = [
   {
     title: "Lens Protection Plan (2 Year)",
     quantity: 1,
+    image: null,
     product: { title: "Lens Protection Plan (2 Year)", has_only_default_variant: true },
     options_with_values: [{ name: "Title", value: "Default Title" }],
     original_price: 1999,
@@ -65,6 +72,7 @@ export const lineItems = [
   {
     title: "Premium Leather Case - Black",
     quantity: 1,
+    image: "//cdn.shopify.com/s/files/1/0848/2527/6713/files/Fencing_Club-05.png",
     product: { title: "Premium Leather Case", has_only_default_variant: false },
     options_with_values: [{ name: "Color", value: "Black" }],
     original_price: 2499,
@@ -77,6 +85,7 @@ export const lineItems = [
   {
     title: "Standard Foil/Saber Body Cord - Bayonet / 2 m / Braided",
     quantity: 1,
+    image: "//cdn.shopify.com/s/files/1/0848/2527/6713/files/Fencing_Club-05.png",
     product: { title: "Standard Foil/Saber Body Cord", has_only_default_variant: false },
     options_with_values: [
       { name: "Connector", value: "Bayonet" },
@@ -104,6 +113,7 @@ export const lineItems = [
   {
     title: "Standard Foil/Saber Mask Cord",
     quantity: 1,
+    image: "//cdn.shopify.com/s/files/1/0848/2527/6713/files/Fencing_Club-05.png",
     product: { title: "Standard Foil/Saber Mask Cord", has_only_default_variant: true },
     options_with_values: [{ name: "Title", value: "Default Title" }],
     original_price: 695,
