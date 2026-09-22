@@ -369,7 +369,13 @@ describe("composition contracts", () => {
     expect(presentationHistoryText(document)).toContain('"billId":"bill:us:119:hr:7008"')
     expect(presentationHistoryText(document)).toContain('"versionCode":"rh"')
     expect(presentationHistoryText(document)).toContain('"versionDate":"2026-02-03"')
-    const bill = { id: "bill:us:119:hr:7008", title: "Stop Insider Trading Act", sessionId: "session:us:119" }
+    const bill = {
+      id: "bill:us:119:hr:7008",
+      introducedAt: "2026-02-03",
+      sessionId: "session:us:119",
+      sourceUrl: "https://www.congress.gov/bill/119th-congress/house-bill/7008",
+      title: "Stop Insider Trading Act"
+    }
     const page = projectEntityResult("get_bill", { bill })
     expect(page).toBeDefined()
     if (!page) {
@@ -390,6 +396,15 @@ describe("composition contracts", () => {
       }
     ).find((item) => item.kind === "bill-progress")
     expect(content).toBeDefined()
+    if (content?.kind !== "bill-progress") {
+      throw new Error("Missing bill progress fixture")
+    }
+    expect(content.stages[0]).toMatchObject({
+      date: "2026-02-03",
+      id: "introduced",
+      sourceUrl: "https://www.congress.gov/bill/119th-congress/house-bill/7008",
+      state: "recorded"
+    })
     const progress = {
       state: "ready",
       blockId: "progress",

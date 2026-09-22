@@ -33,6 +33,8 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
       bill: z.object({
         id: z.literal(record.id),
         chamber: z.string().nullish(),
+        introducedAt: z.iso.date().nullish(),
+        sourceUrl: sourceUrlSchema.nullish(),
         status: z.string().nullish(),
         jurisdictionId: z.string().optional()
       }),
@@ -59,7 +61,13 @@ export function projectBillProgress(data: unknown, page: EntityPage) {
   const progressActions = parsed.data.progressActions.map((action) => normalizeBillAction(action, bill.jurisdictionId))
   const chambers: Record<string, string> = { lower: "House floor", upper: "Senate", unicameral: "Legislature" }
   const stages: z.infer<typeof billProgressSchema>["stages"] = [
-    { id: "introduced", label: "Introduced", state: "unknown" },
+    {
+      id: "introduced",
+      label: "Introduced",
+      state: bill.introducedAt ? "recorded" : "unknown",
+      date: bill.introducedAt ?? undefined,
+      sourceUrl: bill.introducedAt ? bill.sourceUrl : undefined
+    },
     { id: "committee", label: "Committee", state: "unknown" },
     { id: "first", label: chambers[bill.chamber ?? ""] ?? "First chamber", state: "unknown" }
   ]
