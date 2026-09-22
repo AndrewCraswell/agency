@@ -6,16 +6,8 @@ import { ingestionErrorSummary } from "../../ingestion/errors.js"
 import { replicatePassageDocuments } from "../passage-search-replication.js"
 import { nodePostgresEndpoint } from "./config.js"
 import { type ExternalHook } from "./external-hook.js"
+import { createVerifiedRailwayMaintenance, type RailwayMaintenanceConfig } from "./railway-maintenance.js"
 import { type DeterministicFixtureSeed, type RefreshHooks } from "./refresh.js"
-
-type RailwayMaintenanceConfig = {
-  project: string
-  environment: string
-  services: readonly {
-    id: string
-    scale: readonly string[]
-  }[]
-}
 
 export const stagingSchemaLeaseScriptPath = fileURLToPath(
   new URL("../../../../../scripts/legislation-staging-schema-lease.mjs", import.meta.url)
@@ -24,11 +16,13 @@ export const stagingSchemaLeaseScriptPath = fileURLToPath(
 async function run(
   command: string,
   arguments_: readonly string[],
-  environment: NodeJS.ProcessEnv = process.env
+  environment: NodeJS.ProcessEnv = process.env,
+  timeout?: number
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, [...arguments_], {
       env: environment,
+      timeout,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true
     })
@@ -67,15 +61,6 @@ export function railwayServiceScale(value: string) {
   return parseScale(value)
 }
 
-export function railwayScaleArguments(
-  project: string,
-  environment: string,
-  service: string,
-  assignments: readonly string[]
-) {
-  return ["scale", "-p", project, "-e", environment, "-s", service, "--json", "--", ...assignments]
-}
-
 export function railwayMaintenanceEnvironment(environment: NodeJS.ProcessEnv) {
   const maintenanceEnvironment = { ...environment }
   delete maintenanceEnvironment.RAILWAY_TOKEN
@@ -83,29 +68,13 @@ export function railwayMaintenanceEnvironment(environment: NodeJS.ProcessEnv) {
 }
 
 export function createRailwayMaintenanceController(config: RailwayMaintenanceConfig) {
-  let unavailable = false
-  const scale = async (available: boolean) => {
-    for (const service of config.services) {
-      const assignments = available
-        ? service.scale
-        : service.scale.map((entry) => `${entry.slice(0, entry.indexOf("="))}=0`)
-      await run(
-        "railway",
-        railwayScaleArguments(config.project, config.environment, service.id, assignments),
-        railwayMaintenanceEnvironment(process.env)
-      )
-    }
-    unavailable = !available
+  const environment = railwayMaintenanceEnvironment(process.env)
+  if (!environment.RAILWAY_API_TOKEN?.trim()) {
+    throw new Error("Railway maintenance requires the dedicated workspace API token")
   }
-  return {
-    async set(unavailable_: boolean) {
-      if (unavailable_ !== unavailable) await scale(!unavailable_)
-    },
-    async prepareValidation() {
-      if (!unavailable) throw new Error("Staging must be unavailable before service validation")
-      await scale(true)
-    }
-  }
+  return createVerifiedRailwayMaintenance(config, {
+    run: (arguments_) => run("railway", arguments_, environment, 60_000)
+  })
 }
 
 export function createPostgresLockHook(endpoint: string): RefreshHooks["acquireLock"] {

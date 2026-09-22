@@ -32,7 +32,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ startsWith(inputs.operation, 'production-') && 'production' || 'staging' }}
     concurrency:
-      group: legislation-${{ inputs.operation }}
+      group:
+        ${{ startsWith(inputs.operation, 'staging-') && 'legislation-staging-database-mutation' ||
+        format('legislation-{0}', inputs.operation) }}
       cancel-in-progress: false
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

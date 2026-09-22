@@ -1,11 +1,6 @@
 import { isAbsolute } from "node:path"
 import { describe, expect, it } from "vitest"
-import {
-  railwayMaintenanceEnvironment,
-  railwayScaleArguments,
-  railwayServiceScale,
-  stagingSchemaLeaseScriptPath
-} from "./platform-hooks.js"
+import { railwayMaintenanceEnvironment, railwayServiceScale, stagingSchemaLeaseScriptPath } from "./platform-hooks.js"
 
 describe("refresh platform hooks", () => {
   it("resolves the schema lease helper independently of the package working directory", () => {
@@ -17,27 +12,6 @@ describe("refresh platform hooks", () => {
 
   it("accepts explicit Railway restore topology", () => {
     expect(railwayServiceScale("us-west=2,eu-west=1")).toEqual(["us-west=2", "eu-west=1"])
-  })
-
-  it("uses explicit Railway scope for maintenance scaling", () => {
-    const arguments_ = railwayScaleArguments("project-id", "environment-id", "service-id", [
-      "us-west2=0",
-      "europe-west4=2"
-    ])
-
-    expect(arguments_).toEqual([
-      "scale",
-      "-p",
-      "project-id",
-      "-e",
-      "environment-id",
-      "-s",
-      "service-id",
-      "--json",
-      "--",
-      "us-west2=0",
-      "europe-west4=2"
-    ])
   })
 
   it("uses only the workspace API token for maintenance scaling", () => {

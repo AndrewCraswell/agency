@@ -16,6 +16,8 @@ describe("protected staging refresh workflow", () => {
     expect(workflow).toContain("environment: staging")
     expect(workflow).toContain("group: legislation-staging-database-mutation")
     expect(workflow).toContain("cancel-in-progress: false")
+    expect(workflow).toContain("CAPACITY_REVIEWED: ${{ inputs.capacity_reviewed }}")
+    expect(workflow).toContain('if [ "$CAPACITY_REVIEWED" != "true" ]')
   })
 
   it("uses only protected endpoints and the concrete refresh command", async () => {
@@ -38,7 +40,7 @@ describe("protected staging refresh workflow", () => {
     expect(workflow).toContain("RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}")
     expect(workflow).toContain("postgresql-client-18")
     expect(workflow).toContain('echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"')
-    expect(workflow).toContain('--copy-engine "${{ inputs.copy_engine }}"')
+    expect(workflow).not.toContain("--copy-engine")
     expect(workflow).toContain("--apply")
   })
 })

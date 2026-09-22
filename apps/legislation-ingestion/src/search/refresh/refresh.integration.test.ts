@@ -3,15 +3,9 @@ import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import {
-  createDirectCopyEngine,
-  createFallbackCopyEngine,
-  createPgDumpCopyEngine,
-  type CopyEngine
-} from "./copy-engine.js"
+import { createBulkCopyEngine } from "./copy-engine.js"
 import { type ExternalHook } from "./external-hook.js"
 import { createDeterministicFixtureHook, createPassageRebuildHook, createPostgresLockHook } from "./platform-hooks.js"
-import { refreshPolicy } from "./policy.js"
 import { createPostgresRefreshStore } from "./postgres-store.js"
 import { refreshStaging, type RefreshEndpoints } from "./refresh.js"
 
@@ -58,7 +52,7 @@ async function resetDatabase(endpoint: string) {
 }
 
 function dockerPostgresSpawn(command: string, arguments_: readonly string[], environment: NodeJS.ProcessEnv) {
-  const forwarded = ["PGAPPNAME", "PGDATABASE", "PGUSER", "PGPASSWORD", "PGSSLMODE"]
+  const forwarded = ["PGAPPNAME", "PGDATABASE", "PGUSER", "PGPASSWORD", "PGSSLMODE", "PGOPTIONS"]
     .filter((name) => environment[name] !== undefined)
     .flatMap((name) => ["--env", `${name}=${environment[name]}`])
   return spawn(
@@ -171,7 +165,7 @@ describe.skipIf(!enabled)("staging refresh with disposable PostgreSQL 18", () =>
     ])
   })
 
-  it("runs direct binary copy, sanitization, fixture seeding, rebuild, and validation", async () => {
+  it("runs bulk copy, sanitization, fixture seeding, rebuild, and validation", async () => {
     const rebuildHook = createPassageRebuildHook(targetEndpoint!, passageSearchEndpoint!)
     const fixtureHook = createDeterministicFixtureHook(targetEndpoint!)
     const smokeHook: ExternalHook = async () => "true,true"
@@ -194,7 +188,7 @@ describe.skipIf(!enabled)("staging refresh with disposable PostgreSQL 18", () =>
         endpoints,
         source,
         target,
-        copyEngine: createDirectCopyEngine(dockerPostgresSpawn),
+        copyEngine: createBulkCopyEngine(dockerPostgresSpawn),
         hooks: {
           acquireLock: createPostgresLockHook(targetEndpoint!),
           async assertMigrationLeaseAvailable() {},
@@ -206,7 +200,7 @@ describe.skipIf(!enabled)("staging refresh with disposable PostgreSQL 18", () =>
           }
         }
       })
-      expect(result.receipt.engine).toBe("direct")
+      expect(result.receipt.engine).toBe("bulk")
       expect(Object.values(result.validation).every(Boolean)).toBe(true)
     } finally {
       await Promise.allSettled([source.close(), target.close()])
@@ -239,7 +233,7 @@ describe.skipIf(!enabled)("staging refresh with disposable PostgreSQL 18", () =>
     await release()
   }, 600_000)
 
-  it("runs actual pg_dump/pg_restore fallback and releases resources on validation failure", async () => {
+  it("releases resources and retains maintenance on validation failure", async () => {
     maintenance.length = 0
     const alerts: string[] = []
     const rebuildHook = createPassageRebuildHook(targetEndpoint!, passageSearchEndpoint!)
@@ -259,24 +253,13 @@ describe.skipIf(!enabled)("staging refresh with disposable PostgreSQL 18", () =>
       fixtureHook,
       smokeHook
     })
-    const partialDirect: CopyEngine = {
-      async copy(request) {
-        await createDirectCopyEngine(dockerPostgresSpawn).copy({
-          ...request,
-          tables: [request.tables[0]!]
-        })
-        throw new Error("forced failure after a partial direct copy")
-      }
-    }
     try {
       await expect(
         refreshStaging({
           endpoints,
           source,
           target,
-          copyEngine: createFallbackCopyEngine(partialDirect, createPgDumpCopyEngine(dockerPostgresSpawn), () =>
-            target.clear([...refreshPolicy.copy, ...refreshPolicy.clear, ...refreshPolicy.rebuild])
-          ),
+          copyEngine: createBulkCopyEngine(dockerPostgresSpawn),
           hooks: {
             acquireLock: createPostgresLockHook(targetEndpoint!),
             async assertMigrationLeaseAvailable() {},

@@ -40,6 +40,7 @@ function fixtures(validation = passingValidation) {
     readSequences: vi.fn(async () => [{ name: "legislation.bills_id_seq", value: "42", called: true }]),
     writeSequences: vi.fn(async () => undefined),
     clear: vi.fn(async () => undefined),
+    assertCopyReady: vi.fn(async () => undefined),
     rebuild: vi.fn(async () => undefined),
     seedFixtures: vi.fn(async () => undefined),
     auditEmpty: vi.fn(async () => undefined),
@@ -58,6 +59,7 @@ function fixtures(validation = passingValidation) {
     readSequences: vi.fn(async () => []),
     writeSequences: vi.fn(async () => undefined),
     clear: vi.fn(async () => undefined),
+    assertCopyReady: vi.fn(async () => undefined),
     rebuild: vi.fn(async () => undefined),
     seedFixtures: vi.fn(async () => undefined),
     auditEmpty: vi.fn(async () => undefined),
@@ -65,7 +67,7 @@ function fixtures(validation = passingValidation) {
     terminateStaleTargetConnections: vi.fn(async () => undefined)
   }
   const copyEngine: CopyEngine = {
-    copy: vi.fn(async (request) => ({ engine: "direct" as const, tables: request.tables }))
+    copy: vi.fn(async (request) => ({ engine: "bulk" as const, tables: request.tables, counts: {} }))
   }
   const maintenance: boolean[] = []
   const hooks: RefreshHooks = {
@@ -80,10 +82,21 @@ function fixtures(validation = passingValidation) {
 }
 
 describe("staging refresh", () => {
+  it.each([
+    { ...endpoints, targetPrimary: "postgres://different-user@SOURCE.invalid:5432/%70roduction?sslmode=require" },
+    { ...endpoints, targetPassageSearch: "postgresql://different-user@target.invalid:5432/staging" },
+    { ...endpoints, targetPrimary: "postgres-unsafe://target.invalid/staging" }
+  ])("rejects colliding or invalid databases before any hooks or clearing", async (invalidEndpoints) => {
+    const fixture = fixtures()
+    await expect(refreshStaging({ ...fixture, endpoints: invalidEndpoints })).rejects.toThrow("distinct")
+    expect(fixture.hooks.acquireLock).not.toHaveBeenCalled()
+    expect(fixture.target.clear).not.toHaveBeenCalled()
+  })
+
   it("copies, sanitizes, seeds, rebuilds, validates, then restores availability", async () => {
     const fixture = fixtures()
     const result = await refreshStaging({ endpoints, ...fixture })
-    expect(result.receipt.engine).toBe("direct")
+    expect(result.receipt.engine).toBe("bulk")
     expect(fixture.maintenance).toEqual([true, false])
     expect(fixture.target.clear).toHaveBeenCalledWith([
       ...refreshPolicy.copy,
@@ -116,6 +129,35 @@ describe("staging refresh", () => {
     vi.mocked(fixture.source.catalog).mockResolvedValue([...Object.values(refreshPolicy).flat(), "unclassified"])
     await expect(refreshStaging({ endpoints, ...fixture })).rejects.toThrow("unknown: unclassified")
     expect(fixture.copyEngine.copy).not.toHaveBeenCalled()
+    expect(fixture.maintenance).toEqual([true, true])
+  })
+
+  it("refuses insufficient bulk-load privileges before clearing data", async () => {
+    const fixture = fixtures()
+    vi.mocked(fixture.target.assertCopyReady).mockRejectedValue(new Error("maintenance principal required"))
+    await expect(refreshStaging({ endpoints, ...fixture })).rejects.toThrow("maintenance principal required")
+    expect(fixture.target.clear).not.toHaveBeenCalled()
+    expect(fixture.copyEngine.copy).not.toHaveBeenCalled()
+  })
+
+  it("reasserts maintenance after a partial entry failure without clearing data", async () => {
+    const fixture = fixtures()
+    vi.mocked(fixture.hooks.setMaintenance).mockRejectedValueOnce(new Error("second service unavailable"))
+    await expect(refreshStaging({ endpoints, ...fixture })).rejects.toThrow("second service unavailable")
+    expect(fixture.hooks.setMaintenance).toHaveBeenCalledTimes(2)
+    expect(fixture.target.clear).not.toHaveBeenCalled()
+  })
+
+  it("reports snapshot cleanup failure and still releases the lock", async () => {
+    const fixture = fixtures()
+    const release = vi.fn(async () => undefined)
+    const logger = vi.fn()
+    vi.mocked(fixture.hooks.acquireLock).mockResolvedValue(release)
+    vi.mocked(fixture.copyEngine.copy).mockRejectedValue(new Error("copy interrupted"))
+    vi.mocked(fixture.source.endSourceSnapshot).mockRejectedValue(new Error("snapshot cleanup failed"))
+    await expect(refreshStaging({ ...fixture, endpoints, logger })).rejects.toThrow("copy interrupted")
+    expect(release).toHaveBeenCalledOnce()
+    expect(logger).toHaveBeenCalledWith("refresh.cleanup-failed", { error: "Error: snapshot cleanup failed" })
     expect(fixture.maintenance).toEqual([true, true])
   })
 

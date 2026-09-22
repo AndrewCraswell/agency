@@ -1,10 +1,6 @@
 import { Command } from "commander"
 import { productionRefreshEndpoint } from "../../src/search/refresh/config.js"
-import {
-  createDirectCopyEngine,
-  createFallbackCopyEngine,
-  createPgDumpCopyEngine
-} from "../../src/search/refresh/copy-engine.js"
+import { createBulkCopyEngine } from "../../src/search/refresh/copy-engine.js"
 import {
   assertSchemaLeaseAvailable,
   createDeterministicFixtureHook,
@@ -15,7 +11,6 @@ import {
   emitRefreshAlert,
   railwayServiceScale
 } from "../../src/search/refresh/platform-hooks.js"
-import { refreshPolicy } from "../../src/search/refresh/policy.js"
 import { createPostgresRefreshStore } from "../../src/search/refresh/postgres-store.js"
 import { refreshStaging, type RefreshEndpoints, type RefreshHooks } from "../../src/search/refresh/refresh.js"
 
@@ -30,7 +25,6 @@ const program = new Command()
   .requiredOption("--web-scale <region=replicas,...>")
   .requiredOption("--mcp-service <id>")
   .requiredOption("--mcp-scale <region=replicas,...>")
-  .option("--copy-engine <engine>", "direct, fallback, or pg-dump", "fallback")
   .option("--apply", "perform the destructive refresh", false)
   .parse()
 
@@ -45,15 +39,11 @@ const options = program.opts<{
   webScale: string
   mcpService: string
   mcpScale: string
-  copyEngine: string
   apply: boolean
 }>()
 
 if (!options.apply) {
   throw new Error("Refusing destructive staging refresh without --apply")
-}
-if (!["direct", "fallback", "pg-dump"].includes(options.copyEngine)) {
-  throw new Error("--copy-engine must be direct, fallback, or pg-dump")
 }
 
 const endpoints: RefreshEndpoints = {
@@ -67,8 +57,8 @@ const maintenance = createRailwayMaintenanceController({
   project: options.railwayProject,
   environment: options.railwayEnvironment,
   services: [
-    { id: options.webService, scale: railwayServiceScale(options.webScale) },
-    { id: options.mcpService, scale: railwayServiceScale(options.mcpScale) }
+    { id: options.webService, scale: railwayServiceScale(options.webScale), endpoint: endpoints.targetWeb },
+    { id: options.mcpService, scale: railwayServiceScale(options.mcpScale), endpoint: endpoints.targetMcp }
   ]
 })
 const rebuildHook = createPassageRebuildHook(endpoints.targetPrimary, endpoints.targetPassageSearch)
@@ -92,15 +82,7 @@ const target = createPostgresRefreshStore({
   fixtureHook,
   smokeHook
 })
-const direct = createDirectCopyEngine()
-const copyEngine =
-  options.copyEngine === "fallback"
-    ? createFallbackCopyEngine(direct, createPgDumpCopyEngine(), () =>
-        target.clear([...refreshPolicy.copy, ...refreshPolicy.clear, ...refreshPolicy.rebuild])
-      )
-    : options.copyEngine === "pg-dump"
-      ? createPgDumpCopyEngine()
-      : direct
+const copyEngine = createBulkCopyEngine()
 const hooks: RefreshHooks = {
   acquireLock: createPostgresLockHook(endpoints.targetPrimary),
   assertMigrationLeaseAvailable: assertSchemaLeaseAvailable,

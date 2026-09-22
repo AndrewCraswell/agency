@@ -49,11 +49,11 @@ async function compareRows(source: pg.Client, target: pg.Client, sql: string) {
   return JSON.stringify(left.rows) === JSON.stringify(right.rows)
 }
 
-async function countsMatch(source: pg.Client, target: pg.Client) {
+async function countsMatch(counts: Readonly<Record<string, string>>, target: pg.Client) {
   for (const table of refreshPolicy.copy) {
     const sql = `select count(*)::text count from legislation."${table}"`
-    const [sourceCount, targetCount] = await Promise.all([source.query(sql), target.query(sql)])
-    if (countSchema.parse(sourceCount.rows[0]).count !== countSchema.parse(targetCount.rows[0]).count) {
+    const targetCount = await target.query(sql)
+    if (counts[table] !== countSchema.parse(targetCount.rows[0]).count) {
       return false
     }
   }
@@ -122,6 +122,15 @@ export function createPostgresRefreshStore(input: {
   return {
     async catalog() {
       const connection = await client()
+      const denied = await connection.query<{ name: string }>(
+        `select table_name name from unnest($1::text[]) table_name
+         where not has_table_privilege(current_user,format('legislation.%I',table_name),'SELECT')`,
+        [refreshPolicy.copy]
+      )
+      if (denied.rows.length > 0) {
+        throw new Error(`Refresh cannot read approved tables: ${denied.rows.map((row) => row.name).join(", ")}`)
+      }
+      await connection.query("select hash,created_at from legislation_migrations.migrations limit 0")
       const largeObjects = await connection.query("select count(*)::text count from pg_largeobject_metadata")
       if (countSchema.parse(largeObjects.rows[0]).count !== "0") {
         throw new Error("Refresh policy does not permit PostgreSQL large objects")
@@ -211,6 +220,30 @@ export function createPostgresRefreshStore(input: {
     async clear(tables) {
       await (await client()).query(`truncate table ${names(tables)} restart identity`)
     },
+    async assertCopyReady(tables) {
+      names(tables)
+      const connection = await client()
+      const privilege = await connection.query<{ passed: boolean }>(
+        "select rolsuper passed from pg_roles where rolname=current_user"
+      )
+      if (privilege.rows[0]?.passed !== true) {
+        throw new Error(
+          "Bulk refresh requires the protected staging maintenance principal to suspend constraint triggers and rebuild indexes; never use a runtime credential"
+        )
+      }
+      const invalid = await connection.query<{ name: string }>(
+        `select index_relation.relname name from pg_index index_record
+         join pg_class index_relation on index_relation.oid=index_record.indexrelid
+         join pg_class relation on relation.oid=index_record.indrelid
+         join pg_namespace namespace on namespace.oid=relation.relnamespace
+         where namespace.nspname='legislation' and relation.relname=any($1::text[])
+           and (not index_record.indisvalid or not index_record.indisready)`,
+        [tables]
+      )
+      if (invalid.rows.length > 0) {
+        throw new Error(`Bulk refresh refuses invalid indexes: ${invalid.rows.map((row) => row.name).join(", ")}`)
+      }
+    },
     async rebuild(tables, targetPassageSearch) {
       await input.rebuildHook(["rebuild", JSON.stringify(tables), targetPassageSearch])
     },
@@ -226,7 +259,7 @@ export function createPostgresRefreshStore(input: {
         }
       }
     },
-    async validate(endpoints: RefreshEndpoints): Promise<RefreshValidation> {
+    async validate(endpoints: RefreshEndpoints, counts): Promise<RefreshValidation> {
       if (input.sourceEndpoint === undefined || input.passageSearchEndpoint === undefined) {
         throw new Error("Target validation requires explicit source and passage-search endpoints")
       }
@@ -243,7 +276,7 @@ export function createPostgresRefreshStore(input: {
           target,
           "select hash,created_at::text from legislation_migrations.migrations order by created_at"
         )
-        const counts = await countsMatch(source, target)
+        const copiedCounts = await countsMatch(counts, target)
         const foreignKeys = await foreignKeysPass(target)
         let privateData = true
         for (const table of privateTables) {
@@ -254,7 +287,7 @@ export function createPostgresRefreshStore(input: {
           }
         }
         const [sourcePassages, targetPassages, index] = await Promise.all([
-          source.query(`select count(*)::text count from legislation.document_sections section
+          target.query(`select count(*)::text count from legislation.document_sections section
             join legislation.bill_documents document on document.id=section.document_id
             where document.processing_status='processed'`),
           search.query("select count(*)::text count from legislation.document_sections"),
@@ -292,7 +325,7 @@ export function createPostgresRefreshStore(input: {
         return {
           migrations,
           extensions,
-          counts,
+          counts: copiedCounts,
           foreignKeys,
           privateData,
           passageIndex,
