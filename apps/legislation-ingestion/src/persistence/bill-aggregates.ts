@@ -553,10 +553,66 @@ export function insertMissingOrganizationObservations(
 
 const votePositionInsertBatchSize = 100
 
+async function upsertBillAggregateDimensionRows(
+  database: Pick<LegislationDatabase, "insert">,
+  aggregates: readonly CanonicalBillAggregate[]
+): Promise<void> {
+  const jurisdictionValues = uniqueById(aggregates.map((aggregate) => aggregate.jurisdiction))
+  await database
+    .insert(jurisdictions)
+    .values(jurisdictionValues)
+    .onConflictDoUpdate({
+      set: {
+        classification: sql`excluded.classification`,
+        countryCode: sql`excluded.country_code`,
+        name: sql`excluded.name`,
+        sourceUrl: sql`coalesce(excluded.source_url, ${jurisdictions.sourceUrl})`,
+        subdivisionCode: sql`excluded.subdivision_code`,
+        updatedAt: new Date()
+      },
+      setWhere: jurisdictionChanged(),
+      target: jurisdictions.id
+    })
+
+  const sessionValues = uniqueById(aggregates.map((aggregate) => aggregate.session))
+  await database
+    .insert(legislativeSessions)
+    .values(sessionValues)
+    .onConflictDoUpdate({
+      set: {
+        endDate: sql`excluded.end_date`,
+        identifier: sql`excluded.identifier`,
+        isActive: sql`coalesce(excluded.is_active, ${legislativeSessions.isActive})`,
+        jurisdictionId: sql`excluded.jurisdiction_id`,
+        name: sql`excluded.name`,
+        sourceUrl: sql`coalesce(excluded.source_url, ${legislativeSessions.sourceUrl})`,
+        startDate: sql`excluded.start_date`,
+        updatedAt: new Date()
+      },
+      setWhere: legislativeSessionChanged(),
+      target: legislativeSessions.id
+    })
+}
+
+export async function ensureBillAggregateDimensions(
+  database: LegislationDatabase,
+  aggregates: readonly CanonicalBillAggregate[]
+): Promise<void> {
+  if (aggregates.length === 0) {
+    return
+  }
+  for (const aggregate of aggregates) {
+    assertAggregateOwnership(aggregate)
+  }
+  await database.transaction((transaction) => upsertBillAggregateDimensionRows(transaction, aggregates))
+}
+
 export async function upsertBillAggregates(
   database: LegislationDatabase,
   inputAggregates: readonly CanonicalBillAggregate[],
   options: {
+    /** The caller already committed the aggregate jurisdictions and sessions. */
+    dimensionsEnsured?: boolean
     /** Immutable per-batch promotion receipt, not a mutable session cursor. */
     receipt?: { source: string; stream: string; cursor: Record<string, unknown> }
     ownership?: BillBatchOwnership
@@ -609,46 +665,9 @@ export async function upsertBillAggregates(
     if (options.ownership) {
       await assertBillBatchOwnership(transaction, options.ownership)
     }
-    const jurisdictionValues = uniqueById(aggregates.map((aggregate) => aggregate.jurisdiction))
-    await transaction
-      .insert(jurisdictions)
-      .values(jurisdictionValues)
-      .onConflictDoUpdate({
-        set: {
-          classification: sql`excluded.classification`,
-          countryCode: sql`excluded.country_code`,
-          name: sql`excluded.name`,
-          // Bill feeds cannot replace jurisdiction-level provenance.
-          sourceUrl: sql`coalesce(excluded.source_url, ${jurisdictions.sourceUrl})`,
-          subdivisionCode: sql`excluded.subdivision_code`,
-          updatedAt: new Date()
-        },
-        setWhere: jurisdictionChanged(),
-        target: jurisdictions.id
-      })
-
-    const sessionValues = uniqueById(aggregates.map((aggregate) => aggregate.session))
-    await transaction
-      .insert(legislativeSessions)
-      .values(sessionValues)
-      .onConflictDoUpdate({
-        set: {
-          endDate: sql`excluded.end_date`,
-          identifier: sql`excluded.identifier`,
-          // Bill feeds do not state the session active flag. Preserve a value
-          // written by the canonical-foundation source rather than converting
-          // an omitted source fact to false or null.
-          isActive: sql`coalesce(excluded.is_active, ${legislativeSessions.isActive})`,
-          jurisdictionId: sql`excluded.jurisdiction_id`,
-          name: sql`excluded.name`,
-          // Bill feeds cannot replace session-level provenance.
-          sourceUrl: sql`coalesce(excluded.source_url, ${legislativeSessions.sourceUrl})`,
-          startDate: sql`excluded.start_date`,
-          updatedAt: new Date()
-        },
-        setWhere: legislativeSessionChanged(),
-        target: legislativeSessions.id
-      })
+    if (options.dimensionsEnsured !== true) {
+      await upsertBillAggregateDimensionRows(transaction, aggregates)
+    }
 
     const personValues = uniqueById(aggregates.flatMap((aggregate) => aggregate.people ?? []))
     if (personValues.length > 0) {
