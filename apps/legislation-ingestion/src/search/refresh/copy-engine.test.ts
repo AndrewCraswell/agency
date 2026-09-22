@@ -39,6 +39,7 @@ describe("refresh copy engines", () => {
     expect(calls.flatMap((call) => call.arguments_).join(" ")).not.toContain("secret")
     expect(calls[0]?.environment.PGPASSWORD).toBe("source-secret")
     expect(calls[1]?.environment.PGPASSWORD).toBe("target-secret")
+    expect(calls[0]?.environment.PGOPTIONS).toBe("-c statement_timeout=900000 -c lock_timeout=2000")
   })
 
   it("keeps the streaming pg_dump and pg_restore fallback tested", async () => {
@@ -64,6 +65,15 @@ describe("refresh copy engines", () => {
       engine: "pg-dump"
     })
     expect(reset).toHaveBeenCalledOnce()
+  })
+
+  it("reports both copy failures", async () => {
+    const primary: CopyEngine = { copy: async () => Promise.reject(new Error("direct unavailable")) }
+    const fallback: CopyEngine = { copy: async () => Promise.reject(new Error("fallback unavailable")) }
+
+    await expect(createFallbackCopyEngine(primary, fallback, async () => undefined).copy(request)).rejects.toThrow(
+      "Direct copy failed: Error: direct unavailable; fallback failed: Error: fallback unavailable"
+    )
   })
 
   it("rejects same endpoints and unsafe table identifiers", async () => {

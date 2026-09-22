@@ -54,6 +54,18 @@ jobs:
           npm install --global pnpm@11.9.0 @railway/cli@5.54.1 --registry=https://registry.npmjs.org/
           pnpm install --frozen-lockfile
 
+      - name: Install PostgreSQL 18 client
+        run: |
+          curl --fail --silent --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc |
+            sudo gpg --dearmor --yes --output /usr/share/keyrings/postgresql.gpg
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" |
+            sudo tee /etc/apt/sources.list.d/postgresql-pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client-18
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+          /usr/lib/postgresql/18/bin/pg_dump --version
+
       - name: Verify protected refresh configuration
         env:
           LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL }}

@@ -36,6 +36,8 @@ describe("protected staging refresh workflow", () => {
     expect(workflow).not.toContain("pnpm --filter legislation-ingestion refresh:staging --")
     expect(workflow).toContain("RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}")
     expect(workflow).toContain("RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}")
+    expect(workflow).toContain("postgresql-client-18")
+    expect(workflow).toContain('echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"')
     expect(workflow).toContain('--copy-engine "${{ inputs.copy_engine }}"')
     expect(workflow).toContain("--apply")
   })

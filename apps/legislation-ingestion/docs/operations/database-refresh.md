@@ -9,8 +9,8 @@ Railway project, environment, service and restore-topology identifiers. Tests do
 
 The direct engine streams each policy-approved table as PostgreSQL binary `COPY` inside one exported read-only source
 snapshot. The snapshot transaction disables only its idle-in-transaction timeout so it remains valid while external
-copy workers use it; statement and lock bounds remain enforced. It does not create a dump file. A streaming
-custom-format `pg_dump` to `pg_restore` pipeline is the tested
+copy workers use it; copy statements remain bounded to 15 minutes and lock waits to two seconds. It does not create a
+dump file. A streaming custom-format `pg_dump` to `pg_restore` pipeline using the PostgreSQL 18 client is the tested
 fallback. Both paths preserve the target database, schemas, extensions, migration ledger, roles, grants and excluded
 staging configuration. Application sequence values are restored from that same source snapshot. The canonical schema
 does not use PostgreSQL large objects; catalog validation must fail closed if that invariant changes rather than silently
