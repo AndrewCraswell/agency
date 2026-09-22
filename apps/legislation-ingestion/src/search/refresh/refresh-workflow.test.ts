@@ -30,7 +30,8 @@ describe("protected staging refresh workflow", () => {
     ]) {
       expect(workflow).toContain(`secrets.${name}`)
     }
-    expect(workflow).toContain("pnpm --filter legislation-ingestion refresh:staging --")
+    expect(workflow).toContain("pnpm --filter legislation-ingestion refresh:staging \\")
+    expect(workflow).not.toContain("pnpm --filter legislation-ingestion refresh:staging --")
     expect(workflow).toContain('--copy-engine "${{ inputs.copy_engine }}"')
     expect(workflow).toContain("--apply")
   })

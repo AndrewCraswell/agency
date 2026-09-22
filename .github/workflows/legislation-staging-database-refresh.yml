@@ -98,7 +98,7 @@ jobs:
           WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
           WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
         run: |
-          pnpm --filter legislation-ingestion refresh:staging -- \
+          pnpm --filter legislation-ingestion refresh:staging \
             --target-primary "${{ secrets.LEGISLATION_STAGING_PRIMARY_DATABASE_URL }}" \
             --target-passage-search "${{ secrets.LEGISLATION_STAGING_PASSAGE_SEARCH_DATABASE_URL }}" \
             --target-web "$LEGISLATION_WEB_STAGING_URL" \
