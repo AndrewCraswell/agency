@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import pg from "pg"
 import { ingestionErrorSummary } from "../../ingestion/errors.js"
 import { replicatePassageDocuments } from "../passage-search-replication.js"
+import { nodePostgresEndpoint } from "./config.js"
 import { type ExternalHook } from "./external-hook.js"
 import { type DeterministicFixtureSeed, type RefreshHooks } from "./refresh.js"
 
@@ -110,7 +111,7 @@ export function createRailwayMaintenanceController(config: RailwayMaintenanceCon
 export function createPostgresLockHook(endpoint: string): RefreshHooks["acquireLock"] {
   return async () => {
     const client = new pg.Client({
-      connectionString: endpoint,
+      connectionString: nodePostgresEndpoint(endpoint),
       application_name: "legislation-staging-refresh-lock"
     })
     await client.connect()
@@ -145,7 +146,7 @@ export async function assertSchemaLeaseAvailable() {
 }
 
 async function withClient<Result>(endpoint: string, operation: (client: pg.Client) => Promise<Result>) {
-  const client = new pg.Client({ connectionString: endpoint })
+  const client = new pg.Client({ connectionString: nodePostgresEndpoint(endpoint) })
   await client.connect()
   try {
     return await operation(client)
@@ -197,8 +198,8 @@ export function createPassageRebuildHook(primaryEndpoint: string, passageSearchE
     if (arguments_[0] !== "rebuild" || arguments_[2] !== passageSearchEndpoint) {
       throw new Error("Invalid passage rebuild request")
     }
-    const primary = new pg.Client({ connectionString: primaryEndpoint })
-    const search = new pg.Client({ connectionString: passageSearchEndpoint })
+    const primary = new pg.Client({ connectionString: nodePostgresEndpoint(primaryEndpoint) })
+    const search = new pg.Client({ connectionString: nodePostgresEndpoint(passageSearchEndpoint) })
     await Promise.all([primary.connect(), search.connect()])
     try {
       const documents = await primary.query<{ id: string }>(

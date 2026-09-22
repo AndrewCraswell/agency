@@ -1,5 +1,6 @@
 import pg from "pg"
 import { z } from "zod"
+import { nodePostgresEndpoint } from "./config.js"
 import { type ExternalHook } from "./external-hook.js"
 import { privateTables, refreshPolicy } from "./policy.js"
 import {
@@ -23,7 +24,7 @@ function names(tables: readonly string[]) {
 
 async function connect(endpoint: string) {
   const client = new pg.Client({
-    connectionString: endpoint,
+    connectionString: nodePostgresEndpoint(endpoint),
     connectionTimeoutMillis: 10_000,
     statement_timeout: 60_000,
     application_name: "legislation-staging-refresh"

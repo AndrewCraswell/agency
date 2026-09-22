@@ -14,6 +14,11 @@ staging configuration. Application sequence values are restored from that same s
 does not use PostgreSQL large objects; catalog validation must fail closed if that invariant changes rather than silently
 omit a large object.
 
+Railway database endpoints use encrypted `sslmode=require` connections with a platform-managed self-signed certificate.
+Node PostgreSQL clients opt into standard libpq semantics for that mode, which preserves transport encryption without
+requiring a public certificate authority. Endpoints configured with `verify-ca` or `verify-full` retain certificate
+verification and are never weakened by the refresh.
+
 The workflow holds a target PostgreSQL advisory lock, reads the existing GitHub issue-backed schema lease, scales W and
 M to zero replicas and terminates stale target sessions before destructive work. Railway service topology changes use
 a dedicated workspace API token from the protected `RAILWAY_API_TOKEN` secret because environment-scoped project tokens
