@@ -630,7 +630,12 @@ export async function ensureBillAggregatePeople(
   for (const aggregate of aggregates) {
     assertAggregateOwnership(aggregate)
   }
-  await database.transaction((transaction) => upsertBillAggregatePeopleRows(transaction, aggregates))
+  const personValues = uniqueById(aggregates.flatMap((aggregate) => aggregate.people ?? [])).sort((left, right) =>
+    left.id.localeCompare(right.id)
+  )
+  if (personValues.length > 0) {
+    await database.insert(people).values(personValues).onConflictDoNothing()
+  }
 }
 
 export async function upsertBillAggregates(
