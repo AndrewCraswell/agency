@@ -127,7 +127,11 @@ export function createPostgresRefreshStore(input: {
         throw new Error("Refresh policy does not permit PostgreSQL large objects")
       }
       const response = await connection.query<{ table_name: string }>(
-        "select table_name from information_schema.tables where table_schema='legislation' and table_type='BASE TABLE' order by table_name"
+        `select relation.relname table_name
+        from pg_catalog.pg_class relation
+        join pg_catalog.pg_namespace namespace on namespace.oid=relation.relnamespace
+        where namespace.nspname='legislation' and relation.relkind in ('r','p')
+        order by relation.relname`
       )
       return response.rows.map((row) => row.table_name)
     },
