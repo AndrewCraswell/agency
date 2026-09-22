@@ -27,11 +27,11 @@ describe("refresh platform hooks", () => {
 
     expect(arguments_).toEqual([
       "scale",
-      "--project",
+      "-p",
       "project-id",
-      "--environment",
+      "-e",
       "environment-id",
-      "--service",
+      "-s",
       "service-id",
       "--json",
       "--",

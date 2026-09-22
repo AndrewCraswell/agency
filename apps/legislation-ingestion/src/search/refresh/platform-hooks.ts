@@ -72,18 +72,7 @@ export function railwayScaleArguments(
   service: string,
   assignments: readonly string[]
 ) {
-  return [
-    "scale",
-    "--project",
-    project,
-    "--environment",
-    environment,
-    "--service",
-    service,
-    "--json",
-    "--",
-    ...assignments
-  ]
+  return ["scale", "-p", project, "-e", environment, "-s", service, "--json", "--", ...assignments]
 }
 
 export function railwayMaintenanceEnvironment(environment: NodeJS.ProcessEnv) {
