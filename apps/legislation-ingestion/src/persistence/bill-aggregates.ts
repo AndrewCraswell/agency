@@ -607,12 +607,40 @@ export async function ensureBillAggregateDimensions(
   await database.transaction((transaction) => upsertBillAggregateDimensionRows(transaction, aggregates))
 }
 
+async function upsertBillAggregatePeopleRows(
+  database: Pick<LegislationDatabase, "insert">,
+  aggregates: readonly CanonicalBillAggregate[]
+): Promise<void> {
+  const personValues = uniqueById(aggregates.flatMap((aggregate) => aggregate.people ?? []))
+  if (personValues.length > 0) {
+    await database.insert(people).values(personValues).onConflictDoUpdate({
+      set: billPersonUpdate(),
+      target: people.id
+    })
+  }
+}
+
+export async function ensureBillAggregatePeople(
+  database: LegislationDatabase,
+  aggregates: readonly CanonicalBillAggregate[]
+): Promise<void> {
+  if (aggregates.length === 0) {
+    return
+  }
+  for (const aggregate of aggregates) {
+    assertAggregateOwnership(aggregate)
+  }
+  await database.transaction((transaction) => upsertBillAggregatePeopleRows(transaction, aggregates))
+}
+
 export async function upsertBillAggregates(
   database: LegislationDatabase,
   inputAggregates: readonly CanonicalBillAggregate[],
   options: {
     /** The caller already committed the aggregate jurisdictions and sessions. */
     dimensionsEnsured?: boolean
+    /** The caller already committed the aggregate person observations. */
+    peopleEnsured?: boolean
     /** Immutable per-batch promotion receipt, not a mutable session cursor. */
     receipt?: { source: string; stream: string; cursor: Record<string, unknown> }
     ownership?: BillBatchOwnership
@@ -669,12 +697,8 @@ export async function upsertBillAggregates(
       await upsertBillAggregateDimensionRows(transaction, aggregates)
     }
 
-    const personValues = uniqueById(aggregates.flatMap((aggregate) => aggregate.people ?? []))
-    if (personValues.length > 0) {
-      await transaction.insert(people).values(personValues).onConflictDoUpdate({
-        set: billPersonUpdate(),
-        target: people.id
-      })
+    if (options.peopleEnsured !== true) {
+      await upsertBillAggregatePeopleRows(transaction, aggregates)
     }
 
     if (newAggregates.length > 0) {

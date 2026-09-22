@@ -3,7 +3,11 @@ import { bills, syncCheckpoints } from "@repo/legislation-core/database/schema/s
 import { federalBillId } from "@repo/legislation-core/domain/identifiers"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { and, eq, inArray } from "drizzle-orm"
-import { ensureBillAggregateDimensions, upsertBillAggregates } from "../../persistence/bill-aggregates.js"
+import {
+  ensureBillAggregateDimensions,
+  ensureBillAggregatePeople,
+  upsertBillAggregates
+} from "../../persistence/bill-aggregates.js"
 import { ingestionErrorSummary } from "../errors.js"
 import { ProviderHttpError } from "../http-client.js"
 import { createJobCounts } from "../job-result.js"
@@ -198,7 +202,11 @@ async function persistPrepared(
         persistedDimensions.sessionIds.add(aggregate.session.id)
       }
     }
-    const existing = await upsertBillAggregates(database, aggregates, { dimensionsEnsured: true })
+    await ensureBillAggregatePeople(database, aggregates)
+    const existing = await upsertBillAggregates(database, aggregates, {
+      dimensionsEnsured: true,
+      peopleEnsured: true
+    })
     for (const item of prepared) {
       const result = results.find((candidate) => "source" in candidate && candidate.source === item.source)
       if (result !== undefined && "source" in result) {
