@@ -104,6 +104,25 @@ describe("GovInfo normalization", () => {
     })
   })
 
+  it("normalizes legacy GovInfo bill field names", () => {
+    const legacyFixture = fixture
+      .replace("<number>1234</number>", "<billNumber>1234</billNumber>")
+      .replace("<type>HR</type>", "<billType>HR</billType>")
+      .replace("<number>567</number>", "<billNumber>567</billNumber>")
+      .replace("<type>S</type>", "<billType>S</billType>")
+
+    const aggregate = normalizeGovInfoBillStatus(legacyFixture, {
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/117/hr/BILLSTATUS-117hr1234.xml"
+    })
+
+    expect(aggregate.bill.id).toBe("bill:us:119:hr:1234")
+    expect(aggregate.relations).toEqual([
+      expect.objectContaining({
+        relatedBillId: "bill:us:119:s:567"
+      })
+    ])
+  })
+
   it("accepts structured relationship details and removes identical duplicate actions", () => {
     const currentShape = fixture
       .replace(
