@@ -150,6 +150,7 @@ export function createPostgresRefreshStore(input: {
       snapshotClient = await client()
       await snapshotClient.query("begin isolation level repeatable read read only")
       await snapshotClient.query("set local lock_timeout='2s'")
+      await snapshotClient.query("set local idle_in_transaction_session_timeout=0")
       const response = await snapshotClient.query("select pg_export_snapshot() snapshot")
       return z.object({ snapshot: z.string().regex(/^[0-9A-Fa-f]+-[0-9A-Fa-f]+-[0-9]+$/) }).parse(response.rows[0])
         .snapshot
