@@ -43,8 +43,18 @@ Imported files remember their source so they can be re-imported.
 
 Slack, Discord, and Teams can be connected per workspace through Novu to post notifications to a channel.
 
+## Automation
+
+| Service | How it works |
+| --- | --- |
+| MCP | Outstand hosts an MCP server for each workspace, authorized with a workspace API key |
+| [Zapier](https://zapier.com/) | Outstand app with triggers and actions |
+| [Make](https://www.make.com/) | Outstand app with modules |
+| [n8n](https://n8n.io/) | Outstand community node |
+
 ## AI providers
 
 AI writing and Img.ly AI editing use Outstand's provider and are unlimited in the current release. A workspace can
-add its own provider key when preferred. Image generation is deferred and will have separate usage limits when it is
+add its own provider key when preferred. [OpenRouter](https://openrouter.ai/keys) is the suggested key source; OpenAI,
+Anthropic, and Google keys are also accepted. Image generation is deferred and will have separate usage limits when it is
 introduced.

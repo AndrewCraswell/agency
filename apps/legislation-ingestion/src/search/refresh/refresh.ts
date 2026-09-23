@@ -36,10 +36,11 @@ export type RefreshStore = {
   readSequences: () => Promise<readonly RefreshSequenceState[]>
   writeSequences: (sequences: readonly RefreshSequenceState[]) => Promise<void>
   clear: (tables: readonly string[]) => Promise<void>
+  assertCopyReady: (tables: readonly string[]) => Promise<void>
   rebuild: (tables: readonly string[], targetPassageSearch: string) => Promise<void>
   seedFixtures: (seed: DeterministicFixtureSeed) => Promise<void>
   auditEmpty: (tables: readonly string[]) => Promise<void>
-  validate: (endpoints: RefreshEndpoints) => Promise<RefreshValidation>
+  validate: (endpoints: RefreshEndpoints, counts: Readonly<Record<string, string>>) => Promise<RefreshValidation>
   terminateStaleTargetConnections: () => Promise<void>
 }
 
@@ -69,10 +70,13 @@ function validateEndpoints(endpoints: RefreshEndpoints) {
     (endpoint) => new URL(endpoint)
   )
   const serviceUrls = [endpoints.targetWeb, endpoints.targetMcp].map((endpoint) => new URL(endpoint))
+  const databaseIdentities = databaseUrls.map((endpoint) =>
+    JSON.stringify([endpoint.hostname.toLowerCase(), endpoint.port || "5432", decodeURIComponent(endpoint.pathname)])
+  )
   if (
-    databaseUrls.some((endpoint) => !endpoint.protocol.startsWith("postgres")) ||
+    databaseUrls.some((endpoint) => !["postgres:", "postgresql:"].includes(endpoint.protocol)) ||
     serviceUrls.some((endpoint) => !["http:", "https:"].includes(endpoint.protocol)) ||
-    new Set(databaseUrls.map((endpoint) => endpoint.href)).size !== databaseUrls.length
+    new Set(databaseIdentities).size !== databaseUrls.length
   ) {
     throw new Error("Refresh requires distinct explicit PostgreSQL endpoints and explicit staging service endpoints")
   }
@@ -102,16 +106,19 @@ export async function refreshStaging(input: {
   let maintenanceEntered = false
   try {
     await input.hooks.assertMigrationLeaseAvailable()
-    await input.hooks.setMaintenance(true, "staging database refresh")
     maintenanceEntered = true
+    await input.hooks.setMaintenance(true, "staging database refresh")
+    log("refresh.maintenance", { unavailable: true })
     await input.target.terminateStaleTargetConnections()
     const [sourceCatalog, targetCatalog] = await Promise.all([input.source.catalog(), input.target.catalog()])
     classifyRefreshTables(sourceCatalog)
     classifyRefreshTables(targetCatalog)
+    await input.target.assertCopyReady(refreshPolicy.copy)
     const before = await input.target.excludedFingerprints(refreshPolicy.exclude)
     const snapshot = await input.source.beginSourceSnapshot()
     snapshotOpen = true
     await input.target.clear([...refreshPolicy.copy, ...refreshPolicy.clear, ...refreshPolicy.rebuild])
+    log("refresh.copy", { tables: refreshPolicy.copy.length })
     const receipt = await input.copyEngine.copy({
       sourceEndpoint: input.endpoints.sourcePrimary,
       targetEndpoint: input.endpoints.targetPrimary,
@@ -121,17 +128,18 @@ export async function refreshStaging(input: {
     await input.target.writeSequences(await input.source.readSequences())
     await input.source.endSourceSnapshot()
     snapshotOpen = false
-    // Copying canonical rows can fire target-side operational outbox triggers.
-    // Re-clear those independent queues before the sanitization audit.
     await input.target.clear(copyTriggeredOperationalTables)
+    log("refresh.sanitization", {})
     await input.target.auditEmpty([...privateTables, ...refreshPolicy.clear.slice(privateTables.length)])
     const after = await input.target.excludedFingerprints(refreshPolicy.exclude)
     if ([...before].some(([table, fingerprint]) => after.get(table) !== fingerprint)) {
       throw new Error("Staging-owned excluded data changed during refresh")
     }
     await input.target.seedFixtures(deterministicFixtureSeed)
+    log("refresh.rebuild", {})
     await input.target.rebuild(refreshPolicy.rebuild, input.endpoints.targetPassageSearch)
-    const validation = await input.target.validate(input.endpoints)
+    log("refresh.validation", {})
+    const validation = await input.target.validate(input.endpoints, receipt.counts)
     assertValidation(validation)
     log("refresh.complete", { engine: receipt.engine, tables: receipt.tables.length, validation })
     await input.hooks.setMaintenance(false, "staging database refresh validated")
@@ -150,9 +158,13 @@ export async function refreshStaging(input: {
     })
     throw new Error(`Staging refresh failed: ${summary}`, { cause: error })
   } finally {
-    if (snapshotOpen) {
-      await input.source.endSourceSnapshot().catch(() => undefined)
+    const cleanup = await Promise.allSettled([
+      snapshotOpen ? input.source.endSourceSnapshot() : Promise.resolve(),
+      release()
+    ])
+    const failures = cleanup.filter((result) => result.status === "rejected")
+    for (const failure of failures) {
+      log("refresh.cleanup-failed", { error: ingestionErrorSummary(failure.reason) })
     }
-    await release().catch(() => undefined)
   }
 }

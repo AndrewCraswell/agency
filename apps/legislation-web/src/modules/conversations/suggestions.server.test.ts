@@ -24,7 +24,7 @@ vi.mock("@langfuse/tracing", () => ({
     operation: (observation: { update: typeof mocks.update }) => Promise<Value>
   ) => operation({ update: mocks.update })
 }))
-vi.mock("./agent", () => ({ researchModelId: "openai/gpt-5.6-luna-20260709", createResearchModel: () => "test-luna" }))
+vi.mock("./agent", () => ({ researchModelId: "openai/gpt-6-luna", createResearchModel: () => "test-luna" }))
 
 const prompt = {
   name: "legislative-research-suggestions",
@@ -111,7 +111,7 @@ it("uses the production Langfuse prompt, current date and Luna with structured o
   )
   expect(mocks.update).toHaveBeenCalledWith(
     expect.objectContaining({
-      model: "openai/gpt-5.6-luna-20260709",
+      model: "openai/gpt-6-luna",
       prompt: { name: prompt.name, version: 1, isFallback: false }
     })
   )

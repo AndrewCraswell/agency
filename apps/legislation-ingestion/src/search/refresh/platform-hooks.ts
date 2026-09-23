@@ -1,28 +1,28 @@
 import { spawn } from "node:child_process"
 import { appendFile } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
 import pg from "pg"
 import { ingestionErrorSummary } from "../../ingestion/errors.js"
 import { replicatePassageDocuments } from "../passage-search-replication.js"
+import { nodePostgresEndpoint } from "./config.js"
 import { type ExternalHook } from "./external-hook.js"
+import { createVerifiedRailwayMaintenance, type RailwayMaintenanceConfig } from "./railway-maintenance.js"
 import { type DeterministicFixtureSeed, type RefreshHooks } from "./refresh.js"
 
-type RailwayMaintenanceConfig = {
-  project: string
-  environment: string
-  services: readonly {
-    id: string
-    scale: readonly string[]
-  }[]
-}
+export const stagingSchemaLeaseScriptPath = fileURLToPath(
+  new URL("../../../../../scripts/legislation-staging-schema-lease.mjs", import.meta.url)
+)
 
 async function run(
   command: string,
   arguments_: readonly string[],
-  environment: NodeJS.ProcessEnv = process.env
+  environment: NodeJS.ProcessEnv = process.env,
+  timeout?: number
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, [...arguments_], {
       env: environment,
+      timeout,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true
     })
@@ -61,42 +61,26 @@ export function railwayServiceScale(value: string) {
   return parseScale(value)
 }
 
+export function railwayMaintenanceEnvironment(environment: NodeJS.ProcessEnv) {
+  const maintenanceEnvironment = { ...environment }
+  delete maintenanceEnvironment.RAILWAY_TOKEN
+  return maintenanceEnvironment
+}
+
 export function createRailwayMaintenanceController(config: RailwayMaintenanceConfig) {
-  let unavailable = false
-  const scale = async (available: boolean) => {
-    for (const service of config.services) {
-      const assignments = available
-        ? service.scale
-        : service.scale.map((entry) => `${entry.slice(0, entry.indexOf("="))}=0`)
-      await run("railway", [
-        "scale",
-        "--project",
-        config.project,
-        "--environment",
-        config.environment,
-        "--service",
-        service.id,
-        ...assignments,
-        "--json"
-      ])
-    }
-    unavailable = !available
+  const environment = railwayMaintenanceEnvironment(process.env)
+  if (!environment.RAILWAY_API_TOKEN?.trim()) {
+    throw new Error("Railway maintenance requires the dedicated workspace API token")
   }
-  return {
-    async set(unavailable_: boolean) {
-      if (unavailable_ !== unavailable) await scale(!unavailable_)
-    },
-    async prepareValidation() {
-      if (!unavailable) throw new Error("Staging must be unavailable before service validation")
-      await scale(true)
-    }
-  }
+  return createVerifiedRailwayMaintenance(config, {
+    run: (arguments_) => run("railway", arguments_, environment, 60_000)
+  })
 }
 
 export function createPostgresLockHook(endpoint: string): RefreshHooks["acquireLock"] {
   return async () => {
     const client = new pg.Client({
-      connectionString: endpoint,
+      connectionString: nodePostgresEndpoint(endpoint),
       application_name: "legislation-staging-refresh-lock"
     })
     await client.connect()
@@ -118,7 +102,7 @@ export function createPostgresLockHook(endpoint: string): RefreshHooks["acquireL
 }
 
 export async function assertSchemaLeaseAvailable() {
-  const output = await run("node", ["scripts/legislation-staging-schema-lease.mjs", "--command", "read"])
+  const output = await run("node", [stagingSchemaLeaseScriptPath, "--command", "read"])
   const lease = JSON.parse(output) as { expiresAt?: unknown } | null
   if (lease !== null) {
     if (typeof lease.expiresAt !== "string" || !Number.isFinite(Date.parse(lease.expiresAt))) {
@@ -131,7 +115,7 @@ export async function assertSchemaLeaseAvailable() {
 }
 
 async function withClient<Result>(endpoint: string, operation: (client: pg.Client) => Promise<Result>) {
-  const client = new pg.Client({ connectionString: endpoint })
+  const client = new pg.Client({ connectionString: nodePostgresEndpoint(endpoint) })
   await client.connect()
   try {
     return await operation(client)
@@ -183,8 +167,8 @@ export function createPassageRebuildHook(primaryEndpoint: string, passageSearchE
     if (arguments_[0] !== "rebuild" || arguments_[2] !== passageSearchEndpoint) {
       throw new Error("Invalid passage rebuild request")
     }
-    const primary = new pg.Client({ connectionString: primaryEndpoint })
-    const search = new pg.Client({ connectionString: passageSearchEndpoint })
+    const primary = new pg.Client({ connectionString: nodePostgresEndpoint(primaryEndpoint) })
+    const search = new pg.Client({ connectionString: nodePostgresEndpoint(passageSearchEndpoint) })
     await Promise.all([primary.connect(), search.connect()])
     try {
       const documents = await primary.query<{ id: string }>(

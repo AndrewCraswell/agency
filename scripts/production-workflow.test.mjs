@@ -1,10 +1,51 @@
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { test } from "node:test"
+import { assertStagingDeploymentAvailable } from "./staging-maintenance-check.mjs"
 
 const deploymentUrl = new URL("../.github/workflows/legislation-production-deployment.yml", import.meta.url)
 const rollbackUrl = new URL("../.github/workflows/legislation-production-rollback.yml", import.meta.url)
 const recoveryUrl = new URL("../.github/workflows/legislation-production-database-recovery.yml", import.meta.url)
+
+test("serializes staging deployments with refresh and checks persistent maintenance before starting services", async () => {
+  const workflow = await readFile(
+    new URL("../.github/workflows/legislation-staging-deployment.yml", import.meta.url),
+    "utf8"
+  )
+  const refresh = await readFile(
+    new URL("../.github/workflows/legislation-staging-database-refresh.yml", import.meta.url),
+    "utf8"
+  )
+  for (const text of [workflow, refresh]) {
+    assert.match(text, /group: legislation-staging-database-mutation/u)
+    assert.match(text, /cancel-in-progress: false/u)
+  }
+  const guard = workflow.indexOf("node scripts/staging-maintenance-check.mjs")
+  assert.ok(guard >= 0)
+  assert.ok(guard < workflow.indexOf("- name: Deploy staging legislation-web"))
+  assert.ok(guard < workflow.indexOf("- name: Deploy staging legislation-mcp"))
+  assert.match(workflow, /variables\(projectId: \$projectId, environmentId: \$environmentId\)/u)
+})
+
+test("allows only an absent or explicitly false maintenance marker", () => {
+  for (const variables of [{}, { LEGISLATION_STAGING_REFRESH_MAINTENANCE: "false" }]) {
+    assert.doesNotThrow(() => assertStagingDeploymentAvailable({ data: { variables } }))
+  }
+  for (const marker of ["true", "", "FALSE", null, false, 0]) {
+    assert.throws(() =>
+      assertStagingDeploymentAvailable({ data: { variables: { LEGISLATION_STAGING_REFRESH_MAINTENANCE: marker } } })
+    )
+  }
+  for (const payload of [
+    null,
+    {},
+    { data: {} },
+    { data: { variables: [] } },
+    { errors: [{ message: "denied" }], data: { variables: {} } }
+  ]) {
+    assert.throws(() => assertStagingDeploymentAvailable(payload))
+  }
+})
 
 test("gates production after exact staging acceptance and deploys W before M", async () => {
   const workflow = await readFile(deploymentUrl, "utf8")

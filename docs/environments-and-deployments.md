@@ -13,9 +13,11 @@ This page defines the target CI/CD and environment contract for the legislation 
 Shopify deployment is outside this contract. Legislation ingestion remains deployed through Trigger.dev and is verified
 by the shared CI gate, but it is not converted into a Railway service by this design.
 
-This is the target operating model. Production and staging W and M are live. Staging has an initialized primary
-database, passage-search database and PgBouncer with one deterministic synthetic acceptance fixture. No production
-records have been copied and production data refresh remains disabled. Staging W deploys only after the exact `main`
+This is the target operating model. Production and staging W and M are provisioned. Staging initially used an initialized
+primary database, passage-search database and PgBouncer with one deterministic synthetic acceptance fixture.
+The September 22 production-copy rehearsal was cancelled with an incomplete staging corpus; production-scale refresh
+acceptance remains outstanding. Do not treat staging as accepted until the protected refresh completes.
+Staging W deploys only after the exact `main`
 commit passes CI. Staging M has dedicated inbound smoke and outbound W WorkOS credentials. Its authenticated tool smoke
 and controlled Sentry canary passed protected acceptance, so automatic deployment is enabled after successful CI.
 Railway CDN caching is enabled for W in both environments.
@@ -61,7 +63,7 @@ Staging contains the same service topology with environment-specific names, doma
 | --- | --- |
 | `legislation-web` | Persistent staging product and API |
 | `legislation-mcp` | Persistent staging MCP resource |
-| `pgvector` | Writable staging primary database; synthetic-only until production refresh is approved |
+| `pgvector` | Writable staging primary database; incomplete until the protected refresh passes acceptance |
 | `legislation-passage-search` | Writable staging search database rebuilt from the staging primary |
 | PgBouncer | Staging runtime connection pooling where required |
 
@@ -70,8 +72,8 @@ provisioned with their own volumes and populated by the refresh workflow.
 
 The cost-controlled staging bootstrap applies both canonical schemas and uses smaller resource limits than production.
 One clearly named synthetic bill, document and section exercise the real passage replication and BM25 query paths.
-Passage search is enabled against that synthetic corpus. No production records are copied, so broad data-quality and
-production-scale refresh acceptance remain deferred until that work is funded.
+Passage search was enabled against that synthetic corpus. The subsequent production-copy rehearsal did not complete;
+broad data-quality and production-scale refresh acceptance remain deferred pending maintenance and capacity verification.
 
 ### Pull-request previews
 
@@ -154,7 +156,7 @@ Environment mutations and deployments use these repository-wide, non-cancelling 
 | Operation | Concurrency group |
 | --- | --- |
 | Staging database refresh or migration | `legislation-staging-database-mutation` |
-| Staging application deployment | `legislation-staging-deployment` |
+| Staging application deployment | `legislation-staging-database-mutation` |
 | Production database migration | `legislation-production-migration` |
 | Production application deployment | `legislation-production-deployment` |
 
@@ -165,7 +167,9 @@ Active work is never cancelled by a newer run. The credential check may be disab
 ### Merge to `main`
 
 The staging deployment workflow runs only after the required CI workflow succeeds for the exact commit. It uses the
-protected `staging` GitHub environment and the non-cancelling `legislation-staging-deployment` lock. Database-contract
+protected `staging` GitHub environment and the non-cancelling `legislation-staging-database-mutation` lock shared with
+refresh. Before either application deployment, it rejects an active or invalid shared Railway
+`LEGISLATION_STAGING_REFRESH_MAINTENANCE` marker and fails closed if the marker cannot be read. Database-contract
 changes fail closed until the protected staging migration workflow is implemented. Staging M changes are reported but
 deploy automatically only when `LEGISLATION_STAGING_MCP_ENABLED=true`. That gate is enabled after protected run
 `35599431733` deployed commit `cbfda3ecc4f022d03c82492ee9058f28dbc6f615` and passed readiness, authenticated MCP
@@ -235,26 +239,35 @@ that watermark and pass validation.
 Railway volume backups cannot be restored across environments, so the manual `Legislation staging database refresh`
 workflow performs a PostgreSQL-level copy through protected endpoints. It reads production through the TLS-only,
 read-only refresh role, writes to staging with separate target credentials and has no schedule or push trigger. The
-workflow and credentials are ready, but it has not been dispatched and no production content has been copied to
-staging.
+September 22 run `35767316025` was cancelled after the copy stalled while maintaining target indexes. An automatic
+fallback had already restarted the full copy once. Source copy/snapshot sessions were confirmed released after
+cancellation. The run did not reach sanitization or staging acceptance.
+Staging W and M were subsequently contained with stopped-replica and unavailable-readiness checks. The persistent
+maintenance marker remains active. Direct Railway deployments and previews are outside the GitHub workflow guard and
+must remain paused while their staging databases are incomplete.
 
 The in-place refresh uses an explicit staging maintenance window:
 
 1. Acquire the refresh lock and verify that no migration PR owns staging.
-2. Mark staging unready.
+2. Set the persistent maintenance marker, remove application deployments, and verify W and M are unavailable.
 3. Terminate stale staging connections and clear policy-owned target tables.
 4. Copy approved primary tables in one exported source snapshot.
 5. Clear private and operational data while preserving staging-owned configuration.
 6. Seed deterministic synthetic fixtures.
 7. Rebuild the passage-search database from the refreshed primary.
 8. Validate extensions, migration state, record counts, foreign keys, sanitization and search.
-9. Restore staging W and M to their recorded topology.
+9. Redeploy the recorded W and M images and verify their approved topology.
 10. Run W readiness and authenticated M smoke tests.
 11. Mark staging ready and release the refresh lock.
 
-The copy implementation streams PostgreSQL binary `COPY` directly between servers. Its tested fallback streams
-`pg_dump` into `pg_restore` without writing a complete dump to runner disk. The first explicitly approved,
-production-sized rehearsal determines safe resource limits and timeout before any schedule is considered.
+The copy implementation streams PostgreSQL binary `COPY` directly between servers. Each table's nonunique,
+non-constraint indexes are removed and rebuilt transactionally around the load; failed copies are not automatically
+replayed. Progress identifies the active table and distinguishes copying from index construction.
+The protected workflow requires an explicit capacity review before dispatch. In the cancelled rehearsal, production
+allocated table storage for `document_sections` alone was 75 GB, exceeding the 50 GB staging primary volume.
+Allocated sizes include possible bloat, but both primary and passage-search storage need a measured capacity plan
+before another attempt. See the [refresh runbook](../apps/legislation-ingestion/docs/operations/database-refresh.md)
+for limits, privileges and acceptance checks.
 
 If the measured in-place maintenance window is unacceptable, the same workflow must restore into replacement database
 services and switch a stable PgBouncer endpoint only after validation. That is an operational optimization, not a

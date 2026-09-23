@@ -95,6 +95,7 @@ describe("runResearchAgent", () => {
   })
 
   it("defaults conversation answers to Luna with high reasoning", () => {
+    expect(researchModelId).toBe("openai/gpt-6-luna")
     createResearchModel(undefined)
     expect(createOpenRouter).toHaveBeenLastCalledWith({ apiKey: undefined })
     expect(chat).toHaveBeenLastCalledWith(researchModelId, {

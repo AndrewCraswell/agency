@@ -1,89 +1,13 @@
 {
   "servers": {
-    "sentry": {
-      "type": "http",
-      "url": "https://mcp.sentry.dev/mcp/legislation/legislation"
-    },
-    // "context7": {
-    //   "type": "http",
-    //   "url": "https://mcp.context7.com/mcp"
-    // },
-    // "github": {
-    //   "type": "http",
-    //   "url": "https://api.githubcopilot.com/mcp/"
-    // },
-    // "com.figma.mcp/mcp": {
-    //   "type": "http",
-    //   "url": "https://mcp.figma.com/mcp"
-    // },
     "fluent-agent": {
       "type": "http",
       "url": "https://chat.fluentui.dev/mcp/server"
     },
-    "n8n-mcp": {
-      "type": "http",
-      "url": "https://fc-agency.app.n8n.cloud/mcp-server/http",
-      "headers": {
-        "Authorization": "Bearer ${input:n8n-access-token}"
-      }
-    },
-    "langfuse": {
-      "type": "http",
-      "url": "https://us.cloud.langfuse.com/api/public/mcp",
-      "headers": {
-        "Authorization": "Basic ${input:langfuse-basic-auth}"
-      }
-    },
-    "openrouter": {
-      "type": "http",
-      "url": "https://mcp.openrouter.ai/mcp"
-    },
-    "workos": {
-      "type": "http",
-      "url": "https://mcp.workos.com/mcp"
-    },
-    "legislation": {
-      "type": "http",
-      "url": "https://legislation-mcp-production.up.railway.app/mcp"
-    },
-    "legislation-staging": {
-      "type": "http",
-      "url": "https://legislation-mcp-staging.up.railway.app/mcp"
-    },
-    "trigger": {
-      "command": "npx",
-      "args": ["trigger.dev@latest", "mcp"]
-    },
     "shadcn": {
       "command": "npx",
       "args": ["shadcn@latest", "mcp"]
-    },
-    // "microsoft/playwright-mcp": {
-    //   "type": "stdio",
-    //   "command": "npx",
-    //   "args": ["@playwright/mcp@latest"]
-    // },
-    // "pencil": {
-    //   "type": "stdio",
-    //   "command": "C:\\Users\\andcra\\.pencil\\mcp\\visual_studio_code\\out\\mcp-server-windows-x64.exe",
-    //   "args": ["--app", "visual_studio_code", "--agent", "copilotIDE"],
-    //   "env": {}
-    // },
-    "shopify-dev-mcp": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@shopify/dev-mcp@latest"]
-    },
-    "linear": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.linear.app/mcp"]
     }
-    // "trigger": {
-    //   "type": "stdio",
-    //   "command": "npx",
-    //   "args": ["trigger.dev@4.5.4", "mcp"]
-    // }
   },
   "inputs": [
     {
@@ -92,7 +16,6 @@
       "description": "n8n MCP access token",
       "password": true
     },
-    // Run `pnpm --filter blog-writer auth:langfuse`, then paste the output without `Basic `.
     {
       "id": "langfuse-basic-auth",
       "type": "promptString",

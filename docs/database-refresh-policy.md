@@ -116,6 +116,13 @@ must never receive the Railway administrator credential as their long-term runti
 Default privileges apply equivalent read and refresh grants to new migration-owned objects. New runtime-write tables
 require an explicit reviewed grant; they do not silently inherit canonical write access.
 
+The protected bulk-refresh job is a maintenance operation, not a runtime use of `legislation_staging_refresh`.
+Its primary endpoint requires a staging-only superuser to transactionally suspend internal constraint triggers and
+rebuild nonunique indexes after loading. The ordinary refresh role keeps its no-DDL boundary. Do not grant the
+maintenance principal to services or use it for the production source. The job checks this prerequisite before clearing
+tables, restores the original index definitions and trigger states before each table commits, and audits foreign keys
+before release. See the [operator procedure](../apps/legislation-ingestion/docs/operations/database-refresh.md).
+
 ## Non-application schemas
 
 | Schema | Policy |

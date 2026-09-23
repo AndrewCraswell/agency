@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: legislation-staging-deployment
+  group: legislation-staging-database-mutation
   cancel-in-progress: false
 
 env:
@@ -129,6 +129,20 @@ jobs:
       - name: Install Railway CLI
         if: steps.changes.outputs.web == 'true' || steps.changes.outputs.mcp == 'true'
         run: npm install --global @railway/cli@5.54.1 --registry=https://registry.npmjs.org/
+
+      - name: Refuse deployment during staging refresh maintenance
+        if: steps.changes.outputs.web == 'true' || steps.changes.outputs.mcp == 'true'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          set -euo pipefail
+          railway api \
+            'query Maintenance($projectId: String!, $environmentId: String!) {
+              variables(projectId: $projectId, environmentId: $environmentId)
+            }' \
+            --raw-var projectId="$RAILWAY_PROJECT_ID" \
+            --raw-var environmentId="$RAILWAY_ENVIRONMENT_ID" |
+            node scripts/staging-maintenance-check.mjs
 
       - name: Verify staging legislation-web telemetry configuration
         if: steps.changes.outputs.web == 'true'

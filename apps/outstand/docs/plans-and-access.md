@@ -63,6 +63,23 @@ Reviewers do not see Internal comments, workspace settings, or the inbox.
 Comments are visible to everyone in the workspace by default. Anyone except a Reviewer can mark a comment
 Internal, which hides it from Reviewers.
 
+## Members
+
+Organization Owners and Admins manage members in **Settings, Members**. Workspace Admins manage members of
+their own workspace.
+
+- A list of every member with name, email, organization role, workspace access, and last active date.
+- Change a member's organization role, or their role in each workspace.
+- Remove a member from a workspace or from the organization. The Owner role can only be transferred, not
+  removed.
+- Filter by workspace and role, and search by name or email.
+
+### Invitations
+
+- Invite one or more people by email, with an organization role and a role for each workspace.
+- Invitations show a status: **Pending**, **Accepted**, or **Expired**. Invitations expire after 7 days.
+- Pending and expired invitations can be resent or revoked.
+
 ## Invites and access
 
 - Invite people by email with a role, using WorkOS invitations.
@@ -70,3 +87,20 @@ Internal, which hides it from Reviewers.
 - Send an **account connect link** when creating a client workspace. The client signs in to their own social
   accounts and connects them, so they never share passwords with the agency.
 - Enterprise customers can require SSO for their organization.
+
+### Review links
+
+- A review link opens a branded page with the workspace logo, not the agency's app.
+- The guest confirms their email with a one-time code before viewing. The link can be limited to named
+  emails.
+- The guest sees only the posts shared with them, the Preview tab for each platform, comments, and approve or
+  request changes when they are an approver for the current step.
+- Links expire after a chosen time and can be revoked. Every guest action is recorded in the audit trail.
+
+### Account connect links
+
+- The client opens the link, sees which workspace is asking and which platforms are requested, and signs in
+  to each platform directly through Zernio.
+- Outstand never sees the client's passwords. The client can connect some platforms now and the rest later.
+- The agency sees each platform's status on the Accounts page as the client connects.
+- Links expire after 7 days by default and can be revoked.

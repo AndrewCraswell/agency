@@ -7,15 +7,12 @@ on:
         description: Type REFRESH STAGING to authorize destructive replacement of staging data
         required: true
         type: string
-      copy_engine:
-        description: PostgreSQL copy engine
+      capacity_reviewed:
+        description:
+          Confirm both staging volumes have reviewed capacity for canonical data, indexes, WAL and search rebuild
         required: true
-        default: fallback
-        type: choice
-        options:
-          - fallback
-          - direct
-          - pg-dump
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -43,6 +40,15 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     steps:
+      - name: Require reviewed staging storage capacity
+        env:
+          CAPACITY_REVIEWED: ${{ inputs.capacity_reviewed }}
+        run: |
+          if [ "$CAPACITY_REVIEWED" != "true" ]; then
+            echo "::error::Review both staging volume capacities before dispatching a full database refresh."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -54,6 +60,18 @@ jobs:
           npm install --global pnpm@11.9.0 @railway/cli@5.54.1 --registry=https://registry.npmjs.org/
           pnpm install --frozen-lockfile
 
+      - name: Install PostgreSQL 18 client
+        run: |
+          curl --fail --silent --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc |
+            sudo gpg --dearmor --yes --output /usr/share/keyrings/postgresql.gpg
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" |
+            sudo tee /etc/apt/sources.list.d/postgresql-pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client-18
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+          /usr/lib/postgresql/18/bin/psql --version
+
       - name: Verify protected refresh configuration
         env:
           LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL }}
@@ -61,6 +79,7 @@ jobs:
             ${{ secrets.LEGISLATION_STAGING_PASSAGE_SEARCH_DATABASE_URL }}
           LEGISLATION_STAGING_PRIMARY_DATABASE_URL: ${{ secrets.LEGISLATION_STAGING_PRIMARY_DATABASE_URL }}
           LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           SENTRY_STAGING_AUTH_TOKEN: ${{ secrets.SENTRY_STAGING_AUTH_TOKEN }}
           STAGING_SCHEMA_LEASE_ISSUE: ${{ vars.LEGISLATION_STAGING_SCHEMA_LEASE_ISSUE }}
@@ -73,6 +92,7 @@ jobs:
             LEGISLATION_STAGING_PASSAGE_SEARCH_DATABASE_URL \
             LEGISLATION_STAGING_PRIMARY_DATABASE_URL \
             LEGISLATION_SMOKE_BILL_ID \
+            RAILWAY_API_TOKEN \
             RAILWAY_TOKEN \
             SENTRY_STAGING_AUTH_TOKEN \
             STAGING_SCHEMA_LEASE_ISSUE \
@@ -93,12 +113,13 @@ jobs:
           LEGISLATION_MCP_SMOKE_BASE_URL: ${{ env.LEGISLATION_MCP_STAGING_URL }}
           LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL: ${{ secrets.LEGISLATION_PRODUCTION_REFRESH_DATABASE_URL }}
           LEGISLATION_SMOKE_BILL_ID: ${{ vars.LEGISLATION_SMOKE_BILL_ID }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           STAGING_SCHEMA_LEASE_ISSUE: ${{ vars.LEGISLATION_STAGING_SCHEMA_LEASE_ISSUE }}
           WORKOS_MCP_SMOKE_CLIENT_ID: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_ID }}
           WORKOS_MCP_SMOKE_CLIENT_SECRET: ${{ secrets.WORKOS_MCP_SMOKE_CLIENT_SECRET }}
         run: |
-          pnpm --filter legislation-ingestion refresh:staging -- \
+          pnpm --filter legislation-ingestion refresh:staging \
             --target-primary "${{ secrets.LEGISLATION_STAGING_PRIMARY_DATABASE_URL }}" \
             --target-passage-search "${{ secrets.LEGISLATION_STAGING_PASSAGE_SEARCH_DATABASE_URL }}" \
             --target-web "$LEGISLATION_WEB_STAGING_URL" \
@@ -109,5 +130,4 @@ jobs:
             --web-scale us-west2=1 \
             --mcp-service "$LEGISLATION_MCP_SERVICE_ID" \
             --mcp-scale us-west2=1 \
-            --copy-engine "${{ inputs.copy_engine }}" \
             --apply

@@ -95,12 +95,12 @@ but must not close the shared pools. The optional ranked passage store uses the 
 approach without enabling any unapproved search cutover. Capacity remains finite and must be budgeted across replicas
 and other workloads; this change does not resize PostgreSQL or PgBouncer.
 
-Conversation answers use `openai/gpt-5.6-luna-20260709` with **high** reasoning by default, selected by
-`researchReasoningEffort` in the conversation agent. Chat trace metadata uses the same setting. The September 18 upgrade
-does not change the answer prompt, model ID, retry policy or budgets. Homepage suggestions, offline quality judges and
-the analytics acceptance harness remain explicitly at low reasoning; configured evaluation candidates retain their
-selected effort (low when omitted). Hosted Langfuse evaluators are unchanged. There is no automatic model routing or
-Astra escalation in the application.
+Conversation answers use `openai/gpt-6-luna` with **high** reasoning by default, selected by
+`researchReasoningEffort` in the conversation agent. Chat trace metadata uses the same setting. The September 22 model
+upgrade changes only the model ID; the answer prompt, retry policy and budgets remain unchanged. Homepage suggestions,
+offline quality judges and the analytics acceptance harness remain explicitly at low reasoning; configured evaluation
+candidates retain their selected effort (low when omitted). Hosted Langfuse evaluators are unchanged. There is no
+automatic model routing or Astra escalation in the application.
 
 Each accepted chat request appends trusted server time and the current UTC calendar date to the model instructions
 and records that date context in the research trace input. This context is refreshed per turn, including clarification
@@ -179,7 +179,7 @@ retains the same session, references and active stream across that transition. T
 from this real homepage before checking follow-ups, interruption and export. Storybook's `Conversation/Inputs`
 suggestion states also render `HomepageLanding`, including its loading and empty-result behavior.
 
-The homepage uses Luna (`openai/gpt-5.6-luna-20260709`) and the Langfuse text prompt
+The homepage uses Luna (`openai/gpt-6-luna`) and the Langfuse text prompt
 `legislative-research-suggestions`, selected by its `production` label. Version 1 was created September 16, 2026;
 the existing `legislative-research` prompt is unchanged. The server compiles `{{current_date}}` as a UTC calendar date
 and validates exactly six distinct questions covering sponsor, action, comparison and hearing approaches.
