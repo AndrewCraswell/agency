@@ -58,6 +58,13 @@ Captions, first comments, auto-reply text, templates, and inbox replies use a Ti
 - Optional overrides for each platform change the text, media, or settings for that platform only.
 - Platform-specific settings include post type, such as Reel, Story, Short, carousel, or document.
 
+### Google Business Profile locations
+
+- One Google sign-in can connect several Business Profile locations. A dialog lists every location the person
+  manages, marks the ones already connected, and connects the chosen ones as separate accounts.
+- If the new accounts go past the Starter limit, the dialog says how many accounts it makes and offers to
+  upgrade and connect in one step.
+
 ### Location tagging
 
 - Add a location to a post from **Post details**. Search places, or pick a saved location.
@@ -110,7 +117,11 @@ Labels group posts, for example by content pillar or product launch. Views filte
 Velt powers comments, approvals, and the audit trail.
 
 - Each workspace chooses: no approvals, one step, or several ordered steps.
-- When approvals are on, posts cannot be scheduled until every required step is approved.
+- When approvals are on, posts cannot be scheduled until every required step is approved. The Schedule button is
+  locked while a post is in review. The author picks a time and can choose **Schedule automatically when
+  approved**, so the post is scheduled for that time as soon as the last step approves.
+- Solo customers keep approvals off, and the composer shows Schedule and Publish now instead of Send for
+  approval.
 - Approvers can approve or request changes, with comments.
 - Approvals can also be turned on separately for boosts and, after release, ad campaigns.
 - Approvals can be turned on for AI-written auto-replies.
@@ -165,7 +176,7 @@ All views filter by account, status, and label. Reviewers get the simplified cal
 - Add a note to any day, such as a holiday, a launch, or a reminder to avoid posting.
 - A note has a short title, optional details, and a color.
 - Notes show at the top of the day in month and week views and don't count as posts.
-- Notes are visible to the workspace. Mark a note Internal to hide it from Reviewers.
+- Notes are visible to the workspace. Mark a note Team only to hide it from Reviewers.
 
 ## App shell and search
 
@@ -180,10 +191,11 @@ All views filter by account, status, and label. Reviewers get the simplified cal
 - Comments and direct messages from every connected account, wherever Zernio supports them.
 - The design shows which accounts support comments, messages, or both.
 - Statuses: Open, Later, and Done.
-- Internal notes on conversations, hidden from the customer.
+- Team only notes on conversations, hidden from the customer. AI drafts can use them as context but never
+  quote them.
 - AI reply drafts written in the brand voice.
 - Sentiment tags to help decide what to answer first.
-- No assignment to teammates at release.
+- No assignment to teammates at launch. Assignment is planned after launch.
 
 ## Analytics
 
@@ -255,20 +267,50 @@ Events:
 - Account disconnected
 - New inbox messages
 
+## Agency overview
+
+Organizations with more than one workspace get an **Overview** page above the workspace list, so nothing goes
+missing across clients.
+
+- **Needs action:** one list across every workspace, with filters for failed posts, approvals, accounts, and
+  inbox. Each item names the client and has a direct action, such as Reconnect, Send connect link, Remind
+  client, Review, or Open inbox.
+- Items include failed or partly failed posts, disconnected accounts and tokens about to expire, posts waiting
+  on a client past a set time, posts waiting for the viewer's approval, negative messages left open, and
+  connect links about to expire.
+- **Clients:** scheduled, in review, and issues for each workspace this week.
+- **Recent activity** across workspaces.
+- The sidebar shows the organization, the Overview and cross-client Approvals pages, and the list of clients,
+  with a dot on clients that need action. Assignment to teammates will be added here after launch.
+
 ## Integrations
 
 Workspace Admins connect integrations in **Settings, Integrations**.
 
 | Integration | Purpose |
 | --- | --- |
-| MCP server | Let AI tools such as Claude, ChatGPT, and Cursor read the calendar and draft, schedule, and report on posts, within the connected person's role |
+| MCP server | Let AI tools such as Claude, ChatGPT, and Cursor read the calendar and draft, schedule, and report on posts, within the signed-in person's role. Settings only shows the server address and a setup guide. Sign-in happens in the AI tool, and every action appears in the audit log |
 | Zapier | Triggers and actions for posts, approvals, publishing results, and inbox events |
 | Make | The same triggers and actions as Zapier, as Make modules |
 | n8n | An Outstand node for n8n cloud and self-hosted n8n |
 | Slack, Discord, Teams | Post notifications to a channel |
-| API keys | Keys for MCP, n8n, and custom scripts, with create, revoke, and last used date |
+| API keys | Keys for n8n and custom scripts, with create, revoke, and last used date |
 
 Actions taken through integrations follow approval settings and are recorded in the audit trail.
+
+## Import and export (after launch)
+
+Not part of launch. The design reserves the place so it can ship later without new navigation.
+
+- **Settings, Import and export** holds both. Import sources are Planable, Buffer, Hootsuite, Later, Sprout
+  Social, and CSV. Export is CSV or JSON, with or without media, delivered by email link.
+- The import wizard has four steps: connect, choose posts, match accounts and people, and review. Unmatched
+  accounts can be connected in place, and their posts import as drafts. Unmatched people can be invited as
+  Reviewers. Campaigns from other tools become labels. Approval history and comments import as read-only
+  history.
+- Other entry points: **Export** in the List view bulk actions, and an import link on the first post step of
+  onboarding.
+- Recent imports and exports are listed with their results.
 
 ## Feedback and bug reports
 
@@ -288,7 +330,7 @@ Actions taken through integrations follow approval settings and are recorded in 
 
 ## Onboarding
 
-1. Create the organization on Basic.
+1. Create the organization on Starter.
 2. Enter a website so Firecrawl can draft the brand kit.
 3. Connect accounts, or send an account connect link to the client.
 4. Create a first post.

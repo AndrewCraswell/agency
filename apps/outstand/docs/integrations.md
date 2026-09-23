@@ -9,7 +9,7 @@ and what Outstand must build itself.
 | --- | --- | --- |
 | [WorkOS](https://workos.com/) | Organizations, sign-in, invitations, roles, and Enterprise SSO | Workspace membership and role rules, Reviewer view, and connect links |
 | [Stripe](https://stripe.com/) | Subscriptions, invoices, payment methods, and upgrades | Plan limits for workspaces and accounts, and upgrade prompts |
-| [Velt](https://velt.dev/) | Comments, staged approvals, and audit trail | Approval settings per workspace, Internal comments, and the History panel |
+| [Velt](https://velt.dev/) | Comments, staged approvals, and audit trail | Approval settings per workspace, Team only comments, and the History panel |
 | [Zernio](https://zernio.com/) | Social connections, publishing, scheduling, recommended times, comments, messages, boosts, and analytics | Preview mocks, rule checks for each platform, combined post results, and the inbox experience |
 | [Novu](https://novu.co/) | In-app, email, and chat notifications, preferences, and digests | Event definitions and the notification settings screens |
 | [IMG.LY](https://img.ly/) | Image and video editing, design templates, and AI editing tools | Brand locking from the brand kit and the composer layout |
@@ -47,7 +47,7 @@ Slack, Discord, and Teams can be connected per workspace through Novu to post no
 
 | Service | How it works |
 | --- | --- |
-| MCP | Outstand hosts an MCP server for each workspace, authorized with a workspace API key |
+| MCP | Outstand hosts an MCP server. People sign in from their AI tool, actions follow their role, and every action appears in the audit log |
 | [Zapier](https://zapier.com/) | Outstand app with triggers and actions |
 | [Make](https://www.make.com/) | Outstand app with modules |
 | [n8n](https://n8n.io/) | Outstand community node |

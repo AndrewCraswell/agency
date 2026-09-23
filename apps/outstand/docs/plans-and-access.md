@@ -9,12 +9,15 @@ and no per-account charges.
 
 | Plan | Price | Workspaces | Connected accounts | Extras |
 | --- | --- | --- | --- | --- |
-| Basic | $19 per month | 1 | Up to 3 | Everything else included |
+| Starter | $19 per month | 1 | Up to 3 | Everything else included |
 | Pro | $39 per workspace per month | Any number | Unlimited | Everything else included |
 | Enterprise | Custom | Volume pricing per workspace | Unlimited | SSO, onboarding, and support with an SLA |
 
-- New customers start on Basic. There is no free trial.
-- Creating a second workspace, or connecting a fourth account on Basic, prompts an upgrade to Pro.
+- New customers start on Starter. There is no free trial.
+- Starter is for a small business getting started. Once a customer posts often, they move to Pro for a full
+  workspace. Creating a second workspace, or connecting a fourth account on Starter, prompts an upgrade to Pro.
+- Detailed pricing lives on the marketing site. In the product, the upgrade prompt shows the new monthly price
+  and the prorated amount due today.
 - SSO is Enterprise-only because it needs manual setup, onboarding, and a paid WorkOS connection.
 - Stripe manages subscriptions, invoices, payment methods, and the upgrade flow.
 
@@ -56,12 +59,15 @@ Reviewers get a simplified view:
 - Comments and approval actions
 - A read-only analytics summary, which a workspace Admin can turn off
 
-Reviewers do not see Internal comments, workspace settings, or the inbox.
+Reviewers do not see Team only comments, workspace settings, or the inbox.
 
-### Internal comments
+### Team only comments
 
-Comments are visible to everyone in the workspace by default. Anyone except a Reviewer can mark a comment
-Internal, which hides it from Reviewers.
+- Comments are visible to everyone in the workspace, including Reviewers and guests, by default.
+- The comment box has two options: **Everyone** and **Team only**. Reviewers and guests only see Everyone.
+- Team only comments have a yellow background and a lock with "Team only", so it's never unclear who can
+  read them. The same pattern is used for team only inbox notes and calendar notes.
+- AI drafts can use team only notes as context, but never quote or reveal them in public replies.
 
 ## Members
 
@@ -79,6 +85,22 @@ their own workspace.
 - Invite one or more people by email, with an organization role and a role for each workspace.
 - Invitations show a status: **Pending**, **Accepted**, or **Expired**. Invitations expire after 7 days.
 - Pending and expired invitations can be resent or revoked.
+
+## Billing
+
+Organization Owners manage billing in **Settings, Plan and billing**. Stripe handles payment.
+
+- The plan card shows the plan, the price, the renewal date, and usage against limits for accounts and
+  workspaces. Members are unlimited on every plan.
+- **Upgrade:** compare Starter and Pro, see the prorated amount due today, and confirm. Upgrades start right
+  away.
+- **Downgrade:** choose the one workspace and three accounts to keep. Other workspaces become read-only and
+  other accounts pause. Scheduled posts for paused accounts move to drafts. Nothing is deleted, and upgrading
+  again switches everything back on. Downgrades take effect at the end of the billing period.
+- **Cancel:** an optional reason, an offer to pause billing for up to three months, then a confirmation that
+  explains what happens and offers a data download. Access continues to the end of the period. After that, the
+  workspace is read-only for 90 days and then deleted. A banner offers **Resume plan** until then.
+- Payment method, billing email, billing details, and invoices with download are on the same page.
 
 ## Invites and access
 

@@ -20,40 +20,33 @@
       "type": "http",
       "url": "https://chat.fluentui.dev/mcp/server"
     },
-    "n8n-mcp": {
-      "type": "http",
-      "url": "https://fc-agency.app.n8n.cloud/mcp-server/http",
-      "headers": {
-        "Authorization": "******"
-      }
-    },
-    "langfuse": {
-      "type": "http",
-      "url": "https://us.cloud.langfuse.com/api/public/mcp",
-      "headers": {
-        "Authorization": "Basic ${input:langfuse-basic-auth}"
-      }
-    },
-    "openrouter": {
-      "type": "http",
-      "url": "https://mcp.openrouter.ai/mcp"
-    },
-    "workos": {
-      "type": "http",
-      "url": "https://mcp.workos.com/mcp"
-    },
-    "legislation": {
-      "type": "http",
-      "url": "https://legislation-mcp-production.up.railway.app/mcp"
-    },
-    "legislation-staging": {
-      "type": "http",
-      "url": "https://legislation-mcp-staging.up.railway.app/mcp"
-    },
-    "trigger": {
-      "command": "npx",
-      "args": ["trigger.dev@latest", "mcp"]
-    },
+    // "langfuse": {
+    //   "type": "http",
+    //   "url": "https://us.cloud.langfuse.com/api/public/mcp",
+    //   "headers": {
+    //     "Authorization": "Basic ${input:langfuse-basic-auth}"
+    //   }
+    // },
+    // "openrouter": {
+    //   "type": "http",
+    //   "url": "https://mcp.openrouter.ai/mcp"
+    // },
+    // "workos": {
+    //   "type": "http",
+    //   "url": "https://mcp.workos.com/mcp"
+    // },
+    // "legislation": {
+    //   "type": "http",
+    //   "url": "https://legislation-mcp-production.up.railway.app/mcp"
+    // },
+    // "legislation-staging": {
+    //   "type": "http",
+    //   "url": "https://legislation-mcp-staging.up.railway.app/mcp"
+    // },
+    // "trigger": {
+    //   "command": "npx",
+    //   "args": ["trigger.dev@latest", "mcp"]
+    // },
     "shadcn": {
       "command": "npx",
       "args": ["shadcn@latest", "mcp"]
@@ -69,16 +62,16 @@
     //   "args": ["--app", "visual_studio_code", "--agent", "copilotIDE"],
     //   "env": {}
     // },
-    "shopify-dev-mcp": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@shopify/dev-mcp@latest"]
-    },
-    "linear": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.linear.app/mcp"]
-    }
+    // "shopify-dev-mcp": {
+    //   "type": "stdio",
+    //   "command": "npx",
+    //   "args": ["-y", "@shopify/dev-mcp@latest"]
+    // },
+    // "linear": {
+    //   "type": "stdio",
+    //   "command": "npx",
+    //   "args": ["-y", "mcp-remote", "https://mcp.linear.app/mcp"]
+    // }
     // "trigger": {
     //   "type": "stdio",
     //   "command": "npx",

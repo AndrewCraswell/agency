@@ -50,15 +50,15 @@ Create, preview, review, schedule, publish, reply, and measure.
 
 | Excluded | Notes |
 | --- | --- |
-| Campaigns | Labels are the way to group posts |
+| Campaigns | Planned after launch. Labels group posts at launch |
 | Social listening | Not planned |
 | SEO and AI visibility features | Not planned |
 | Full ad campaign management | Boosting new and published posts is in scope. Approval settings are designed to cover ad campaigns later |
-| Post import and export | Analytics and audit log exports are still included |
+| Post import and export | Planned after launch in Settings, Import and export. Analytics and audit log exports are included at launch |
 | AI image generation | Planned after GA. Img.ly AI editing tools are included |
 | Custom reports | The analytics pages and read-only Reviewer summary cover release |
-| Inbox assignment | Conversations use statuses and internal notes instead |
-| Free trial | Customers start on Basic |
+| Inbox assignment | Planned after launch. Conversations use statuses and team only notes at launch |
+| Free trial | Customers start on Starter |
 
 ## Related research
 
