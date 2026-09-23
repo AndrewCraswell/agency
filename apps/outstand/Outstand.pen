@@ -1,0 +1,1455 @@
+{
+  "version": "2.17",
+  "children": [
+    {
+      "type": "frame",
+      "id": "Sfwxh",
+      "x": 0,
+      "y": 0,
+      "name": "Planable prior art — reference board",
+      "width": 2832,
+      "fill": "#F3F1EA",
+      "layout": "vertical",
+      "gap": 56,
+      "padding": 64,
+      "children": [
+        {
+          "type": "frame",
+          "id": "jt8Va",
+          "name": "Prior art header",
+          "width": 2704,
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "gKppD",
+              "name": "Prior art title",
+              "fill": "#171612",
+              "content": "PLANABLE — PRODUCT SURFACE INVENTORY",
+              "fontFamily": "Inter",
+              "fontSize": 54,
+              "fontWeight": "700",
+              "letterSpacing": -1.5
+            },
+            {
+              "type": "text",
+              "id": "TvbvD",
+              "name": "Prior art metadata",
+              "fill": "#69665D",
+              "content": "Captured 22 September 2026  |  24 representative views  |  Authenticated evaluation workspace",
+              "fontFamily": "Inter",
+              "fontSize": 19,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "DL1Mt",
+              "name": "Prior art use note",
+              "fill": "#69665D",
+              "textGrowth": "fixed-width",
+              "width": 1800,
+              "content": "Competitor reference for workflow analysis only. Do not reproduce Planable branding, copy, or screen designs in the Outstand product.",
+              "fontFamily": "Inter",
+              "fontSize": 17
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "s92mG",
+          "name": "Section — 01 — Entry and core workspace",
+          "width": 2704,
+          "layout": "vertical",
+          "gap": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "c6Obb",
+              "name": "Section title — 01 — Entry and core workspace",
+              "fill": "#24231F",
+              "content": "01 — Entry and core workspace",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "PXrqQ",
+              "name": "Row one — 01 — Entry and core workspace",
+              "width": 2704,
+              "height": 670,
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "aHm0C",
+                  "name": "Reference card — Dashboard",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "aIdaO",
+                      "name": "Screenshot — Dashboard",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/01-dashboard.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "MM61h",
+                      "name": "Caption — Dashboard",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Dashboard",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "F6rkZ",
+                  "name": "Reference card — Content calendar",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "MP4HS",
+                      "name": "Screenshot — Content calendar",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/02-content-calendar.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "Bv5zY",
+                      "name": "Caption — Content calendar",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Content calendar",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Ls10X",
+                  "name": "Reference card — Campaigns",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "aQs69",
+                      "name": "Screenshot — Campaigns",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/03-campaigns.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "JNq0v",
+                      "name": "Caption — Campaigns",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Campaigns",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KkdCF",
+              "name": "Row two — 01 — Entry and core workspace",
+              "width": 2704,
+              "height": 670,
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Qse3f",
+                  "name": "Reference card — My approvals",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "BXsIQ",
+                      "name": "Screenshot — My approvals",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/04-my-approvals.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "nWGOt",
+                      "name": "Caption — My approvals",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "My approvals",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "T9bviu",
+                  "name": "Reference card — Social inbox",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "IqvcH",
+                      "name": "Screenshot — Social inbox",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/05-social-inbox.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "jeSWH",
+                      "name": "Caption — Social inbox",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Social inbox",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dAirP",
+                  "name": "Reference card — Analytics",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "VrvZT",
+                      "name": "Screenshot — Analytics",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/06-analytics.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "a8vGq",
+                      "name": "Caption — Analytics",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Analytics",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "xkHLa",
+          "name": "Section — 02 — Discovery and creation",
+          "width": 2704,
+          "layout": "vertical",
+          "gap": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "M35jP",
+              "name": "Section title — 02 — Discovery and creation",
+              "fill": "#24231F",
+              "content": "02 — Discovery and creation",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "B24ow",
+              "name": "Row one — 02 — Discovery and creation",
+              "width": 2704,
+              "height": 670,
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "p4OG3",
+                  "name": "Reference card — Social listening",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "xc1b4",
+                      "name": "Screenshot — Social listening",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/07-social-listening.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "fO3Ni",
+                      "name": "Caption — Social listening",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Social listening",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Z9x4vP",
+                  "name": "Reference card — Content view menu",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "R588P",
+                      "name": "Screenshot — Content view menu",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/08-content-view-menu.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "Cbe7o",
+                      "name": "Caption — Content view menu",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Content view menu",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "d3FVI",
+                  "name": "Reference card — Content feed",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Z4D0S",
+                      "name": "Screenshot — Content feed",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/09-content-feed.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "yif25",
+                      "name": "Caption — Content feed",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Content feed",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "aDUBl",
+              "name": "Row two — 02 — Discovery and creation",
+              "width": 2704,
+              "height": 670,
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zZttV",
+                  "name": "Reference card — Compose post",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "iALvk",
+                      "name": "Screenshot — Compose post",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/10-compose-post.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "W8Dvhm",
+                      "name": "Caption — Compose post",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Compose post",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "X4vK3",
+                  "name": "Reference card — Profile menu",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "IFaT2",
+                      "name": "Screenshot — Profile menu",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/11-profile-menu.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "F5XvyE",
+                      "name": "Caption — Profile menu",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Profile menu",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "d6Gpme",
+                  "name": "Reference card — Profile settings",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Hylkv",
+                      "name": "Screenshot — Profile settings",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/12-profile-settings.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "O15mT",
+                      "name": "Caption — Profile settings",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Profile settings",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Fki6v",
+          "name": "Section — 03 — Account administration",
+          "width": 2704,
+          "layout": "vertical",
+          "gap": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "iHBdt",
+              "name": "Section title — 03 — Account administration",
+              "fill": "#24231F",
+              "content": "03 — Account administration",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "BWtWi",
+              "name": "Row one — 03 — Account administration",
+              "width": 2704,
+              "height": 670,
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Cn5x9",
+                  "name": "Reference card — Notification settings",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "P8S5h",
+                      "name": "Screenshot — Notification settings",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/13-notification-settings.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "Z1eQfp",
+                      "name": "Caption — Notification settings",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Notification settings",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jyuEw",
+                  "name": "Reference card — Integrations",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "k3zAv",
+                      "name": "Screenshot — Integrations",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/14-integrations.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "RMBnX",
+                      "name": "Caption — Integrations",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Integrations",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jBarb",
+                  "name": "Reference card — Devices",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "K5K6NS",
+                      "name": "Screenshot — Devices",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/15-devices.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "G0BD03",
+                      "name": "Caption — Devices",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Devices",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n2sFap",
+              "name": "Row two — 03 — Account administration",
+              "width": 2704,
+              "height": 670,
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "z227IS",
+                  "name": "Reference card — Security",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uASDE",
+                      "name": "Screenshot — Security",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/16-security.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "pGC9Z",
+                      "name": "Caption — Security",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Security",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "m6Xfh2",
+                  "name": "Reference card — Workspace menu",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "HP0rD",
+                      "name": "Screenshot — Workspace menu",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/17-workspace-menu.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "osDN1",
+                      "name": "Caption — Workspace menu",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Workspace menu",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "NXvSF",
+                  "name": "Reference card — Workspace general settings",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "QwHHV",
+                      "name": "Screenshot — Workspace general settings",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/18-workspace-settings.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "suUbw",
+                      "name": "Caption — Workspace general settings",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Workspace general settings",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "R8o6P",
+          "name": "Section — 04 — Workspace administration",
+          "width": 2704,
+          "layout": "vertical",
+          "gap": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "xzovO",
+              "name": "Section title — 04 — Workspace administration",
+              "fill": "#24231F",
+              "content": "04 — Workspace administration",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "Q5pbXR",
+              "name": "Row one — 04 — Workspace administration",
+              "width": 2704,
+              "height": 670,
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "XVrzK",
+                  "name": "Reference card — Brand context",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "B6full",
+                      "name": "Screenshot — Brand context",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/19-brand-context.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "lTsLC",
+                      "name": "Caption — Brand context",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Brand context",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "x3Ju1h",
+                  "name": "Reference card — Team and clients",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "D112jb",
+                      "name": "Screenshot — Team and clients",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/20-team-clients.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "n1B0xO",
+                      "name": "Caption — Team and clients",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Team and clients",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ERijU",
+                  "name": "Reference card — Approval settings",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "qwQu9",
+                      "name": "Screenshot — Approval settings",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/21-approval-settings.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "bGeCf",
+                      "name": "Caption — Approval settings",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Approval settings",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "NU0J2",
+              "name": "Row two — 04 — Workspace administration",
+              "width": 2704,
+              "height": 670,
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "G8CI9W",
+                  "name": "Reference card — Templates",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "R5lBB",
+                      "name": "Screenshot — Templates",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/22-templates.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "g5yqQ",
+                      "name": "Caption — Templates",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Templates",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hCeTg",
+                  "name": "Reference card — Labels",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "D9ry9j",
+                      "name": "Screenshot — Labels",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/23-labels.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "dO6mt",
+                      "name": "Caption — Labels",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Labels",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "q4h7D",
+                  "name": "Reference card — Timetable",
+                  "clip": true,
+                  "width": 880,
+                  "height": 670,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 18,
+                  "stroke": "#DAD8D0",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#14130F14",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pEIL3",
+                      "name": "Screenshot — Timetable",
+                      "width": 880,
+                      "height": 611,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "prior-art/planable/24-timetable.png",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "IHnd6",
+                      "name": "Caption — Timetable",
+                      "fill": "#24231F",
+                      "textGrowth": "fixed-width",
+                      "width": 840,
+                      "content": "Timetable",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "imports": {
+    "4": "../../../../d:/Designs/Shadcn%20Free/Shadcn%20Free%20Library.lib.pen"
+  },
+  "fileToken": "c61c4503-42c5-4667-94d4-be159155b829",
+  "fonts": [
+    {
+      "name": "VideoJS",
+      "url": "Outstand-assets-2/videojs-400-0.woff"
+    }
+  ]
+}

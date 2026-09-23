@@ -16,6 +16,10 @@ debugging failures and slowness with safe Sentry/Langfuse diagnostics, not produ
 The [legislation diffing package](../packages/legislation-diffing/README.md) owns deterministic full-text comparison;
 its app consumers and Storybook prototypes do not perform legal interpretation or amendment application.
 
+Outstand product research: [documentation index](../apps/outstand/docs/README.md), including the
+[Planable feature analysis](../apps/outstand/docs/planable-feature-analysis.md) and
+[platform coverage and plans](../apps/outstand/docs/planable-coverage-and-plans.md).
+
 | Page                             | What it covers                                                                                                                                              |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [tech-stack.md](tech-stack.md)   | The preferred tools we reach for first (by category). Deviating requires a discussion with a human.                                                         |
