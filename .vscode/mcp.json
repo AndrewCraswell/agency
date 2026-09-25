@@ -1,9 +1,9 @@
 {
   "servers": {
-    "sentry": {
-      "type": "http",
-      "url": "https://mcp.sentry.dev/mcp/legislation/legislation"
-    },
+    // "sentry": {
+    //   "type": "http",
+    //   "url": "https://mcp.sentry.dev/mcp/legislation/legislation"
+    // },
     // "context7": {
     //   "type": "http",
     //   "url": "https://mcp.context7.com/mcp"
