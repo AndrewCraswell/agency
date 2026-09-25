@@ -3,7 +3,11 @@ import { bills, syncCheckpoints } from "@repo/legislation-core/database/schema/s
 import { federalBillId } from "@repo/legislation-core/domain/identifiers"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { and, eq, inArray } from "drizzle-orm"
-import { upsertBillAggregates } from "../../persistence/bill-aggregates.js"
+import {
+  ensureBillAggregateDimensions,
+  ensureBillAggregatePeople,
+  upsertBillAggregates
+} from "../../persistence/bill-aggregates.js"
 import { ingestionErrorSummary } from "../errors.js"
 import { ProviderHttpError } from "../http-client.js"
 import { createJobCounts } from "../job-result.js"
@@ -27,6 +31,7 @@ type PersistResult =
   | ImportFailure
   | SkippedPackage
   | { source: GovInfoBillStatusPackage; status: "inserted" | "prepared" | "updated" }
+type PersistedDimensions = { jurisdictionIds: Set<string>; sessionIds: Set<string> }
 
 export function partitionGovInfoPackages(
   packages: readonly GovInfoBillStatusPackage[],
@@ -78,6 +83,10 @@ export async function importGovInfoPackages(
   counts.skipped = startIndex
   let canAdvanceCheckpoint = true
   let durableIndex = startIndex
+  const persistedDimensions: PersistedDimensions = {
+    jurisdictionIds: new Set(),
+    sessionIds: new Set()
+  }
 
   const concurrency = Math.max(1, options.concurrency ?? 1)
   for (let chunkStart = startIndex; chunkStart < packages.length; chunkStart += concurrency) {
@@ -138,7 +147,7 @@ export async function importGovInfoPackages(
       return result
     })
     const successful = prepared.filter((result): result is PreparedPackage => "aggregate" in result)
-    await persistPrepared(database, successful, results)
+    await persistPrepared(database, successful, results, persistedDimensions)
     for (const result of results) {
       if (result.status === "failed") {
         counts.failed += 1
@@ -173,16 +182,31 @@ export async function importGovInfoPackages(
 async function persistPrepared(
   database: LegislationDatabase,
   prepared: readonly PreparedPackage[],
-  results: PersistResult[]
+  results: PersistResult[],
+  persistedDimensions: PersistedDimensions
 ): Promise<void> {
   if (prepared.length === 0) {
     return
   }
   try {
-    const existing = await upsertBillAggregates(
-      database,
-      prepared.map((item) => item.aggregate)
+    const aggregates = prepared.map((item) => item.aggregate)
+    const missingDimensions = aggregates.filter(
+      (aggregate) =>
+        !persistedDimensions.jurisdictionIds.has(aggregate.jurisdiction.id) ||
+        !persistedDimensions.sessionIds.has(aggregate.session.id)
     )
+    if (missingDimensions.length > 0) {
+      await ensureBillAggregateDimensions(database, missingDimensions)
+      for (const aggregate of missingDimensions) {
+        persistedDimensions.jurisdictionIds.add(aggregate.jurisdiction.id)
+        persistedDimensions.sessionIds.add(aggregate.session.id)
+      }
+    }
+    await ensureBillAggregatePeople(database, aggregates)
+    const existing = await upsertBillAggregates(database, aggregates, {
+      dimensionsEnsured: true,
+      peopleEnsured: true
+    })
     for (const item of prepared) {
       const result = results.find((candidate) => "source" in candidate && candidate.source === item.source)
       if (result !== undefined && "source" in result) {
@@ -192,8 +216,8 @@ async function persistPrepared(
   } catch (error) {
     if (prepared.length > 1) {
       const midpoint = Math.ceil(prepared.length / 2)
-      await persistPrepared(database, prepared.slice(0, midpoint), results)
-      await persistPrepared(database, prepared.slice(midpoint), results)
+      await persistPrepared(database, prepared.slice(0, midpoint), results, persistedDimensions)
+      await persistPrepared(database, prepared.slice(midpoint), results, persistedDimensions)
       return
     }
     const item = prepared[0]

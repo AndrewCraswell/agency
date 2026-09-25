@@ -865,7 +865,7 @@ async function importGovInfo(options: {
         importGovInfoPackages(database, client, packages, {
           concurrency: config.ingestion.concurrency,
           force: options.force === true || options.rematerialize === true,
-          restart: options.force,
+          restart: options.force === true,
           sourceStore: createSourceStore(config, "federal"),
           stream
         })

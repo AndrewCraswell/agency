@@ -55,14 +55,30 @@ const relationshipDetailsSchema = z.union([
     })
     .passthrough()
 ])
-const relatedBillSchema = z
-  .object({
-    congress: z.coerce.number().int().positive(),
-    number: z.coerce.string(),
-    relationshipDetails: relationshipDetailsSchema.optional(),
-    type: z.string()
-  })
-  .passthrough()
+function normalizeBillFieldNames(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return value
+  }
+
+  const bill = value as Record<string, unknown>
+  return {
+    ...bill,
+    number: bill.number ?? bill.billNumber,
+    type: bill.type ?? bill.billType
+  }
+}
+
+const relatedBillSchema = z.preprocess(
+  normalizeBillFieldNames,
+  z
+    .object({
+      congress: z.coerce.number().int().positive(),
+      number: z.coerce.string(),
+      relationshipDetails: relationshipDetailsSchema.optional(),
+      type: z.string()
+    })
+    .passthrough()
+)
 const textVersionSchema = z
   .object({
     date: optionalString,
@@ -76,29 +92,32 @@ const textVersionSchema = z
 const billStatusSchema = z
   .object({
     billStatus: z.object({
-      bill: z
-        .object({
-          actions: collection(actionSchema),
-          committees: collection(committeeSchema),
-          congress: z.coerce.number().int().positive(),
-          cosponsors: collection(sponsorSchema),
-          introducedDate: optionalString,
-          latestAction: actionSchema.optional(),
-          number: z.coerce.string(),
-          originChamber: z.string().optional(),
-          policyArea: z.preprocess(
-            (value) => (typeof value === "string" ? undefined : value),
-            z.object({ name: z.string() }).optional()
-          ),
-          relatedBills: collection(relatedBillSchema),
-          sponsors: collection(sponsorSchema),
-          summaries: collection(z.object({ text: z.string() }).passthrough()),
-          textVersions: collection(textVersionSchema),
-          titles: collection(z.object({ title: z.string(), titleType: z.string().optional() }).passthrough()),
-          type: z.string().min(1),
-          updateDate: optionalString
-        })
-        .passthrough()
+      bill: z.preprocess(
+        normalizeBillFieldNames,
+        z
+          .object({
+            actions: collection(actionSchema),
+            committees: collection(committeeSchema),
+            congress: z.coerce.number().int().positive(),
+            cosponsors: collection(sponsorSchema),
+            introducedDate: optionalString,
+            latestAction: actionSchema.optional(),
+            number: z.coerce.string(),
+            originChamber: z.string().optional(),
+            policyArea: z.preprocess(
+              (value) => (typeof value === "string" ? undefined : value),
+              z.object({ name: z.string() }).optional()
+            ),
+            relatedBills: collection(relatedBillSchema),
+            sponsors: collection(sponsorSchema),
+            summaries: collection(z.object({ text: z.string() }).passthrough()),
+            textVersions: collection(textVersionSchema),
+            titles: collection(z.object({ title: z.string(), titleType: z.string().optional() }).passthrough()),
+            type: z.string().min(1),
+            updateDate: optionalString
+          })
+          .passthrough()
+      )
     })
   })
   .passthrough()
