@@ -7599,7 +7599,7 @@
                                                       "id": "JDPPQ",
                                                       "name": "When",
                                                       "fill": "$muted-foreground",
-                                                      "content": "8:00 AM",
+                                                      "content": "6:30 AM",
                                                       "fontFamily": "$v2-font-sans",
                                                       "fontSize": 12,
                                                       "fontWeight": "normal"
@@ -18006,7 +18006,7 @@
                                     {
                                       "type": "frame",
                                       "id": "M07cT",
-                                      "name": "Item / Cold brew launch",
+                                      "name": "Item / Cold brew is here",
                                       "width": "fill_container",
                                       "height": 40,
                                       "fill": "$accent",
@@ -18045,7 +18045,7 @@
                                               "id": "rBthy",
                                               "name": "Title",
                                               "fill": "$foreground",
-                                              "content": "Cold brew launch",
+                                              "content": "Cold brew is here",
                                               "fontFamily": "$v2-font-sans",
                                               "fontSize": 13,
                                               "fontWeight": "500"
@@ -18055,7 +18055,7 @@
                                               "id": "z0DBcC",
                                               "name": "Meta",
                                               "fill": "$muted-foreground",
-                                              "content": "Fri, Jun 12",
+                                              "content": "Thu, Jun 11",
                                               "fontFamily": "$v2-font-sans",
                                               "fontSize": 12,
                                               "fontWeight": "normal"
@@ -18063,9 +18063,9 @@
                                           ]
                                         },
                                         {
-                                          "id": "FhMkT",
+                                          "id": "f3EUw",
                                           "type": "ref",
-                                          "ref": "WJN8w",
+                                          "ref": "aJUcV",
                                           "name": "Status"
                                         },
                                         {
@@ -19972,7 +19972,7 @@
                                             {
                                               "type": "frame",
                                               "id": "A6U6sQ",
-                                              "name": "Item / Facebook failed to publish Cold brew launch",
+                                              "name": "Item / Facebook failed to publish Behind the bar",
                                               "width": "fill_container",
                                               "stroke": "$border",
                                               "strokeWidth": {
@@ -20064,7 +20064,7 @@
                                                       "id": "eNGKb",
                                                       "name": "Title",
                                                       "fill": "$foreground",
-                                                      "content": "Cold brew launch failed to publish on Facebook",
+                                                      "content": "Behind the bar: 6 AM prep failed to publish on Facebook",
                                                       "fontFamily": "$v2-font-sans",
                                                       "fontSize": 13,
                                                       "fontWeight": "500"
@@ -20074,7 +20074,7 @@
                                                       "id": "lkKSO",
                                                       "name": "Detail",
                                                       "fill": "$muted-foreground",
-                                                      "content": "Connection expired 2 hours ago",
+                                                      "content": "Connection expired 3 hours ago",
                                                       "fontFamily": "$v2-font-sans",
                                                       "fontSize": 13,
                                                       "fontWeight": "normal"
@@ -22130,7 +22130,7 @@
                                           "fill": "$foreground",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "Cold brew launch failed to publish on Facebook",
+                                          "content": "Behind the bar: 6 AM prep failed to publish on Facebook",
                                           "lineHeight": 1.4,
                                           "fontFamily": "$v2-font-sans",
                                           "fontSize": 13,
@@ -22975,7 +22975,7 @@
                               "content": "Facebook reconnected"
                             },
                             "SQ8nS": {
-                              "content": "Retry Cold brew launch from Posts.",
+                              "content": "Retry Behind the bar: 6 AM prep from Posts.",
                               "enabled": true
                             },
                             "Kr926": {
@@ -23548,7 +23548,7 @@
                                                   "fill": "$foreground",
                                                   "textGrowth": "fixed-width",
                                                   "width": "fill_container",
-                                                  "content": "Cold brew launch failed to publish on Facebook",
+                                                  "content": "Behind the bar: 6 AM prep failed to publish on Facebook",
                                                   "fontFamily": "$v2-font-sans",
                                                   "fontSize": 13,
                                                   "fontWeight": "500"
@@ -25810,7 +25810,7 @@
                           "fill": "$muted-foreground",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Reconnect on Cold brew launch succeeds",
+                          "content": "Reconnect on Behind the bar: 6 AM prep succeeds",
                           "lineHeight": 1.35,
                           "fontFamily": "$v2-font-sans",
                           "fontSize": 20,
@@ -25826,7 +25826,7 @@
                               "content": "Facebook reconnected"
                             },
                             "SQ8nS": {
-                              "content": "Retry Cold brew launch from Posts.",
+                              "content": "Retry Behind the bar: 6 AM prep from Posts.",
                               "enabled": true
                             },
                             "Kr926": {
@@ -132526,7 +132526,7 @@
                                           "id": "tBpfw",
                                           "name": "Text",
                                           "fill": "$muted-foreground",
-                                          "content": "sam@northwindcoffee.com, expires Jun 20",
+                                          "content": "sam@northwindcoffee.com, expires Jun 16",
                                           "fontFamily": "$v2-font-sans",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
@@ -135049,7 +135049,7 @@
                               "content": "Connect link resent"
                             },
                             "SQ8nS": {
-                              "content": "We emailed sam@northwindcoffee.com. It expires Jun 20.",
+                              "content": "We emailed sam@northwindcoffee.com. It expires Jun 16.",
                               "enabled": true
                             },
                             "Kr926": {
@@ -146094,7 +146094,7 @@
                                       "fill": "$muted-foreground",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Connect the rest later with this link. It expires Jun 20.",
+                                      "content": "Connect the rest later with this link. It expires Jun 16.",
                                       "fontFamily": "$v2-font-sans",
                                       "fontSize": 13,
                                       "fontWeight": "normal"
@@ -146738,7 +146738,7 @@
                               "fill": "$muted-foreground",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Connect the rest later with this link. It expires Jun 20.",
+                              "content": "Connect the rest later with this link. It expires Jun 16.",
                               "fontFamily": "$v2-font-sans",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -147099,7 +147099,7 @@
                               "content": "You can finish later"
                             },
                             "Z3JRD": {
-                              "content": "Use the same link until Jun 20.",
+                              "content": "Use the same link until Jun 16.",
                               "enabled": true
                             },
                             "pY5CO": {
@@ -150058,7 +150058,7 @@
                                             {
                                               "type": "frame",
                                               "id": "HuEl2",
-                                              "name": "Item / Facebook failed to publish Cold brew launch",
+                                              "name": "Item / Facebook failed to publish Behind the bar",
                                               "width": "fill_container",
                                               "stroke": "$border",
                                               "strokeWidth": {
@@ -150150,7 +150150,7 @@
                                                       "id": "t2nWrG",
                                                       "name": "Title",
                                                       "fill": "$foreground",
-                                                      "content": "Cold brew launch failed to publish on Facebook",
+                                                      "content": "Behind the bar: 6 AM prep failed to publish on Facebook",
                                                       "fontFamily": "$v2-font-sans",
                                                       "fontSize": 13,
                                                       "fontWeight": "500"
@@ -150160,7 +150160,7 @@
                                                       "id": "eREFk",
                                                       "name": "Detail",
                                                       "fill": "$muted-foreground",
-                                                      "content": "Connection expired 2 hours ago",
+                                                      "content": "Connection expired 3 hours ago",
                                                       "fontFamily": "$v2-font-sans",
                                                       "fontSize": 13,
                                                       "fontWeight": "normal"
@@ -152303,7 +152303,7 @@
                           "fill": "$muted-foreground",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Retry the failed Cold brew launch post",
+                          "content": "Retry the failed Behind the bar: 6 AM prep post",
                           "lineHeight": 1.35,
                           "fontFamily": "$v2-font-sans",
                           "fontSize": 20,
@@ -152316,7 +152316,7 @@
                           "name": "Toast / Retrying Cold brew launch",
                           "descendants": {
                             "fgkYm": {
-                              "content": "Retrying Cold brew launch"
+                              "content": "Retrying Behind the bar: 6 AM prep"
                             },
                             "lasml": {
                               "content": "Publishing to Facebook for Northwind Coffee.",
@@ -152357,7 +152357,7 @@
                           "name": "Toast / Couldn’t publish Cold brew launch",
                           "descendants": {
                             "z2rzH": {
-                              "content": "Couldn’t publish Cold brew launch"
+                              "content": "Couldn’t publish Behind the bar: 6 AM prep"
                             },
                             "j2TCy": {
                               "content": "Reconnect Facebook for Northwind Coffee, then try again.",
@@ -153263,7 +153263,7 @@
                                             {
                                               "type": "frame",
                                               "id": "B0v5ck",
-                                              "name": "Item / Facebook failed to publish Cold brew launch",
+                                              "name": "Item / Facebook failed to publish Behind the bar",
                                               "width": "fill_container",
                                               "stroke": "$border",
                                               "strokeWidth": {
@@ -153355,7 +153355,7 @@
                                                       "id": "ELH2R",
                                                       "name": "Title",
                                                       "fill": "$foreground",
-                                                      "content": "Cold brew launch failed to publish on Facebook",
+                                                      "content": "Behind the bar: 6 AM prep failed to publish on Facebook",
                                                       "fontFamily": "$v2-font-sans",
                                                       "fontSize": 13,
                                                       "fontWeight": "500"
@@ -153365,7 +153365,7 @@
                                                       "id": "J26lFx",
                                                       "name": "Detail",
                                                       "fill": "$muted-foreground",
-                                                      "content": "Connection expired 2 hours ago",
+                                                      "content": "Connection expired 3 hours ago",
                                                       "fontFamily": "$v2-font-sans",
                                                       "fontSize": 13,
                                                       "fontWeight": "normal"
@@ -156444,7 +156444,7 @@
                                             {
                                               "type": "frame",
                                               "id": "sVXVr",
-                                              "name": "Item / Facebook failed to publish Cold brew launch",
+                                              "name": "Item / Facebook failed to publish Behind the bar",
                                               "width": "fill_container",
                                               "stroke": "$border",
                                               "strokeWidth": {
@@ -156536,7 +156536,7 @@
                                                       "id": "Ksyfb",
                                                       "name": "Title",
                                                       "fill": "$foreground",
-                                                      "content": "Cold brew launch failed to publish on Facebook",
+                                                      "content": "Behind the bar: 6 AM prep failed to publish on Facebook",
                                                       "fontFamily": "$v2-font-sans",
                                                       "fontSize": 13,
                                                       "fontWeight": "500"
@@ -156546,7 +156546,7 @@
                                                       "id": "GpoPM",
                                                       "name": "Detail",
                                                       "fill": "$muted-foreground",
-                                                      "content": "Connection expired 2 hours ago",
+                                                      "content": "Connection expired 3 hours ago",
                                                       "fontFamily": "$v2-font-sans",
                                                       "fontSize": 13,
                                                       "fontWeight": "normal"

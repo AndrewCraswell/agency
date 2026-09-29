@@ -32,6 +32,10 @@ apps/legislation/.container/
 /apps/legislation/tmp/
 /apps/legislation/infra/bicep/main.json
 
+# Claude Code personal settings, and per-machine junctions into .agents/skills.
+/.claude/settings.local.json
+/.claude/skills/
+
 # Next
 .next
 *.tsbuildinfo
