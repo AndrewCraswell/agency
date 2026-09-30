@@ -1,1 +1,0 @@
-Shipping update for order {{ order_name }}

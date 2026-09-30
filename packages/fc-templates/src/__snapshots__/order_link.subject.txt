@@ -1,1 +1,0 @@
-View your order {{ order_name }}

@@ -9,18 +9,6 @@
       "ignoreDependencies": ["@vitest/expect"],
       "ignoreBinaries": ["ado-npm-auth"]
     },
-    "packages/fc-theme": {
-      "entry": ["assets/*.js"],
-      "ignore": ["assets/vendor-scripts-v11.js"]
-    },
-    "packages/fc-theme-base": {
-      "entry": [
-        "assets/*.js",
-        "content/capture-migration.mjs",
-        "tests/component-library/{library,privacy-fixture,workflows}.js",
-        "tests/preview-size-charts.mjs"
-      ]
-    },
     "apps/scoring": {
       "entry": ["simulator/src/**/*.test.{ts,tsx}"],
       "ignoreDependencies": ["@repo/oxlint-config"]
@@ -99,18 +87,8 @@
       ],
       "ignoreBinaries": ["graphql-codegen", "shopify"]
     },
-    "packages/fc-templates": {
-      "entry": ["src/emails/marketing/*.tsx", "src/emails/notifications/*.tsx", "src/emails/printouts/*/*.tsx"],
-      "ignoreDependencies": ["@repo/oxlint-config", "@react-email/ui"]
-    },
     "packages/scoring-circuit": {
       "entry": ["src/*.test.{ts,tsx}"],
-      "ignoreDependencies": ["@repo/oxlint-config"]
-    },
-    "packages/shopify-emails": {
-      "ignoreDependencies": ["@repo/oxlint-config"]
-    },
-    "packages/shopify-content": {
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "packages/storybook-config": {

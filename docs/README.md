@@ -30,13 +30,3 @@ Outstand product research: [documentation index](../apps/outstand/docs/README.md
 | [database-performance.md](database-performance.md) | Privacy-safe PostgreSQL query statistics and the targeted AI diagnosis workflow. |
 | [database-refresh-policy.md](database-refresh-policy.md) | Complete production-to-staging table policies, privacy boundaries and refresh release gates. |
 | [environments-and-deployments.md](environments-and-deployments.md) | Legislation CI/CD, Railway environments, database refreshes, migration ownership, previews and CDN policy. |
-| [shopify-app-generator.md](../packages/fc-theme-base/docs/shopify-app-generator.md) | Creating a neutral embedded Shopify app with the local Turbo generator.                                                               |
-| [shopify-policy-pages.md](../packages/fc-theme-base/docs/shopify-policy-pages.md) | Policy page templates, store-managed content, responsive reading, and footer menu wiring. |
-| [shopify-content-installation.md](../packages/fc-theme-base/docs/shopify-content-installation.md) | Fencing Club migration content, portable manifests, menu wiring, and safe reruns. |
-| [shopify-catalog-rehearsal.md](../packages/fc-theme-base/docs/shopify-catalog-rehearsal.md) | Read-only source snapshots, Contoso imports, native bundles, chart assignments, and controlled stock. |
-| [shopify-collection-filters.md](../packages/fc-theme-base/docs/shopify-collection-filters.md) | Shopify filter sources, curated classifications, protection attributes, and migration boundaries. |
-| [shopify-size-charts.md](../packages/fc-theme-base/docs/shopify-size-charts.md) | Shared chart pages and drawers, editable category headings/order, dynamic membership, and sizing verification. |
-| [shopify-drawers.md](../packages/fc-theme-base/docs/shopify-drawers.md) | Reusable drawer shell, motion, focus and scroll lifecycle, and consumer integration. |
-| [shopify-cart.md](../packages/fc-theme-base/docs/shopify-cart.md) | Cart panel/page layout, native bundles, notes, discounts, request coordination, and acceptance. |
-| [shopify-interaction-states.md](../packages/fc-theme-base/docs/shopify-interaction-states.md) | Interactive component inventory, state/motion contract, and local component lab. |
-| [Printable measuring tape](../packages/fc-theme-base/printables/README.md) | Branded A4 and Letter PDFs, print calibration, font assets, and regeneration checks. |

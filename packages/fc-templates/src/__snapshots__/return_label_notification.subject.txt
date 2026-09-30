@@ -1,1 +1,0 @@
-Your return label for order {{ order_name }} is ready

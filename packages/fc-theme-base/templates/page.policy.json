@@ -1,9 +1,0 @@
-{
-  "sections": {
-    "main": {
-      "type": "main-policy",
-      "settings": {}
-    }
-  },
-  "order": ["main"]
-}

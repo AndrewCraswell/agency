@@ -1,1 +1,0 @@
-Your cancellation request for order {{ order_name }} was declined

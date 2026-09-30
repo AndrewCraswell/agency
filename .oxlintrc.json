@@ -1,4 +1,3 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": ["packages/fc-theme/**", "packages/fc-theme-base/**"]
+  "$schema": "./node_modules/oxlint/configuration_schema.json"
 }

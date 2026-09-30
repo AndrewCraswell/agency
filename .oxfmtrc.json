@@ -24,8 +24,6 @@
     "**/fixtures/fr-2024-01-02-metadata.json",
     ".vscode/mcp.json",
     "pnpm-lock.yaml",
-    "packages/scoring-circuit/pcb/**",
-    "packages/fc-theme/**",
-    "packages/fc-theme-base/**"
+    "packages/scoring-circuit/pcb/**"
   ]
 }
