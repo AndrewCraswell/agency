@@ -304,7 +304,6 @@ A task is complete only when:
   is tenant-owned;
 - input, persisted output, and external responses are validated at the owning boundary;
 - focused unit or integration tests cover the new behavior and meaningful failure path;
-- changed merchant-facing copy is reviewed with the Fluent Agent MCP when available;
 - changed UX is exercised in the integrated browser at desktop and mobile widths, including keyboard and accessible-name
   behavior;
 - the relevant documentation and environment examples are current;

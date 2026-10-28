@@ -16,10 +16,6 @@
     //   "type": "http",
     //   "url": "https://mcp.figma.com/mcp"
     // },
-    "fluent-agent": {
-      "type": "http",
-      "url": "https://chat.fluentui.dev/mcp/server"
-    },
     // "langfuse": {
     //   "type": "http",
     //   "url": "https://us.cloud.langfuse.com/api/public/mcp",

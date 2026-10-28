@@ -428,9 +428,7 @@ Use plain, neutral language. Preserve official terminology where necessary and e
 coverage qualifications next to the affected claim. Avoid unsupported promises such as real-time nationwide coverage,
 exhaustive legal research, or guaranteed delivery. Do not use dot glyphs as visual separators.
 
-Review new/changed customer-facing copy with Fluent Agent MCP when available and record the guidance applied. Historical
-unavailability is not a current tool status; the conversation handoff records its own review. Annotate copy questions
-separately from interaction questions.
+Annotate copy questions separately from interaction questions.
 
 ## 13 Prototype scenarios and representative content
 
@@ -590,7 +588,7 @@ automatic Done states are inferred from the historical reports.
 | Keyboard/focus behavior | Real screen focus states, modal focus return, keyboard navigation; more than a showcase example | Foundation and design; release acceptance |
 | Navigation reconciliation | Reachable search, meetings, settings and direct evidence links; shared drawer/page return behavior and direct source access per the evidence-navigation handoff | Foundation and design; legislative pages |
 | Research components | Consistent answer block, evidence container, reader and comparison typography | Conversation and research; legislative pages |
-| Copy and usability | Fluent guidance, target-ICP prototype evaluation and resolution of critical misunderstandings | Integrations and release |
+| Copy and usability | Target-ICP prototype evaluation and resolution of critical misunderstandings | Integrations and release |
 
 The previous design reviews were scenario and artifact audits, not evidence of interviews or production usability.
 Use the acceptance flows in the designer brief and verify implemented UX in the integrated browser before release.
