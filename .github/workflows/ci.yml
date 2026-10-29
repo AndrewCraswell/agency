@@ -1,5 +1,6 @@
 name: CI
 
+# legislation-staging-deployment.yml deploys after a successful run of this workflow on main, by its name.
 on:
   push:
     branches: [main]
@@ -8,6 +9,9 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   # The committed .npmrc supports development behind the work VPN. CI uses
@@ -31,12 +35,15 @@ jobs:
       database: ${{ steps.detect.outputs.database }}
       ingestion: ${{ steps.detect.outputs.ingestion }}
     steps:
-      - uses: actions/checkout@v4
+      # Detection needs Node and the history it diffs, not the workspace's dependencies. The shared setup action caches
+      # pnpm's store even without an install, and this job would save an empty one under the key verify's needs.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
       - name: Detect affected legislation surfaces
         id: detect
         env:
@@ -45,29 +52,17 @@ jobs:
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: node scripts/legislation-change-detection.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
 
+  # This stays here rather than calling the shared ci-verify workflow until that workflow can set PNPM_CONFIG_REGISTRY
+  # before its install: a called workflow doesn't get this one's env, and the .npmrc's Azure feed needs credentials.
   verify:
     name: Required verification
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: betterapps-hq/pipelines/github/actions/setup@8b4311a69b28ad7423898dceda366cee6644f92c # v1.1.1
         with:
-          # `pnpm verify` runs `beachball check`, which diffs against
-          # origin/main, so the full git history must be available.
+          # The full history this job has always fetched.
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - name: Install pnpm
-        run: npm install --global pnpm@11.9.0 --registry=https://registry.npmjs.org/
-      - name: Resolve pnpm store
-        id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: pnpm install --frozen-lockfile
       - run: sudo apt-get update && sudo apt-get install --yes ngspice
       # Storybook browser tests run through Playwright.
       - run: pnpm --filter blog-writer exec playwright install --with-deps chromium
