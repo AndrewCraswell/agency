@@ -35,11 +35,15 @@ jobs:
       database: ${{ steps.detect.outputs.database }}
       ingestion: ${{ steps.detect.outputs.ingestion }}
     steps:
-      # Detection needs Node and the history it diffs, not the workspace's dependencies.
-      - uses: betterapps-hq/pipelines/github/actions/setup@978c87e0f9676edfb85ea5ca735e3cea656c8475 # v1.1.0
+      # Detection needs Node and the history it diffs, not the workspace's dependencies. The shared setup action caches
+      # pnpm's store even without an install, and this job would save an empty one under the key verify's needs.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          install: "false"
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
       - name: Detect affected legislation surfaces
         id: detect
         env:
