@@ -13,21 +13,14 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  # The committed .npmrc supports development behind the work VPN. CI uses
-  # pnpm's higher-precedence override and does not need Azure credentials.
-  PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
-  # Keep interaction-heavy browser tests deterministic on hosted runners.
-  VITEST_MAX_WORKERS: 2
-  # Turbo Remote Cache. Set TURBO_TOKEN (secret) and TURBO_TEAM (variable) in the
-  # repository settings to share the cache across CI runs and contributors.
-  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-
 jobs:
   changes:
     name: Detect legislation changes
     runs-on: ubuntu-latest
+    env:
+      # The committed .npmrc supports development behind the work VPN. CI uses
+      # pnpm's higher-precedence override and does not need Azure credentials.
+      PNPM_CONFIG_REGISTRY: https://registry.npmjs.org/
     outputs:
       web: ${{ steps.detect.outputs.web }}
       mcp: ${{ steps.detect.outputs.mcp }}
@@ -35,15 +28,11 @@ jobs:
       database: ${{ steps.detect.outputs.database }}
       ingestion: ${{ steps.detect.outputs.ingestion }}
     steps:
-      # Detection needs Node and the history it diffs, not the workspace's dependencies. The shared setup action caches
-      # pnpm's store even without an install, and this job would save an empty one under the key verify's needs.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Detection needs Node and the history it diffs, not the workspace's dependencies.
+      - uses: betterapps-hq/pipelines/github/actions/setup@c3b85f070cf22fbf7a4dae841461f82e2b16ea20 # v1.2.0
         with:
           fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
+          install: "false"
       - name: Detect affected legislation surfaces
         id: detect
         env:
@@ -52,18 +41,24 @@ jobs:
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: node scripts/legislation-change-detection.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
 
-  # This stays here rather than calling the shared ci-verify workflow until that workflow can set PNPM_CONFIG_REGISTRY
-  # before its install: a called workflow doesn't get this one's env, and the .npmrc's Azure feed needs credentials.
+  # Its check is "Required verification / Verify (ubuntu-latest)". No branch rule or workflow needs it by name.
   verify:
     name: Required verification
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: betterapps-hq/pipelines/github/actions/setup@8b4311a69b28ad7423898dceda366cee6644f92c # v1.1.1
-        with:
-          # The full history this job has always fetched.
-          fetch-depth: 0
-      - run: sudo apt-get update && sudo apt-get install --yes ngspice
-      # Storybook browser tests run through Playwright.
-      - run: pnpm --filter blog-writer exec playwright install --with-deps chromium
-      - run: pnpm verify
+    uses: betterapps-hq/pipelines/.github/workflows/ci-verify.yml@c3b85f070cf22fbf7a4dae841461f82e2b16ea20 # v1.2.0
+    with:
+      # The full history this job has always fetched.
+      fetch-depth: 0
+      # A called workflow doesn't get this one's env, so its settings go here. The committed .npmrc supports development
+      # behind the work VPN: CI uses pnpm's higher-precedence override and does not need Azure credentials. Vitest's
+      # workers are capped to keep interaction-heavy browser tests deterministic on hosted runners. Turbo Remote Cache
+      # takes TURBO_TOKEN (secret) and TURBO_TEAM (variable) from the repository settings, once they're set there.
+      env: |
+        PNPM_CONFIG_REGISTRY=https://registry.npmjs.org/
+        VITEST_MAX_WORKERS=2
+        TURBO_TEAM=${{ vars.TURBO_TEAM }}
+      prepare: |
+        sudo apt-get update && sudo apt-get install --yes ngspice
+        # Storybook browser tests run through Playwright.
+        pnpm --filter blog-writer exec playwright install --with-deps chromium
+    secrets:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
