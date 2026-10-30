@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      # @types/node stays on the major of the Node version the repo runs (.nvmrc), so it moves with Node, by hand.
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
     groups:
       # One PR for routine minor/patch bumps to keep noise down.
       dependencies:
