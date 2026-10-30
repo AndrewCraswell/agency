@@ -42,7 +42,7 @@ jobs:
     if: github.ref_name == 'main' && inputs.confirmation == 'RESTORE PRODUCTION DATABASE'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -78,7 +78,7 @@ jobs:
       name: production
       url: ${{ env.LEGISLATION_WEB_PRODUCTION_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.application_commit_sha }}
 

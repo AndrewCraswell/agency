@@ -36,7 +36,7 @@ jobs:
       GITHUB_TOKEN: ${{ github.token }}
       STAGING_SCHEMA_LEASE_ISSUE: ${{ vars.LEGISLATION_STAGING_SCHEMA_LEASE_ISSUE }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # pull_request_target keeps the executable helper on the trusted base branch.
           fetch-depth: 1

@@ -55,7 +55,7 @@ jobs:
     outputs:
       staging_run_url: ${{ steps.evidence.outputs.staging_run_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit_sha }}
           fetch-depth: 0
@@ -127,7 +127,7 @@ jobs:
       name: production
       url: ${{ inputs.deploy_web && env.LEGISLATION_WEB_PRODUCTION_URL || env.LEGISLATION_MCP_PRODUCTION_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit_sha }}
 

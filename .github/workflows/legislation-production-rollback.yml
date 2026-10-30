@@ -46,7 +46,7 @@ jobs:
     if: github.ref_name == 'main' && inputs.confirmation == 'ROLLBACK PRODUCTION'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -82,7 +82,7 @@ jobs:
       name: production
       url: ${{ inputs.rollback_web && env.LEGISLATION_WEB_PRODUCTION_URL || env.LEGISLATION_MCP_PRODUCTION_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
