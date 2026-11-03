@@ -1,12 +1,6 @@
 ---
 name: pen-design
-description: >
-  Create high-quality visual designs — websites, app screens, dashboards, slides, marketing materials, social media
-  graphics — using the pen.dev CLI tool. Use this skill whenever the user wants to create, generate, or visualize any
-  kind of UI design, mockup, wireframe, layout, webpage, app screen, presentation slide, poster, banner, or marketing
-  asset. Also use it when the user says things like "design me a...", "make a visual for...", "create a mockup of...",
-  "what would X look like?", or wants to turn an idea into a visual. Even if the user doesn't mention "pen.dev" or
-  "design tool" explicitly — if they want something visual created, this is the skill to use.
+description: "Create or revise editable .pen designs and exported previews using the pen.dev CLI. Use when pen.dev or .pen output is requested or established in the task. For frontend code implementation use Impeccable; for image-only concepts use an image-generation skill."
 ---
 
 # pen.dev Design
@@ -105,7 +99,7 @@ Agents don’t always get the skills directory from context. When the path isn�
 | **Cursor**                     | Project: `.cursor/skills/pen-design/SKILL.md`; user-level: under `~/.cursor/skills/`                                                                         |
 | **Claude Code**                | Often `.claude/skills/pen-design/SKILL.md` or user-level under `~/.claude/`                                                                                  |
 | **OpenClaw**                   | Often `~/.openclaw/skills/`, workspace `.agents/skills/`, or paths in [OpenClaw skills docs](https://docs.openclaw.ai/skills/) — verify for the user’s setup |
-| **Other agents (Codex, etc.)** | Use the directory your product uses for skills or prompts                                                                                                    |
+| **Codex** | Project: `.agents/skills/pen-design/SKILL.md`; user-level: `~/.agents/skills/pen-design/SKILL.md`                                                                                                    |
 
 Example (adjust the destination path to match your agent):
 

@@ -1,8 +1,6 @@
 ---
 name: grilling
-description:
-  Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or
-  uses any 'grill' trigger phrases.
+description: "Stress-test a plan, design, decision, or idea through rounds of questions and recommended answers. Use when the user asks to be grilled, challenged on assumptions, or interviewed to resolve decisions before implementation. grill-me is an explicit-invocation alias for this workflow."
 ---
 
 Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision

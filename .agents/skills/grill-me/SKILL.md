@@ -1,7 +1,7 @@
 ---
 name: grill-me
-description: A relentless interview to sharpen a plan or design.
+description: "Explicit-invocation alias for grilling. Use when the user requests grill-me to sharpen a plan, design, or decision through the same round-based interview workflow."
 disable-model-invocation: true
 ---
 
-Call the Skill tool with "grilling".
+Read [the grilling skill](../grilling/SKILL.md) and follow its interview workflow. Use the current agent's skill loader when available; otherwise read that file directly. This is an alias, not a separate workflow.

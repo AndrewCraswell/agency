@@ -32,9 +32,19 @@
     "legislation:test:acceptance": "pnpm --filter ./apps/legislation-web test:acceptance && pnpm --filter ./apps/legislation-web test:webhook-verification-receiver && pnpm --filter ./apps/legislation-mcp test:acceptance && node --test scripts/legislation-change-detection.test.mjs scripts/legislation-staging-schema-lease.test.mjs scripts/legislation-acceptance.test.mjs scripts/production-release-evidence.test.mjs scripts/production-rollback-check.test.mjs scripts/production-workflow.test.mjs",
     "change": "beachball change",
     "change:release": "beachball publish",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install --force",
+    "guidance:sync": "playbook-sync",
+    "guidance:check": "playbook-sync --check",
+    "guidance:update": "pnpm --filter agency add -D @betterapps/playbook@github:betterapps-hq/playbook#main --registry=https://registry.npmjs.org --force && playbook-sync",
+    "skills:add": "skills add",
+    "skills:update": "skills update -p",
+    "skills:remove": "skills remove",
+    "skills:check": "skills check",
+    "skills:sync": "skills add betterapps-hq/playbook --skill \"*\" -a codex claude-code github-copilot --yes",
+    "rules:import": "rulesync import"
   },
   "devDependencies": {
+    "@betterapps/playbook": "github:betterapps-hq/playbook#main",
     "@turbo/gen": "^2.10.0",
     "@vitest/expect": "4.1.10",
     "beachball": "^2.65.5",
@@ -43,6 +53,8 @@
     "npm-run-all2": "^9.0.2",
     "oxfmt": "^0.57.0",
     "oxlint": "^1.72.0",
+    "rulesync": "43.5.0",
+    "skills": "1.7.6",
     "turbo": "^2.10.0"
   },
   "packageManager": "pnpm@11.9.0"

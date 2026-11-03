@@ -24,6 +24,12 @@
     "**/fixtures/fr-2024-01-02-metadata.json",
     ".vscode/mcp.json",
     "pnpm-lock.yaml",
-    "packages/scoring-circuit/pcb/**"
+    "packages/scoring-circuit/pcb/**",
+    "best-practices/**",
+    ".agents/skills/**",
+    ".claude/skills/**",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".github/copilot-instructions.md"
   ]
 }

@@ -1,0 +1,127 @@
+---
+root: true
+targets: ["*"]
+description: Project-specific instructions
+---
+
+# Project-specific guidance
+
+Project-specific requirements below take precedence over shared recommendations when they differ.
+
+# AGENTS.md
+
+Agent guidance for this repository lives in [.github/copilot-instructions.md](.github/copilot-instructions.md). Read it
+before making changes.
+
+Quick reference:
+
+- **Lint:** `oxlint` (not eslint) · **Format:** `oxfmt` (not prettier)
+- **Type-check:** TypeScript 7 RC native compiler via `pnpm check:types`
+- **Test:** Vitest via `pnpm test` · **Build:** Vite via `pnpm build`
+- **Package manager:** pnpm `>=11` on Node `>=24` · **Tasks:** Turborepo
+- **Git hooks:** lefthook (pre-commit: `oxlint --fix` + `oxfmt`; pre-push: `check:types`). Don't use `--no-verify`.
+- **Reuse first:** prefer `@mantine/hooks`, `ts-extras`, `ts-pattern`, and `tiny-invariant` over hand-rolled hooks /
+  type helpers; narrow with type guards, not `as`.
+- **Product copy:** never use `·`, `•`, or another dot glyph as a visual separator.
+- **UX acceptance:** verify every UX change through the integrated browser before calling it complete. Component tests
+  alone are not sufficient.
+
+Verify loop (must be clean before finishing): run **`pnpm verify`** (format, lint, types, knip, tests with coverage).
+
+# Agency Monorepo — Project Guidelines
+
+A Turborepo + pnpm monorepo with React 19 and TypeScript applications. UI systems are selected at the app or
+product-surface boundary. Shared config lives in `@repo/*` packages under `packages/`. See [README.md](README.md) for
+setup and the [docs index](docs/README.md) for conventions.
+
+## Tooling (differs from common defaults)
+
+- **Lint:** `oxlint` (not eslint) · **Format:** `oxfmt` (not prettier).
+- **Type-check:** `tsc` from a pinned native TypeScript — keep the version aligned across packages.
+- **Test:** Vitest (jsdom unit + Storybook browser tests) · **Bundler/dev server:** Vite · **Workshop:** Storybook.
+- **Package manager:** pnpm (`>=11`) on Node `>=24`, enforced via root `engines` + `engine-strict`.
+- **Task runner:** Turborepo.
+
+## Build / verify loop
+
+Complete the coherent implementation before running unit tests, type-checks, lint, browser acceptance, or the full
+verification suite. Do not run these checks after each small edit. Once the implementation is complete, run the smallest
+relevant focused checks, then run the required final verification. If a check exposes related defects, batch the repairs
+before rerunning that check.
+
+Run `pnpm verify` before declaring work done — it must be clean. It runs `check` (oxfmt format + `oxlint` lint and `tsc`
+type-check deferred per-package via Turbo + `knip` once over the whole graph) then `test:coverage`. Formatting is
+global; lint and type-check are per-package; knip is root-only.
+
+Git hooks (lefthook): **pre-commit** runs `oxlint --fix` + `oxfmt` on staged files; **pre-push** runs
+`pnpm check:types`. Do not bypass them with `--no-verify` unless the user explicitly authorizes it for a failure wholly
+caused by unrelated project work. That exception does not waive focused verification for the files being committed, and
+the commit handoff must record the unrelated blocker and the checks run directly. The scoring-device and prototype-PCB
+workstream currently has that permission for the unrelated legislation dependency-install failure.
+
+## Workspace layout
+
+- `apps/` — product applications.
+- **Reusable shared config** (extend these; don't redefine per package): `@repo/oxlint-config`,
+  `@repo/storybook-config`, `@repo/typescript-config`.
+
+## Conventions
+
+Coding conventions live in the [`docs/`](docs/README.md) folder — start at the index and read the relevant page before
+writing code. Two points worth stating up front: the **React Compiler is on** (don't hand-write
+`useMemo`/`useCallback`/`memo`), and **reuse before building** — check the [hooks](docs/hooks.md) and
+[type-helper](docs/typescript.md) catalogs before writing your own.
+
+Prefer the tools in the [preferred tech stack](docs/tech-stack.md); **introducing a library that isn't already used
+needs a human discussion**, not a silent add.
+
+## Documentation
+
+- **Keep this file brief** — it's the entry point; link to `docs/` articles rather than duplicating detail.
+- **Prefer small, focused `docs/` pages**, and update them (and the [index](docs/README.md)) in the same change as the
+  behavior they describe.
+- Do not create executable validators or test suites for prose documentation, evidence ledgers, backlog/status tables,
+  or narrative part-selection records. Review those artifacts directly. Tests should cover executable code and generated
+  product artifacts whose correctness affects runtime behavior, fabrication, or an external interface.
+
+## Product copy and UX acceptance
+
+- Never use a dot glyph, including `·` or `•`, as a visual separator. Use layout, separate text elements, or a clearly
+  worded phrase instead.
+- Verify every new or changed UX feature in the integrated browser before considering it complete. Exercise the customer
+  workflow, inspect the rendered result at desktop and mobile sizes, and check keyboard and accessible-name behavior.
+  Unit or component tests do not replace this browser acceptance check.
+
+## Gotchas
+
+- Hosted on **GitHub** — use GitHub for PRs and issues.
+- oxlint rules live in the shared `@repo/oxlint-config` base; add new rules there so every package benefits.
+
+## Principles for development
+
+- **Don't reinvent wheels.** [typescript.md](docs/typescript.md) and [hooks.md](docs/hooks.md) catalog what the
+  installed libraries already provide. Check them before adding a hook or type helper.
+- **One topic per page, kept short.** Prefer a new focused page over growing an existing one past a scannable length.
+- **Docs stay current.** When behavior, tooling, or conventions change, update the relevant page (and this index) in the
+  same change.
+- Don't overtest or verify. Complete shippable units of work before running test passes and resolving failures. Test
+  passes cost lots of time.
+- Prefer correctness over expediency or backwards compatibility. If faced with an issue where the new behavior would
+  create a breaking change, ask first whether it needs to be backwards compatible. If no user is available to answer,
+  assume not.
+- Do not preserve backward compatibility. Replace obsolete contracts and implementations directly.
+- Do not create version-suffixed files, symbols, schemas, routes, or APIs such as `V2`, `Phase2`, `legacy`, or
+  compatibility aliases. Keep one canonical implementation.
+- Fix forward. Update the current implementation and its original migration baseline instead of adding compatibility
+  migrations, data rewrites, shims, fallbacks, or dual paths for unreleased behavior.
+- Prioritize correctness over expediency. Fix root causes and maintain coherent contracts even when resetting prototype
+  state is faster than preserving it.
+- Treat prototype data as disposable. Do not preserve, migrate, or repair stale workflow or execution data unless the
+  user explicitly requests it. Prefer a clean database reset or targeted deletion of stale prototype records.
+- Preserve integration credentials and unrelated external configuration when resetting application data unless the user
+  explicitly requests a full reset.
+- Complete the entire coherent deliverable before running tests, type-checks, lint, formatting checks, browser
+  acceptance, or repository verification.
+- After the deliverable is complete, run the smallest relevant focused checks, repair related failures in one batch, and
+  then run the required final repository verification.
+- Do not run verification after each incremental edit or partial implementation.
