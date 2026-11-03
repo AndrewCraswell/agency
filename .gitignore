@@ -47,3 +47,6 @@ __pycache__/
 /apps/legislation-ingestion/tmp/
 /apps/legislation-mcp/tmp/
 /apps/legislation-web/infra/bicep/main.json
+
+# Generated hook launchers for the worktree's configured hook directory.
+/.vite-hooks/_/
