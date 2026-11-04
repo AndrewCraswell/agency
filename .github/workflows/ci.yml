@@ -29,7 +29,7 @@ jobs:
       ingestion: ${{ steps.detect.outputs.ingestion }}
     steps:
       # Detection needs Node and the history it diffs, not the workspace's dependencies.
-      - uses: betterapps-hq/pipelines/github/actions/setup@c3b85f070cf22fbf7a4dae841461f82e2b16ea20 # v1.2.0
+      - uses: betterapps-hq/pipelines/github/actions/setup@main
         with:
           fetch-depth: 0
           install: "false"
@@ -44,7 +44,7 @@ jobs:
   # Its check is "Required verification / Verify (ubuntu-latest)". No branch rule or workflow needs it by name.
   verify:
     name: Required verification
-    uses: betterapps-hq/pipelines/.github/workflows/ci-verify.yml@c3b85f070cf22fbf7a4dae841461f82e2b16ea20 # v1.2.0
+    uses: betterapps-hq/pipelines/.github/workflows/ci-verify.yml@main
     with:
       # The full history this job has always fetched.
       fetch-depth: 0
